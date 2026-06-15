@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fighter Jet Game (Placeholder Version)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; overflow: hidden; background: #000; }
+
+
+    #startScreen {
+      position: absolute;
+      width: 100%;
+      height: 100vh;
+      background: linear-gradient(to right, #000428, #004e92);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    #startScreen input {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px;
+      width: 200px;
+    }
+
+    #startScreen button {
+      padding: 12px 24px;
+      font-size: 18px;
+      background: #00c6ff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #scoreBoard, #timer, #rankInfo {
+      position: absolute;
+      top: 10px;
+      font-size: 20px;
+      z-index: 5;
+      color: white;
+      padding: 10px;
+    }
+
+    #scoreBoard { left: 10px; }
+    #timer { right: 10px; }
+    #rankInfo { left: 50%; transform: translateX(-50%); top: 10px; }
+    #rankInfo span { font-weight: bold; }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background-color: black; /* for debug */
+    }
+
+    #watchIcon {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      display: none;
+      z-index: 5;
+      cursor: pointer;
+    }
+    #watchIcon:hover {
+      transform: scale(1.1);
+      transition: transform 0.2s;
+    }
+    #watchIcon:active {
+      transform: scale(0.9);
+      transition: transform 0.1s;
+    }
+    #watchIcon:focus {
+      outline: none;
+    }
+
+    #leaderboardModal {
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(34, 34, 34, 0.95);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+      z-index: 20;
+      width: 90%;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(255,255,255,0.2);
+    }
+
+    #leaderboardModal li {
+      background: #333;
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 5px;
+    }
+
+    #soundToggle {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 11;
+      padding: 10px;
+      font-size: 18px;
+      border: none;
+      background: #00c6ff;
+      color: white;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    #soundToggle:hover {
+      background: #00a3cc;
+    }
+
+    #leaderboardModal h3 {
+      margin-bottom: 10px;
+    }
+
+    #leaderboardModal button {
+      margin-top: 10px;
+      background: #00c6ff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #viewLeaderboardBtn {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 11;
+      padding: 10px 20px;
+      background: #ffaa00;
+      color: black;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .tab-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .tabBtn {
+      background: #333;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+
+    .tabBtn.active {
+      background: #ffaa00;
+      color: black;
+    }
+
+    .tabContent table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .tabContent th, .tabContent td {
+      border: 1px solid #666;
+      padding: 6px 10px;
+      text-align: center;
+    }
+
+    #menuBtn {
+      position: absolute;
+      top: 15px;
+      left: 20px;
+      z-index: 15;
+      font-size: 24px;
+      background: #ffaa00;
+      color: black;
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #dropdownMenu {
+      position: absolute;
+      top: 65px;
+      left: 20px;
+      z-index: 16;
+      display: none;
+      flex-direction: column;
+      background: #222;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    }
+
+    #dropdownMenu button {
+      background: #333;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      width: 160px;
+      text-align: left;
+      cursor: pointer;
+      border-bottom: 1px solid #444;
+    }
+
+    #dropdownMenu button:last-child {
+      border-bottom: none;
+    }
+
+    #dropdownMenu button:hover {
+      background: #444;
+    }
+
+    canvas, .touchZone, #fireBtn {
+      pointer-events: none;
+    }
+
+
+    #dropdownMenu {
+      position: absolute;
+      top: 60px;
+      right: 15px;
+      z-index: 16;
+      display: none;
+      flex-direction: column;
+      background: #222;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.4);
+    }
+
+    #dropdownMenu button {
+      background: #333;
+      color: white;
+      border: none;
+      padding: 10px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    #dropdownMenu button:hover {
+      background: #444;
+    }
+
+
+    .touchZone {
+      position: absolute;
+      top: 0;
+      width: 50vw;
+      height: 100vh;
+      z-index: 10;
+    }
+
+    #leftTouch { left: 0; }
+    #rightTouch { right: 0; }
+
+    #fireBtn {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 11;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 20px;
+      display: none;
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div id="startScreen">
+  <h1 style="font-size: 2.5em;">🚀 Fighter Jet Elite 👑</h1>
+  <input type="text" id="playerName" placeholder="Enter your name" />
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<!-- CANVAS -->
+<canvas id="gameCanvas"></canvas>
+
+<!-- HUD INFO -->
+<div id="scoreBoard">Score: 0</div>
+<div id="timer">Time: 60</div>
+<div id="rankInfo">Rank: 🟤 Noob</div>
+
+<!-- RANK PROGRESS BAR -->
+<div id="rankProgress" style="width: 200px; height: 10px; background: gray; border-radius: 10px; margin: 0 auto 10px; overflow: hidden;">
+  <div id="rankFill" style="width: 0%; height: 100%; background: lime; transition: width 0.5s;"></div>
+</div>
+
+<!-- MOVING WATCH ICON -->
+<img id="watchIcon" src="https://img.icons8.com/emoji/48/alarm-clock-emoji.png" />
+
+<!-- SOUND TOGGLE -->
+<button id="soundToggle" onclick="toggleSound()">🔊</button>
+
+<!-- TOP-RIGHT MENU ICON -->
+<div id="menuBtn" onclick="toggleMenu()">☰</div>
+
+<!-- DROPDOWN MENU (top right) -->
+<div id="dropdownMenu">
+  <button onclick="toggleSound()">🔊 Toggle Sound</button>
+  <button onclick="openLeaderboard()">🏆 Leaderboard</button>
+  <button onclick="resetData()">♻️ Reset Stats</button>
+</div>
+
+
+<div id="leaderboardModal">
+  <div class="tab-buttons">
+    <button class="tabBtn active" onclick="showTab('recentTab')">📅 Recent Matches</button>
+    <button class="tabBtn" onclick="showTab('allTimeTab')">🌐 All-Time Leaderboard</button>
+  </div>
+
+  <!-- RECENT MATCHES TAB -->
+  <div id="recentTab" class="tabContent">
+    <h3>📅 Top 5 Scores</h3>
+    <table>
+      <thead><tr><th>#</th><th>Name</th><th>Score</th></tr></thead>
+      <tbody id="topScoresList"></tbody>
+    </table>
+  </div>
+
+  <!-- ALL TIME TAB -->
+  <div id="allTimeTab" class="tabContent" style="display: none;">
+    <h3>🌐 Player Stats</h3>
+    <table>
+      <thead><tr>
+        <th>Name</th>
+        <th>Matches</th>
+        <th>Total</th>
+        <th>Avg</th>
+        <th>Rank</th>
+      </tr></thead>
+      <tbody id="allTimeStatsTable"></tbody>
+    </table>
+  </div>
+
+  <button onclick="closeLeaderboard()">Close</button>
+</div>
+
+<!-- SOUND TOGGLE -->
+<!-- Tumhare sounds hi maintain -->
+<audio id="shootSound" src="./sounds/362462__jalastram__shooting_sounds_010.wav"></audio>
+<audio id="blastSound" src="./sounds/805194__mrspivey__laser-gun-02.wav"></audio>
+<audio id="bgMusic" src="./sounds/434166__supervanz__instant-rave.wav" loop></audio>
+<audio id="gameOverSound" src="./sounds/767605__minimalistiga__gameover-sfx.wav"></audio>
+
+<!-- Touch Controls -->
+<div id="leftTouch" class="touchZone"></div>
+<div id="rightTouch" class="touchZone"></div>
+<button id="fireBtn" onclick="mobileFire()">🔥</button>
+
+
+<script>
+let playerImage = new Image();
+let enemyImage = new Image();
+playerImage.src = "images/player-jet.png";
+enemyImage.src = "images/enemy-jet.png";
+
+let moveLeft = false;
+let moveRight = false;
+
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+let soundOn = true;
+let bulletCooldown = 0;
+const bulletFireRate = 5; // Lower = faster
+
+const explosions = [];
+
+const player = {
+  x: canvas.width / 2 - 25,
+  y: canvas.height - 70,
+  width: 50,
+  height: 50,
+  speed: 7
+};
+
+const bullets = [];
+const enemies = [];
+const watches = [];
+
+let score = 0;
+let timeLeft = 60;
+let keys = {};
+let gameRunning = false;
+let totalScore = Number(localStorage.getItem("totalScore")) || 0;
+let totalMatches = Number(localStorage.getItem("totalMatches")) || 0;
+
+function toggleSound() {
+  soundOn = !soundOn;
+  document.getElementById("soundToggle").innerText = soundOn ? "🔊" : "🔇";
+  if (!soundOn) {
+    bgMusic.pause();
+  } else if (gameRunning) {
+    bgMusic.play();
+  }
+}
+
+const shootSound = document.getElementById("shootSound");
+const blastSound = document.getElementById("blastSound");
+const bgMusic = document.getElementById("bgMusic");
+const gameOverSound = document.getElementById("gameOverSound");
+const watchIcon = document.getElementById("watchIcon");
+const timerElement = document.getElementById("timer");
+const scoreBoard = document.getElementById("scoreBoard");
+
+document.addEventListener("keydown", (e) => keys[e.key] = true);
+document.addEventListener("keyup", (e) => keys[e.key] = false);
+
+watchIcon.addEventListener("click", () => {
+  timeLeft += 5;
+  watchIcon.style.display = "none";
+});
+
+// function drawPlayer() {
+//   ctx.fillStyle = "blue";
+//   ctx.fillRect(player.x, player.y, player.width, player.height);
+// }
+
+document.getElementById("leftTouch").addEventListener("touchstart", () => moveLeft = true);
+document.getElementById("leftTouch").addEventListener("touchend", () => moveLeft = false);
+
+document.getElementById("rightTouch").addEventListener("touchstart", () => moveRight = true);
+document.getElementById("rightTouch").addEventListener("touchend", () => moveRight = false);
+
+function mobileFire() {
+  bullets.push({ x: player.x + player.width / 2 - 2, y: player.y });
+  if (soundOn) shootSound.play();
+}
+
+
+function drawPlayer() {
+  ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+}
+
+
+function drawBullets() {
+  ctx.fillStyle = "yellow";
+  bullets.forEach((b, i) => {
+    b.y -= 10;
+    ctx.fillRect(b.x, b.y, 4, 10);
+    if (b.y < 0) bullets.splice(i, 1);
+  });
+}
+
+function drawEnemies() {
+  ctx.fillStyle = "red";
+  enemies.forEach((enemy, ei) => {
+    enemy.y += 3;
+    // ctx.fillRect(enemy.x, enemy.y, 40, 40);
+    ctx.drawImage(enemyImage, enemy.x, enemy.y, 40, 40);
+    if (enemy.y > canvas.height) enemies.splice(ei, 1);
+
+    bullets.forEach((b, bi) => {
+      if (b.x < enemy.x + 40 && b.x + 4 > enemy.x &&
+          b.y < enemy.y + 40 && b.y + 10 > enemy.y) {
+          createExplosion(enemy.x + 20, enemy.y + 20);
+          enemies.splice(ei, 1);
+          bullets.splice(bi, 1);
+          score++;
+          scoreBoard.innerText = "Score: " + score;
+          blastSound.play();
+      }
+    });
+  });
+}
+
+function spawnEnemy() {
+  enemies.push({ x: Math.random() * (canvas.width - 40), y: -40 });
+}
+
+function spawnWatch() {
+  watches.push({ x: Math.random() * (canvas.width - 40), y: -40, speed: 2 });
+}
+
+function drawWatches() {
+  watches.forEach((watch, i) => {
+    watch.y += watch.speed;
+    ctx.drawImage(document.getElementById("watchIcon"), watch.x, watch.y, 40, 40);
+
+    // Collision with player
+    if (
+      watch.x < player.x + player.width &&
+      watch.x + 40 > player.x &&
+      watch.y < player.y + player.height &&
+      watch.y + 40 > player.y
+    ) {
+      timeLeft += 5;
+      watches.splice(i, 1);
+    }
+
+    // Remove if off-screen
+    if (watch.y > canvas.height) {
+      watches.splice(i, 1);
+    }
+  });
+}
+
+function update() {
+  if (!gameRunning) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (keys["ArrowLeft"] && player.x > 0) player.x -= player.speed;
+  if (keys["ArrowRight"] && player.x < canvas.width - player.width) player.x += player.speed;
+  const now = Date.now();
+  if (keys[" "] || keys["Spacebar"]) {
+    bulletCooldown--;
+    if (bulletCooldown <= 0) {
+      bullets.push({ x: player.x + player.width / 2 - 2, y: player.y });
+      shootSound.play();
+      bulletCooldown = bulletFireRate;
+    }
+  } else {
+    bulletCooldown = 0; // reset if not shooting
+  }
+
+  drawPlayer();
+  drawBullets();
+  drawEnemies();
+  drawWatches();
+  if (keys["Escape"]) {
+    gameRunning = false;
+    bgMusic.pause();
+    alert("Game Paused. Your Score: " + score);
+  }
+
+  requestAnimationFrame(update);
+  drawExplosions();
+}
+
+function startTimer() {
+  const timer = setInterval(() => {
+    if (!gameRunning) return clearInterval(timer);
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      gameRunning = false;
+      gameOverSound.play();
+      saveScore(player.name, score); // 💾 Save data
+      document.getElementById("menuBtn").style.display = "block";
+
+      setTimeout(() => {
+        let again = confirm(`⏰ Time's up!\nYour Score: ${score}\n\nPlay again?`);
+        if (again) {
+          document.location.reload();
+        }
+      }, 100);
+    } else {
+      timerElement.innerText = "Time: " + timeLeft;
+      timeLeft--;
+    }
+  }, 1000);
+}
+// function closeLeaderboard() {
+//   document.getElementById("leaderboardModal").style.display = "none";
+// }
+
+function updateProgressBar() {
+  const score = totalScore;
+
+  const thresholds = [
+    { score: 500, rank: "🟢 Beginner" },
+    { score: 1150, rank: "🟡 Learner" },
+    { score: 1800, rank: "🔵 Amateur" },
+    { score: 2500, rank: "🟣 Semi-Pro" },
+    { score: 3500, rank: "🟠 Professional" },
+    { score: 4700, rank: "🔴 Expert" },
+    { score: 6200, rank: "🟤 Master" },
+    { score: 8200, rank: "⚪ Grand Master" },
+    { score: 10000, rank: "⚫ Ace" },
+    { score: 12500, rank: "🌟 Superstar" },
+    { score: 15500, rank: "💻 Hacker" },
+    { score: 20000, rank: "👑 KING" }
+  ];
+
+  let current = 0, next = 20000;
+
+  for (let i = 0; i < thresholds.length; i++) {
+    if (score < thresholds[i].score) {
+      next = thresholds[i].score;
+      break;
+    }
+    current = thresholds[i].score;
+  }
+
+  const percent = Math.min(100, Math.floor(((score - current) / (next - current)) * 100));
+  document.getElementById("rankFill").style.width = percent + "%";
+}
+
+
+function startGame() {
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  resizeCanvas(); // ✅ FIRST
+  window.addEventListener("resize", resizeCanvas);
+
+  // ✅ THEN set player position
+  player.x = canvas.width / 2 - player.width / 2;
+  player.y = canvas.height - player.height - 20;
+
+  const name = document.getElementById("playerName").value.trim();
+  if (!name) return alert("Please enter your name.");
+
+  player.name = name; // Save for later
+  document.getElementById("startScreen").style.display = "none";
+  gameRunning = true;
+  bgMusic.play();
+  document.getElementById("menuBtn").style.display = "none";
+  document.getElementById("dropdownMenu").style.display = "none";
+
+  // Show fire button only on mobile
+  if (/Mobi|Android/i.test(navigator.userAgent)) {
+    document.getElementById("fireBtn").style.display = "block";
+  }
+  setInterval(spawnEnemy, 1000);
+  setInterval(spawnWatch, 15000);
+  updateRankDisplay(); // 💥 Initial Rank
+  startTimer();
+  update();
+
+}
+
+
+function saveScore(name, score) {
+  let scores = JSON.parse(localStorage.getItem("topScores")) || [];
+  scores.push({ name, score });
+  scores.sort((a, b) => b.score - a.score);
+  scores = scores.slice(0, 5);
+  localStorage.setItem("topScores", JSON.stringify(scores));
+
+  totalScore += score;
+  totalMatches += 1;
+  localStorage.setItem("totalScore", totalScore);
+  localStorage.setItem("totalMatches", totalMatches);
+
+  // Save per-player data
+  let allTime = JSON.parse(localStorage.getItem("allTimePlayers")) || {};
+  if (!allTime[name]) allTime[name] = { matches: 0, total: 0 };
+  allTime[name].matches++;
+  allTime[name].total += score;
+  localStorage.setItem("allTimePlayers", JSON.stringify(allTime));
+}
+
+
+function getRank(score) {
+  if (score < 500) return "🟤 Noob";
+  if (score < 1150) return "🟢 Beginner";
+  if (score < 1800) return "🟡 Learner";
+  if (score < 2500) return "🔵 Amateur";
+  if (score < 3500) return "🟣 Semi-Pro";
+  if (score < 4700) return "🟠 Professional";
+  if (score < 6200) return "🔴 Expert";
+  if (score < 8200) return "🟤 Master";
+  if (score < 10000) return "⚪ Grand Master";
+  if (score < 12500) return "⚫ Ace";
+  if (score < 15500) return "🌟 Superstar";
+  if (score < 20000) return "💻 Hacker";
+  return "👑 KING";
+}
+
+function calculateAverage() {
+  if (totalMatches === 0) return 0;
+  return Math.round(totalScore / totalMatches);
+}
+// function to update rank display
+
+function updateRankDisplay() {
+  const rank = getRank(totalScore);
+  document.getElementById("rankInfo").innerText = "Rank: " + rank;
+  updateProgressBar(); // Add this line
+}
+
+function toggleMenu() {
+  const menu = document.getElementById("dropdownMenu");
+  menu.style.display = menu.style.display === "flex" ? "none" : "flex";
+}
+
+//update leaderboard
+
+function closeLeaderboard() {
+  document.getElementById("leaderboardModal").style.display = "none";
+}
+
+function showTab(tabId) {
+  document.querySelectorAll(".tabContent").forEach(tab => tab.style.display = "none");
+  document.querySelectorAll(".tabBtn").forEach(btn => btn.classList.remove("active"));
+  document.getElementById(tabId).style.display = "block";
+  const btnIndex = tabId === "recentTab" ? 0 : 1;
+  document.querySelectorAll(".tabBtn")[btnIndex].classList.add("active");
+}
+
+function openLeaderboard() {
+  const scores = JSON.parse(localStorage.getItem("topScores")) || [];
+  const topList = document.getElementById("topScoresList");
+  const allTimeTable = document.getElementById("allTimeStatsTable");
+
+  // Recent Matches Table
+  topList.innerHTML = scores.length
+    ? scores.map((s, i) => `<tr><td>${i + 1}</td><td>${s.name}</td><td>${s.score}</td></tr>`).join("")
+    : "<tr><td colspan='3'>No scores yet</td></tr>";
+
+  // All-Time Player Stats Table
+  const allTimeData = JSON.parse(localStorage.getItem("allTimePlayers")) || {};
+  allTimeTable.innerHTML = Object.entries(allTimeData).map(([name, data]) => `
+    <tr>
+      <td>${name}</td>
+      <td>${data.matches}</td>
+      <td>${data.total}</td>
+      <td>${Math.round(data.total / data.matches)}</td>
+      <td>${getRank(data.total)}</td>
+    </tr>
+  `).join("");
+
+  showTab('recentTab'); // Default tab
+  document.getElementById("leaderboardModal").style.display = "block";
+}
+
+function createExplosion(x, y) {
+  for (let i = 0; i < 10; i++) {
+    explosions.push({
+      x,
+      y,
+      dx: (Math.random() - 0.5) * 4,
+      dy: (Math.random() - 0.5) * 4,
+      life: 30
+    });
+  }
+}
+
+function drawExplosions() {
+  ctx.fillStyle = "orange";
+  explosions.forEach((p, i) => {
+    p.x += p.dx;
+    p.y += p.dy;
+    p.life--;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (p.life <= 0) explosions.splice(i, 1);
+  });
+}
+
+
+function resetData() {
+  if (confirm("Are you sure you want to reset all data?")) {
+    localStorage.removeItem("topScores");
+    localStorage.removeItem("totalScore");
+    localStorage.removeItem("totalMatches");
+    alert("All stats have been reset.");
+    location.reload();
+  }
+}
+</script>
+
+</body>
+</html>
+

@@ -1,0 +1,630 @@
+--- STARTING E2E MULTIPLAYER POLISH TEST ---
+Starting Next.js production server on port 3004...
+[Next.js]: 
+> gamehub@0.1.0 start
+> next start -p 3004
+
+[Next.js]:    ▲ Next.js 15.5.19
+[Next.js]:    - Local:        http://localhost:3004
+   - Network:      http://10.192.62.178:3004
+✓ Production server ready on port 3004
+[Next.js]: 
+ ✓ Starting...
+[Next.js]:  ✓ Ready in 915ms
+Seeding host user: mock-host-polish-112242 and joiner user: mock-joiner-polish-112242
+✓ Seeding complete. Set up browser contexts...
+
+=== TEST 1: Friends Presence Indicator ===
+  [waitForScreen] Waiting for "MENU"… 9ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [waitForScreen] Waiting for "MENU"… 514ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 1025ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 1542ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 2052ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 6ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [waitForScreen] Waiting for "MENU"… 518ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 1039ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 1544ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+Waiting for host presence list to update Joiner status to Online...
+✓ Friend presence indicator (Online) verified on Host page!
+
+=== TEST 2: Friend Lobbies Invite flow ===
+Host creating Hand Cricket room...
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "CREATE",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "CREATE",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [waitForScreen] Waiting for "LOBBY"… 1ms | current: ["CREATE"] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "LOBBY"… 515ms | current: ["CREATE"] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "LOBBY"… 1022ms | current: ["CREATE"] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "LOBBY"… 1531ms | current: ["CREATE"] | url: http://localhost:3004/dashboard/multiplayer
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+Host created room code: V1Q65L
+Host sending invite to Joiner via modal...
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+[Next.js]: [ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+✓ Pending invite record verified in DB
+Checking Joiner dashboard receives invite list...
+✓ Joiner lobby page received invite list notifications
+
+=== TEST 3: Decline Invite ===
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[JOINER BROWSER]: [DEBUG DECLINE] notifications list: [
+  {
+    "id": "6173b5eb-03f7-40b1-a9b0-9d0a29ea421e",
+    "profileId": "d3dae23a-d4d4-436f-bf08-720d48da4d0a",
+    "type": "ROOM_INVITE",
+    "title": "Game Lobby Invite 🌐",
+    "message": "HostPolish_112242 invited you to play Hand Cricket!",
+    "linkUrl": null,
+    "meta": {
+      "gameSlug": "cricket",
+      "roomCode": "V1Q65L",
+      "hostUsername": "HostPolish_112242"
+    },
+    "isRead": false,
+    "createdAt": "2026-06-14T09:23:55.500Z"
+  }
+]
+[JOINER BROWSER]: [DEBUG DECLINE] searching for roomCode: V1Q65L
+[JOINER BROWSER]: [DEBUG DECLINE] relativeNotif found: true
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [NOTIFICATIONS POST] action=decline/delete, notif.id= 6173b5eb-03f7-40b1-a9b0-9d0a29ea421e meta= {"gameSlug":"cricket","roomCode":"V1Q65L","hostUsername":"HostPolish_112242"}
+[Next.js]: [NOTIFICATIONS POST] room found: true receiverId= mock-joiner-polish-112242
+[Next.js]: [NOTIFICATIONS POST] multiplayerInvite updated count: 1
+[JOINER BROWSER]: [DEBUG DECLINE] Notification decline succeeded
+✓ Invite decline recorded in DB
+Re-inviting Joiner...
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+
+=== TEST 4: Accept Invite ===
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [waitForScreen] Waiting for "LOBBY"… 1ms | current: ["MENU"] | url: http://localhost:3004/dashboard/multiplayer
+[Next.js]: [JOIN-ROOM] Request from userId=mock-joiner-polish-112242 roomCode=V1Q65L
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+  [waitForScreen] Waiting for "LOBBY"… 507ms | current: ["MENU"] | url: http://localhost:3004/dashboard/multiplayer
+[Next.js]: [JOIN-ROOM] ✓ userId=mock-joiner-polish-112242 joined room V1Q65L
+  [waitForScreen] Waiting for "LOBBY"… 1019ms | current: ["MENU"] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "LOBBY"… 1534ms | current: ["MENU"] | url: http://localhost:3004/dashboard/multiplayer
+  [waitForScreen] Waiting for "LOBBY"… 2039ms | current: ["MENU"] | url: http://localhost:3004/dashboard/multiplayer
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY","mock-joiner-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+✓ Joiner accepted invite and successfully redirected to LOBBY
+
+=== TEST 5: Lobby Chat panel ===
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY","mock-joiner-polish-112242: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+Host sending chat message: "Hello Joiner! 112242"...
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY","mock-joiner-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY","mock-joiner-polish-112242: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+✓ Chat message polled and displayed in Joiner's feed
+Joiner sending chat message: "Hey Host! Good luck! 112242"...
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY","mock-joiner-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY","mock-joiner-polish-112242: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+✓ Chat message polled and displayed in Host's feed
+
+=== TEST 6: Reconnect recovery (Lobby reload) ===
+Refreshing Joiner page...
+  [waitForScreen] Waiting for "LOBBY"… 9ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [waitForScreen] Waiting for "LOBBY"… 513ms | current: [] | url: http://localhost:3004/dashboard/multiplayer
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+✓ Joiner successfully restored to the LOBBY screen on reload
+
+=== TEST 7: Start Game & Redirects ===
+Host readying up...
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY","mock-joiner-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=NOT_READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: NOT_READY","mock-joiner-polish-112242: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+[Next.js]: [READY] roomId=cmqdkulxx00007g4vw1kcbbcu
+[READY] userId=mock-host-polish-112242
+[READY] oldStatus=NOT_READY
+[READY] newStatus=READY
+Joiner readying up...
+[Next.js]: [READY] roomId=cmqdkulxx00007g4vw1kcbbcu
+[READY] userId=mock-joiner-polish-112242
+[READY] oldStatus=NOT_READY
+[READY] newStatus=READY
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: READY","mock-joiner-polish-112242: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+Waiting for Host start button to be enabled (waiting for poll cycle)...
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-polish-112242
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: READY","mock-joiner-polish-112242: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: READY","mock-joiner-polish-112242: READY"],"isHost":true,"startButtonDisabled":false}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":false}
+Host launching the game match...
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: READY","mock-joiner-polish-112242: READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-polish-112242
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: READY","mock-joiner-polish-112242: READY"],"isHost":false,"startButtonDisabled":false}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":true,"disabled":false}
+Waiting for host redirect...
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: READY","mock-joiner-polish-112242: READY"],"isHost":true,"startButtonDisabled":false}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":false}
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-polish-112242
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: PLAYING
+[HOST BROWSER]: [MULTIPLAYER REDIRECT EXECUTED] Redirecting user to /dashboard/multiplayer/play/V1Q65L
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "PLAYING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: READY","mock-joiner-polish-112242: READY"],"isHost":true,"startButtonDisabled":false}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":false}
+Waiting for joiner redirect...
+[Next.js]: [ROOM POLL] roomCode=V1Q65L
+  - player: userId=mock-host-polish-112242 readyStatus=READY
+  - player: userId=mock-joiner-polish-112242 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-polish-112242
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: V1Q65L, Status: PLAYING
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT EXECUTED] Redirecting user to /dashboard/multiplayer/play/V1Q65L
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "V1Q65L",
+  "roomStatus": "PLAYING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-polish-112242",
+  "hostUserId": "mock-host-polish-112242",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-polish-112242","mock-joiner-polish-112242"],"ready statuses":["mock-host-polish-112242: READY","mock-joiner-polish-112242: READY"],"isHost":false,"startButtonDisabled":false}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":true,"disabled":false}
+✓ Both players automatically redirected to game boards!
+Redirect log checks: {
+  hostCheckRedirect: true,
+  hostExecutedRedirect: true,
+  joinerCheckRedirect: true,
+  joinerExecutedRedirect: true
+}
+✓ Redirect logs successfully validated!
+
+=== TEST 8: Active Match Recovery ===
+Scenario A: Refreshing active match play page directly...
+[Next.js]: [API GET /game] roomCode=V1Q65L currentTurn=mock-host-polish-112242 gameState={"p1":{"userId":"mock-host-polish-112242","username":"HostPolish_112242"},"p2":{"userId":"mock-joiner-polish-112242","username":"JoinerPolish_112242"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPolish_112242. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-polish-112242","battingUserId":null,"bowlingUserId":null}
+[Next.js]: [API GET /game] roomCode=V1Q65L currentTurn=mock-host-polish-112242 gameState={"p1":{"userId":"mock-host-polish-112242","username":"HostPolish_112242"},"p2":{"userId":"mock-joiner-polish-112242","username":"JoinerPolish_112242"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPolish_112242. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-polish-112242","battingUserId":null,"bowlingUserId":null}
+[Next.js]: [API GET /game] roomCode=V1Q65L currentTurn=mock-host-polish-112242 gameState={"p1":{"userId":"mock-host-polish-112242","username":"HostPolish_112242"},"p2":{"userId":"mock-joiner-polish-112242","username":"JoinerPolish_112242"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPolish_112242. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-polish-112242","battingUserId":null,"bowlingUserId":null}
+✓ Restored to play page directly
+Scenario B: Navigating to main multiplayer page while match is active...
+Waiting for active-room query and automatic redirect back to play page...
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-polish-112242",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [API GET /game] roomCode=V1Q65L currentTurn=mock-host-polish-112242 gameState={"p1":{"userId":"mock-host-polish-112242","username":"HostPolish_112242"},"p2":{"userId":"mock-joiner-polish-112242","username":"JoinerPolish_112242"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPolish_112242. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-polish-112242","battingUserId":null,"bowlingUserId":null}
+[HOST BROWSER]: [MULTIPLAYER RECONNECT RECOVERY] Active match found: V1Q65L
+[Next.js]: [API GET /game] roomCode=V1Q65L currentTurn=mock-host-polish-112242 gameState={"p1":{"userId":"mock-host-polish-112242","username":"HostPolish_112242"},"p2":{"userId":"mock-joiner-polish-112242","username":"JoinerPolish_112242"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPolish_112242. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-polish-112242","battingUserId":null,"bowlingUserId":null}
+✓ Automatically redirected back to active match!
+
+══════════════════════════════════════════════════
+✅ ALL 8 E2E SOCIAL/POLISH TESTS PASSED
+══════════════════════════════════════════════════
+
+Shutting down Next.js dev server...
+[Next.js]: [API GET /game] roomCode=V1Q65L currentTurn=mock-host-polish-112242 gameState={"p1":{"userId":"mock-host-polish-112242","username":"HostPolish_112242"},"p2":{"userId":"mock-joiner-polish-112242","username":"JoinerPolish_112242"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPolish_112242. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-polish-112242","battingUserId":null,"bowlingUserId":null}
+EXIT_0  

@@ -1,0 +1,440 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Profile {
+  id                   String              @id @default(uuid())
+  userId               String              @unique
+  username             String              @unique
+  avatarUrl            String?
+  isGuest              Boolean             @default(false)
+  role                 Role                @default(USER)
+  xp                   Int                 @default(0)
+  level                Int                 @default(1)
+  currentStreak        Int                 @default(0)
+  longestStreak        Int                 @default(0)
+  lastLoginDate        DateTime?
+  lastDailyRewardClaim DateTime?
+  dailyRewardDay       Int                 @default(1)
+  migratedFromGuest    Boolean             @default(false)
+  coins                Int                 @default(0)
+  selectedTitle        String?
+  selectedBadge        String?
+  selectedFrame        String?
+  selectedTheme        String?
+  friendCode           String?             @unique
+  lastSeenAt           DateTime?
+  currentRank          Int?
+  previousRank         Int?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  analyticsEvents      AnalyticsEvent[]
+  dailyClaims          DailyRewardLog[]
+  friendsReceived      Friendship[]        @relation("AddresseeFriends")
+  friendsSent          Friendship[]        @relation("RequesterFriends")
+  matchesAsP1          MatchRecord[]       @relation("Player1Matches")
+  matchesAsP2          MatchRecord[]       @relation("Player2Matches")
+  wonMatches           MatchRecord[]       @relation("WonMatches")
+  notifications        Notification[]
+  preferences          Preferences?
+  battlePasses         ProfileBattlePass[]
+  gameStats            ProfileGameStats[]
+  inventory            ProfileInventory[]
+  scores               Score[]
+  achievements         UserAchievement[]
+  xpEvents             XPEvent[]
+  hostedRooms          MultiplayerRoom[]       @relation("HostedRooms")
+  multiplayerRooms     MultiplayerRoomPlayer[] @relation("PlayerRooms")
+  sentInvites          MultiplayerInvite[]     @relation("SentInvites")
+  receivedInvites      MultiplayerInvite[]     @relation("ReceivedInvites")
+  chatMessages         MultiplayerChatMessage[]
+
+  @@index([xp(sort: Desc)])
+  @@index([level(sort: Desc)])
+}
+
+model ProfileGameStats {
+  id         String   @id @default(uuid())
+  profileId  String
+  gameSlug   String
+  playCount  Int      @default(0)
+  winCount   Int      @default(0)
+  highScore  Int      @default(0)
+  lastPlayed DateTime @default(now())
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, gameSlug])
+}
+
+model Preferences {
+  id                 String  @id @default(uuid())
+  profileId          String  @unique
+  soundEnabled       Boolean @default(true)
+  darkMode           Boolean @default(true)
+  showOnLeaderboard  Boolean @default(true)
+  emailNotifications Boolean @default(true)
+  profile            Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model Game {
+  id          String        @id @default(uuid())
+  slug        String        @unique
+  name        String
+  description String?
+  type        String        @default("REWRITTEN")
+  isMultiplay Boolean       @default(false)
+  category    String        @default("arcade")
+  matches     MatchRecord[]
+  scores      Score[]
+}
+
+model Score {
+  id        String   @id @default(uuid())
+  profileId String
+  gameId    String
+  score     Int
+  metadata  Json?
+  playedAt  DateTime @default(now())
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, score(sort: Desc)])
+  @@index([profileId])
+}
+
+model MatchRecord {
+  id           String   @id @default(uuid())
+  roomCode     String?
+  gameId       String
+  player1Id    String
+  player2Id    String?
+  player1Score Int      @default(0)
+  player2Score Int      @default(0)
+  winnerId     String?
+  xpEarned     Int      @default(0)
+  coinsEarned  Int      @default(0)
+  durationSecs Int?
+  playedAt     DateTime @default(now())
+  game         Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player1      Profile  @relation("Player1Matches", fields: [player1Id], references: [id])
+  player2      Profile? @relation("Player2Matches", fields: [player2Id], references: [id])
+  winner       Profile? @relation("WonMatches", fields: [winnerId], references: [id])
+}
+
+model XPEvent {
+  id        String      @id @default(uuid())
+  profileId String
+  type      XPEventType
+  amount    Int
+  meta      Json?
+  createdAt DateTime    @default(now())
+  profile   Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt(sort: Desc)])
+}
+
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  addressee   Profile          @relation("AddresseeFriends", fields: [addresseeId], references: [id], onDelete: Cascade)
+  requester   Profile          @relation("RequesterFriends", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  profileId String
+  type      NotificationType
+  title     String
+  message   String
+  linkUrl   String?
+  meta      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  profile   Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, isRead])
+  @@index([profileId, createdAt(sort: Desc)])
+}
+
+model Achievement {
+  id          String            @id @default(uuid())
+  slug        String            @unique
+  name        String
+  description String
+  xpReward    Int               @default(100)
+  coinReward  Int               @default(0)
+  iconUrl     String?
+  category    String            @default("general")
+  gameSlug    String?
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  profileId     String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  profile       Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, achievementId])
+}
+
+model CosmeticItem {
+  id         String             @id @default(uuid())
+  name       String             @unique
+  type       CosmeticType
+  priceCoins Int                @default(0)
+  assetUrl   String?
+  metadata   Json?
+  isDefault  Boolean            @default(false)
+  owners     ProfileInventory[]
+}
+
+model ProfileInventory {
+  id             String       @id @default(uuid())
+  profileId      String
+  cosmeticItemId String
+  purchasedAt    DateTime     @default(now())
+  cosmeticItem   CosmeticItem @relation(fields: [cosmeticItemId], references: [id], onDelete: Cascade)
+  profile        Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, cosmeticItemId])
+}
+
+model DailyRewardLog {
+  id         String   @id @default(uuid())
+  profileId  String
+  dayNumber  Int
+  coinsGiven Int      @default(0)
+  xpGiven    Int      @default(0)
+  claimedAt  DateTime @default(now())
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, claimedAt(sort: Desc)])
+}
+
+model BattlePass {
+  id           String              @id @default(uuid())
+  seasonNumber Int                 @unique
+  startDate    DateTime
+  endDate      DateTime
+  tiers        BattlePassTier[]
+  participants ProfileBattlePass[]
+}
+
+model BattlePassTier {
+  id           String     @id @default(uuid())
+  battlePassId String
+  tierNumber   Int
+  xpRequired   Int
+  isFree       Boolean    @default(true)
+  rewardType   String
+  rewardValue  String
+  battlePass   BattlePass @relation(fields: [battlePassId], references: [id], onDelete: Cascade)
+}
+
+model ProfileBattlePass {
+  id                String     @id @default(uuid())
+  profileId         String
+  battlePassId      String
+  currentTier       Int        @default(1)
+  currentXP         Int        @default(0)
+  isPremiumUnlocked Boolean    @default(false)
+  premiumUnlockedAt DateTime?
+  battlePass        BattlePass @relation(fields: [battlePassId], references: [id], onDelete: Cascade)
+  profile           Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, battlePassId])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  profileId String?
+  eventName String
+  metadata  Json?
+  timestamp DateTime @default(now())
+  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([eventName])
+  @@index([timestamp(sort: Desc)])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+enum NotificationType {
+  ACHIEVEMENT
+  FRIEND_REQUEST
+  ROOM_INVITE
+  TOURNAMENT
+  SYSTEM
+  BILLING
+}
+
+enum CosmeticType {
+  AVATAR_FRAME
+  BOARD_THEME
+  CHAT_COLOR
+  TITLE
+  BADGE
+  AVATAR
+  CHAT_PACK
+  SCRATCHER
+}
+
+enum XPEventType {
+  MATCH_WIN
+  MATCH_LOSS
+  DAILY_LOGIN
+  ACHIEVEMENT
+  STREAK_BONUS
+  MANUAL_GRANT
+  MANUAL_DEDUCTION
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model Ad {
+  id           String   @id @default(uuid())
+  imageUrl     String
+  targetUrl    String
+  durationSecs Int      @default(5)
+  allGames     Boolean  @default(false)
+  games        String[]
+  active       Boolean  @default(true)
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Tournament {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  startDate      DateTime
+  endDate        DateTime
+  eligibleGames  String[]
+  rewardCoins    Int      @default(0)
+  rewardBadge    String?
+  rewardTitle    String?
+  rewardCosmetic String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum MultiplayerRoomStatus {
+  WAITING
+  STARTING
+  PLAYING
+  FINISHED
+}
+
+enum PlayerReadyStatus {
+  READY
+  NOT_READY
+  DISCONNECTED
+  LEFT
+}
+
+model MultiplayerRoom {
+  id             String                @id @default(cuid())
+  roomCode       String                @unique
+  gameSlug       String
+  hostUserId     String
+  status         MultiplayerRoomStatus @default(WAITING)
+  maxPlayers     Int                   @default(4)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  lastActivityAt DateTime              @default(now())
+  startedAt      DateTime?
+  endedAt        DateTime?
+
+  host           Profile               @relation("HostedRooms", fields: [hostUserId], references: [userId], onDelete: Cascade)
+  players        MultiplayerRoomPlayer[]
+  gameSession    MultiplayerGameSession?
+  chatMessages   MultiplayerChatMessage[]
+  invites        MultiplayerInvite[]
+}
+
+model MultiplayerRoomPlayer {
+  id       String            @id @default(cuid())
+  roomId   String
+  userId   String
+  status   PlayerReadyStatus @default(NOT_READY)
+  joinedAt DateTime          @default(now())
+
+  room     MultiplayerRoom   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  profile  Profile           @relation("PlayerRooms", fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model MultiplayerGameSession {
+  id             String   @id @default(cuid())
+  roomId         String   @unique
+
+  gameSlug       String
+
+  status         String
+
+  gameState      Json
+
+  currentTurn    String?
+
+  winnerId       String?
+
+  lastActivityAt DateTime @default(now())
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  room           MultiplayerRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model MultiplayerChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  message   String
+  createdAt DateTime @default(now())
+
+  room      MultiplayerRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  profile   Profile         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
+model MultiplayerInvite {
+  id         String   @id @default(cuid())
+  roomId     String
+  senderId   String
+  receiverId String
+  status     String   @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  room       MultiplayerRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender     Profile         @relation("SentInvites", fields: [senderId], references: [userId], onDelete: Cascade)
+  receiver   Profile         @relation("ReceivedInvites", fields: [receiverId], references: [userId], onDelete: Cascade)
+
+  @@unique([roomId, receiverId, status])
+}

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Leaderboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      margin-bottom: 1rem;
+    }
+
+    table {
+      width: 90%;
+      border-collapse: collapse;
+      background: #222;
+    }
+
+    th, td {
+      padding: 0.8rem;
+      text-align: center;
+      border-bottom: 1px solid #444;
+    }
+
+    th {
+      background: #333;
+    }
+
+    button, input {
+      margin-top: 1rem;
+      padding: 0.6rem 1rem;
+      font-weight: bold;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+    }
+
+    button {
+      background-color: #4caf50;
+      color: white;
+      margin-left: 0.5rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #ff5722;
+    }
+
+    input {
+      background-color: #222;
+      color: white;
+      border: 1px solid #444;
+    }
+
+    .recent {
+      margin-top: 2rem;
+      width: 90%;
+      background: #1a1a1a;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    .recent h3 {
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid #444;
+      padding-bottom: 0.3rem;
+    }
+
+    .recent p {
+      margin: 0.3rem 0;
+    }
+
+    
+    .back-button {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background-color: #4caf50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      font-size: 1rem;
+      border-radius: 30px;
+      cursor: pointer;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      transition: background-color 0.3s;
+    }
+
+    .back-button:hover {
+      background-color: #ff5722;
+    }
+
+  </style>
+</head>
+<body>
+  <h1>🏆 Tic Tac Toe Leaderboard</h1>
+  <button onclick="goBack()" class="back-button">⬅ Back</button>
+
+  <input type="text" id="searchInput" placeholder="🔍 Search Player..." oninput="loadLeaderboard()">
+  <button onclick="resetLeaderboard()">Reset Leaderboard</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Player</th>
+        <th>Games Played</th>
+        <th>Games Won</th>
+        <th>Games Tied</th>
+        <th>Win Rate</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboardBody"></tbody>
+  </table>
+
+  <div class="recent">
+    <h3>🕓 Recent Games</h3>
+    <div id="recentGamesList"></div>
+  </div>
+
+  <button onclick="closeLeaderboard()">Close</button>
+
+  <script>
+    function loadLeaderboard() {
+      let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+      let recentGames = JSON.parse(localStorage.getItem("recentGames")) || [];
+
+      const searchQuery = document.getElementById("searchInput").value.toLowerCase();
+
+      if (searchQuery) {
+        leaderboard = leaderboard.filter(player => player.name.toLowerCase().includes(searchQuery));
+      }
+
+      leaderboard.sort((a, b) => {
+        const rateA = a.gamesWon / a.gamesPlayed || 0;
+        const rateB = b.gamesWon / b.gamesPlayed || 0;
+        return rateB - rateA;
+      });
+
+      const tbody = document.getElementById("leaderboardBody");
+      tbody.innerHTML = "";
+
+      leaderboard.forEach((player, index) => {
+        const winRate = player.gamesPlayed ? ((player.gamesWon / player.gamesPlayed) * 100).toFixed(2) : "0.00";
+        const row = `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${player.name}</td>
+            <td>${player.gamesPlayed}</td>
+            <td>${player.gamesWon}</td>
+            <td>${player.gamesTied || 0}</td>
+            <td>${winRate}%</td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+      });
+
+      // Show recent games
+      const recentList = document.getElementById("recentGamesList");
+      recentList.innerHTML = "";
+      recentGames.slice().reverse().slice(0, 10).forEach(game => {
+        recentList.innerHTML += `<p>🧑‍🤝‍🧑 ${game.player1} vs ${game.player2} → <strong>${game.result}</strong></p>`;
+      });
+    }
+
+    function resetLeaderboard() {
+      if (confirm("Are you sure you want to reset the leaderboard and history?")) {
+        localStorage.removeItem("leaderboard");
+        localStorage.removeItem("recentGames");
+        loadLeaderboard();
+      }
+    }
+
+    window.onload = loadLeaderboard;
+
+    function goBack() {
+      window.location.href = "scribble.html";  // previous page
+    }
+
+    function closeLeaderboard() {
+      window.location.href = "scribble.html";  // previous page
+    }
+  </script>
+</body>
+</html>

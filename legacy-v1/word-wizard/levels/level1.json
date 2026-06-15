@@ -1,0 +1,9 @@
+{
+  "grid": [
+    ["C", "A", "T", "S"],
+    ["D", "O", "G", "S"],
+    ["R", "A", "T", "E"],
+    ["B", "I", "R", "D"]
+  ],
+  "targetWords": ["CAT", "DOG", "RAT", "BIRD"]
+}

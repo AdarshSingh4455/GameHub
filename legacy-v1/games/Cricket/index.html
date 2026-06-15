@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cricket Toss</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    height: 100vh;
+    background: linear-gradient(45deg, #001f3f, #003366, #001f3f);
+    background-size: 400% 400%;
+    animation: lights 8s ease infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: white;
+    overflow: hidden;
+  }
+  @keyframes lights {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 10px #00eaff;
+  }
+
+  .start-btn {
+    padding: 15px 40px;
+    font-size: 1.5rem;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(135deg, #00eaff, #0077ff);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0, 200, 255, 0.6);
+    transition: 0.3s;
+  }
+  .start-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(0, 200, 255, 0.9);
+  }
+
+  /* Toss container */
+  .toss-container {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .coin {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #FFD700, #B8860B);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: #333;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 1s;
+  }
+
+  .coin.spin {
+    animation: spin 2s ease forwards;
+  }
+
+  @keyframes spin {
+    0% { transform: rotateY(0); }
+    100% { transform: rotateY(1800deg); }
+  }
+
+  .choice-btns {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+  }
+  .choice-btns button {
+    padding: 10px 20px;
+    border: none;
+    background: #00eaff;
+    color: #000;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .choice-btns button:hover {
+    background: #0077ff;
+    color: white;
+  }
+
+  .bat-bowl {
+    display: none;
+    margin-top: 1.5rem;
+    gap: 1rem;
+  }
+  .bat-bowl button {
+    padding: 10px 20px;
+    border: none;
+    background: #FFD700;
+    color: #000;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .bat-bowl button:hover {
+    background: #B8860B;
+    color: white;
+  }
+</style>
+</head>
+<body>
+
+<h1>Cricket Match</h1>
+<button class="start-btn" onclick="showToss()">Start Match</button>
+
+<div class="toss-container" id="tossContainer">
+  <div class="coin" id="coin">H</div>
+  <div class="choice-btns">
+    <button onclick="callToss('H')">Heads</button>
+    <button onclick="callToss('T')">Tails</button>
+  </div>
+  <div id="tossResult" style="margin-top:1rem;font-size:1.2rem;"></div>
+  <div class="bat-bowl" id="batBowlChoice">
+    <button onclick="chooseRole('bat')">Batting</button>
+    <button onclick="chooseRole('bowl')">Bowling</button>
+  </div>
+</div>
+
+<audio id="cheerSound" src="./crowd-cheering-379666.mp3"></audio>
+
+<script>
+let tossCall = '';
+let tossWinner = '';
+
+function showToss() {
+  document.querySelector('.start-btn').style.display = 'none';
+  document.getElementById('tossContainer').style.display = 'flex';
+}
+
+function callToss(choice) {
+  tossCall = choice;
+  let coin = document.getElementById('coin');
+  coin.classList.add('spin');
+
+  setTimeout(() => {
+    let result = Math.random() < 0.5 ? 'H' : 'T';
+    document.getElementById('cheerSound').play();
+    coin.textContent = result;
+    coin.classList.remove('spin');
+
+    if (result === tossCall) {
+      tossWinner = 'Player 1';
+      document.getElementById('tossResult').textContent = "Player 1 wins the toss!";
+    } else {
+      tossWinner = 'Player 2';
+      document.getElementById('tossResult').textContent = "Player 2 wins the toss!";
+    }
+    document.getElementById('batBowlChoice').style.display = 'flex';
+  }, 2000);
+}
+
+function chooseRole(role) {
+  localStorage.setItem('tossWinner', tossWinner);
+  localStorage.setItem('tossChoice', role);
+  window.location.href = 'crick.html';
+}
+</script>
+
+</body>
+</html>

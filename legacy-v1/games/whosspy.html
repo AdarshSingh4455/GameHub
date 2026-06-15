@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Who's Spy</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            color: #000000;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+
+        /* Main Section */
+        main {
+            padding: 2rem;
+            text-align: center;
+        }
+
+        #start-page, #setup-page {
+            display: none;
+        }
+
+        #start-page.active, #setup-page.active {
+            display: block;
+        }
+
+        #start-game {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        #start-game:hover {
+            background-color: #45a049;
+        }
+
+        #setup-page {
+            text-align: center;
+            padding: 1rem 0;
+            background-color: #fdfcfc;
+            color: rgb(2, 2, 2);
+            position: fixed;
+            width: 100%;
+        }
+
+        #assign-roles {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        #assign-roles:hover {
+            background-color: #45a049;
+        }
+
+        #roles-list {
+            list-style: none;
+            padding: 0;
+            color: #000000;
+        }
+
+        #roles-list li {
+            margin: 0.5rem 0;
+            color: #000000;
+        }
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 1rem 0;
+            background-color: #333;
+            color: white;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        footer p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+
+            header h1 {
+                font-size: 2rem;
+            }
+
+            #start-game, #assign-roles, #proceed-to-rounds, #start-voting, #reveal-spy, #replay-game {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Who's Spy</h1>
+    </header>
+    <main>
+        <!-- Start Page -->
+        <section id="start-page" class="active">
+            <p>Welcome to Who's Spy! Gather your friends and find the spy among you.</p>
+            <button id="start-game">Start Game</button>
+        </section>
+
+        <!-- Setup Page -->
+        <section id="setup-page">
+            <h2>Player Setup</h2>
+            <form id="setup-form">
+                <label for="num-players">Number of Players:</label>
+                <input type="number" id="num-players" min="3" max="10" required>
+                <div id="player-names"></div>
+                <button type="button" id="assign-roles">Assign Roles</button>
+            </form>
+            <section id="role-assignment" style="display: none;">
+                <h2>Roles Assigned</h2>
+                <ul id="roles-list"></ul>
+                <button id="proceed-to-rounds" style="margin-top: 1rem;">Proceed to Game Rounds</button>
+            </section>
+        </section>
+        <!-- Add after the #setup-page section -->
+        <section id="game-rounds" style="display: none;">
+            <h2>Game Rounds</h2>
+            <p>Each player writes something related to their word (but not the exact word).</p>
+            <div id="game-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;"></div>
+            <button id="submit-clues" style="margin-top: 1rem;">Submit Clues</button>
+        </section>
+
+        <section id="voting-system" style="display: none;">
+            <h2>Voting</h2>
+            <p>Vote for the player you think is the Spy:</p>
+            <ul id="voting-list"></ul>
+            <button id="reveal-spy">Reveal Spy</button>
+        </section>
+
+        <section id="results" style="display: none;">
+            <h2>Results</h2>
+            <p id="result-message"></p>
+            <button id="replay-game">Replay Game</button>
+        </section>
+        <section id="scoreboard" style="display: none;">
+            <h2>Scoreboard</h2>
+            <ul id="score-list"></ul>
+        </section>
+        <section id="settings" style="display: none;">
+            <h2>Game Settings</h2>
+            <label for="num-spies">Number of Spies:</label>
+            <input type="number" id="num-spies" min="1" max="3" value="1">
+            <label for="common-word">Common Word:</label>
+            <input type="text" id="common-word" placeholder="Enter common word" value="Beach">
+            <label for="spy-word">Spy Word:</label>
+            <input type="text" id="spy-word" placeholder="Enter spy word" value="Desert">
+            <label for="round-duration">Round Duration (minutes):</label>
+            <input type="number" id="round-duration" min="1" max="10" value="2">
+            <button id="save-settings">Save Settings</button>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2025 GameHub</p>
+    </footer>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const startPage = document.getElementById("start-page");
+            const setupPage = document.getElementById("setup-page");
+            const startGameButton = document.getElementById("start-game");
+            const numPlayersInput = document.getElementById("num-players");
+            const playerNamesDiv = document.getElementById("player-names");
+            const assignRolesButton = document.getElementById("assign-roles");
+            const rolesList = document.getElementById("roles-list");
+            const roleAssignmentSection = document.getElementById("role-assignment");
+            
+            const gameRoundsPage = document.getElementById("game-rounds");
+            const votingSystemPage = document.getElementById("voting-system");
+            const resultsPage = document.getElementById("results");
+            const startVotingButton = document.getElementById("start-voting");
+            const votingList = document.getElementById("voting-list");
+            const revealSpyButton = document.getElementById("reveal-spy");
+            const resultMessage = document.getElementById("result-message");
+            
+            let playerNames = [];
+            let spyIndex = -1;
+            let timerInterval;
+
+            // Navigate to the setup page
+            startGameButton.addEventListener("click", () => {
+                startPage.classList.remove("active");
+                setupPage.classList.add("active");
+            });
+
+            // Generate input fields for player names based on the number of players
+            numPlayersInput.addEventListener("input", () => {
+                const numPlayers = parseInt(numPlayersInput.value);
+                playerNamesDiv.innerHTML = ""; // Clear previous inputs
+                for (let i = 1; i <= numPlayers; i++) {
+                    const input = document.createElement("input");
+                    input.type = "text";
+                    input.placeholder = `Player ${i} Name`;
+                    input.required = true;
+                    input.classList.add("player-name");
+                    playerNamesDiv.appendChild(input);
+                }
+            });
+
+            // Replay Game
+            document.getElementById("replay-game").addEventListener("click", () => {
+                resultsPage.style.display = "none";
+                startPage.classList.add("active");
+                rolesList.innerHTML = ""; // Clear roles list
+                votingList.innerHTML = ""; // Clear voting list
+                resultMessage.textContent = ""; // Clear result message
+            });
+
+            // Save Settings
+            document.getElementById("save-settings").addEventListener("click", () => {
+                const numSpies = parseInt(document.getElementById("num-spies").value);
+                const commonWord = document.getElementById("common-word").value;
+                const spyWord = document.getElementById("spy-word").value;
+                const roundDuration = parseInt(document.getElementById("round-duration").value);
+
+                alert("Settings saved!");
+                // Use these variables in the game logic
+            });
+
+            const roleAssignedSound = new Audio("sounds/role-assigned.mp3");
+            const voteSound = new Audio("sounds/vote.mp3");
+            const resultSound = new Audio("sounds/result.mp3");
+
+            // Play sound when roles are assigned
+            assignRolesButton.addEventListener("click", () => {
+                roleAssignedSound.play();
+             
+                // Assign roles to players
+                assignRolesButton.addEventListener("click", () => {
+                    const playerInputs = document.querySelectorAll(".player-name");
+                    const playerNames = Array.from(playerInputs).map(input => input.value.trim());
+                    if (playerNames.some(name => name === "")) {
+                        alert("Please enter all player names.");
+                        return;
+                    }
+
+                    const numPlayers = playerNames.length;
+                    spyIndex = Math.floor(Math.random() * numPlayers); // Randomly select a spy
+                    const commonWord = "Beach"; // Example common word
+                    const spyWord = "Desert"; // Example spy word
+
+                    rolesList.innerHTML = ""; // Clear previous roles
+                    playerNames.forEach((name, index) => {
+                        const li = document.createElement("li");
+                        if (index === spyIndex) {
+                            li.textContent = `${name}: Spy (Word: ${spyWord})`;
+                        } else {
+                            li.textContent = `${name}: Non-Spy (Word: ${commonWord})`;
+                        }
+                        rolesList.appendChild(li);
+                    });
+
+                    // Show the role assignment section
+                    roleAssignmentSection.style.display = "block";
+                });
+            }); 
+            document.getElementById("proceed-to-rounds").addEventListener("click", () => {
+                setupPage.classList.remove("active");
+                gameRoundsPage.style.display = "block";
+
+                const gameGrid = document.getElementById("game-grid");
+                gameGrid.innerHTML = ""; // Clear previous grid
+
+                // Dynamically create text areas for each player
+                playerNames.forEach((name, index) => {
+                    const playerDiv = document.createElement("div");
+                    playerDiv.style.border = "1px solid #ccc";
+                    playerDiv.style.padding = "1rem";
+                    playerDiv.style.textAlign = "center";
+                    playerDiv.style.borderRadius = "5px";
+                    playerDiv.style.backgroundColor = "#f9f9f9";
+
+                    const playerName = document.createElement("p");
+                    playerName.textContent = name;
+
+                    const clueInput = document.createElement("textarea");
+                    clueInput.placeholder = "Enter your clue here...";
+                    clueInput.dataset.index = index;
+                    clueInput.classList.add("clue-input");
+                    clueInput.style.width = "100%";
+                    clueInput.style.height = "80px";
+
+                    playerDiv.appendChild(playerName);
+                    playerDiv.appendChild(clueInput);
+                    gameGrid.appendChild(playerDiv);
+                });
+
+                // Adjust grid layout based on the number of players
+                const numPlayers = playerNames.length;
+                gameGrid.style.gridTemplateColumns = `repeat(${Math.min(numPlayers, 4)}, 1fr)`;
+            });
+
+        document.getElementById("submit-clues").addEventListener("click", () => {
+            const clueInputs = document.querySelectorAll(".clue-input");
+            let disqualifiedPlayers = [];
+            let validClues = true;
+
+            clueInputs.forEach((input) => {
+                const index = parseInt(input.dataset.index);
+                const clue = input.value.trim().toLowerCase();
+
+                // Check if the clue matches the spy word
+                if (index === spyIndex && clue === "desert") {
+                    disqualifiedPlayers.push(playerNames[index]);
+                    validClues = false;
+                }
+
+                // Check if the clue matches the common word
+                if (index !== spyIndex && clue === "beach") {
+                    disqualifiedPlayers.push(playerNames[index]);
+                    validClues = false;
+                }
+            });
+
+            if (!validClues) {
+                alert(`Disqualified players: ${disqualifiedPlayers.join(", ")}`);
+            } else {
+                alert("All clues are valid! Proceeding to reveal the spy...");
+            }
+
+            // Reveal the spy
+            const resultMessage = document.getElementById("result-message");
+            resultMessage.textContent = `The Spy was ${playerNames[spyIndex]}!`;
+
+            // Update scores
+            const winner = disqualifiedPlayers.includes(playerNames[spyIndex]) ? "Non-Spies" : "Spy";
+            scores[winner] = (scores[winner] || 0) + 1;
+
+            scoreList.innerHTML = ""; // Clear previous scores
+            for (const [player, score] of Object.entries(scores)) {
+                const li = document.createElement("li");
+                li.textContent = `${player}: ${score}`;
+                scoreList.appendChild(li);
+            }
+
+            // Show results and scoreboard
+            gameRoundsPage.style.display = "none";
+            resultsPage.style.display = "block";
+            document.getElementById("scoreboard").style.display = "block";
+        });
+
+                // Add a "Proceed to Game Rounds" button
+                if (!document.getElementById("proceed-to-rounds")) {
+                    const proceedButton = document.createElement("button");
+                    proceedButton.id = "proceed-to-rounds";
+                    proceedButton.textContent = "Proceed to Game Rounds";
+                    proceedButton.style.marginTop = "1rem";
+                    proceedButton.addEventListener("click", () => {
+                        setupPage.classList.remove("active");
+                        gameRoundsPage.style.display = "block";
+                    });
+                    roleAssignmentSection.appendChild(proceedButton);
+                }
+
+            // Start voting
+            startVotingButton.addEventListener("click", () => {
+                gameRoundsPage.style.display = "none";
+                votingSystemPage.style.display = "block";
+
+                votingList.innerHTML = ""; // Clear previous voting options
+                playerNames.forEach((name, index) => {
+                    const li = document.createElement("li");
+                    const button = document.createElement("button");
+                    button.textContent = `Vote for ${name}`;
+                    button.dataset.index = index;
+                    button.addEventListener("click", () => {
+                        button.classList.add("voted");
+                        button.disabled = true;
+                        button.textContent = `Voted for ${name}`;
+                    });
+                    li.appendChild(button);
+                    votingList.appendChild(li);
+                    votingList.addEventListener("click", (event) => {
+                        if (event.target.tagName === "BUTTON") {
+                            voteSound.play();
+                        }
+                    });
+                });
+            });
+
+            const scoreList = document.getElementById("score-list");
+            let scores = {};
+
+            // Reveal the Spy
+            revealSpyButton.addEventListener("click", () => {
+                resultSound.play();
+                votingSystemPage.style.display = "none";
+                resultsPage.style.display = "block";
+
+                const votedButtons = document.querySelectorAll(".voted");
+                const votes = Array.from(votedButtons).map(button => parseInt(button.dataset.index));
+                const voteCounts = votes.reduce((acc, index) => {
+                    acc[index] = (acc[index] || 0) + 1;
+                    return acc;
+                }, {});
+
+                const mostVotedIndex = Object.keys(voteCounts).reduce((a, b) => voteCounts[a] > voteCounts[b] ? a : b);
+
+                if (parseInt(mostVotedIndex) === spyIndex) {
+                    resultMessage.textContent = `The Spy (${playerNames[spyIndex]}) was caught! Non-Spies win!`;
+                } else {
+                    resultMessage.textContent = `The Spy (${playerNames[spyIndex]}) escaped! The Spy wins!`;
+                }
+
+                // Update scoreboard
+                const winner = parseInt(mostVotedIndex) === spyIndex ? "Non-Spies" : "Spy";
+                scores[winner] = (scores[winner] || 0) + 1;
+
+                scoreList.innerHTML = ""; // Clear previous scores
+                for (const [player, score] of Object.entries(scores)) {
+                    const li = document.createElement("li");
+                    li.textContent = `${player}: ${score}`;
+                    scoreList.appendChild(li);
+                }
+
+                document.getElementById("scoreboard").style.display = "block";
+            });
+            // Timer function
+            function startTimer(duration, display) {
+                let timer = duration;
+                timerInterval = setInterval(() => {
+                    const minutes = Math.floor(timer / 60);
+                    const seconds = timer % 60;
+
+                    display.textContent = `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+
+                    if (--timer < 0) {
+                        clearInterval(timerInterval);
+                        alert("Time's up! Proceed to voting.");
+                        gameRoundsPage.style.display = "none";
+                        votingSystemPage.style.display = "block";
+                    }
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

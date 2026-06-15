@@ -1,0 +1,113 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background: #fafafa;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 200px);
+  grid-template-rows: repeat(3, 200px);
+  gap: 2px;
+  background: black;
+}
+
+.cell {
+  width: 200px;
+  height: 200px;
+  position: relative;
+  background-color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.home.red {
+  background-color: #ff3333;
+}
+
+.home.green {
+  background-color: #33cc33;
+}
+
+.home.blue {
+  background-color: #3399ff;
+}
+
+.home.yellow {
+  background-color: #ffff33;
+}
+
+.token-container {
+  display: grid;
+  grid-template-columns: repeat(2, 40px);
+  grid-template-rows: repeat(2, 40px);
+  gap: 20px;
+}
+
+.token {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid black;
+}
+
+.token.red {
+  background-color: red;
+}
+
+.token.green {
+  background-color: green;
+}
+
+.token.blue {
+  background-color: blue;
+}
+
+.token.yellow {
+  background-color: yellow;
+}
+
+.ludo-board {
+  width: 750px;
+  height: 750px;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  grid-template-rows: repeat(15, 1fr);
+  width: 100%;
+  height: 100%;
+}
+
+.cell {
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+.red-path {
+  background-color: #ffcccc;
+}
+.green-path {
+  background-color: #ccffcc;
+}
+.yellow-path {
+  background-color: #ffffcc;
+}
+.blue-path {
+  background-color: #cce5ff;
+}
+.center {
+  background: conic-gradient(
+    red 0deg 90deg,
+    yellow 90deg 180deg,
+    green 180deg 270deg,
+    blue 270deg 360deg
+  );
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Skribbl Clone - 2 Player Drawing Guess Game</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Mode Selection Screen -->
+  <div id="modeSelection">
+    <h1>Skribbl Clone</h1>
+    <p>Select Game Mode:</p>
+    <button id="mode2p">2 Players</button>
+    <button id="mode1p">1 Player vs Computer</button>
+  </div>
+
+  <!-- Game Container -->
+  <div id="gameContainer" style="display:none;">
+    <div id="infoPanel">
+      <div>Level: <span id="levelDisplay">1</span></div>
+      <div>Turn: <span id="turnDisplay"></span></div>
+      <div>Timer: <span id="timerDisplay">60</span> s</div>
+    </div>
+    <div id="gameArea">
+      <div id="canvasContainer">
+        <canvas id="drawingCanvas" width="500" height="400"></canvas>
+        <div id="tools">
+          <input type="color" id="colorPicker" value="#000000" />
+          <input type="range" id="brushSize" min="1" max="20" value="5" />
+          <button id="clearCanvas">Clear</button>
+        </div>
+      </div>
+      <div id="guessArea">
+        <!-- Drawer ko hi word dikhane ke liye (alert se notify kar rahe hain) -->
+        <input type="text" id="guessInput" placeholder="Enter your guess" />
+        <button id="submitGuess">Submit Guess</button>
+        <div id="feedback"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

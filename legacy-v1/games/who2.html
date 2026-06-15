@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Who's the Spy?</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      background-color: #f2f2f2;
+      margin: 0;
+      padding: 20px;
+    }
+    .fade-in {
+      animation: fadeIn 0.8s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .player-card {
+      display: inline-block;
+      border: 2px solid #555;
+      border-radius: 10px;
+      width: 180px;
+      height: 200px;
+      margin: 10px;
+      position: relative;
+      background-color: white;
+    }
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      padding: 10px;
+    }
+    .overlay.show {
+      opacity: 1;
+    }
+    textarea {
+      width: 90%;
+      height: 80px;
+      margin-top: 10px;
+      resize: none;
+    }
+    #leaderboardModal h2 {
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    #leaderboardModal div {
+        font-size: 16px;
+        color: #555;
+    }
+
+    #leaderboardModal button:hover {
+        background: #45a049;
+    }
+
+    nav span {
+        font-size: 24px;
+        color: #333;
+        cursor: pointer;
+    }
+
+    #menu a {
+        color: #333;
+        text-decoration: none;
+        display: block;
+        margin: 5px 0;
+    }
+
+    #menu a:hover {
+        text-decoration: underline;
+    }
+
+    #menu {
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        position: absolute;
+        top: 40px;
+        left: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (max-width: 768px) {
+        .player-card {
+            width: 100%;
+            margin: 5px 0;
+        }
+        #playersContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    }
+  </style>
+</head>
+<body>
+    <nav style="position: fixed; top: 0; left: 0; width: 100%; padding: 10px; z-index: 1000;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 24px; color: #333; cursor: pointer;" onclick="toggleMenu()">☰</span>
+            <div id="menu" style="display: none; background: white; padding: 10px; border-radius: 5px; position: absolute; top: 40px; left: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
+                <a href="#leaderboard" onclick="showPage('leaderboard')" style="color: #333; text-decoration: none; display: block; margin: 5px 0;">Leaderboard</a>
+                <a href="#stats" onclick="showPage('stats')" style="color: #333; text-decoration: none; display: block; margin: 5px 0;">Stats</a>
+                <a href="#quit" onclick="showPage('quit')" style="color: #333; text-decoration: none; display: block; margin: 5px 0;">Quit</a>
+                <a href="#home" onclick="showPage('home')" style="color: #333; text-decoration: none; display: block; margin: 5px 0;">Home</a>
+            </div>
+        </div>
+    </nav>
+    <div id="leaderboardPage" style="display: none; margin-top: 60px;">
+        <h1>🏆 Leaderboard</h1>
+        <div id="leaderboardContent"></div>
+    </div>
+    
+    <div id="statsPage" style="display: none; margin-top: 60px;">
+        <h1>📊 Stats</h1>
+        <canvas id="statsChart" width="400" height="200"></canvas>
+        <div id="winningProbabilities" style="margin-top: 20px;"></div>
+    </div>
+    
+    <div id="quitPage" style="display: none; margin-top: 60px;">
+        <h1>❌ Quit</h1>
+        <p>Are you sure you want to quit the game?</p>
+        <button onclick="quitGame()">Yes, Quit</button>
+    </div>
+    
+    <div id="homePage" style="display: none; margin-top: 60px;">
+        <h1>🏠 Home</h1>
+        <p>Welcome to the game! Use the menu to navigate.</p>
+    </div>
+
+    <div id="setup">
+    <h1>Who's the Spy? 👀</h1>
+    <input id="numPlayers" type="number" placeholder="Number of Players (min 3)" min="3"><br><br>
+    <div id="playerNamesContainer"></div>
+    <button onclick="addPlayerInputs()">Add Player Names</button><br><br>
+    <input id="commonWord" type="text" placeholder="Enter Common Word"><br><br>
+    <input id="spyWord" type="text" placeholder="Enter Spy Word"><br><br>
+    <button onclick="startGame()">Start Game</button>
+    </div>
+
+    <div id="playersContainer" class="fade-in"></div>
+
+    <div id="voteSection" style="text-align:center; display:none; margin: 20px;">
+    <h3 id="timerDisplay" style="color:#f39c12; margin-bottom:10px;">⏳ Timer: 60s</h3>
+    <button onclick="startVoting()">Start Voting</button>
+    <div id="votingArea" style="margin-top: 20px;"></div>
+    <button id="submitVoteBtn" onclick="submitVotes()" style="display:none; margin-top:10px;">Submit Vote</button>
+    </div>
+
+    <div id="resultSection" style="text-align:center; display:none; margin: 20px;">
+    <h2 id="resultText"></h2>
+    <button onclick="nextRound()">Next Round</button>
+    </div>
+
+    <div id="scoreboard" style="text-align:center; display:none; margin-top: 20px;">
+    <h2>🏆 Scoreboard</h2>
+    <div id="scoreList"></div>
+    </div>
+
+    <div id="leaderboardModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); width: 80%; max-width: 500px; z-index: 1000; padding: 20px; text-align: center;">
+        <h2>🏆 Leaderboard</h2>
+        <div id="leaderboardContent" style="margin-top: 20px;"></div>
+        <button id="closeLeaderboard" style="margin-top: 20px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+    </div>
+    <div id="modalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 999;"></div>
+
+    <script>
+        let words = [];
+        let forbiddenWord = '';
+        let votes = [];
+        let spyIndexGlobal = -1;
+        let scores = {};
+        let timerInterval;
+        let roundTime = 60;
+
+        function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        }
+        function toggleMenu() {
+            const menu = document.getElementById("menu");
+            menu.style.display = menu.style.display === "block" ? "none" : "block";
+        }
+
+        function showPage(pageId) {
+            // Hide all pages
+            const pages = ['leaderboardPage', 'statsPage', 'quitPage', 'homePage'];
+            pages.forEach(page => {
+                document.getElementById(page).style.display = "none";
+            });
+
+            // Show the selected page
+            document.getElementById(`${pageId}Page`).style.display = "block";
+            //showPage function ke andar, pages.forEach loop ke baad selected page ko show karna hoga.
+
+            // Hide the menu
+            toggleMenu();
+        }
+
+        function quitGame() {
+            alert("Thank you for playing! The game will now close.");
+            window.location.reload(); // Reload the page to reset the game
+        }
+
+        let playerNames = []; // Array to store player names
+
+        function addPlayerInputs() {
+        const num = parseInt(document.getElementById('numPlayers').value);
+        const container = document.getElementById('playerNamesContainer');
+        container.innerHTML = ""; // Clear previous inputs
+
+        if (num < 3) {
+            alert("Minimum 3 players required!");
+            return;
+        }
+
+        for (let i = 0; i < num; i++) {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = `Enter name for Player ${i + 1}`;
+            input.id = `playerName${i}`;
+            container.appendChild(input);
+            container.appendChild(document.createElement("br"));
+        }
+        document.querySelector("button[onclick='addPlayerInputs()']").style.display = "none";
+        }
+
+        function startGame() {
+            const num = parseInt(document.getElementById('numPlayers').value);
+            const common = document.getElementById('commonWord').value.trim();
+            const spy = document.getElementById('spyWord').value.trim();
+            if (num < 3 || !common || !spy) {
+                alert("Minimum 3 players and both words required!");
+                return;
+            }
+
+            playerNames = [];
+            for (let i = 0; i < num; i++) {
+                const name = document.getElementById(`playerName${i}`).value.trim();
+                if (!name) {
+                alert(`Please enter a name for Player ${i + 1}`);
+                return;
+                }
+                playerNames.push(name);
+            }
+
+            words = Array(num).fill(common);
+            const spyIndex = Math.floor(Math.random() * num);
+            words[spyIndex] = spy;
+            spyIndexGlobal = spyIndex;
+            console.log(`Spy Index: ${spyIndexGlobal}, Spy Word: ${words[spyIndexGlobal]}`);
+            forbiddenWord = common.toLowerCase();
+            shuffleArray(words);
+            generatePlayers(words);
+            document.getElementById('setup').style.display = "none";
+            document.getElementById('voteSection').style.display = "block";
+            document.getElementById("scoreboard").style.display = "none";
+            votes = Array(num).fill(null);
+            if (currentRound === 1) initScores(num);
+            startRoundTimer();
+        }
+
+        let firstBoxClicked = null;
+
+        function generatePlayers(words) {
+        const container = document.getElementById("playersContainer");
+        container.innerHTML = "";
+        container.classList.add("fade-in");
+        setTimeout(() => container.classList.remove("fade-in"), 800);
+
+        words.forEach((word, index) => {
+            const card = document.createElement("div");
+            card.className = "player-card";
+
+            const playerName = document.createElement("p");
+            playerName.textContent = playerNames[index];
+            playerName.style.fontWeight = "bold";
+            playerName.style.marginBottom = "10px";
+
+            const overlay = document.createElement("div");
+            overlay.className = "overlay";
+            overlay.innerText = "Click to reveal word";
+
+            card.onclick = () => {
+            if (!firstBoxClicked) {
+                firstBoxClicked = playerNames[index];
+                console.log(`First box clicked: ${firstBoxClicked}`);
+            }
+            overlay.innerHTML = `Your word is: <strong>${word}</strong>`;
+            overlay.classList.add("show");
+            setTimeout(() => overlay.classList.remove("show"), 3000);
+            };
+
+            const textarea = document.createElement("textarea");
+            textarea.placeholder = "Write your hint...";
+            textarea.addEventListener("input", () => {
+            if (textarea.value.toLowerCase().includes(forbiddenWord)) {
+                alert("You cannot use the forbidden word!");
+                textarea.value = ""; // Clear the input
+                textarea.disabled = true; // Optionally disable the textarea
+            }
+            });
+
+            card.appendChild(playerName);
+            card.appendChild(overlay);
+            card.appendChild(textarea);
+            container.appendChild(card);
+        });
+        }
+
+        function initScores(num) {
+        for (let i = 0; i < num; i++) {
+            scores[i] = { caught: 0, missed: 0, voted: 0 };
+        }
+        }
+
+        function startRoundTimer() {
+        let timeLeft = roundTime;
+        const display = document.getElementById("timerDisplay");
+        display.textContent = `⏳ Timer: ${timeLeft}s`;
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            display.textContent = `⏳ Timer: ${timeLeft}s`;
+            if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            autoRevealAll();
+            startVoting();
+            }
+        }, 1000);
+        }
+
+        function autoRevealAll() {
+        const overlays = document.querySelectorAll(".overlay");
+        overlays.forEach((overlay, idx) => {
+            overlay.innerHTML = `Auto-revealed<br>Your word is: <strong>${words[idx]}</strong>`;
+            console.log("Words Array:", words);
+            overlay.classList.add("show");
+            setTimeout(() => overlay.classList.remove("show"), 3000);
+        });
+        }
+
+
+        function startVoting() {
+            clearInterval(timerInterval);
+            const votingArea = document.getElementById('votingArea');
+            votingArea.innerHTML = "";
+            document.getElementById('submitVoteBtn').style.display = "inline-block";
+
+            words.forEach((_, index) => {
+                const div = document.createElement("div");
+                div.style.margin = "10px";
+                const label = document.createElement("label");
+                label.textContent = `${playerNames[index]} votes: `;
+                const select = document.createElement("select");
+                select.setAttribute("data-player", index);
+                const defaultOption = document.createElement("option");
+                defaultOption.text = "-- Select --";
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                select.appendChild(defaultOption);
+
+                words.forEach((_, i) => {
+                if (i !== index) {
+                    const opt = document.createElement("option");
+                    opt.value = i;
+                    opt.text = playerNames[i];
+                    select.appendChild(opt);
+                }
+                });
+                div.appendChild(label);
+                div.appendChild(select);
+                votingArea.appendChild(div);
+            });
+        }
+
+        function submitVotes() {
+            const selects = document.querySelectorAll("#votingArea select");
+            let allVoted = true;
+            votes = [];
+
+            selects.forEach((select, index) => {
+                const votedFor = parseInt(select.value);
+                if (isNaN(votedFor)) {
+                    allVoted = false;
+                } else {
+                    votes[index] = votedFor;
+                }
+                console.log("Votes Array:", votes);
+            });
+
+            if (!allVoted) {
+                alert("All players must vote!");
+                return;
+            }
+
+            // Count votes
+            const voteCounts = Array(words.length).fill(0);
+            votes.forEach(vote => {
+                if (!isNaN(vote)) voteCounts[vote]++;
+            });
+
+            let maxVotes = Math.max(...voteCounts);
+            let accusedPlayers = voteCounts
+                .map((count, i) => (count === maxVotes ? i : -1))
+                .filter(i => i !== -1);
+
+            if (accusedPlayers.length > 1) {
+                alert("There is a tie in votes! No one is accused.");
+                return;
+            }
+
+            let accused = accusedPlayers[0];
+            console.log("Accused Player:", accused);
+
+            document.getElementById("resultSection").style.display = "block";
+            if (accused === spyIndexGlobal) {
+                document.getElementById("resultText").innerHTML = `🎯 Spy was <strong>Player ${spyIndexGlobal + 1}</strong> — You caught them!`;
+                scores[accused].caught++;
+            } else {
+                document.getElementById("resultText").innerHTML = `❌ Spy was <strong>Player ${spyIndexGlobal + 1}</strong> — You missed!`;
+                scores[spyIndexGlobal].missed++;
+            }
+
+            selects.forEach(select => {
+                const votedFor = parseInt(select.value);
+                if (!isNaN(votedFor)) {
+                    scores[votedFor].voted++;
+                }
+            });
+
+            onRoundEnd(spyIndexGlobal, votes, words.length);
+
+            document.getElementById("voteSection").style.display = "none";
+            showScoreboard();
+        }
+
+        // Add this code after the existing functions
+
+        let totalRounds = 3;
+        let currentRound = 1;
+        let playerPoints = {}; // Format: { playerIndex: points }
+
+        function calculatePoints(spyIndex, votes, totalPlayers) {
+        let spyGuessedBySomeone = votes.includes(spyIndex);
+        let points = Array(totalPlayers).fill(0);
+
+        if (spyGuessedBySomeone) {
+            // Award 150 points to players who guessed spy correctly
+            for (let i = 0; i < totalPlayers; i++) {
+            if (votes[i] === spyIndex) {
+                points[i] = 150;
+            }
+            }
+        } else {
+            // Spy gets 20 points per player who failed to guess them
+            let missedCount = totalPlayers - votes.filter(vote => vote === spyIndex).length;
+            points[spyIndex] = 20 * missedCount;
+        }
+
+        return points;
+        }
+
+        function onRoundEnd(spyIndex, votes, totalPlayers) {
+            const roundPoints = calculatePoints(spyIndex, votes, totalPlayers);
+            console.log("Round Points:", roundPoints);
+            console.log("Player Points:", playerPoints);
+
+            // Update player points
+            for (let i = 0; i < totalPlayers; i++) {
+                if (!playerPoints[i]) playerPoints[i] = 0;
+                playerPoints[i] += roundPoints[i]; // Add points to total score
+            }
+
+            currentRound++;
+            if (currentRound > totalRounds) {
+                endGame();
+            } else {
+                startNextRound();
+            }
+        }
+
+        function endGame() {
+            const leaderboard = Object.entries(playerPoints)
+                .map(([id, pts]) => ({ id: parseInt(id) + 1, points: pts }))
+                .sort((a, b) => b.points - a.points);
+
+            // Show the leaderboard modal
+            showLeaderboard(leaderboard);
+        }
+        function showLeaderboard(leaderboardData) {
+            const leaderboardModal = document.getElementById("leaderboardModal");
+            const leaderboardContent = document.getElementById("leaderboardContent");
+            const modalOverlay = document.getElementById("modalOverlay");
+
+            // Clear previous leaderboard content
+            leaderboardContent.innerHTML = "";
+
+            // Populate leaderboard
+            leaderboardData.forEach((player, index) => {
+                const div = document.createElement("div");
+                div.style.margin = "10px 0";
+                div.innerHTML = `<strong>${index + 1}. Player ${player.id}</strong> – ${player.points} points`;
+                leaderboardContent.appendChild(div);
+            });
+
+            // Show the modal
+            leaderboardModal.style.display = "block";
+            modalOverlay.style.display = "block";
+
+            // Close the modal
+            document.getElementById("closeLeaderboard").onclick = () => {
+                leaderboardModal.style.display = "none";
+                modalOverlay.style.display = "none";
+            };
+        }
+        function showStats() {
+            const statsSection = document.getElementById("statsPage");
+            statsSection.style.display = "block";
+            //chart.js
+
+            // Line graph for game stats
+            const ctx = document.getElementById("statsChart").getContext("2d");
+            const labels = Object.keys(playerPoints).map(id => `Player ${parseInt(id) + 1}`);
+            const data = Object.values(playerPoints);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Points Over Rounds',
+                        data: data,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Winning probabilities
+            const totalPoints = Object.values(playerPoints).reduce((a, b) => a + b, 0);
+            const probabilities = Object.entries(playerPoints).map(([id, pts]) => ({
+                player: `Player ${parseInt(id) + 1}`,
+                probability: ((pts / totalPoints) * 100).toFixed(2)
+            }));
+
+            const winningProbabilities = document.getElementById("winningProbabilities");
+            winningProbabilities.innerHTML = "<h3>Winning Probabilities:</h3>";
+            probabilities.forEach(prob => {
+                const div = document.createElement("div");
+                div.textContent = `${prob.player}: ${prob.probability}%`;
+                winningProbabilities.appendChild(div);
+            });
+
+            // Show the stats page
+            showPage('stats');
+        }
+
+        function showScoreboard() {
+            const list = document.getElementById("scoreList");
+            list.innerHTML = "";
+
+            Object.keys(scores).forEach((pid) => {
+                const data = scores[pid];
+                const div = document.createElement("div");
+                div.innerHTML = `👤 Player ${parseInt(pid)+1} – 🎯 Caught: ${data.caught}, ❌ Missed: ${data.missed}, 🗳 Votes Received: ${data.voted}`;
+                list.appendChild(div);
+            });
+
+            document.getElementById("scoreboard").style.display = "block";
+            document.getElementById("scoreboard").classList.add("fade-in");
+            setTimeout(() => document.getElementById("scoreboard").classList.remove("fade-in"), 800);
+        }
+
+        function nextRound() {
+            console.log("Starting next round: ", currentRound);
+            currentRound++;
+            document.getElementById("resultSection").style.display = "none";
+            //nextRound function ke andar currentRound++ aur startGame() call karo.
+            document.getElementById("voteSection").style.display = "block";
+            startGame();
+        }
+    </script>
+</body>
+</html>

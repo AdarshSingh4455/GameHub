@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cricket Match Game</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 1rem;
+      text-align: center;
+    }
+    body {
+      background-image: url('Assets/fingers/cricket.jpg');
+      background-color: #0b0b0b;
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: 120vmin 120vmin;
+    }
+    h1, h2 {
+      margin-bottom: 1rem;
+    }
+    .game-btn {
+      padding: 0.8rem 1.5rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      background: #333;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .game-btn:hover {
+      background: #555;
+    }
+    .result {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+    }
+    .input-container {
+      margin: 1rem 0;
+    }
+    .scoreboard {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #1e1e1e;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .scoreboard h3 {
+      margin-bottom: 0.5rem;
+    }
+    .scoreboard p {
+      margin: 0.5rem 0;
+    }
+    .highlight {
+      color: #03a9f4;
+      font-weight: bold;
+    }
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #03a9f4;
+      color: #fff;
+      padding: 1rem 2rem;
+      border-radius: 10px;
+      font-size: 1.5rem;
+      display: none;
+      animation: popupEffect 0.5s ease-out;
+    }
+    @keyframes popupEffect {
+      from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    @media (max-width: 480px) {
+      .game-btn {
+        font-size: 0.9rem;
+        padding: 0.6rem 1rem;
+      }
+      .scoreboard {
+        width: 90%;
+      }
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2rem;
+      background: #1a1a1a;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+      max-width: 500px;
+      width: 100%;
+      transition: all 0.4s ease;
+    }
+    .screen h2 {
+      margin-bottom: 1rem;
+    }
+    .screen input {
+      padding: 0.7rem;
+      margin: 0.5rem 0;
+      width: 80%;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+    }
+    .game-btn {
+      padding: 0.8rem 1.5rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #03a9f4, #0288d1);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<!-- <div class="screen" id="gameScreen"> -->
+  <h1>Cricket Match Game</h1>
+  <div id="modeSelection" class="screen">
+    <h2>Select Game Mode:</h2>
+    <button class="game-btn" onclick="setGameMode('Player')">Player vs Player</button>
+    <button class="game-btn" onclick="setGameMode('Computer')">Player vs Computer</button>
+  </div>
+
+  <div id="nameInputArea" class="screen">
+    <h2 id="nameHeading">Enter Player Name(s):</h2>
+    <input type="text" id="player1Name" placeholder="Player 1 Name" class="game-btn" />
+    <div id="player2NameDiv">
+      <input type="text" id="player2Name" placeholder="Player 2 Name" class="game-btn" />
+    </div>
+    <button class="game-btn" onclick="proceedToToss()">Next</button>
+  </div>
+  <div id="gameArea" class="screen">
+    <h2 id="tossHeading">Choose Heads or Tails:</h2>
+    <button class="game-btn" onclick="chooseToss('Heads')">Heads</button>
+    <button class="game-btn" onclick="chooseToss('Tails')">Tails</button>
+    <div class="result" id="tossResult"></div>
+  </div>
+
+  <div id="wicketSelection" class="screen">
+    <h2>Choose Wickets and Overs:</h2>
+    <input type="number" id="wicketsInput" min="1" max="10" value="5" />
+    <input type="number" id="oversInput" min="1" max="10" value="2" />
+    <button class="game-btn" onclick="startMatch()">Start Match</button>
+  </div>
+
+  <div class="result" id="tossResult" class="screen"></div>
+
+  <div id="matchArea" style="display: none;" class="screen">
+
+    <div class="scoreboard">
+      <h3>Scoreboard</h3>
+      <p id="player1Score">Player 1: 0 /0 </p>
+      <p id="player2Score">Player 2: 0 /0</p>
+    </div>
+    <h2 id="matchHeading">Match in Progress</h2>
+    <div id="matchStatus"></div>
+    <div id="commentaryBox" style="margin-top:1rem; font-style:italic; color:#ccc; min-height:40px;"></div>
+    <div id="matchInstructions"></div>
+    <div id="batterSelection"></div>
+    <div id="bowlerSelection" style="display: none;"></div>
+  </div>
+<!-- </div> -->
+  <div id="popup" class="popup"></div>
+
+  <script>
+    let gameMode = null; // 'Player' or 'Computer'
+    let tossWinner = null;
+    let player1 = "Player 1";
+    let player2 = "Player 2";
+    let totalOvers = 2;
+    let ballsBowled = 0;
+    let battingPlayer = null;
+    let bowlingPlayer = null;
+    let totalWickets = 0;
+    let player1Score = 0, player2Score = 0;
+    let player1Wickets = 0, player2Wickets = 0;
+    let isPlayer1Batting = true;
+
+    const commentary = {
+      out: [
+        "He’s bowled him! Clean as a whistle!",
+        "Bowled around his legs!",
+        "Massive appeal... and he’s given OUT!",
+        "Edged and taken! What a catch!"
+      ],
+      0: [
+        "Another dot ball — pressure building!",
+        "That’s a confident defense!"
+      ],
+      1: [
+        "That’s a cheeky single!",
+        "Quick single — well run!",
+        "He drops it and they sneak one!"
+      ],
+      2: [
+        "Comfortable two runs there.",
+        "Pushed into the gap — easy two!",
+        "Good running between the wickets!"
+      ],
+      3: [
+        "That’s three! Excellent placement.",
+        "Turning one into three — brilliant running!",
+        "Quick legs, they steal three!"
+      ],
+      4: [
+        "Flicked off the pads for four!",
+        "Cracking shot through the covers!",
+        "Straight down the ground! Beautiful!"
+      ],
+      5: [
+        "Overthrow! That’s five runs!",
+        "Bonus five! Poor fielding.",
+        "Rare five — crowd loves it!"
+      ],
+      6: [
+        "That’s a juicy full toss — punished!",
+        "The crowd is going wild!",
+        "He lofts it over mid-off — SIX!"
+      ]
+    };
+
+    function showCommentary(batterChoice, bowlerChoice) {
+      const box = document.getElementById('commentaryBox');
+      let lines = [];
+
+      if (batterChoice === bowlerChoice) {
+        lines = commentary.out;
+      } else {
+        lines = commentary[batterChoice] || ["Nice shot!"];
+      }
+
+      const line = lines[Math.floor(Math.random() * lines.length)];
+      box.textContent = line;
+    }
+
+
+    function setGameMode(mode) {
+      gameMode = mode;
+      document.getElementById("modeSelection").style.display = "none";
+      document.getElementById("nameInputArea").style.display = "block";
+
+      if (gameMode === "Computer") {
+        document.getElementById("player2NameDiv").style.display = "none";
+        document.getElementById("nameHeading").textContent = "Enter Your Name:";
+      } else {
+        document.getElementById("player2NameDiv").style.display = "block";
+        document.getElementById("nameHeading").textContent = "Enter Player Names:";
+      }
+      showOnly('nameInputArea');
+    }
+
+    function proceedToToss() {
+      const name1 = document.getElementById('player1Name').value.trim();
+      const name2 = document.getElementById('player2Name').value.trim();
+
+      if (name1) player1 = name1;
+      if (gameMode === 'Player' && name2) player2 = name2;
+      else if (gameMode === 'Computer') player2 = 'Computer';
+
+      document.getElementById('nameInputArea').style.display = 'none';
+      document.getElementById('gameArea').style.display = 'block';
+      showOnly('gameArea');
+    }
+
+    function getOverCount() {
+      return `${Math.floor(ballsBowled / 6)}.${ballsBowled % 6} overs`;
+    }
+    function proceedToMode() {
+      const name1 = document.getElementById('player1Name').value.trim();
+      const name2 = document.getElementById('player2Name').value.trim();
+
+      if (name1) player1 = name1;
+      if (name2) player2 = name2;
+
+      document.getElementById('nameInputArea').style.display = 'none';
+      document.getElementById('modeSelection').style.display = 'block';
+    }
+    function chooseToss(playerChoice) {
+      const tossOutcome = Math.random() < 0.5 ? 'Heads' : 'Tails'; // Random toss outcome
+      const tossResultDiv = document.getElementById('tossResult');
+
+      if (playerChoice === tossOutcome) {
+        tossWinner = 1;
+        tossResultDiv.innerHTML = `<p>The coin landed on <strong>${tossOutcome}</strong>. ${player1} wins the toss!</p>`;
+        tossResultDiv.innerHTML += `<p>${player1}, choose to Bat or Bowl:</p>
+          <button class="game-btn" onclick="chooseRole('Bat')">Bat</button>
+          <button class="game-btn" onclick="chooseRole('Bowl')">Bowl</button>`;
+      } else {
+        tossWinner = 2;
+        tossResultDiv.innerHTML = `<p>The coin landed on <strong>${tossOutcome}</strong>.  ${player2} wins the toss!</p>`;
+        tossResultDiv.innerHTML += `<p>${gameMode === 'Player' ? player2 : 'Computer'}, choose to Bat or Bowl:</p>
+          <button class="game-btn" onclick="chooseRole('Bat')">Bat</button>
+          <button class="game-btn" onclick="chooseRole('Bowl')">Bowl</button>`;
+      }
+    }
+
+    function chooseRole(role) {
+      const tossResultDiv = document.getElementById('tossResult');
+      tossResultDiv.style.display = 'none';
+      document.getElementById('wicketSelection').style.display = 'block';
+
+      if (role === 'Bat') {
+        battingPlayer = tossWinner;
+        bowlingPlayer = tossWinner === 1 ? 2 : 1;
+      } else {
+        bowlingPlayer = tossWinner;
+        battingPlayer = tossWinner === 1 ? 2 : 1;
+      }
+      showOnly('wicketSelection');
+    }
+
+    function showOnly(sectionId) {
+      const sections = document.querySelectorAll('.screen');
+      sections.forEach(sec => sec.style.display = 'none');
+      document.getElementById(sectionId).style.display = 'flex';
+    }
+
+    function startMatch() {
+      totalWickets = parseInt(document.getElementById('wicketsInput').value);
+      totalOvers = parseInt(document.getElementById('oversInput').value);
+      ballsBowled = 0;
+
+      if (totalWickets < 1 || totalWickets > 10) {
+        alert('Please select a valid number of wickets (1-10).');
+        return;
+      }
+      document.getElementById('wicketSelection').style.display = 'none';
+      document.getElementById('matchArea').style.display = 'block';
+      updateScoreboard();
+      startInnings();
+      showOnly('matchArea');
+    }
+
+    function startInnings() {
+      const instructions = document.getElementById('matchInstructions');
+      const batterSelection = document.getElementById('batterSelection');
+      const bowlerSelection = document.getElementById('bowlerSelection');
+
+      bowlerSelection.style.display = 'none';
+      bowlerSelection.innerHTML = '';
+      batterSelection.innerHTML = '';
+
+      if (isPlayer1Batting) {
+        instructions.innerHTML = `<p class="highlight">${player1} is batting , choose a number (1-6):</p>`;
+      } else {
+        instructions.innerHTML = `<p class="highlight">${gameMode === 'Player' ? player2 : 'Computer'} is batting. ${
+          gameMode === 'Player' ? player2 : 'Computer'
+        }, choose a number (1-6):</p>`;
+      }
+
+      // Show batter buttons
+      batterSelection.innerHTML = Array.from({ length: 6 }, (_, i) =>
+        `<button class="game-btn" onclick="chooseBatter(${i + 1})">${i + 1}</button>`
+      ).join('');
+    }
+
+    function chooseBatter(batterChoice) {
+      const bowlerSelection = document.getElementById('bowlerSelection');
+      const instructions = document.getElementById('matchInstructions');
+      instructions.innerHTML += `<p class="highlight">Bowler, choose a number (1-6):</p>`;
+      bowlerSelection.style.display = 'block';
+      bowlerSelection.innerHTML = '';
+
+      if (gameMode === 'Player' || isPlayer1Batting) {
+        bowlerSelection.innerHTML = Array.from({ length: 6 }, (_, i) =>
+          `<button class="game-btn" onclick="playTurn(${batterChoice}, ${i + 1})">${i + 1}</button>`
+        ).join('');
+      } else {
+        const computerChoice = Math.floor(Math.random() * 6) + 1; // Computer randomly chooses a number
+        setTimeout(() => playTurn(batterChoice, computerChoice), 1000);
+      }
+      batterSelection.innerHTML = '';
+    }
+
+    function playTurn(batterChoice, bowlerChoice) {
+      const instructions = document.getElementById('matchInstructions');
+      const batterSelection = document.getElementById('batterSelection');
+      const bowlerSelection = document.getElementById('bowlerSelection');
+      const popup = document.getElementById('popup');
+      let result = '';
+      ballsBowled++;
+
+      if (batterChoice === bowlerChoice) {
+        result = `OUT! Batter chose ${batterChoice}, Bowler chose ${bowlerChoice}.`;
+        popup.textContent = 'OUT!';
+        popup.style.display = 'block';
+        setTimeout(() => (popup.style.display = 'none'), 1000);
+        if (isPlayer1Batting) {
+          player1Wickets++;
+        } else {
+          player2Wickets++;
+        }
+        showCommentary(batterChoice, bowlerChoice);
+      } else {
+        result = `Batter scored ${batterChoice} runs. Bowler chose ${bowlerChoice}.`;
+        popup.textContent = `${batterChoice} RUNS!`;
+        popup.style.display = 'block';
+        setTimeout(() => (popup.style.display = 'none'), 1000);
+        if (isPlayer1Batting) {
+          player1Score += batterChoice;
+        } else {
+          player2Score += batterChoice;
+        }
+        showCommentary(batterChoice, bowlerChoice);
+      }
+
+      instructions.innerHTML = `<p>${result}</p>`;
+      updateScoreboard();
+
+      // End conditions based on overs
+      if ((ballsBowled >= totalOvers * 6) || (isPlayer1Batting && player1Wickets >= totalWickets)) {
+        isPlayer1Batting = false;
+        ballsBowled = 0;
+        instructions.innerHTML += `<p>${player1} innings over. ${player2} will now bat.</p>`;
+        setTimeout(startInnings, 1500);
+        return;
+      }
+
+      if (!isPlayer1Batting && player2Wickets >= totalWickets) {
+        instructions.innerHTML += `<p>${player2} is all out! Match over!</p>`;
+        determineWinner();
+        return;
+      }
+
+      if (!isPlayer1Batting && player2Score > player1Score) {
+        instructions.innerHTML += `<p>${player2} has successfully chased the target! Match over!</p>`;
+        determineWinner();
+        return;
+      }
+      batterSelection.innerHTML = '';
+      bowlerSelection.style.display = 'none';
+      setTimeout(startInnings, 1000);
+    }
+
+    function updateScoreboard() {
+      const overText = getOverCount();
+      document.getElementById('player1Score').textContent =
+        `${player1}: ${player1Score} / ${player1Wickets} ${isPlayer1Batting ? `(${overText})` : ''}`;
+
+      document.getElementById('player2Score').textContent =
+        `${player2}: ${player2Score} / ${player2Wickets}  ${!isPlayer1Batting ? `(${overText})` : ''}`;
+    }
+
+    function determineWinner() {
+      const instructions = document.getElementById('matchInstructions');
+      if (player1Score > player2Score) {
+        const runDifference = player1Score - player2Score;
+        instructions.innerHTML += `<p>${player1} wins by ${runDifference} runs! ${player1} scored ${player1Score} runs, ${gameMode === 'Player' ? player2 : 'Computer'} scored ${player2Score} runs.</p>`;
+      } else if (player2Score > player1Score) {
+        const wicketsRemaining = totalWickets - player2Wickets;
+        instructions.innerHTML += `<p>${gameMode === 'Player' ? player2 : 'Computer'} wins by ${wicketsRemaining} wickets! ${
+          gameMode === 'Player' ? player2 : 'Computer'
+        } scored ${player2Score} runs, ${player1} scored ${player1Score} runs.</p>`;
+      } else {
+        instructions.innerHTML += `<p>It's a tie! Both players scored ${player1Score} runs.</p>`;
+      }
+
+      const resetButton = `<button class="game-btn" onclick="resetGame()">Reset Game</button>`;
+      const rematchButton = `<button class="game-btn" onclick="rematch()">Rematch</button>`;
+      instructions.innerHTML += `<div>${resetButton} ${rematchButton}</div>`;
+    }
+
+    function resetGame() {
+      location.reload();
+    }
+
+    window.onload = () => showOnly('modeSelection');
+
+    // window.onresize = () => {
+    //   const sections = document.querySelectorAll('.screen');
+    //   sections.forEach(sec => sec.style.display = 'none');
+    //   document.getElementById('gameScreen').style.display = 'flex';
+    // };
+    function rematch() {
+      player1Score = 0;
+      player2Score = 0;
+      player1Wickets = 0;
+      player2Wickets = 0;
+      ballsBowled = 0;
+      isPlayer1Batting = true;
+
+      document.getElementById('matchArea').style.display = 'none';
+      document.getElementById('tossResult').style.display = 'block';
+      document.getElementById('tossResult').innerHTML = `<p>Let's play a rematch! ${player1}, choose Heads or Tails:</p>
+        <button class="game-btn" onclick="chooseToss('Heads')">Heads</button>
+        <button class="game-btn" onclick="chooseToss('Tails')">Tails</button>`;
+    }
+</script>
+</body>
+</html>

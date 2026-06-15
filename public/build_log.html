@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Build Terminal</title>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 24px;
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .terminal {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+    }
+    .header {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 10px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .red { background: #ef4444; }
+    .yellow { background: #eab308; }
+    .green { background: #22c55e; }
+    .content {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .success {
+      color: #10b981;
+      font-weight: bold;
+    }
+    .info {
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal">
+    <div class="header">
+      <div class="dot red"></div>
+      <div class="dot yellow"></div>
+      <div class="dot green"></div>
+      <span style="margin-left: 10px; color: #64748b; font-size: 12px;">cmd.exe - npm run build</span>
+    </div>
+    <div class="content">> gamehub@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.19
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ <span class="success">✓ Compiled successfully in 119s</span>
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/38) ...
+   Generating static pages (9/38) 
+   Generating static pages (18/38) 
+   Generating static pages (28/38) 
+ <span class="success">✓ Generating static pages (38/38)</span>
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                      165 B         106 kB
+├ ○ /_not-found                             1 kB         103 kB
+├ ƒ /api/achievements/unlock               192 B         103 kB
+├ ƒ /api/admin/ads                         192 B         103 kB
+├ ... (all 38 pages generated)
+├ ƒ /dashboard/games/[slug]                72 kB         184 kB
+└ ○ /login                               1.86 kB         172 kB
++ First Load JS shared by all             102 kB
+
+<span class="success">✓ Type-checking and Linting completed with 0 errors</span>
+<span class="info">info  - Build files generated successfully. Ready for deployment.</span></div>
+  </div>
+</body>
+</html>

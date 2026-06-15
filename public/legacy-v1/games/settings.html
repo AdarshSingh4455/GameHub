@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Game Settings</title>
+  <style>
+    body {
+      background-color: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .setting {
+      margin: 1rem 0;
+    }
+
+    select, input[type="text"] {
+      padding: 0.5rem;
+      margin-left: 1rem;
+      border-radius: 5px;
+      border: none;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      margin-top: 1.5rem;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #ff5722;
+    }
+
+    
+    .back-button {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background-color: #4caf50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      font-size: 1rem;
+      border-radius: 30px;
+      cursor: pointer;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      transition: background-color 0.3s;
+    }
+
+    .back-button:hover {
+      background-color: #ff5722;
+    }
+
+  </style>
+</head>
+<body>
+  <h1>🎮 Game Settings</h1>
+  <button onclick="goBack()" class="back-button">⬅ Back</button>
+
+  <div class="setting">
+    <label>🎨 Background:</label>
+    <select id="bg-select">
+      <option value="#111">Dark</option>
+      <option value="#f0f0f0">Light</option>
+      <option value="#003366">Navy Blue</option>
+      <option value="#222831">Charcoal</option>
+      <option value="url('https://i.pinimg.com/originals/f4/55/67/f455676cd2b74be0c377cb2eb4f3fa4d.jpg')">🖼️ Background Image</option>
+      <option value="url('https://th.bing.com/th/id/OIP.A9dBMr1vnJja5ebXyYwI-QHaJQ?w=900&h=1125&rs=1&pid=ImgDetMain')">🖼️ Background Image</option>
+      <option value="url('https://images.freecreatives.com/wp-content/uploads/2016/04/Website-Backgrounds-For-Desktop.jpg')">🖼️ Background Image</option>
+    </select>
+    
+  </div>
+
+  <div class="setting">
+    <label>🔊 Sound:</label>
+    <select id="sound-toggle">
+      <option value="on">On</option>
+      <option value="off">Off</option>
+    </select>
+  </div>
+
+  <div class="setting">
+    <label>🌗 Theme:</label>
+    <select id="theme-mode">
+      <option value="light">Day</option>
+      <option value="dark">Night</option>
+    </select>
+  </div>
+
+  <div class="setting">
+    <label>🧑 Player 1 Name:</label>
+    <input type="text" id="edit-name1" placeholder="Player X" />
+  </div>
+  
+  <div class="setting">
+    <label>🧍 Player 1 Icon:</label>
+    <select id="icon-select1">
+      <option value="😎">😎</option>
+      <option value="👨‍💻">👨‍💻</option>
+      <option value="🧑">🧑</option>
+      <option value="👩‍🚀">👩‍🚀</option>
+    </select>
+  </div>
+  
+  <div class="setting">
+    <label>🧑 Player 2 Name:</label>
+    <input type="text" id="edit-name2" placeholder="Player O" />
+  </div>
+  
+  <div class="setting">
+    <label>🧍 Player 2 Icon:</label>
+    <select id="icon-select2">
+      <option value="🤖">🤖</option>
+      <option value="👽">👽</option>
+      <option value="🧙‍♂️">🧙‍♂️</option>
+      <option value="🧛">🧛</option>
+    </select>
+  </div>
+  
+
+  <button onclick="saveSettings()">💾 Save Settings</button>
+
+  <script>
+    function saveSettings() {
+      const settings = {
+        bgColor: document.getElementById("bg-select").value,
+        sound: document.getElementById("sound-toggle").value,
+        theme: document.getElementById("theme-mode").value,
+        player1Name: document.getElementById("edit-name1").value || "Player X",
+        player2Name: document.getElementById("edit-name2").value || "Player O",
+        player1Icon: document.getElementById("icon-select1").value,
+        player2Icon: document.getElementById("icon-select2").value
+      };
+
+      localStorage.setItem("gameSettings", JSON.stringify(settings));
+      localStorage.setItem("player1Name", settings.player1Name);
+      localStorage.setItem("player2Name", settings.player2Name);
+      localStorage.setItem("player1Icon", settings.player1Icon);
+      localStorage.setItem("player2Icon", settings.player2Icon);
+
+      alert("Settings saved!");
+    }
+
+
+    window.onload = () => {
+      const settings = JSON.parse(localStorage.getItem("gameSettings")) || {};
+      document.getElementById("bg-select").value = settings.bgColor || "#111";
+      document.getElementById("sound-toggle").value = settings.sound || "on";
+      document.getElementById("theme-mode").value = settings.theme || "light";
+      document.getElementById("icon-select").value = settings.icon || "😎";
+      document.getElementById("edit-name").value = settings.name || "";
+    };
+    function goBack() {
+      // window.history.back();
+      window.location.href = "scribble.html";  // previous page
+
+    }
+  </script>
+</body>
+</html>

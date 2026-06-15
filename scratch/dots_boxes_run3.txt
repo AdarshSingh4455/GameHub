@@ -1,0 +1,486 @@
+--- STARTING DOTS & BOXES MULTIPLAYER E2E TEST ---
+Starting Next.js server on port 3003...
+[Server]: 
+> gamehub@0.1.0 start
+> next start -p 3003
+
+[Server]:    ▲ Next.js 15.5.19
+[Server]:    - Local:        http://localhost:3003
+   - Network:      http://10.192.62.178:3003
+✓ Server ready on port 3003
+[Server]: 
+ ✓ Starting...
+[Server]:  ✓ Ready in 957ms
+Host navigating to lobby menu...
+
+[goToMenu [HOST]] Navigating to multiplayer…
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [waitForScreen] Waiting for "MENU"… 6ms | current: [] | url: http://localhost:3003/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 515ms | current: [] | url: http://localhost:3003/dashboard/multiplayer
+[HOST]: Failed to load resource: the server responded with a status of 404 (Not Found)
+  [waitForScreen] Waiting for "MENU"… 1030ms | current: [] | url: http://localhost:3003/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 1543ms | current: [] | url: http://localhost:3003/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 2058ms | current: [] | url: http://localhost:3003/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 2574ms | current: [] | url: http://localhost:3003/dashboard/multiplayer
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "CREATE",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [click] #multiplayer-create-room-btn (Create Room card)
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "CREATE",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [click] #multiplayer-create-confirm-btn (Create Confirm)
+  [waitForScreen] Waiting for "LOBBY"… 2ms | current: ["CREATE"] | url: http://localhost:3003/dashboard/multiplayer
+  [waitForScreen] Waiting for "LOBBY"… 521ms | current: ["CREATE"] | url: http://localhost:3003/dashboard/multiplayer
+  [waitForScreen] Waiting for "LOBBY"… 1027ms | current: ["CREATE"] | url: http://localhost:3003/dashboard/multiplayer
+  [waitForScreen] Waiting for "LOBBY"… 1539ms | current: ["CREATE"] | url: http://localhost:3003/dashboard/multiplayer
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+✓ Room created. Code: LT0EVL
+Joiner joining room...
+
+[goToMenu [JOINER]] Navigating to multiplayer…
+[Server]: [ROOM POLL] roomCode=LT0EVL
+[Server]:   - player: userId=mock-host-db-522381 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-db-522381
+[HOST]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": true
+}
+[HOST]: [LOBBY STATE] {"players":["mock-host-db-522381"],"ready statuses":["mock-host-db-522381: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[JOINER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-db-522381",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [waitForScreen] Waiting for "MENU"… 1ms | current: [] | url: http://localhost:3003/dashboard/multiplayer
+  [waitForScreen] Waiting for "MENU"… 515ms | current: [] | url: http://localhost:3003/dashboard/multiplayer
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-db-522381
+[HOST]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": true
+}
+[HOST]: [LOBBY STATE] {"players":["mock-host-db-522381"],"ready statuses":["mock-host-db-522381: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+  [waitForScreen] Waiting for "MENU"… 1025ms | current: [] | url: http://localhost:3003/dashboard/multiplayer
+[JOINER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "JOIN",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-db-522381",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [click] #multiplayer-join-room-btn (Join Room card)
+  [click] #multiplayer-room-input
+[JOINER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "JOIN",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-db-522381",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+  [click] #multiplayer-join-confirm-btn (Join Confirm)
+  [waitForScreen] Waiting for "LOBBY"… 5ms | current: ["JOIN"] | url: http://localhost:3003/dashboard/multiplayer
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-db-522381
+[HOST]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": true
+}
+[HOST]: [LOBBY STATE] {"players":["mock-host-db-522381"],"ready statuses":["mock-host-db-522381: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Server]: [JOIN-ROOM] Request from userId=mock-joiner-db-522381 roomCode=LT0EVL
+  [waitForScreen] Waiting for "LOBBY"… 512ms | current: ["JOIN"] | url: http://localhost:3003/dashboard/multiplayer
+[Server]: [JOIN-ROOM] ✓ userId=mock-joiner-db-522381 joined room LT0EVL
+  [waitForScreen] Waiting for "LOBBY"… 1023ms | current: ["JOIN"] | url: http://localhost:3003/dashboard/multiplayer
+[JOINER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-db-522381",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+✓ Joiner joined lobby successfully
+Players marking ready...
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=NOT_READY
+  - player: userId=mock-joiner-db-522381 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-db-522381
+[JOINER]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[JOINER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": false
+}
+[JOINER]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: NOT_READY","mock-joiner-db-522381: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=NOT_READY
+  - player: userId=mock-joiner-db-522381 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-db-522381
+[HOST]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": true
+}
+[HOST]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: NOT_READY","mock-joiner-db-522381: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+  [click] #multiplayer-ready-btn (Joiner ready)
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=NOT_READY
+  - player: userId=mock-joiner-db-522381 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-db-522381
+[JOINER]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[JOINER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": false
+}
+[JOINER]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: NOT_READY","mock-joiner-db-522381: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=NOT_READY
+  - player: userId=mock-joiner-db-522381 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-db-522381
+[HOST]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": true
+}
+[HOST]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: NOT_READY","mock-joiner-db-522381: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+  [click] #multiplayer-ready-btn (Host ready)
+[Server]: [READY] roomId=cmqdki35w00007c4vtbfvpq2d
+[READY] userId=mock-joiner-db-522381
+[READY] oldStatus=NOT_READY
+[READY] newStatus=READY
+Host starting game...
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=NOT_READY
+  - player: userId=mock-joiner-db-522381 readyStatus=READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-db-522381
+[JOINER]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[JOINER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": false
+}
+[JOINER]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: NOT_READY","mock-joiner-db-522381: READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+[Server]: [READY] roomId=cmqdki35w00007c4vtbfvpq2d
+[READY] userId=mock-host-db-522381
+[READY] oldStatus=NOT_READY
+[READY] newStatus=READY
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=READY
+[Server]:   - player: userId=mock-joiner-db-522381 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-db-522381
+[HOST]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": true
+}
+[HOST]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: READY","mock-joiner-db-522381: READY"],"isHost":true,"startButtonDisabled":false}
+[HOST]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":false}
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": true
+}
+[HOST]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: READY","mock-joiner-db-522381: READY"],"isHost":true,"startButtonDisabled":true}
+[HOST]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":true}
+  [click] #multiplayer-start-btn (Start Game)
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=READY
+  - player: userId=mock-joiner-db-522381 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-db-522381
+[JOINER]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: WAITING
+[JOINER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": false
+}
+[JOINER]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: READY","mock-joiner-db-522381: READY"],"isHost":false,"startButtonDisabled":false}
+[JOINER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":true,"disabled":false}
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": true
+}
+[HOST]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: READY","mock-joiner-db-522381: READY"],"isHost":true,"startButtonDisabled":false}
+[HOST]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":false}
+[Server]: [ROOM POLL] roomCode=LT0EVL
+[Server]:   - player: userId=mock-host-db-522381 readyStatus=READY
+  - player: userId=mock-joiner-db-522381 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-db-522381
+[HOST]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: PLAYING
+[HOST]: [MULTIPLAYER REDIRECT EXECUTED] Redirecting user to /dashboard/multiplayer/play/LT0EVL
+[HOST]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "PLAYING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": true
+}
+[HOST]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: READY","mock-joiner-db-522381: READY"],"isHost":true,"startButtonDisabled":false}
+[HOST]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":false}
+[Server]: [ROOM POLL] roomCode=LT0EVL
+  - player: userId=mock-host-db-522381 readyStatus=READY
+[Server]:   - player: userId=mock-joiner-db-522381 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-db-522381
+[JOINER]: [MULTIPLAYER REDIRECT CHECK] Room code: LT0EVL, Status: PLAYING
+[JOINER]: [MULTIPLAYER REDIRECT EXECUTED] Redirecting user to /dashboard/multiplayer/play/LT0EVL
+[JOINER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "LT0EVL",
+  "roomStatus": "PLAYING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-db-522381",
+  "hostUserId": "mock-host-db-522381",
+  "isHost": false
+}
+[JOINER]: [LOBBY STATE] {"players":["mock-host-db-522381","mock-joiner-db-522381"],"ready statuses":["mock-host-db-522381: READY","mock-joiner-db-522381: READY"],"isHost":false,"startButtonDisabled":false}
+[JOINER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":true,"disabled":false}
+✓ Redirection to play page verified
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":[]}
+Initial turn owner: Host
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":[]}
+Inactive player clicks h-0-0 (should be blocked)...
+[JOINER]: [CLIENT handleLineClick] lineId=h-0-0 currentTurn=mock-host-db-522381 currentUserId=mock-joiner-db-522381 isSubmitting=false status=PLAYING
+  [click] #db-line-h-0-0 (Blocked Line)
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":[]}
+✓ Turn validation block verified successfully
+Active player clicks h-0-0...
+[HOST]: [CLIENT handleLineClick] lineId=h-0-0 currentTurn=mock-host-db-522381 currentUserId=mock-host-db-522381 isSubmitting=false status=PLAYING
+  [click] #db-line-h-0-0 (Claim Line)
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":[]}
+[Server]: [API POST /move] roomCode=LT0EVL userId=mock-host-db-522381 move={"lineId":"h-0-0"}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":[]}
+[Server]: [DB LOAD] roomCode=LT0EVL room.gameSession.id=cmqdkidq000037c4vs8asbtmw gameState={"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":[]}
+  [waitForLineInDB] ✓ h-0-0 confirmed in DB (2262ms)
+✓ Line claim and turn switch verified
+Drawing remaining lines to verify box capture...
+  [waitForTurn] bannerInfo: {"found":true,"text":"🔵DBHost_925's Turn"} | pageText snippet: ☰🎮 GameHubA🎮 GameHub✕AAdarshLevel 2 · 350 CoinsLevel 2 XP Progress25%1500 / 3000 XP🔥 4 Day Streak🎁 Claim!Next AchievementWinner Winner0 / 10%🏠Home🎮All Games🌐Multiplayer🪙Store🏆Leaderboard🎯Rewards🛠️Admin Panel👥Friends👤Profile⚙️Settings🚪 Sign Out🏠Home🎮Games🎯Rewards🪙Store👤Profile0You 
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[JOINER]: [CLIENT handleLineClick] lineId=v-0-0 currentTurn=mock-joiner-db-522381 currentUserId=mock-joiner-db-522381 isSubmitting=false status=PLAYING
+  [click] #db-line-v-0-0 (Draw side v-0-0)
+[Server]: [API POST /move] roomCode=LT0EVL userId=mock-joiner-db-522381 move={"lineId":"v-0-0"}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [DB LOAD] roomCode=LT0EVL room.gameSession.id=cmqdkidq000037c4vs8asbtmw gameState={"lineOwners":{"h-0-0":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381"},"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+  [waitForLineInDB] ✓ v-0-0 confirmed in DB (4021ms)
+  [waitForTurn] bannerInfo: {"found":true,"text":"🔵DBJoiner_104's Turn"} | pageText snippet: ☰🎮 GameHubA🎮 GameHub✕AAdarshLevel 2 · 350 CoinsLevel 2 XP Progress25%1500 / 3000 XP🔥 4 Day Streak🎁 Claim!Next AchievementWinner Winner0 / 10%🏠Home🎮All Games🌐Multiplayer🪙Store🏆Leaderboard🎯Rewards🛠️Admin Panel👥Friends👤Profile⚙️Settings🚪 Sign Out🏠Home🎮Games🎯Rewards🪙Store👤Profile0You 
+[HOST]: [CLIENT handleLineClick] lineId=v-0-1 currentTurn=mock-host-db-522381 currentUserId=mock-host-db-522381 isSubmitting=false status=PLAYING
+  [click] #db-line-v-0-1 (Draw side v-0-1)
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381"},"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [API POST /move] roomCode=LT0EVL userId=mock-host-db-522381 move={"lineId":"v-0-1"}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381"},"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [DB LOAD] roomCode=LT0EVL room.gameSession.id=cmqdkidq000037c4vs8asbtmw gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381"},"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381"},"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+  [waitForLineInDB] ✓ v-0-1 confirmed in DB (2968ms)
+Completing box (0,0) by drawing h-1-0...
+  [waitForTurn] bannerInfo: {"found":true,"text":"🔵DBHost_925's Turn"} | pageText snippet: ☰🎮 GameHubA🎮 GameHub✕AAdarshLevel 2 · 350 CoinsLevel 2 XP Progress25%1500 / 3000 XP🔥 4 Day Streak🎁 Claim!Next AchievementWinner Winner0 / 10%🏠Home🎮All Games🌐Multiplayer🪙Store🏆Leaderboard🎯Rewards🛠️Admin Panel👥Friends👤Profile⚙️Settings🚪 Sign Out🏠Home🎮Games🎯Rewards🪙Store👤Profile0You 
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381","v-0-1":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0","v-0-1"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+  [waitForTurn] bannerInfo: {"found":true,"text":"🔵DBHost_925's Turn"} | pageText snippet: ☰🎮 GameHubA🎮 GameHub✕AAdarshLevel 2 · 350 CoinsLevel 2 XP Progress25%1500 / 3000 XP🔥 4 Day Streak🎁 Claim!Next AchievementWinner Winner0 / 10%🏠Home🎮All Games🌐Multiplayer🪙Store🏆Leaderboard🎯Rewards🛠️Admin Panel👥Friends👤Profile⚙️Settings🚪 Sign Out🏠Home🎮Games🎯Rewards🪙Store👤Profile0You 
+  [waitForTurn] bannerInfo: {"found":true,"text":"🔵DBHost_925's Turn"} | pageText snippet: ☰🎮 GameHubA🎮 GameHub✕AAdarshLevel 2 · 350 CoinsLevel 2 XP Progress25%1500 / 3000 XP🔥 4 Day Streak🎁 Claim!Next AchievementWinner Winner0 / 10%🏠Home🎮All Games🌐Multiplayer🪙Store🏆Leaderboard🎯Rewards🛠️Admin Panel👥Friends👤Profile⚙️Settings🚪 Sign Out🏠Home🎮Games🎯Rewards🪙Store👤Profile0You 
+  [waitForTurn] bannerInfo: {"found":true,"text":"🔵DBHost_925's Turn"} | pageText snippet: ☰🎮 GameHubA🎮 GameHub✕AAdarshLevel 2 · 350 CoinsLevel 2 XP Progress25%1500 / 3000 XP🔥 4 Day Streak🎁 Claim!Next AchievementWinner Winner0 / 10%🏠Home🎮All Games🌐Multiplayer🪙Store🏆Leaderboard🎯Rewards🛠️Admin Panel👥Friends👤Profile⚙️Settings🚪 Sign Out🏠Home🎮Games🎯Rewards🪙Store👤Profile0You 
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381","v-0-1":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0","v-0-1"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[JOINER]: [CLIENT handleLineClick] lineId=h-1-0 currentTurn=mock-joiner-db-522381 currentUserId=mock-joiner-db-522381 isSubmitting=false status=PLAYING
+  [click] #db-line-h-1-0 (Draw side h-1-0)
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381","v-0-1":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0","v-0-1"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [API POST /move] roomCode=LT0EVL userId=mock-joiner-db-522381 move={"lineId":"h-1-0"}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381","v-0-1":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0","v-0-1"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [DB LOAD] roomCode=LT0EVL room.gameSession.id=cmqdkidq000037c4vs8asbtmw gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381","v-0-1":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0","v-0-1"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","v-0-0":"mock-joiner-db-522381","v-0-1":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":["v-0-0","v-0-1"],"completedBoxes":[],"horizontalLines":["h-0-0"]}
+  [waitForBoxInDB] ✓ box(0,0) confirmed in DB (2702ms)
+✓ Box capture, score updates, and extra turn verified
+Injecting near-complete game state to database...
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"lineOwners":{"h-0-0":"mock-host-db-522381","h-1-0":"mock-joiner-db-522381","v-0-0":"mock-joiner-db-522381","v-0-1":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":1},"verticalLines":["v-0-0","v-0-1"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-joiner-db-522381"}],"horizontalLines":["h-0-0","h-1-0"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":1},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3"]}
+Clicking the final line h-5-4 in active browser page...
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":1},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3"]}
+[JOINER]: [CLIENT handleLineClick] lineId=h-5-4 currentTurn=mock-joiner-db-522381 currentUserId=mock-joiner-db-522381 isSubmitting=false status=PLAYING
+  [click] #db-line-h-5-4 (Claim final Line)
+[Server]: [API POST /move] roomCode=LT0EVL userId=mock-joiner-db-522381 move={"lineId":"h-5-4"}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":1},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":1},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-joiner-db-522381 gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":1},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3"]}
+[Server]: [DB LOAD] roomCode=LT0EVL room.gameSession.id=cmqdkidq000037c4vs8asbtmw gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":1},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3"]}
+  [waitForGameFinishedInDB] ✓ Game FINISHED confirmed in DB (2989ms)
+✓ Game completion and win evaluation verified
+Voting for Play Again...
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=null gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","h-5-4":"mock-joiner-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":2},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"},{"c":4,"r":4,"owner":"mock-joiner-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3","h-5-4"]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=null gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","h-5-4":"mock-joiner-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":2},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"},{"c":4,"r":4,"owner":"mock-joiner-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3","h-5-4"]}
+  [click] #multiplayer-replay-btn (Host Replay)
+  [click] #multiplayer-replay-btn (Joiner Replay)
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=null gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","h-5-4":"mock-joiner-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":2},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"},{"c":4,"r":4,"owner":"mock-joiner-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3","h-5-4"]}
+[Server]: [REPLAY VOTE] Vote registered. roomId=cmqdki35w00007c4vtbfvpq2d userId=mock-joiner-db-522381 votes={"mock-joiner-db-522381":true}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=null gameState={"dotsSize":6,"lineOwners":{"h-0-0":"mock-host-db-522381","h-0-1":"mock-host-db-522381","h-0-2":"mock-host-db-522381","h-0-3":"mock-host-db-522381","h-0-4":"mock-host-db-522381","h-1-0":"mock-host-db-522381","h-1-1":"mock-host-db-522381","h-1-2":"mock-host-db-522381","h-1-3":"mock-host-db-522381","h-1-4":"mock-host-db-522381","h-2-0":"mock-host-db-522381","h-2-1":"mock-host-db-522381","h-2-2":"mock-host-db-522381","h-2-3":"mock-host-db-522381","h-2-4":"mock-host-db-522381","h-3-0":"mock-host-db-522381","h-3-1":"mock-host-db-522381","h-3-2":"mock-host-db-522381","h-3-3":"mock-host-db-522381","h-3-4":"mock-host-db-522381","h-4-0":"mock-host-db-522381","h-4-1":"mock-host-db-522381","h-4-2":"mock-host-db-522381","h-4-3":"mock-host-db-522381","h-4-4":"mock-host-db-522381","h-5-0":"mock-host-db-522381","h-5-1":"mock-host-db-522381","h-5-2":"mock-host-db-522381","h-5-3":"mock-host-db-522381","h-5-4":"mock-joiner-db-522381","v-0-0":"mock-host-db-522381","v-0-1":"mock-host-db-522381","v-0-2":"mock-host-db-522381","v-0-3":"mock-host-db-522381","v-0-4":"mock-host-db-522381","v-0-5":"mock-host-db-522381","v-1-0":"mock-host-db-522381","v-1-1":"mock-host-db-522381","v-1-2":"mock-host-db-522381","v-1-3":"mock-host-db-522381","v-1-4":"mock-host-db-522381","v-1-5":"mock-host-db-522381","v-2-0":"mock-host-db-522381","v-2-1":"mock-host-db-522381","v-2-2":"mock-host-db-522381","v-2-3":"mock-host-db-522381","v-2-4":"mock-host-db-522381","v-2-5":"mock-host-db-522381","v-3-0":"mock-host-db-522381","v-3-1":"mock-host-db-522381","v-3-2":"mock-host-db-522381","v-3-3":"mock-host-db-522381","v-3-4":"mock-host-db-522381","v-3-5":"mock-host-db-522381","v-4-0":"mock-host-db-522381","v-4-1":"mock-host-db-522381","v-4-2":"mock-host-db-522381","v-4-3":"mock-host-db-522381","v-4-4":"mock-host-db-522381","v-4-5":"mock-host-db-522381"},"currentTurn":"mock-joiner-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":24,"mock-joiner-db-522381":2},"verticalLines":["v-0-0","v-0-1","v-0-2","v-0-3","v-0-4","v-0-5","v-1-0","v-1-1","v-1-2","v-1-3","v-1-4","v-1-5","v-2-0","v-2-1","v-2-2","v-2-3","v-2-4","v-2-5","v-3-0","v-3-1","v-3-2","v-3-3","v-3-4","v-3-5","v-4-0","v-4-1","v-4-2","v-4-3","v-4-4","v-4-5"],"completedBoxes":[{"c":0,"r":0,"owner":"mock-host-db-522381"},{"c":1,"r":0,"owner":"mock-host-db-522381"},{"c":2,"r":0,"owner":"mock-host-db-522381"},{"c":3,"r":0,"owner":"mock-host-db-522381"},{"c":4,"r":0,"owner":"mock-host-db-522381"},{"c":0,"r":1,"owner":"mock-host-db-522381"},{"c":1,"r":1,"owner":"mock-host-db-522381"},{"c":2,"r":1,"owner":"mock-host-db-522381"},{"c":3,"r":1,"owner":"mock-host-db-522381"},{"c":4,"r":1,"owner":"mock-host-db-522381"},{"c":0,"r":2,"owner":"mock-host-db-522381"},{"c":1,"r":2,"owner":"mock-host-db-522381"},{"c":2,"r":2,"owner":"mock-host-db-522381"},{"c":3,"r":2,"owner":"mock-host-db-522381"},{"c":4,"r":2,"owner":"mock-host-db-522381"},{"c":0,"r":3,"owner":"mock-host-db-522381"},{"c":1,"r":3,"owner":"mock-host-db-522381"},{"c":2,"r":3,"owner":"mock-host-db-522381"},{"c":3,"r":3,"owner":"mock-host-db-522381"},{"c":4,"r":3,"owner":"mock-host-db-522381"},{"c":0,"r":4,"owner":"mock-host-db-522381"},{"c":1,"r":4,"owner":"mock-host-db-522381"},{"c":2,"r":4,"owner":"mock-host-db-522381"},{"c":3,"r":4,"owner":"mock-host-db-522381"},{"c":4,"r":4,"owner":"mock-joiner-db-522381"}],"horizontalLines":["h-0-0","h-0-1","h-0-2","h-0-3","h-0-4","h-1-0","h-1-1","h-1-2","h-1-3","h-1-4","h-2-0","h-2-1","h-2-2","h-2-3","h-2-4","h-3-0","h-3-1","h-3-2","h-3-3","h-3-4","h-4-0","h-4-1","h-4-2","h-4-3","h-4-4","h-5-0","h-5-1","h-5-2","h-5-3","h-5-4"]}
+[Server]: [REPLAY VOTE] Vote registered. roomId=cmqdki35w00007c4vtbfvpq2d userId=mock-host-db-522381 votes={"mock-joiner-db-522381":true,"mock-host-db-522381":true}
+[REPLAY RESET] Both players voted to replay. Resetting match state for roomCode=LT0EVL
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":[]}
+  [waitForLinesCleared] ✓ Lines cleared confirmed in DB (4039ms)
+✓ Replay successfully reset match board!
+
+======================================
+✅ ALL 8 DOTS & BOXES MULTIPLAYER E2E TESTS PASSED
+======================================
+
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":[]}
+[Server]: [API GET /game] roomCode=LT0EVL currentTurn=mock-host-db-522381 gameState={"currentTurn":"mock-host-db-522381","replayVotes":{},"playerScores":{"mock-host-db-522381":0,"mock-joiner-db-522381":0},"verticalLines":[],"completedBoxes":[],"horizontalLines":[]}
+Cleaning up server...
+BUILD_EXIT_0  

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ludo Game</title>
+  <!-- <link rel="stylesheet" href="style.css"/> -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #gameContainer {
+      position: relative;
+      width: 600px;
+      height: 600px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    }
+
+    #ludoCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border: 2px solid black;
+    }
+
+    /* #controls {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+    } */
+
+    #ui {
+      text-align: center;
+      margin-top: 10px;
+      color: white;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #555;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="ludoCanvas" width="600" height="600"></canvas>
+    <div id="ui">
+      <p id="turnInfo">Turn: Red 🔴</p>
+      <button onclick="rollDice()">🎲 Roll Dice</button>
+      <p id="diceValue">Dice: -</p>
+      <!-- Add this button in your #ui div -->
+      <button onclick="skipTurn()">⏭️ Skip Turn</button>
+      <button onclick="nextTurn()">➡️ Next Player</button>
+    </div>
+  </div>
+  <!-- <script src="script.js"></script> -->
+   <script>
+    const canvas = document.getElementById("ludoCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const bgImage = new Image();
+    bgImage.src = "Assets/bg.jpg";
+
+    const players = [
+      {
+        color: "Red",
+        emoji: "🔴",
+        homeX: 85,
+        homeY: 85,
+        tokenColor: "red",
+        tokens: []
+      },
+      {
+        color: "Yellow",
+        emoji: "🟡",
+        homeX: 435,
+        homeY: 435,
+        tokenColor: "gold",
+        tokens: []
+      },
+      {
+        color: "Green",
+        emoji: "🟢",
+        homeX: 435,
+        homeY: 85,
+        tokenColor: "green",
+        tokens: []
+      },
+      {
+        color: "Blue",
+        emoji: "🔵",
+        homeX: 125,
+        homeY: 435,
+        tokenColor: "blue",
+        tokens: []
+      }
+    ];
+
+
+
+    let currentPlayerIndex = 0;
+    let currentDice = 0;
+
+    
+    bgImage.onload = () => {
+      drawBoard();
+      drawAllTokens();
+      updateUI();
+    };
+    // token.pathIndex = 0; // when leaving home
+    // token.x = pathCells[0].x;
+    // token.y = pathCells[0].y;
+
+    // if (typeof token.pathIndex === "number") {
+    //   token.pathIndex += currentDice;
+    //   token.x = pathCells[token.pathIndex].x;
+    //   token.y = pathCells[token.pathIndex].y;
+    // }
+
+
+    // 1. Expand pathCells to at least 20 cells for demo (should be 52 for full Ludo)
+    const pathCells = [
+      // Top row (Red start)
+      {x:230,y:50},{x:180,y:50},{x:130,y:50},{x:80,y:50},{x:50,y:80},{x:50,y:130},{x:50,y:180},{x:50,y:230},
+      {x:80,y:260},{x:130,y:260},{x:180,y:260},{x:230,y:260},{x:260,y:230},
+      // Right column (Blue start)
+      {x:260,y:180},{x:260,y:130},{x:260,y:80},{x:260,y:50},{x:310,y:50},{x:360,y:50},{x:410,y:50},{x:440,y:80},
+      {x:440,y:130},{x:440,y:180},{x:440,y:230},{x:410,y:260},{x:360,y:260},{x:310,y:260},{x:260,y:260},
+      // Bottom row (Yellow start)
+      {x:260,y:310},{x:260,y:360},{x:260,y:410},{x:260,y:440},{x:310,y:440},{x:360,y:440},{x:410,y:440},{x:440,y:410},
+      {x:440,y:360},{x:440,y:310},{x:410,y:310},{x:360,y:310},{x:310,y:310},{x:260,y:310},
+      // Left column (Green start)
+      {x:230,y:310},{x:180,y:310},{x:130,y:310},{x:80,y:310},{x:50,y:310},{x:50,y:360},{x:50,y:410},{x:80,y:440},
+      {x:130,y:440},{x:180,y:440},{x:230,y:440},{x:230,y:410},{x:230,y:360},{x:230,y:310}
+    ];
+
+    // Home entry for each player (for future: add home stretch logic)
+    const startIndices = [0, 13, 26, 39];
+
+    // Arrange tokens in a 2x2 grid inside home, bigger and spaced
+    function generateTokens(player, startIndex) {
+      const spacing = 35;
+      const radius = 22;
+      player.tokens = [
+        { x: player.homeX + spacing, y: player.homeY + spacing, pathIndex: null, isHome: true, radius },
+        { x: player.homeX + 2 * spacing, y: player.homeY + spacing, pathIndex: null, isHome: true, radius },
+        { x: player.homeX + spacing, y: player.homeY + 2 * spacing, pathIndex: null, isHome: true, radius },
+        { x: player.homeX + 2 * spacing, y: player.homeY + 2 * spacing, pathIndex: null, isHome: true, radius }
+      ];
+      player.startIndex = startIndex;
+    }
+    // Generate tokens for all players
+    players.forEach((player, i) => generateTokens(player, startIndices[i]));
+
+    // // Red starts at 0, Blue at 10 (example)
+    // generateTokens(players[0], 0);
+    // generateTokens(players[1], 10);
+
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+      // Highlight current player's home
+      const player = players[currentPlayerIndex];
+      ctx.strokeStyle = player.tokenColor;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(player.homeX + 20, player.homeY + 20, 70, 70);
+    }
+
+
+    // Draw tokens (in home or on path)
+    function drawTokens(player) {
+      player.tokens.forEach(token => {
+        let drawX = token.x, drawY = token.y, radius = token.radius || 18;
+        if (token.pathIndex !== null) {
+          drawX = pathCells[token.pathIndex].x;
+          drawY = pathCells[token.pathIndex].y;
+          radius = 15;
+        }
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = player.tokenColor;
+        ctx.fill();
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+    }
+
+    function drawAllTokens() {
+      players.forEach(player => drawTokens(player));
+    }
+
+    // 4. Move logic: click token to move
+    canvas.onclick = function (e) {
+      if (currentDice === 0) return; // Only allow move after dice roll
+      const currentPlayer = players[currentPlayerIndex];
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      let moved = false;
+      currentPlayer.tokens.forEach(token => {
+        let tx = token.x, ty = token.y, radius = token.radius || 18;
+        if (token.pathIndex !== null) {
+          tx = pathCells[token.pathIndex].x;
+          ty = pathCells[token.pathIndex].y;
+          radius = 15;
+        }
+        if (
+          Math.sqrt((mx - tx) ** 2 + (my - ty) ** 2) < radius + 5
+        ) {
+          // If in home and dice is 6, move out
+          if (token.isHome && currentDice === 6) {
+            token.pathIndex = currentPlayer.startIndex;
+            token.isHome = false;
+            moved = true;
+          }
+          // If on path, move forward if not in home
+          else if (!token.isHome && token.pathIndex !== null) {
+            let newIndex = token.pathIndex + currentDice;
+            if (newIndex < pathCells.length) {
+              token.pathIndex = newIndex;
+              moved = true;
+            }
+          }
+        }
+      });
+      if (moved) {
+        drawBoard();
+        drawAllTokens();
+        setTimeout(() => {
+          // If dice was 6, same player gets another turn
+          if (currentDice !== 6) {
+            currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+          }
+          updateUI();
+          currentDice = 0;
+          document.getElementById("diceValue").innerText = `Dice: -`;
+        }, 400);
+      }
+    };
+
+    // Roll dice
+    function rollDice() {
+      if (currentDice !== 0) return; // Prevent rolling twice
+      currentDice = Math.floor(Math.random() * 6) + 1;
+      document.getElementById("diceValue").innerText = `Dice: ${currentDice}`;
+    }
+
+    function updateUI() {
+      const player = players[currentPlayerIndex];
+      document.getElementById("turnInfo").innerText = `Turn: ${player.color} ${player.emoji}`;
+    }
+
+    function nextTurn() {
+      currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+      updateUI();
+    }
+
+    function isInHome(token, player) {
+      return token.x >= player.homeX &&
+            token.x <= player.homeX + 30 &&
+            token.y >= player.homeY &&
+            token.y <= player.homeY + 30;
+    }
+
+    function skipTurn() {
+      currentDice = 0;
+      document.getElementById("diceValue").innerText = `Dice: -`;
+      currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+      updateUI();
+    }
+
+   </script>
+</body>
+</html>

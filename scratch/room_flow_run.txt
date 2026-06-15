@@ -1,0 +1,878 @@
+--- STARTING E2E MULTIPLAYER TEST SUITE ---
+Starting Next.js production server on port 3001...
+[Next.js]: 
+> gamehub@0.1.0 start
+> next start -p 3001
+
+[Next.js]:    ▲ Next.js 15.5.19
+[Next.js]:    - Local:        http://localhost:3001
+   - Network:      http://10.192.62.178:3001
+
+✓ Production server ready on port 3001
+[Next.js]:  ✓ Starting...
+[Next.js]:  ✓ Ready in 967ms
+
+=== TEST 1: Create Room ===
+Navigating to Multiplayer page (host)...
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[HOST BROWSER]: Failed to load resource: the server responded with a status of 404 (Not Found)
+✓ Menu screen loaded
+
+[E2E DEBUG – MENU]
+  URL: http://localhost:3001/dashboard/multiplayer
+  SCREEN attr: MENU
+  TITLE: Dashboard | GameHub
+  BUTTONS: [(no id)]☰, [(no id)]✕, [sidebar-claim-reward]🎁 Claim!, [signout-btn]🚪 Sign Out, [multiplayer-create-room-btn]➕ Create Room, [multiplayer-join-room-btn]🚪 Enter Code, [(no id)]⚡ Quick Join, [(no id)]Create, [(no id)]⚡ Quick Join, [(no id)]Create, [(no id)]⚡ Quick Join, [(no id)]Create, [(no id)]⚡ Quick Join, [(no id)]Create
+  INPUTS: 
+  SELECTS: 
+Clicking Create Room...
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "CREATE",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+
+[E2E DEBUG – CREATE screen]
+  URL: http://localhost:3001/dashboard/multiplayer
+  SCREEN attr: CREATE
+  TITLE: Dashboard | GameHub
+  BUTTONS: [(no id)]☰, [(no id)]✕, [sidebar-claim-reward]🎁 Claim!, [signout-btn]🚪 Sign Out, [(no id)]Back, [multiplayer-create-confirm-btn]Create Room
+  INPUTS: [multiplayer-maxplayers-selector/maxPlayers]type=range
+  SELECTS: [multiplayer-game-selector/game]4opts
+✓ Game selector found and cricket selected
+✓ Max players set to 2
+Clicking Create Room confirm...
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "CREATE",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+✓ Room created. Code: YY6XB3
+
+=== TEST 2: Host appears in lobby ===
+[HOST BROWSER]: [DIAGNOSTICS BEFORE LINE 227] {
+  "url": "http://localhost:3001/dashboard/multiplayer",
+  "pathname": "/dashboard/multiplayer",
+  "innerTextSnippet": "🎮 GameHub\nA\nAdarsh\nLevel 2 · 350 Coins\nLevel 2 XP Progress\n25%\n1500 / 3000 XP\n🔥\n4\nDay Streak\n🎁 Claim!\nNEXT ACHIEVEMENT\nWinner Winner\n0 / 1\n0%\n🏠\nHome\n🎮\nAll Games\n🌐\nMultiplayer\n🪙\nStore\n🏆\nLeaderboard\n🎯\nRewards\n🛠️\nAdmin Panel\n👥\nFriends\n👤\nProfile\n⚙️\nSettings\n🚪 Sign Out\nGAME LOBBY\n🏏 Hand Cricket\nPlayers: 0 / 4\nROOM CODE\nYY6XB3\n📋\n🔗\n➕ Invite Friends\nJoined Players\n🚪 Leave\n✅ Ready up\n💬 Lobby Chat\n\nSend a message to start chatting!\n\nSend\n🔔\nRoom Created\n\nRoom code YY6XB3 created!\n\n✕",
+  "ids": [
+    "sidebar-claim-reward",
+    "signout-btn",
+    "lobby-player-count",
+    "multiplayer-room-code",
+    "multiplayer-copy-code-btn",
+    "lobby-invite-btn",
+    "lobby-players-list",
+    "multiplayer-leave-btn",
+    "multiplayer-ready-btn",
+    "_R_"
+  ],
+  "screens": [
+    "LOBBY"
+  ]
+}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+[Next.js]:   - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[Next.js]: [ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+✓ Host appears in lobby with crown badge 👑
+
+=== TEST 3: Copy room code ===
+✓ Copy room code button clicked
+
+=== TEST 4: Invalid room code blocked ===
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[JOINER BROWSER]: Failed to load resource: the server responded with a status of 404 (Not Found)
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "JOIN",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "JOIN",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [JOIN-ROOM] Request from userId=mock-joiner-id-793996 roomCode=XXXXXX
+[Next.js]: [JOIN-ROOM] Room not found: XXXXXX
+[JOINER BROWSER]: Failed to load resource: the server responded with a status of 404 (Not Found)
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "JOIN",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+✓ Invalid room code correctly blocked
+
+=== TEST 5: Joiner joins room YY6XB3 ===
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "JOIN",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [JOIN-ROOM] Request from userId=mock-joiner-id-793996 roomCode=YY6XB3
+[Next.js]: [JOIN-ROOM] ✓ userId=mock-joiner-id-793996 joined room YY6XB3
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-id-793996
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY","mock-joiner-id-793996: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+✓ Joiner joined lobby. Both players visible.
+
+=== TEST 6: Full room blocked ===
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY","mock-joiner-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-id-793996
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY","mock-joiner-id-793996: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY","mock-joiner-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+✓ Full room correctly blocked
+
+=== TEST 7: Start button disabled ===
+✓ Start button is disabled (not all ready)
+
+=== TEST 8: Ready toggle sync ===
+✓ Ready status synced across clients
+
+=== TEST 9: Start enabled after all ready ===
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-id-793996
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY","mock-joiner-id-793996: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+[Next.js]: [JOIN-ROOM] Request from userId=mock-player3-id-793996 roomCode=undefined
+[Next.js]: [READY] roomId=cmqdl19ah0000wo4vtz1a1q02
+[READY] userId=mock-joiner-id-793996
+[READY] oldStatus=NOT_READY
+[READY] newStatus=READY
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY","mock-joiner-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+[Next.js]: [READY] roomId=cmqdl19ah0000wo4vtz1a1q02
+[READY] userId=mock-host-id-793996
+[READY] oldStatus=NOT_READY
+[READY] newStatus=READY
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=READY
+  - player: userId=mock-joiner-id-793996 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: READY","mock-joiner-id-793996: READY"],"isHost":true,"startButtonDisabled":false}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":false}
+✓ Start button now enabled (all players ready)
+
+=== TEST 10: Start game ===
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: READY","mock-joiner-id-793996: READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=READY
+  - player: userId=mock-joiner-id-793996 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-id-793996
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: READY","mock-joiner-id-793996: READY"],"isHost":false,"startButtonDisabled":false}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":true,"disabled":false}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: READY","mock-joiner-id-793996: READY"],"isHost":true,"startButtonDisabled":false}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":false}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=READY
+  - player: userId=mock-joiner-id-793996 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-id-793996
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: STARTING
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT EXECUTED] Redirecting user to /dashboard/multiplayer/play/YY6XB3
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "STARTING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: READY","mock-joiner-id-793996: READY"],"isHost":false,"startButtonDisabled":false}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":true,"disabled":false}
+[Next.js]: [ROOM POLL] roomCode=YY6XB3
+  - player: userId=mock-host-id-793996 readyStatus=READY
+  - player: userId=mock-joiner-id-793996 readyStatus=READY
+[ROOM POLL] allPlayersReady=true playerCount=2 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: YY6XB3, Status: PLAYING
+[HOST BROWSER]: [MULTIPLAYER REDIRECT EXECUTED] Redirecting user to /dashboard/multiplayer/play/YY6XB3
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "YY6XB3",
+  "roomStatus": "PLAYING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: READY","mock-joiner-id-793996: READY"],"isHost":true,"startButtonDisabled":false}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":true,"disabled":false}
+[HOST BROWSER]: [DIAGNOSTICS BEFORE LINE 382] {
+  "url": "http://localhost:3001/dashboard/multiplayer/play/YY6XB3",
+  "pathname": "/dashboard/multiplayer/play/YY6XB3",
+  "innerTextSnippet": "🎮 GameHub\nA\nAdarsh\nLevel 2 · 350 Coins\nLevel 2 XP Progress\n25%\n1500 / 3000 XP\n🔥\n4\nDay Streak\n🎁 Claim!\nNEXT ACHIEVEMENT\nWinner Winner\n0 / 1\n0%\n🏠\nHome\n🎮\nAll Games\n🌐\nMultiplayer\n🪙\nStore\n🏆\nLeaderboard\n🎯\nRewards\n🛠️\nAdmin Panel\n👥\nFriends\n👤\nProfile\n⚙️\nSettings\n🚪 Sign Out\nLoading Match session...\n\nConnecting to room YY6XB3...\n\n🔔\nGame Starting\n\nGame is launching!\n\n✕",
+  "ids": [
+    "sidebar-claim-reward",
+    "signout-btn",
+    "_R_"
+  ],
+  "testids": []
+}
+✓ Game started! Redirected to play page.
+
+=== TEST 11: Host transfer ===
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[TEST 11] Marked both players as LEFT and room as FINISHED
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "CREATE",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "CREATE",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+New room for host transfer test: IDH6X4
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: IDH6X4, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: IDH6X4, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [API GET /game] roomCode=YY6XB3 currentTurn=mock-host-id-793996 gameState={"p1":{"userId":"mock-host-id-793996","username":"HostPlayer_798"},"p2":{"userId":"mock-joiner-id-793996","username":"JoinerPlayer_766"},"runs":0,"balls":0,"moves":{},"stage":"TOSS","history":[],"innings":1,"wickets":0,"maxOvers":2,"commentary":["🪙 Toss won by HostPlayer_798. Waiting for their choice."],"maxWickets":3,"tossChoice":null,"replayVotes":{},"tossWinnerId":"mock-host-id-793996","battingUserId":null,"bowlingUserId":null}
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "JOIN",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: IDH6X4, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[DEBUG] New room status: WAITING, players: 1
+[DEBUG] Joiner directly added to room IDH6X4 via Prisma
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: IDH6X4, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: IDH6X4, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY","mock-joiner-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-host-id-793996 readyStatus=NOT_READY
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=2 hostUserId=mock-host-id-793996
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: IDH6X4, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": false
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY","mock-joiner-id-793996: NOT_READY"],"isHost":false,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":2,"allReady":false,"disabled":true}
+Both players in new room. Host leaving...
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 2,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-host-id-793996","mock-joiner-id-793996"],"ready statuses":["mock-host-id-793996: NOT_READY","mock-joiner-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":2,"allReady":false,"disabled":true}
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 0,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": null,
+  "isHost": false
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":[],"ready statuses":[],"isHost":false,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":false,"playerCount":0,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-host-id-793996
+[HOST BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: IDH6X4, Status: WAITING
+[HOST BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "MENU",
+  "roomCode": "",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-host-id-793996",
+  "hostUserId": "mock-host-id-793996",
+  "isHost": true
+}
+[HOST BROWSER]: [LOBBY STATE] {"players":["mock-joiner-id-793996"],"ready statuses":["mock-joiner-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[HOST BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-joiner-id-793996
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: IDH6X4, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": "mock-joiner-id-793996",
+  "isHost": true
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-joiner-id-793996"],"ready statuses":["mock-joiner-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+✓ Host transfer verified. Joiner is now host!
+
+=== TEST 12: Room cleanup ===
+[HOST BROWSER]: Failed to load resource: the server responded with a status of 403 (Forbidden)
+[Next.js]: [ROOM POLL] roomCode=IDH6X4
+  - player: userId=mock-joiner-id-793996 readyStatus=NOT_READY
+[ROOM POLL] allPlayersReady=false playerCount=1 hostUserId=mock-joiner-id-793996
+[JOINER BROWSER]: [MULTIPLAYER REDIRECT CHECK] Room code: IDH6X4, Status: WAITING
+[JOINER BROWSER]: [DEBUG MULTIPLAYER] {
+  "pathname": "/dashboard/multiplayer",
+  "screen": "LOBBY",
+  "roomCode": "IDH6X4",
+  "roomStatus": "WAITING",
+  "playerCount": 1,
+  "currentUserId": "mock-joiner-id-793996",
+  "hostUserId": "mock-joiner-id-793996",
+  "isHost": true
+}
+[JOINER BROWSER]: [LOBBY STATE] {"players":["mock-joiner-id-793996"],"ready statuses":["mock-joiner-id-793996: NOT_READY"],"isHost":true,"startButtonDisabled":true}
+[JOINER BROWSER]: [START BUTTON CONDITION] {"isHost":true,"playerCount":1,"allReady":false,"disabled":true}
+Seeded expired room: OLD793996
+Cleanup API response: {"success":true,"count":1}
+✓ Expired room deleted by cleanup
+
+══════════════════════════════════════════════════
+✅ ALL 12 E2E TESTS PASSED
+══════════════════════════════════════════════════
+
+Shutting down Next.js dev server...
+EXIT_0  

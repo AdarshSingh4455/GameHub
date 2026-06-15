@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ultimate Multiplayer Guess Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+    body {
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      padding: 1rem;
+    }
+    .container {
+      background: rgba(255,255,255,0.05);
+      padding: 2rem;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 0 25px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 500px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px 5px;
+      width: 80%;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #00c9ff;
+      color: #000;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #92fe9d;
+    }
+    .cover {
+      width: 140px;
+      height: 140px;
+      margin: 20px auto;
+      background: linear-gradient(145deg, #111, #333);
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px #00ffe7;
+      transition: all 0.5s ease;
+    }
+    .feedback { margin-top: 10px; font-size: 1.2rem; }
+    .score { margin-top: 10px; font-size: 1rem; }
+    .guessed { margin-top: 10px; font-size: 0.9rem; color: #ccc; }
+    #popup {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    #popupContent {
+      background: white;
+      color: black;
+      padding: 2rem;
+      border-radius: 1rem;
+      font-size: 1.5rem;
+      text-align: center;
+    }
+    canvas.confetti {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .shake {
+      animation: shakeEffect 0.4s;
+    }
+
+    @keyframes shakeEffect {
+      0% { transform: translateX(0px); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); }
+      75% { transform: translateX(-5px); }
+      100% { transform: translateX(0px); }
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      50% { transform: translateX(10px); }
+      75% { transform: translateX(-6px); }
+      100% { transform: translateX(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.6); }
+      70% { box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+    }
+
+    @keyframes zoomIn {
+      0% { transform: scale(0.7); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    #modeSelect button {
+      background: linear-gradient(135deg, #00c6ff, #007bff);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    #modeSelect button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(0, 198, 255, 0.6);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="modeSelect" style="
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.95);
+    backdrop-filter: blur(6px);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+  ">
+    <h2 style="margin-bottom: 20px;">🎮 Choose Game Mode</h2>
+    <button onclick="chooseMode('friend')" style="padding: 10px 30px; margin: 10px; font-size: 18px;">👥 VS Friend (1-100)</button>
+    <button onclick="chooseMode('ai')" style="padding: 10px 30px; margin: 10px; font-size: 18px;">🤖 VS AI (1-100)</button>
+  </div>
+
+  <div class="container" id="setup">
+    <h1>🎮 Multiplayer Guessing</h1>
+    <input type="text" id="player1" placeholder="Player 1 Name" />
+    <input type="text" id="player2" placeholder="Player 2 Name" />
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <div class="container" id="game" style="display: none;">
+    <h2 id="turnDisplay"></h2>
+    <div id="roundInfo"></div>
+    <div class="cover" id="coverBox">Guess It!</div>
+    <input type="number" id="guessInput" placeholder="Enter your guess" />
+    <button onclick="makeGuess()">Submit Guess</button>
+    <div class="feedback" id="feedback"></div>
+    <div class="score" id="score"></div>
+    <div class="guessed" id="guessedNumbers"></div>
+  </div>
+
+  <div id="popup"><div id="popupContent"></div></div>
+  <canvas class="confetti" id="confetti"></canvas>
+
+  <script>
+    const confettiCanvas = document.getElementById('confetti');
+    const ctx = confettiCanvas.getContext('2d');
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+    let particles = [];
+    for (let i = 0; i < 200; i++) {
+      particles.push({
+        x: Math.random() * confettiCanvas.width,
+        y: Math.random() * confettiCanvas.height,
+        r: Math.random() * 6 + 2,
+        d: Math.random() * 100,
+        color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+        tilt: Math.random() * 10 - 10,
+        tiltAngle: 0
+      });
+    }
+    function drawConfetti() {
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.lineWidth = p.r;
+        ctx.strokeStyle = p.color;
+        ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r);
+        ctx.stroke();
+      });
+      particles.forEach(p => {
+        p.y += Math.cos(p.d) + 1 + p.r / 2;
+        p.x += Math.sin(p.d);
+        p.tiltAngle += 0.1;
+        p.tilt = Math.sin(p.tiltAngle) * 15;
+      });
+    }
+    let interval;
+    function startConfetti() { interval = setInterval(drawConfetti, 20); }
+    function stopConfetti() { clearInterval(interval); ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height); }
+
+    let playerNames = [], currentTurn = 0, number = 0;
+    let round = 1, maxRounds = 3;
+    let playerWins = [0, 0];
+    let guesses = [[], []];
+
+    function startGame() {
+      const p1 = document.getElementById("player1").value.trim();
+      const p2 = document.getElementById("player2").value.trim();
+      if (!p1 || !p2) return alert("Enter both names");
+      playerNames = [p1, p2];
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("game").style.display = "block";
+      startRound();
+    }
+
+    function startRound() {
+      number = Math.floor(Math.random() * 100) + 1;
+      guesses = [[], []];
+      document.getElementById("coverBox").textContent = "Guess It!";
+      document.getElementById("guessInput").value = "";
+      document.getElementById("feedback").textContent = "";
+      document.getElementById("guessedNumbers").textContent = "";
+      document.getElementById("roundInfo").textContent = `🎯 Round ${round} of ${maxRounds}`;
+      updateTurn(); updateScore();
+    }
+
+    function updateTurn() {
+      document.getElementById("turnDisplay").textContent = `🔁 ${playerNames[currentTurn]}'s Turn`;
+    }
+
+    function updateScore() {
+      document.getElementById("score").textContent = `🏆 ${playerNames[0]}: ${playerWins[0]} | ${playerNames[1]}: ${playerWins[1]}`;
+    }
+
+    function makeGuess() {
+      const guess = parseInt(document.getElementById("guessInput").value);
+      if (!guess) return;
+      guesses[currentTurn].push(guess);
+      document.getElementById("guessedNumbers").textContent = `${playerNames[0]}: [${guesses[0].join(", ")}] | ${playerNames[1]}: [${guesses[1].join(", ")}]`;
+      document.getElementById("coverBox").textContent = `You guessed: ${guess}`;
+      if (guess === number) {
+        document.getElementById("coverBox").textContent = `🎉 Correct! It was ${number}`;
+        startConfetti();
+        playerWins[currentTurn]++;
+        if (playerWins[currentTurn] === 2) {
+          showPopup(`${playerNames[currentTurn]} wins the game! 🏆`);
+          setTimeout(() => location.reload(), 4000);
+        } else {
+          round++;
+          setTimeout(() => { stopConfetti(); startRound(); }, 3000);
+        }
+      } else {
+        document.getElementById("feedback").textContent = guess < number ? "Too low!" : "Too high!";
+        document.getElementById("coverBox").classList.add("shake");
+        setTimeout(() => {
+          document.getElementById("coverBox").classList.remove("shake");
+        }, 400);
+        currentTurn = 1 - currentTurn;
+        updateTurn();
+        document.getElementById("guessInput").value = "";
+      }
+    }
+
+    function showPopup(message) {
+      document.getElementById("popupContent").textContent = message;
+      document.getElementById("popup").style.display = "flex";
+    }
+    function chooseMode(mode) {
+      if (mode === 'friend') {
+        document.getElementById('modeSelect').style.display = 'none';
+      } else if (mode === 'ai') {
+        window.location.href = 'AI_mode.html';
+      }
+    }
+    document.getElementById("guessInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault(); // Prevent default form submission
+        makeGuess();
+      }
+    });
+  </script>
+</body>
+</html>

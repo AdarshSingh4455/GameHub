@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cricket Game Menu</title>
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    background: radial-gradient(circle at center, #0d1b2a, #000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+  }
+
+  /* Stadium lights effect */
+  .lights {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(110, 174, 233, 0.704) 10%, transparent 60%);
+    animation: flicker 3s infinite alternate;
+    z-index: 0;
+  }
+  @keyframes flicker {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+    100% { opacity: 0.3; }
+  }
+
+  .outer-circle {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #1e88e5, #e53935, #1e88e5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: rotate 8s linear infinite;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  /* Circular AI Mode text */
+  .circle-text {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: white;
+    pointer-events: none;
+    text-transform: uppercase;
+  }
+  .circle-text span {
+    position: absolute;
+    left: 50%;
+    transform-origin: 0 150px;
+  }
+
+  .inner-circle {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1e88e5, #1565c0);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: bold;
+    box-shadow: 0 0 25px rgba(0,0,0,0.6);
+    z-index: 2;
+    transition: transform 0.3s;
+  }
+  .inner-circle:hover {
+    transform: scale(1.08);
+  }
+
+  /* Ring clickable area for AI Mode */
+  .ai-ring {
+    position: absolute;
+    top: 0; left: 0;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    z-index: 1;
+  }
+
+  .ai-ring:hover {
+    box-shadow: 0 0 25px 10px rgba(229, 57, 53, 0.6);
+  }
+
+  /* @keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  } */
+</style>
+</head>
+<body>
+
+<div class="lights"></div>
+
+<div class="outer-circle">
+  <div class="ai-ring" onclick="goToAI()"></div>
+  <div class="circle-text" id="circleText"></div>
+  <div class="inner-circle" onclick="goToPlayer()">Player Mode</div>
+</div>
+
+<script>
+  function goToPlayer() {
+    window.location.href = 'index.html';
+  }
+  function goToAI() {
+    window.location.href = 'ai_mode.html';
+  }
+
+  // Generate circular text for AI MODE
+  const text = "AI MODE • AI MODE • AI MODE • ";
+  const circleTextContainer = document.getElementById("circleText");
+  for (let i = 0; i < text.length; i++) {
+    const span = document.createElement("span");
+    span.innerText = text[i];
+    span.style.transform = `rotate(${i * (360 / text.length)}deg)`;
+    circleTextContainer.appendChild(span);
+  }
+</script>
+
+</body>
+</html>

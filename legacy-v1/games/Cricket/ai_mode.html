@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Cricket — AI Mode</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    background:#000;color:#fff;height:100vh;display:flex;flex-direction:column;overflow:hidden;
+  }
+
+  /* Panels */
+  .topPanel{
+    flex:1;
+    background:transparent; /* set via JS as backgroundImage */
+    border-bottom-left-radius:50% 50%;
+    border-bottom-right-radius:50% 50%;
+    position:relative; display:flex; align-items:flex-start; justify-content:center; padding-top:12px;
+  }
+  .bottomPanel{
+    flex:1;
+    background:transparent; /* set via JS as backgroundImage */
+    border-top-left-radius:50% 50%;
+    border-top-right-radius:50% 50%;
+    position:relative; display:flex; align-items:flex-end; justify-content:center; padding-bottom:12px;
+  }
+
+  /* Number buttons (stick to edges of their panels) */
+  .numButtons{ position:absolute; display:flex; gap:8px; }
+  .topPanel .numButtons{ top:8px }
+  .bottomPanel .numButtons{ bottom:8px }
+  .numButtons button{
+    width:44px;height:44px;border-radius:50%;border:none;background:#fff;color:#000;font-weight:700;cursor:pointer;
+    transition:transform .12s;
+  }
+  .numButtons button:active{ transform:scale(.95) }
+
+  /* Middle area */
+  .middleArea{
+    flex:0 0 96px; background:#060606; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  #commentaryBox{font-style:italic;color:#cfcfcf;min-height:22px}
+  #timer{font-size:36px;font-weight:700;margin-top:6px}
+
+  /* Scoreboard semicircle (left) */
+  #scoreboard{
+    position:fixed; left:0; top:50%; transform:translateY(-50%);
+    width:70px;height:150px; padding:.6rem; display:flex; align-items:center; justify-content:center;
+    writing-mode:vertical-rl; text-align:center; font-weight:700; border-top-right-radius:50px; border-bottom-right-radius:50px;
+    transition:background .3s;
+  }
+  #scoreText{ font-size:.95rem; line-height:1.15 }
+
+  /* Exit semicircle (right) */
+  #exitBtn{
+    position:fixed; right:0; top:50%; transform:translateY(-50%); width:54px;height:86px;
+    background:#ffb300; border-top-left-radius:60px; border-bottom-left-radius:60px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; user-select:none;
+  }
+
+  /* Color buttons (green circle, icon-only) */
+  .colorBtn{ position:absolute; width:36px;height:36px;border-radius:50%; background:#4caf50;border:none;color:#fff; cursor:pointer }
+  .topPanel .colorBtn{ left:12px; top:12px }
+  .bottomPanel .colorBtn{ right:12px; bottom:12px }
+
+  /* Popup (runs/out) */
+  .popup{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#03a9f4; color:#000; padding:12px 20px; border-radius:10px; display:none; font-weight:700; z-index:250 }
+
+  /* Overlays */
+  #endOverlay,#inningsOverlay,#setupPopup{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:300 }
+  #endOverlay,#inningsOverlay{ background:rgba(0,0,0,.9); color:#fff; flex-direction:column; animation:fadeIn .35s }
+  @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+
+  /* Setup popup */
+  #setupPopup{ background:rgba(0,0,0,.9); color:#fff }
+  .setupBox{ background:#111; padding:18px 22px; border-radius:12px; display:flex; flex-direction:column; gap:12px; align-items:center }
+  .setupRow{ display:flex; gap:10px; align-items:center }
+  .setupRow button{ width:34px;height:34px;border-radius:50%;border:none;background:#00eaff;color:#000;font-weight:700;cursor:pointer }
+  .smallBtn{ padding:8px 12px;border-radius:8px;border:none;background:#ffd966;color:#000; font-weight:700;cursor:pointer }
+
+  @media (max-width:640px){
+    #timer{ font-size:28px } .numButtons button{ width:38px;height:38px }
+  }
+</style>
+</head>
+<body>
+
+<!-- Scoreboard (batting side only) -->
+<div id="scoreboard"><div id="scoreText">0/0 (0.0)</div></div>
+
+<!-- Exit (hold 2s) -->
+<div id="exitBtn" title="Hold to Quit">⏻</div>
+
+<!-- Top panel (Player 1) -->
+<div class="topPanel" id="panelP1">
+  <button class="colorBtn" title="Change color" onclick="changePanelColor('panelP1')">🎨</button>
+  <div class="numButtons" id="buttonsP1"></div>
+</div>
+
+<!-- Middle (commentary + timer) -->
+<div class="middleArea">
+  <div id="tossInfo"></div>
+  <div id="commentaryBox">Welcome — AI mode ready</div>
+  <div id="timer">3</div>
+</div>
+
+<!-- Bottom panel (Player 2 = AI) -->
+<div class="bottomPanel" id="panelP2">
+  <div class="numButtons" id="buttonsP2"></div>
+  <button class="colorBtn" title="Change color" onclick="changePanelColor('panelP2')">🎨</button>
+</div>
+
+<!-- Popups/Overlays -->
+<div id="popup" class="popup"></div>
+
+<div id="inningsOverlay"><h1 id="inningsMsg">Innings Change</h1></div>
+
+<div id="endOverlay">
+  <h1 id="winnerText">Winner</h1>
+  <div style="margin-top:14px">
+    <button class="smallBtn" onclick="rematch()">Rematch</button>
+    <button class="smallBtn" onclick="resetGame()">Reset</button>
+  </div>
+</div>
+
+<!-- Setup popup -->
+<div id="setupPopup">
+  <div class="setupBox">
+    <h2>Match Setup (AI Mode)</h2>
+    <div id="tossDisplay" style="font-size:.95rem;color:#ddd"></div>
+
+    <div class="setupRow">Overs
+      <button onclick="changeOvers(-1)">-</button>
+      <span id="oversVal">2</span>
+      <button onclick="changeOvers(1)">+</button>
+    </div>
+
+    <div class="setupRow">Wickets
+      <button onclick="changeWickets(-1)">-</button>
+      <span id="wicketsVal">2</span>
+      <button onclick="changeWickets(1)">+</button>
+    </div>
+
+    <div class="setupRow">
+      <label style="color:#ccc">Who bats first?</label>
+      <button class="smallBtn" id="batP1">You</button>
+      <button class="smallBtn" id="batP2">AI</button>
+    </div>
+
+    <div style="margin-top:6px">
+      <button class="smallBtn" id="playBtn">Play Match</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   STATE & CONFIG
+   ========================= */
+let overs = 2, totalWickets = 2;
+let ballsBowled = 0;
+let player1Score = 0, player2Score = 0;
+let player1Wickets = 0, player2Wickets = 0;
+let innings = 1;
+let isPlayer1Batting = true;   // set via setup/toss
+let target = null;
+
+let batterChoice = null, bowlerChoice = null;
+
+const isComputerMode = true;   // this file is AI mode
+const isPlayer2AI = true;      // player2 is AI
+let aiWasBattingThisBall = false;
+
+const commentary = {
+  out: ["Bowled him!", "Massive appeal... OUT!", "Edged and taken!", "He’s gone!"],
+  0: ["Dot ball!", "Solid defense!"],
+  1: ["Quick single!", "Cheeky run!"],
+  2: ["Easy two!", "Good running!"],
+  3: ["Three taken!", "Brilliant running!"],
+  4: ["FOUR!", "Cracking shot!"],
+  5: ["Five runs! Overthrow!"],
+  6: ["SIX!", "Huge hit!"]
+};
+
+const gradients = [
+  "linear-gradient(135deg,#1e88e5,#1565c0)",
+  "linear-gradient(135deg,#8e24aa,#6a1b9a)",
+  "linear-gradient(135deg,#00897b,#00695c)",
+  "linear-gradient(135deg,#fbc02d,#f57f17)",
+  "linear-gradient(135deg,#ef5350,#b71c1c)"
+];
+const panelColorIndex = { panelP1: 0, panelP2: 4 };
+
+/* =========================
+   AI (Adaptive + Persistent)
+   ========================= */
+const AI = {
+  counts:{ player:[0,1,1,1,1,1,1], bowler:[0,1,1,1,1,1,1] }, // Laplace smoothing (index 1..6)
+  total:{ player:6, bowler:6 },
+  epsilon:0.14,
+  key:'cricketAI_stats_v1',
+  load(){
+    try{ const s = localStorage.getItem(this.key);
+      if(s){ const o = JSON.parse(s); if(o.counts){ this.counts=o.counts; this.total=o.total; } }
+    }catch(e){}
+  },
+  save(){ try{ localStorage.setItem(this.key, JSON.stringify({counts:this.counts,total:this.total})) }catch(e){} },
+  learn(opponentRole, pick){
+    if(!pick||pick<1||pick>6) return;
+    this.counts[opponentRole][pick] = (this.counts[opponentRole][pick]||0)+1;
+    this.total[opponentRole] = (this.total[opponentRole]||0)+1;
+    this.save();
+  },
+  pickWhenBowling(){
+    if(Math.random()<this.epsilon) return 1+Math.floor(Math.random()*6);
+    let best=1,bv=-1; for(let i=1;i<=6;i++){ if(this.counts.player[i]>bv){ bv=this.counts.player[i]; best=i; } }
+    return best;
+  },
+  pickWhenBatting(){
+    if(Math.random()<this.epsilon) return 1+Math.floor(Math.random()*6);
+    let best=1,bv=-1e9,tot=this.total.bowler||6;
+    for(let r=1;r<=6;r++){
+      const pEq=(this.counts.bowler[r]||0)/tot;
+      const score=r*(1-pEq);
+      if(score>bv){ bv=score; best=r; }
+    }
+    return best;
+  },
+  pick(isBowling){ return isBowling ? this.pickWhenBowling() : this.pickWhenBatting(); }
+};
+AI.load();
+
+/* =========================
+   UI HELPERS
+   ========================= */
+function applyPanelColors(){
+  document.getElementById('panelP1').style.backgroundImage = gradients[panelColorIndex.panelP1];
+  document.getElementById('panelP2').style.backgroundImage = gradients[panelColorIndex.panelP2];
+}
+function changePanelColor(panelId){
+  panelColorIndex[panelId] = (panelColorIndex[panelId]+1)%gradients.length;
+  document.getElementById(panelId).style.backgroundImage = gradients[panelColorIndex[panelId]];
+  updateScoreboard(); // sync color
+}
+
+function updateScoreboard(){
+  const overText = `${Math.floor(ballsBowled/6)}.${ballsBowled%6}`;
+  const scoreStr = isPlayer1Batting ? `P1: ${player1Score}/${player1Wickets}` : `P2 (AI): ${player2Score}/${player2Wickets}`;
+  let text = `${scoreStr} (${overText})`;
+  if(innings===2 && target) text += `  Target: ${target}`;
+  document.getElementById('scoreText').textContent = text;
+
+  // color sync with batting panel
+  const colorImg = isPlayer1Batting
+    ? getComputedStyle(document.getElementById('panelP1')).backgroundImage
+    : getComputedStyle(document.getElementById('panelP2')).backgroundImage;
+  document.getElementById('scoreboard').style.backgroundImage = colorImg;
+}
+
+function showCommentary(key){
+  const arr = commentary[key] || ["Nice shot!"];
+  document.getElementById('commentaryBox').textContent = arr[Math.floor(Math.random()*arr.length)];
+}
+
+/* =========================
+   SETUP POPUP / TOSS
+   ========================= */
+function setTossDisplay(){
+  const w = localStorage.getItem('tossWinner');
+  const c = localStorage.getItem('tossChoice');
+  const el = document.getElementById('tossDisplay');
+  const info = document.getElementById('tossInfo');
+  if(w && c){
+    el.textContent = `Toss: ${w} | chose to ${c}`;
+    info.textContent = `Toss → ${w} chose to ${c}`;
+    // default batting based on toss
+    if(w==='Player 1'){ isPlayer1Batting = (c==='bat'); }
+    else { // Player 2 (AI)
+      isPlayer1Batting = !(c==='bat');
+    }
+    highlightSelection();
+  } else {
+    el.textContent = `Toss: not set (choose below)`;
+    info.textContent = ``;
+  }
+}
+function changeOvers(v){ overs = Math.max(1, overs+v); document.getElementById('oversVal').textContent = overs; }
+function changeWickets(v){ totalWickets = Math.max(1, totalWickets+v); document.getElementById('wicketsVal').textContent = totalWickets; }
+
+document.getElementById('oversVal').textContent = overs;
+document.getElementById('wicketsVal').textContent = totalWickets;
+
+document.getElementById('batP1').addEventListener('click', ()=>{ isPlayer1Batting=true; highlightSelection(); });
+document.getElementById('batP2').addEventListener('click', ()=>{ isPlayer1Batting=false; highlightSelection(); });
+function highlightSelection(){
+  document.getElementById('batP1').style.opacity = isPlayer1Batting ? '1' : '.6';
+  document.getElementById('batP2').style.opacity = isPlayer1Batting ? '.6' : '1';
+}
+
+/* =========================
+   BALL FLOW + TIMER
+   ========================= */
+let countdownInterval = null;
+
+function renderButtons(){
+  const p1 = document.getElementById('buttonsP1');
+  const p2 = document.getElementById('buttonsP2');
+  p1.innerHTML=''; p2.innerHTML='';
+
+  // Map buttons to ROLES (not players):
+  // role 1 => batter, role 2 => bowler
+  for(let i=1;i<=6;i++){
+    // Player 1's buttons: pass role=1 if P1 is batting; else role=2
+    p1.innerHTML += `<button onclick="selectNumber(${isPlayer1Batting?1:2},${i})">${i}</button>`;
+
+    // Player 2's buttons:
+    if(isPlayer2AI){
+      // show disabled (AI will auto-pick)
+      p2.innerHTML += `<button disabled style="opacity:.55">${i}</button>`;
+    } else {
+      // role=1 if P2 batting, else 2
+      p2.innerHTML += `<button onclick="selectNumber(${isPlayer1Batting?2:1},${i})">${i}</button>`;
+    }
+  }
+}
+
+function startCountdown(){
+  let t=3;
+  document.getElementById('timer').textContent = t;
+  clearInterval(countdownInterval);
+  countdownInterval = setInterval(()=>{
+    t--; document.getElementById('timer').textContent = t;
+    if(t<=0){ clearInterval(countdownInterval); processTurn(); }
+  },1000);
+}
+
+function newBall(){
+  batterChoice=null; bowlerChoice=null;
+  renderButtons();
+  startCountdown();
+
+  // AI schedule
+  if(isPlayer2AI){
+    const aiIsBatting = !isPlayer1Batting;          // Player2 bats when Player1 not batting
+    aiWasBattingThisBall = aiIsBatting;
+    const delay = 600 + Math.floor(Math.random()*700);
+    setTimeout(()=>{
+      const aiPick = AI.pick(!aiIsBatting);         // pass isBowling
+      const roleForAI = aiIsBatting ? 1 : 2;        // if AI batting -> role=1 (batter), else role=2 (bowler)
+      selectNumber(roleForAI, aiPick);
+    }, delay);
+  }
+}
+
+function selectNumber(role, num){
+  if(role===1) batterChoice = num;
+  if(role===2) bowlerChoice = num;
+  if(batterChoice!==null && bowlerChoice!==null){
+    clearInterval(countdownInterval);
+    processTurn();
+  }
+}
+
+function processTurn(){
+  ballsBowled++;
+  const popup = document.getElementById('popup');
+
+  if(batterChoice===null || bowlerChoice===null){
+    // missing pick => treat as 1 run for fairness
+    const runs = 1;
+    popup.textContent = `Auto: ${runs} RUN`;
+    showCommentary(runs);
+    if(isPlayer1Batting) player1Score += runs; else player2Score += runs;
+  } else if(batterChoice === bowlerChoice){
+    popup.textContent = "OUT!";
+    showCommentary('out');
+    if(isPlayer1Batting) player1Wickets++; else player2Wickets++;
+  } else {
+    const runs = batterChoice;
+    popup.textContent = `${runs} RUNS!`;
+    showCommentary(runs);
+    if(isPlayer1Batting) player1Score += runs; else player2Score += runs;
+  }
+  popup.style.display='block';
+  setTimeout(()=>popup.style.display='none',700);
+
+  // AI learning
+  if(isPlayer2AI){
+    if(aiWasBattingThisBall){
+      // AI batted -> learn human bowler choice
+      AI.learn('bowler', bowlerChoice);
+    } else {
+      // AI bowled -> learn human batter choice
+      AI.learn('player', batterChoice);
+    }
+  }
+
+  updateScoreboard();
+
+  if(checkEnd()) return;
+  setTimeout(newBall,900);
+}
+
+/* =========================
+   END / INNINGS CHANGE
+   ========================= */
+function showInningsChange(msg){
+  const ov = document.getElementById('inningsOverlay');
+  document.getElementById('inningsMsg').textContent = msg;
+  ov.style.display='flex';
+  setTimeout(()=>{ ov.style.display='none'; updateScoreboard(); newBall(); }, 1700);
+}
+
+function checkEnd(){
+  if(innings===1){
+    const wicketsDown = isPlayer1Batting ? player1Wickets>=totalWickets : player2Wickets>=totalWickets;
+    if(wicketsDown || ballsBowled >= overs*6){
+      target = (isPlayer1Batting ? player1Score : player2Score) + 1;
+      innings = 2;
+      isPlayer1Batting = !isPlayer1Batting;   // SWAP roles (Player ⇄ AI)
+      ballsBowled = 0;
+      showInningsChange("Second Innings Begins");
+      return true;
+    }
+    return false;
+  } else {
+    // Game over in 2nd innings
+    const battingScore = isPlayer1Batting ? player1Score : player2Score;
+    const wicketsDown = isPlayer1Batting ? player1Wickets>=totalWickets : player2Wickets>=totalWickets;
+    if(ballsBowled >= overs*6 || wicketsDown || battingScore >= target){
+      endMatch();
+      return true;
+    }
+    return false;
+  }
+}
+
+function endMatch(){
+  let text="";
+  if(player1Score > player2Score) text="Player 1 wins!";
+  else if(player2Score > player1Score) text="AI (Player 2) wins!";
+  else text="Match Tied!";
+  document.getElementById('winnerText').textContent = text;
+  document.getElementById('endOverlay').style.display='flex';
+}
+
+/* =========================
+   STARTUP / SETUP
+   ========================= */
+function startAfterSetup(){
+  document.getElementById('setupPopup').style.display='none';
+  applyPanelColors();
+  updateScoreboard();
+  newBall();
+}
+
+function initSetup(){
+  // Default gradients
+  applyPanelColors();
+  // Toss info
+  setTossDisplay();
+  // Highlight batting selection
+  highlightSelection();
+
+  // Play button
+  document.getElementById('playBtn').addEventListener('click', startAfterSetup);
+
+  // Show setup
+  document.getElementById('setupPopup').style.display='flex';
+}
+
+/* =========================
+   HOLD-TO-EXIT / REMATCH
+   ========================= */
+let holdTimer=null;
+document.getElementById('exitBtn').addEventListener('mousedown', ()=>{ holdTimer=setTimeout(resetGame,2000); });
+['mouseup','mouseleave'].forEach(ev=>document.getElementById('exitBtn').addEventListener(ev, ()=>clearTimeout(holdTimer)));
+
+function rematch(){ location.reload(); }
+function resetGame(){ localStorage.clear(); location.href='main.html'; }
+
+/* =========================
+   BOOT
+   ========================= */
+initSetup();
+updateScoreboard();
+</script>
+</body>
+</html>

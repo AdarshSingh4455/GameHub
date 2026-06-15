@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Mode - Guessing Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, #141e30, #243b55);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+      position: relative;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px 0;
+      width: 80%;
+      border-radius: 10px;
+      border: none;
+    }
+    button {
+      background-color: #00c6ff;
+      color: #000;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background-color: #92fe9d;
+    }
+    #hint, #aiGuessDisplay {
+      margin-top: 15px;
+      font-size: 1.2rem;
+    }
+
+    .cover {
+      width: 140px;
+      height: 140px;
+      margin: 20px auto;
+      background: linear-gradient(145deg, #111, #333);
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px #00ffe7;
+      transition: all 0.5s ease;
+    }
+
+    .cover.reveal {
+      background: #00ff8850;
+      color: white;
+      box-shadow: 0 0 10px #00ff88;
+    }
+
+    #popup {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 99;
+    }
+    #popupContent {
+      background: white;
+      color: black;
+      padding: 2rem;
+      border-radius: 1rem;
+      font-size: 1.5rem;
+      text-align: center;
+    }
+
+    .shake {
+      animation: shakeEffect 0.4s;
+    }
+
+    @keyframes shakeEffect {
+      0% { transform: translateX(0px); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); }
+      75% { transform: translateX(-5px); }
+      100% { transform: translateX(0px); }
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      50% { transform: translateX(10px); }
+      75% { transform: translateX(-6px); }
+      100% { transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🤖Number Guessing</h2>
+    <div class="cover" id="coverBox">Guess It!</div>
+    <div id="turnDisplay">Your Turn</div>
+    <input type="number" id="guessInput" placeholder="Enter your guess" />
+    <button onclick="playerGuess()">Submit</button>
+
+    <div id="hint"></div>
+    <div id="aiGuessDisplay"></div>
+  </div>
+
+  <div id="popup"><div id="popupContent"></div></div>
+
+  <script>
+    let target = Math.floor(Math.random() * 100) + 1;
+    let playerTurn = true;
+    let aiLow = 1, aiHigh = 100;
+    let lastPlayerGuess = null;
+
+    function playerGuess() {
+      if (!playerTurn) return;
+
+      const guess = parseInt(document.getElementById("guessInput").value);
+      if (!guess || guess < 1 || guess > 100) return;
+
+      lastPlayerGuess = guess;
+
+      document.getElementById("guessInput").value = '';
+      document.getElementById("coverBox").textContent = `You guessed: ${guess}`;
+      document.getElementById("turnDisplay").textContent = "AI's Turn";
+
+      if (guess === target) {
+        win("🎉 You win!");
+        return;
+      }
+
+      if (guess < target) {
+        document.getElementById("hint").textContent = "📉 Too Low!";
+        document.getElementById("coverBox").classList.add("shake");
+        setTimeout(() => {
+          document.getElementById("coverBox").classList.remove("shake");
+        }, 400);
+      } else {
+        document.getElementById("hint").textContent = "📈 Too High!";
+        document.getElementById("coverBox").classList.add("shake");
+        setTimeout(() => {
+          document.getElementById("coverBox").classList.remove("shake");
+        }, 400);
+      }
+
+      playerTurn = false;
+
+      // Show AI thinking...
+      document.getElementById("aiGuessDisplay").textContent = "🤖 AI is thinking...";
+      setTimeout(aiGuess, 1500);
+    }
+
+    function aiGuess() {
+      // Use lastPlayerGuess to adjust range
+      if (lastPlayerGuess !== null) {
+        const hint = document.getElementById("hint").textContent;
+        if (hint.includes("Too Low")) {
+          aiLow = Math.max(aiLow, lastPlayerGuess + 1);
+        } else if (hint.includes("Too High")) {
+          aiHigh = Math.min(aiHigh, lastPlayerGuess - 1);
+        }
+      }
+
+      const guess = Math.floor(Math.random() * (aiHigh - aiLow + 1)) + aiLow;
+
+      document.getElementById("aiGuessDisplay").textContent = `🤖 AI guessed: ${guess}`;
+      document.getElementById("coverBox").textContent = `AI guessed: ${guess}`;
+
+      if (guess === target) {
+        win("💻 AI wins!");
+        return;
+      }
+
+      if (guess < target) {
+        document.getElementById("hint").textContent = "📉 Too Low!";
+        aiLow = guess + 1;
+      } else {
+        document.getElementById("hint").textContent = "📈 Too High!";
+        aiHigh = guess - 1;
+      }
+
+      playerTurn = true;
+      document.getElementById("turnDisplay").textContent = "Your Turn";
+    }
+
+    function win(msg) {
+      document.getElementById("popupContent").textContent = msg;
+      document.getElementById("popup").style.display = "flex";
+
+      // Reveal number in cover
+      document.getElementById("coverBox").textContent = `🎯 ${target}`;
+      document.getElementById("coverBox").classList.add("reveal");
+
+      // Confetti!
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    }
+
+    document.getElementById("guessInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        playerGuess();
+      }
+    });
+  </script>
+</body>
+</html>

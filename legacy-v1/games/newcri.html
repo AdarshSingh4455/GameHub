@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cricket Match Game</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #000;
+    color: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Top Player (Blue) */
+  .topPanel {
+    flex: 1;
+    background: linear-gradient(135deg, #1e88e5, #1565c0);
+    border-bottom-left-radius: 50% 50%;
+    border-bottom-right-radius: 50% 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    position: relative;
+  }
+
+  /* Bottom Player (Red) */
+  .bottomPanel {
+    flex: 1;
+    background: linear-gradient(135deg, #e53935, #b71c1c);
+    border-top-left-radius: 50% 50%;
+    border-top-right-radius: 50% 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    position: relative;
+  }
+
+  /* Middle area */
+  .middleArea {
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 1.2rem;
+    background: #000;
+  }
+  #timer {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+  }
+
+  /* Number buttons */
+  .numButtons {
+    display: flex;
+    gap: 0.5rem;
+    position: absolute;
+  }
+  .topPanel .numButtons { top: 10px; }
+  .bottomPanel .numButtons { bottom: 10px; }
+
+  .numButtons button {
+    width: 40px; height: 40px;
+    border-radius: 50%; border: none;
+    font-weight: bold; background: white; color: black;
+    cursor: pointer; font-size: 1rem;
+    transition: transform 0.2s;
+  }
+  .numButtons button:hover { transform: scale(1.1); }
+
+  /* Scoreboard semicircle */
+  #scoreboard {
+    position: fixed;
+    top: 50%; left: 0;
+    transform: translateY(-50%);
+    width: 65px; height: 140px;
+    border-top-right-radius: 50px;
+    border-bottom-right-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    text-align: center;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+    font-weight: bold;
+    transition: background 0.5s;
+  }
+
+  /* Exit button semicircle */
+  #exitBtn {
+    position: fixed;
+    top: 50%; right: 0;
+    transform: translateY(-50%);
+    width: 50px; height: 80px;
+    background: #ffb300;
+    border-top-left-radius: 60px;
+    border-bottom-left-radius: 60px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: translateY(-50%) scale(1); }
+    50% { transform: translateY(-50%) scale(1.05); }
+  }
+
+  /* Color change buttons (green circle) */
+  .colorBtn {
+    position: absolute;
+    bottom: 10px;
+    width: 35px; height: 35px;
+    border-radius: 50%; background: #4caf50;
+    border: none; font-size: 1.2rem; cursor: pointer; color: white;
+    animation: pulse 3s infinite;
+  }
+  .topPanel .colorBtn { left: 10px; top: 10px; bottom: auto; }
+  .bottomPanel .colorBtn { right: 10px; bottom: 10px; }
+
+  /* Popup for OUT / Runs */
+  .popup {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #03a9f4;
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    font-size: 1.5rem;
+    display: none;
+    animation: popupEffect 0.5s ease-out;
+    z-index: 200;
+  }
+  @keyframes popupEffect {
+    from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  }
+
+  /* Match End Overlay */
+  #endOverlay, #inningsOverlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    animation: fadeIn 0.5s ease-out;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- Scoreboard -->
+<div id="scoreboard">
+  <div id="scoreText"></div>
+</div>
+
+<!-- Exit Button -->
+<div id="exitBtn" title="Hold to Quit">⏻</div>
+
+<!-- Top Panel -->
+<div class="topPanel" id="panelP1">
+  <div class="numButtons" id="buttonsP1"></div>
+  <button class="colorBtn" onclick="changePanelColor('panelP1')">🎨</button>
+</div>
+
+<!-- Middle Area -->
+<div class="middleArea">
+  <div id="commentaryBox"></div>
+  <div id="timer">3</div>
+</div>
+
+<!-- Bottom Panel -->
+<div class="bottomPanel" id="panelP2">
+  <div class="numButtons" id="buttonsP2"></div>
+  <button class="colorBtn" onclick="changePanelColor('panelP2')">🎨</button>
+</div>
+
+<!-- Popup -->
+<div id="popup" class="popup"></div>
+
+<!-- Overlays -->
+<div id="endOverlay">
+  <h2 id="winnerText"></h2>
+  <button onclick="rematch()">Rematch</button>
+  <button onclick="resetGame()">Reset Game</button>
+</div>
+<div id="inningsOverlay">
+  <h2 id="inningsText"></h2>
+</div>
+
+<script>
+let player1 = "Player 1", player2 = "Player 2";
+let totalOvers = 2, ballsBowled = 0, totalWickets = 2;
+let player1Score = 0, player2Score = 0, player1Wickets = 0, player2Wickets = 0;
+let isPlayer1Batting = true, innings = 1, target = null;
+let batterChoice = null, bowlerChoice = null;
+let holdTimer;
+
+const commentary = {
+  out: ["He’s bowled him!", "Massive appeal... OUT!", "Edged and taken!"],
+  0: ["Dot ball!", "Solid defense!"],
+  1: ["Quick single!", "Cheeky run!"],
+  2: ["Easy two runs!", "Good running!"],
+  3: ["Three runs!", "Brilliant running!"],
+  4: ["FOUR!", "Cracking shot!"],
+  5: ["Five runs!", "Overthrow!"],
+  6: ["SIX!", "Huge hit!"]
+};
+const colors = [
+  "linear-gradient(135deg, #1e88e5, #1565c0)",
+  "linear-gradient(135deg, #8e24aa, #6a1b9a)",
+  "linear-gradient(135deg, #00897b, #00695c)",
+  "linear-gradient(135deg, #fbc02d, #f57f17)",
+  "linear-gradient(135deg, #ef5350, #b71c1c)"
+];
+
+function updateScoreboard() {
+  const overText = `${Math.floor(ballsBowled/6)}.${ballsBowled%6}`;
+  let scoreStr = isPlayer1Batting
+    ? `${player1}: ${player1Score}/${player1Wickets} (${overText})`
+    : `${player2}: ${player2Score}/${player2Wickets} (${overText})`;
+
+  if (innings === 2) scoreStr += ` | Target: ${target}`;
+  const board = document.getElementById("scoreboard");
+  board.style.background = isPlayer1Batting
+    ? document.getElementById("panelP1").style.backgroundImage
+    : document.getElementById("panelP2").style.backgroundImage;
+  document.getElementById("scoreText").textContent = scoreStr;
+}
+
+function newBall() {
+  batterChoice = null; bowlerChoice = null;
+  document.getElementById("buttonsP1").innerHTML = "";
+  document.getElementById("buttonsP2").innerHTML = "";
+  for (let i = 1; i <= 6; i++) {
+    document.getElementById("buttonsP1").innerHTML += `<button onclick="selectNumber(${isPlayer1Batting?1:2},${i})">${i}</button>`;
+    document.getElementById("buttonsP2").innerHTML += `<button onclick="selectNumber(${isPlayer1Batting?2:1},${i})">${i}</button>`;
+  }
+  startCountdown();
+}
+
+function startCountdown() {
+  let time = 3;
+  document.getElementById("timer").textContent = time;
+  const interval = setInterval(()=>{
+    time--;
+    document.getElementById("timer").textContent = time;
+    if(time<=0){ clearInterval(interval); processTurn(); }
+  },1000);
+}
+
+function selectNumber(role, num) {
+  if(role === 1) batterChoice = num;
+  if(role === 2) bowlerChoice = num;
+  if(batterChoice !== null && bowlerChoice !== null) processTurn();
+}
+
+function processTurn() {
+  ballsBowled++;
+  let popup = document.getElementById("popup");
+  if(batterChoice === bowlerChoice) {
+    popup.textContent = "OUT!";
+    if(isPlayer1Batting) player1Wickets++; else player2Wickets++;
+    showCommentary("out");
+  } else {
+    let runs = batterChoice;
+    popup.textContent = `${runs} RUNS!`;
+    if(isPlayer1Batting) player1Score += runs; else player2Score += runs;
+    showCommentary(runs);
+  }
+  popup.style.display = "block";
+  setTimeout(()=>popup.style.display="none",800);
+  updateScoreboard();
+  if(checkEnd()) return;
+  setTimeout(newBall,1000);
+}
+
+function checkEnd() {
+  if(innings === 1 && (player1Wickets>=totalWickets || ballsBowled >= totalOvers*6)) {
+    innings = 2;
+    target = player1Score + 1;
+    isPlayer1Batting = false;
+    ballsBowled = 0;
+    showInningsChange("Second Innings Begins");
+    return true;
+  }
+  if(innings === 2 && (player2Wickets>=totalWickets || ballsBowled >= totalOvers*6 || player2Score>=target)) {
+    endMatch();
+    return true;
+  }
+  return false;
+}
+
+function showCommentary(type) {
+  let lines = commentary[type] || ["Nice shot!"];
+  document.getElementById("commentaryBox").textContent = lines[Math.floor(Math.random()*lines.length)];
+}
+
+function showInningsChange(msg) {
+  const overlay = document.getElementById("inningsOverlay");
+  document.getElementById("inningsText").textContent = msg;
+  overlay.style.display = "flex";
+  setTimeout(()=>{
+    overlay.style.display = "none";
+    updateScoreboard();
+    newBall();
+  },2000);
+}
+
+function endMatch() {
+  let text = "";
+  if(player1Score > player2Score) text = `${player1} wins!`;
+  else if(player2Score > player1Score) text = `${player2} wins!`;
+  else text = "It's a tie!";
+  document.getElementById("winnerText").textContent = text;
+  document.getElementById("endOverlay").style.display = "flex";
+}
+
+function rematch() {
+  player1Score = player2Score = 0;
+  player1Wickets = player2Wickets = 0;
+  ballsBowled = 0; innings = 1; isPlayer1Batting = true; target = null;
+  document.getElementById("endOverlay").style.display = "none";
+  updateScoreboard();
+  newBall();
+}
+
+function resetGame() { location.reload(); }
+
+function changePanelColor(panelId) {
+  const panel = document.getElementById(panelId);
+  let current = panel.style.backgroundImage;
+  let idx = colors.indexOf(current);
+  let next = colors[(idx+1)%colors.length] || colors[0];
+  panel.style.backgroundImage = next;
+  updateScoreboard();
+}
+
+/* Hold-to-exit */
+const exitBtn = document.getElementById("exitBtn");
+exitBtn.addEventListener("mousedown", () => {
+  holdTimer = setTimeout(()=>resetGame(),2000);
+});
+exitBtn.addEventListener("mouseup", () => clearTimeout(holdTimer));
+exitBtn.addEventListener("mouseleave", () => clearTimeout(holdTimer));
+
+/* Start Game */
+document.getElementById("panelP1").style.backgroundImage = colors[0];
+document.getElementById("panelP2").style.backgroundImage = colors[4];
+updateScoreboard();
+newBall();
+</script>
+</body>
+</html>

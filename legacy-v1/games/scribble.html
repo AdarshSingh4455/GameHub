@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe</title>
+  <link rel="icon" href="https://img.icons8.com/ios-filled/100/tic-tac-toe.png" type="image/x-icon" />
+  <style>
+    :root {
+      --bg-color: #f0f0f0;
+      --text-color: #333;
+      --cell-bg: #fff;
+      --cell-hover: #e0e0e0;
+      --primary-color: #4caf50;
+      --secondary-color: #ff5722;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #121212;
+      --text-color: #f0f0f0;
+      --cell-bg: #1e1e1e;
+      --cell-hover: #333;
+      --primary-color: #81c784;
+      --secondary-color: #ff8a65;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 10px;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      background-color: var(--cell-bg);
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s, font-size 0.2s;
+    }
+
+    .cell:hover {
+      background-color: var(--cell-hover);
+      transform: scale(1.1);
+    }
+
+    .cell.taken {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .cell.taken {
+      animation: pop 0.3s ease-in-out;
+    }
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    .reset {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: var(--primary-color);
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .reset:hover {
+      background-color: var(--secondary-color);
+      transform: scale(1.1);
+    }
+
+    .theme-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: var(--primary-color);
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .theme-toggle:hover {
+      background-color: var(--secondary-color);
+      transform: scale(1.1);
+    }
+    .sidebar {
+      height: 100%;
+      width: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: #111;
+      overflow-x: hidden;
+      transition: 0.5s;
+      padding-top: 60px;
+      color: white;
+    }
+
+    .sidebar h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .sidebar ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .sidebar ul li {
+      padding: 10px 20px;
+      text-align: left;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .sidebar ul li:hover {
+      background-color: #575757;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 20px;
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+
+    .open-sidebar {
+      position: fixed;
+      top: 40px;
+      left: 20px;
+      font-size: 20px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .open-sidebar:hover {
+      background-color: var(--secondary-color);
+      transform: scale(1.1);
+    }
+
+    .back-button {
+      position: fixed;
+      top: 2px;
+      left: 10px;
+      background-color: #4caf50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      font-size: 1rem;
+      border-radius: 30px;
+      cursor: pointer;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      transition: background-color 0.3s;
+    }
+
+    .back-button:hover {
+      background-color: #ff5722;
+    }
+
+    .history {
+      margin-top: 20px;
+      padding: 1rem;
+      background-color: #222;
+      color: white;
+      border-radius: 10px;
+      max-width: 250px;
+    }
+
+    .timer {
+      font-size: 1.2rem;
+      margin-top: 10px;
+      color: orange;
+    }
+
+    .game-container {
+      height: 100vh;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      align-items: center;
+      gap: 40px;
+      padding: 20px;
+    }
+
+    .left-section {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .right-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .popup {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #222;
+      color: white;
+      padding: 2rem;
+      border-radius: 20px;
+      font-size: 1.5rem;
+      z-index: 9999;
+      box-shadow: 0 0 20px #ff0;
+      animation: popper 0.7s ease forwards;
+    }
+
+    @keyframes popper {
+      0% { transform: scale(0.3) translate(-50%, -50%); opacity: 0; }
+      100% { transform: scale(1) translate(-50%, -50%); opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(50px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      .board {
+        grid-template-columns: repeat(3, 80px);
+        grid-template-rows: repeat(3, 80px);
+      }
+
+      .cell {
+        width: 80px;
+        height: 80px;
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <button onclick="goBack()" class="back-button">⬅ Back</button>
+  <button class="theme-toggle" id="theme-toggle">🌙 Night Mode</button>
+  <div class="game-container">
+    <div class="left-section">
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <h1 style="margin-bottom: 0;">Tic Tac Toe</h1>
+        <small style="margin-top: -10px; margin-bottom: 20px; align-self: flex-end; color: rgb(255, 255, 255);">By WeR</small>
+      </div>
+      <div class="board" id="board"></div>
+      <div class="status" id="status">Loading...</div>
+      <button class="reset" id="reset">Reset Game</button>
+    </div>
+
+    <div class="right-section">
+      <div class="timer" id="timer">⏳ 5</div>
+      <div class="history" id="history">
+        <h3>📈 Game History</h3>
+        <p id="starter1">First Turn: 0%</p>
+        <p id="starter2">Second Turn: 0%</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="congratsPopup" style="display: none;" class="popup">
+    <span id="popupMessage">🎉 Congratulations! 🎉</span>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button class="close-btn" id="close-sidebar">✖</button>
+    <h2>Menu</h2>
+    <ul>
+      <li id="leaderboard-btn" onclick="showLeaderboard()" class="attractive">🏆 Leaderboard</li>
+      <li id="settings-btn">⚙️ Game Settings</li>
+      <li id="exit-btn">🚪 Exit</li>
+    </ul>
+  </div>
+  <button class="open-sidebar" id="open-sidebar">☰</button>
+
+  <!-- Leaderboard Modal -->
+  <div id="leaderboardModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; color: #fff; padding: 2rem; border-radius: 10px; text-align: center; z-index: 1001;">
+    <h2>Leaderboard</h2>
+    <table style="width: 100%; margin-top: 1rem; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th style="border-bottom: 1px solid #555; padding: 0.5rem;">Rank</th>
+          <th style="border-bottom: 1px solid #555; padding: 0.5rem;">Player</th>
+          <th style="border-bottom: 1px solid #555; padding: 0.5rem;">Games Played</th>
+          <th style="border-bottom: 1px solid #555; padding: 0.5rem;">Games Won</th>
+          <th style="border-bottom: 1px solid #555; padding: 0.5rem;">Win Rate</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboardTable"></tbody>
+    </table>
+    <button onclick="closeLeaderboard()" class="attractive" style="margin-top: 1rem;">Close</button>
+    <button onclick="resetLeaderboard()" class="attractive" style="margin-top: 1rem;">Reset Leaderboard</button>
+  </div>
+
+  <script>
+    const settings = JSON.parse(localStorage.getItem("gameSettings")) || {};
+    document.body.style.background = settings.bgColor || "#111";
+
+    const board = document.getElementById("board");
+    const status = document.getElementById("status");
+    const resetButton = document.getElementById("reset");
+    const themeToggle = document.getElementById("theme-toggle");
+    const body = document.body;
+    const sidebar = document.getElementById("sidebar");
+    const openSidebarBtn = document.getElementById("open-sidebar");
+    const closeSidebarBtn = document.getElementById("close-sidebar");
+    const leaderboardBtn = document.getElementById("leaderboard-btn");
+    const settingsBtn = document.getElementById("settings-btn");
+    const exitBtn = document.getElementById("exit-btn");
+    let timerInterval;
+    let timeLeft = 5;
+
+    let player1Name = localStorage.getItem("player1Name") || "Player X";
+    let player2Name = localStorage.getItem("player2Name") || "Player O";
+    let player1Icon = localStorage.getItem("player1Icon") || "❌";
+    let player2Icon = localStorage.getItem("player2Icon") || "⭕";
+    let starterWins = {
+      [player1Name]: 0,
+      [player2Name]: 0
+    };
+
+
+    let turnStats = JSON.parse(localStorage.getItem("turnStats")) || {
+      first: { wins: 0, games: 0, ties: 0 },
+      second: { wins: 0, games: 0, ties: 0 }
+    };
+
+    if (!player1Name || !player2Name) {
+      window.location.href = "player-entry.html"; // 🔁 redirect if no names
+    }
+    let currentPlayer = "X";
+    let startingPlayer = currentPlayer;
+    let gameActive = true;
+    let gameState = ["", "", "", "", "", "", "", "", ""];
+
+    // Winning combinations
+    const winningCombinations = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
+    ];
+
+    // Create the board
+    function createBoard() {
+      board.innerHTML = "";
+      gameState.forEach((cell, index) => {
+        const cellElement = document.createElement("div");
+        cellElement.classList.add("cell");
+        cellElement.dataset.index = index;
+        cellElement.addEventListener("click", handleCellClick);
+        board.appendChild(cellElement);
+      });
+    }
+
+    // Handle cell click
+    function handleCellClick(event) {
+      const cell = event.target;
+      const index = cell.dataset.index;
+
+      if (gameState[index] !== "" || !gameActive) return;
+
+      gameState[index] = currentPlayer;
+      cell.textContent = currentPlayer === "X" ? player1Icon : player2Icon;
+      cell.classList.add("taken");
+      clearInterval(timerInterval);
+
+      if (checkWinner()) {
+        const winnerName = currentPlayer === "X" ? player1Name : player2Name;
+        const starterName = startingPlayer === "X" ? player1Name : player2Name;
+        const loserName = currentPlayer === "X" ? player2Name : player1Name;
+
+        status.textContent = `${winnerName} wins! 🎉`;
+        updateTurnStats(winnerName);
+        updateLeaderboard(winnerName, true);             
+        updateLeaderboard(loserName, false);   
+        saveGameResult(player1Name, player2Name, `${winnerName} wins`);
+
+        showPopup("win", winnerName);
+        gameActive = false;
+
+        if (winnerName === starterName) {
+          starterWins[starterName]++;
+        }
+
+        updateHistoryUI();
+        return;
+      }
+
+      if (gameState.every(cell => cell !== "")) {
+        status.textContent = "It's a draw! 🤝";
+        updateTurnStats("tie");
+        updateLeaderboard(player1Name, false, true);
+        updateLeaderboard(player2Name, false, true);
+        saveGameResult(player1Name, player2Name, "Draw");
+
+        showPopup("tie");
+        gameActive = false;
+        // updateLeaderboard(player1Name, false, true);
+        // updateLeaderboard(player2Name, false, true);
+        return;
+      }
+
+      currentPlayer = currentPlayer === "X" ? "O" : "X";
+      status.textContent = `Turn: ${currentPlayer === "X" ? player1Name : player2Name}`;
+      startTurnTimer(); 
+    }
+
+    function updateLeaderboard(playerName, isWinner, isTie = false) {
+      const leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+      let player = leaderboard.find(p => p.name === playerName);
+
+      if (!player) {
+        player = { name: playerName, gamesPlayed: 0, gamesWon: 0, gamesTied: 0 };
+        leaderboard.push(player);
+      }
+
+      player.gamesPlayed++;
+      if (isWinner) player.gamesWon++;
+      if (isTie) player.gamesTied++;
+
+      localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+    }
+
+    resetButton.addEventListener("click", () => {
+      currentPlayer = startingPlayer === "X" ? "O" : "X";  // alternate
+      startingPlayer = currentPlayer;
+      gameActive = true;
+      gameState = ["", "", "", "", "", "", "", "", ""];
+      // status.textContent = `Turn: ${player1Name}`;
+      status.textContent = `Turn: ${currentPlayer === "X" ? player1Name : player2Name}`;
+      createBoard();
+    });
+
+
+
+    // Check for a winner
+    function checkWinner() {
+      for (let combination of winningCombinations) {
+        const [a, b, c] = combination;
+        if (
+          gameState[a] &&
+          gameState[a] === gameState[b] &&
+          gameState[b] === gameState[c]
+        ) {
+          highlightWinningLine([a, b, c]);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function highlightWinningLine(indices) {
+      indices.forEach(i => {
+        const cell = document.querySelector(`.cell[data-index='${i}']`);
+        cell.style.border = "3px solid deepskyblue";
+        cell.style.transition = "border 0.5s ease-in-out";
+      });
+    }
+
+    // Toggle theme
+    themeToggle.addEventListener("click", () => {
+      const currentTheme = body.getAttribute("data-theme");
+      const newTheme = currentTheme === "light" ? "dark" : "light";
+      body.setAttribute("data-theme", newTheme);
+      document.body.style.backgroundColor = newTheme === "light" ? "#69b4d2" : "#121212";
+      document.body.style.color = newTheme === "light" ? "#ffffff" : "#ffffff";
+      themeToggle.textContent = newTheme === "light" ? "🌙 Night Mode" : "☀️ Day Mode";
+    });
+
+        // Open sidebar
+    openSidebarBtn.addEventListener("click", () => {
+      sidebar.style.width = "250px";
+    });
+
+    // Close sidebar
+    closeSidebarBtn.addEventListener("click", () => {
+      sidebar.style.width = "0";
+    });
+
+    // Leaderboard functionality
+    leaderboardBtn.addEventListener("click", () => {
+      window.open("leaderboard.html", "_blank");
+    });
+
+
+    // Game settings functionality
+    settingsBtn.addEventListener("click", () => {
+      window.open("settings.html", "_blank");
+    });
+
+    // Exit functionality
+    exitBtn.addEventListener("click", () => {
+      if (confirm("Are you sure you want to exit the game?")) {
+        window.close();
+      }
+    });
+
+    function saveGameResult(player1, player2, result) {
+      const recentGames = JSON.parse(localStorage.getItem("recentGames")) || [];
+      recentGames.push({ player1, player2, result });
+      localStorage.setItem("recentGames", JSON.stringify(recentGames));
+    }
+
+    function startTurnTimer() {
+      clearInterval(timerInterval);
+      timeLeft = 5;
+      updateTimerUI();
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerUI();
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          autoSwitchTurn(); // turn skip on timeout
+        }
+      }, 1000);
+    }
+
+    function updateTimerUI() {
+      document.getElementById("timer").textContent = `⏳ ${timeLeft}`;
+    }
+
+    function autoSwitchTurn() {
+      currentPlayer = currentPlayer === "X" ? "O" : "X";
+      status.textContent = `Turn: ${currentPlayer === "X" ? player1Name : player2Name}`;
+      startTurnTimer();
+    }
+
+    function updateTurnStats(winner) {
+      const isStarter = currentPlayer === startingPlayer;
+      const starterRole = isStarter ? "first" : "second";
+      const secondRole = isStarter ? "second" : "first";
+
+      turnStats[starterRole].games++;
+      turnStats[secondRole].games++;
+
+      if (winner === "tie") {
+        turnStats.first.ties++;
+        turnStats.second.ties++;
+      } else {
+        turnStats[starterRole].wins++;
+      }
+
+      localStorage.setItem("turnStats", JSON.stringify(turnStats));
+      updateTurnStatsUI();
+    }
+
+    function updateTurnStatsUI() {
+      const f = turnStats.first;
+      const s = turnStats.second;
+
+      const fWin = f.games > 0 ? ((f.wins / f.games) * 100).toFixed(1) + "%" : "0%";
+      const sWin = s.games > 0 ? ((s.wins / s.games) * 100).toFixed(1) + "%" : "0%";
+
+      document.getElementById("starter1").textContent =
+        `First Turn: ${fWin} | Games: ${f.games} | Ties: ${f.ties}`;
+
+      document.getElementById("starter2").textContent =
+        `Second Turn: ${sWin} | Games: ${s.games} | Ties: ${s.ties}`;
+    }
+
+    function showPopup(type = "win", winner = "") {
+      const popup = document.getElementById("congratsPopup");
+      const msg = document.getElementById("popupMessage");
+
+      if (type === "tie") {
+        msg.textContent = "🤝 Oops! It's a tie!";
+      } else {
+        msg.textContent = `🎉 Congratulations ${winner}! 🎉`;
+      }
+
+      popup.style.display = "block";
+      setTimeout(() => {
+        popup.style.display = "none";
+      }, 3000);
+    }
+    // Initialize the game
+    createBoard();
+    status.textContent = `Turn: ${player1Name}`;
+    function goBack() {
+      // window.history.back();
+      window.location.href = "player-entry.html";  // previous page
+    }
+  </script>
+</body>
+</html>
+
+
+<!-- bhaii day mode me grid ka color navy blue rakho aur X and O ke animately appear krwao jisse user ko interactive lage...
+ aur yeh game start hone se phle user se input le unke names and to select their usericon...then game new tab pr open ho...
+ iske andr ek feature aur add kro leaderboard ka ..ki kisne kitni baar khela kitne jeete hai winning percentage and tie kitne hue...
+ jisey reset leaderboard ka bhi option ho aur close krne ka bhi..leader board side navbar me hoga...jo ki hum kabhi bhi open kar skte hai..
+ side navbar ko open karne ke liye 3 line wale symbol pr jaenge aur phir usme 4 options honge ..pehle leaderboard..then game settings..
+ lastly exit..and in game settings me change background..jisme kuch optional backgrounds honge voh use kar skenge hum...
+then sound on and off...automatically voh on rhega...aur voh day / night mode bhi yahi rahega....change usericon...edit name... -->

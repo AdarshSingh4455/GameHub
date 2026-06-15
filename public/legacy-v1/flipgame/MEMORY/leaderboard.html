@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Memory Game Leaderboard</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2rem;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+    th, td {
+      padding: 0.8rem;
+      border: 1px solid #333;
+      text-align: center;
+    }
+    th {
+      background-color: #03a9f4;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      background-color: #f44336;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+      display: block;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <button id="backButton" onclick="goBack()" title="Back" style="position: fixed; top: 15px; right: 20px; z-index: 1000; background: none; border: none; font-size: 1.8rem; color: black;">🔙</button>
+  <h2>🏆 Leaderboard</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Player</th>
+        <th>Played</th>
+        <th>Won</th>
+        <th>Win %</th>
+        <th>Rank</th>
+        <th>Level</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboardBody"></tbody>
+  </table>
+
+  <h2>🕹️ Last 5 Matches</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Player 1</th>
+        <th>Player 2</th>
+        <th>Winner</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody id="historyBody"></tbody>
+  </table>
+  <h2>📅 All Matches (Filter)</h2>
+  <input type="text" id="filterInput" placeholder="Search by player name or winner..." style="width: 100%; padding: 0.5rem; margin-bottom: 1rem;" />
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Player 1</th>
+        <th>Player 2</th>
+        <th>Winner</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody id="allHistoryBody"></tbody>
+  </table>
+
+
+  <button onclick="clearLeaderboard()">Reset All</button>
+
+  <script>
+    const history = JSON.parse(localStorage.getItem('memoryGameHistory')) || [];
+    function getRankByWins(wins) {
+      if (wins >= 100) return "King 👑";
+      if (wins >= 76) return "Pro";
+      if (wins >= 51) return "Skilled";
+      if (wins >= 31) return "Amateur";
+      if (wins >= 16) return "Learner";
+      if (wins >= 6)  return "Beginner";
+      return "Noob";
+    }
+
+    function getLevelProgress(wins) {
+      let cap = 5;
+      if (wins >= 6) cap = 15;
+      if (wins >= 16) cap = 30;
+      if (wins >= 31) cap = 50;
+      if (wins >= 51) cap = 75;
+      if (wins >= 76) cap = 100;
+      const progress = Math.min((wins / cap) * 100, 100);
+      return `${progress.toFixed(1)}%`;
+    }
+
+    const leaderboard = JSON.parse(localStorage.getItem("memoryGameLeaderboard")) || [];
+    const tbody = document.getElementById("leaderboardBody");
+    tbody.innerHTML = "";
+
+    leaderboard
+      .sort((a, b) => (b.gamesWon / b.gamesPlayed || 0) - (a.gamesWon / a.gamesPlayed || 0))
+      .forEach(player => {
+        const winPercent = player.gamesPlayed > 0 ? ((player.gamesWon / player.gamesPlayed) * 100).toFixed(1) : "0.0";
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${player.name}</td>
+          <td>${player.gamesPlayed}</td>
+          <td>${player.gamesWon}</td>
+          <td>${winPercent}%</td>
+          <td><span class="rank-badge">${getRankByWins(player.gamesWon)}</span></td>
+          <td>${getLevelProgress(player.gamesWon)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+
+
+    const histBody = document.getElementById('historyBody');
+    const last5 = history.slice(-5).reverse();
+    last5.forEach((h, i) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${h.player1}</td>
+        <td>${h.player2}</td>
+        <td>${h.winner}</td>
+        <td>${h.date}</td>
+      `;
+      histBody.appendChild(row);
+    });
+
+    const allHistBody = document.getElementById('allHistoryBody');
+    history.forEach((h, i) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${h.player1}</td>
+        <td>${h.player2}</td>
+        <td>${h.winner}</td>
+        <td>${h.date}</td>
+      `;
+      allHistBody.appendChild(row);
+    });
+
+    document.getElementById('filterInput').addEventListener('input', function () {
+      const query = this.value.toLowerCase();
+      const rows = allHistBody.querySelectorAll('tr');
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+      });
+    });
+
+    function clearLeaderboard() {
+      if (confirm("Are you sure you want to reset all leaderboard and history data?")) {
+        localStorage.removeItem("memoryGameLeaderboard");
+        localStorage.removeItem("memoryGameHistory");
+        location.reload();
+      }
+    }
+
+    function goBack() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = "index.html"; // fallback
+      }
+    }
+
+  </script>
+</body>
+</html>

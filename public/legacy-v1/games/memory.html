@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- PWA Meta -->
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#03a9f4">
+  <link rel="icon" href="../icon.png" type="image/png">
+  <title>Memory Card Flip Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 1rem;
+      transition: background-color 0.5s ease;
+    }
+    h1 {
+      margin-bottom: 1rem;
+      font-size: 2.5rem;
+      text-align: center;
+    }
+
+    /* #loadingScreen {
+      transition: opacity 0.5s ease;
+    } */
+    .hamburger {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      font-size: 2rem;
+      color: white;
+      cursor: pointer;
+      z-index: 1002;
+    }
+    .menu-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      background: #222;
+      width: 220px;
+      height: 100vh;
+      z-index: 1001;
+      padding-top: 60px;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+    }
+    .menu-overlay ul {
+      list-style: none;
+      padding: 0;
+    }
+    .menu-overlay li {
+      padding: 1rem;
+      border-bottom: 1px solid #444;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .menu-overlay li:hover {
+      background-color: #444;
+    }
+    .back-icon, .fullscreen-icon {
+      position: fixed;
+      top: 15px;
+      font-size: 1.8rem;
+      background: none;
+      color: white;
+      border: none;
+      cursor: pointer;
+      z-index: 1001;
+    }
+    .back-icon {
+      right: 60px;
+    }
+    .fullscreen-icon {
+      right: 20px;
+    }
+
+
+    .page-exit {
+      animation: slideOut 0.5s forwards;
+    }
+
+    @keyframes slideOut {
+      0% { transform: translateX(0); opacity: 1; }
+      100% { transform: translateX(-100%); opacity: 0; }
+    }
+
+    .mode-selection, .name-input, .icon-selection, .game-board, .scoreboard {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .mode-selection, .name-input, .icon-selection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .mode-selection button, .name-input button, .icon-selection button {
+      padding: 0.8rem 1.5rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      background-color: #333;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .mode-selection button:hover {
+      background-color: #555;
+      transform: scale(1.05);
+    }
+
+    .name-input button:hover, .icon-selection button:hover {
+      background-color: #555;
+    }
+    .name-input input {
+      padding: 0.8rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      width: 80%;
+      max-width: 300px;
+    }
+    .icon-selection {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .category-selection {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 1rem;
+    }
+
+    .category-selection button {
+        margin: 0.5rem;
+    }
+    .icon-selection img {
+      width: 50px;
+      height: 50px;
+      margin: 0.5rem;
+      cursor: pointer;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .icon-selection img.selected {
+      border-color: #03a9f4;
+      transform: scale(1.1);
+    }
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 10px;
+    }
+    .card {
+      width: 100%;
+      aspect-ratio: 1;
+      background-color: #333;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: #fff;
+      cursor: pointer;
+      transform: scale(1);
+      transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+    .card.flipped {
+      background-color: #03a9f4;
+      color: #121212;
+      cursor: default;
+      transform: scale(1.1);
+    }
+    .card.matched {
+      background-color: #4caf50;
+      color: #121212;
+      cursor: default;
+    }
+    .scoreboard {
+      margin-top: 1rem;
+      text-align: center;
+      background-color: #222;
+      padding: 1rem;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .scoreboard .player {
+      display: flex;
+      align-items: center;
+    }
+    .scoreboard .player img {
+      width: 40px;
+      height: 40px;
+      margin-right: 0.5rem;
+      border-radius: 50%;
+    }
+    .scoreboard .player.active {
+        color: #03a9f4; /* Highlight color for active player */
+        font-weight: bold;
+    }
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #03a9f4;
+      color: #fff;
+      padding: 2rem;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 1.5rem;
+      display: none;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    .popup button {
+      margin-top: 1rem;
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      background-color: #333;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .popup button:hover {
+      background-color: #555;
+    }
+    /* Attractive button styles */
+    button.attractive {
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 8px;
+        background: linear-gradient(45deg, #03a9f4, #4caf50);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button.attractive:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    button.attractive:active {
+        transform: scale(1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    #progressBar {
+      width: 100%;
+      height: 10px;
+      background: #333;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+    }
+    #progress {
+      width: 0%;
+      height: 100%;
+      background: #03a9f4;
+      transition: width 0.3s ease;
+    }
+    @media (max-width: 480px) {
+      .mode-selection button, .name-input button, .icon-selection button {
+        font-size: 0.9rem;
+        padding: 0.6rem 1rem;
+      }
+    }
+
+    #loadingScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #121212;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 2rem;
+      z-index: 3000;
+      transition: opacity 0.5s ease;
+    }
+
+    #loadingScreen h1 {
+      font-size: 3rem;
+      margin: 0;
+    }
+
+    #loadingScreen p {
+      margin-top: 0.5rem;
+      font-size: 1.2rem;
+      opacity: 0.7;
+    }
+    #pageContainer {
+      display: none;
+      padding: 2rem;
+      text-align: center;
+    }
+    .main-title {
+      font-size: 2.5rem;
+      margin-top: 1rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      opacity: 0.6;
+      margin-bottom: 1.5rem;
+    }
+
+    /* 🔹 Buttons, Inputs, Layout Tweaks for Mobile */
+  @media (max-width: 480px) {
+    body {
+      padding: 0.5rem;
+    }
+
+    h1.main-title {
+      font-size: 1.8rem;
+    }
+
+    .mode-selection button,
+    .name-input button,
+    .icon-selection button,
+    .category-selection button,
+    .popup button {
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+      margin: 0.3rem;
+    }
+
+    .name-input input {
+      width: 90%;
+      font-size: 0.9rem;
+    }
+
+    .icon-selection img {
+      width: 40px;
+      height: 40px;
+      margin: 0.3rem;
+    }
+
+    .scoreboard {
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.8rem;
+    }
+
+    .scoreboard .player {
+      justify-content: center;
+    }
+
+    .game-board {
+      grid-template-columns: repeat(3, 1fr); /* 3 cards per row */
+      gap: 8px;
+    }
+
+    .card {
+      font-size: 1.5rem;
+      min-width: 60px;
+      min-height: 60px;
+    }
+
+    .category-selection div {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .fullscreen-icon,
+    .back-icon,
+    .hamburger {
+      font-size: 1.4rem;
+    }
+
+    #leaderboardModal {
+      width: 95vw;
+      font-size: 0.8rem;
+      padding: 1rem;
+    }
+
+    #leaderboardModal table {
+      font-size: 0.75rem;
+    }
+
+    #leaderboardModal table th,
+    #leaderboardModal table td {
+      padding: 0.3rem;
+    }
+  }
+
+  </style>
+</head>
+<body>
+  <div id="loadingScreen">
+    <h1>Memory</h1>
+    <p>by WeR</p>
+  </div>
+  <div id="pageContainer">
+    <!-- <div id="loadingScreen" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; font-family: 'Segoe UI', sans-serif;">
+      <h1 style="font-size: 3rem; margin-bottom: 1rem;">Memory</h1>
+      <span style="position: absolute; bottom: 20px; right: 20px; font-size: 1rem; opacity: 0.7;">by WeR</span>
+    </div> -->
+    <h1 class="main-title">Memory</h1>
+    <p class="subtitle">by WeR</p>
+    <!-- <h1>Memory Card Flip Game</h1> -->
+    <div class="hamburger" onclick="toggleMenu()">☰</div>
+      <div id="menuOverlay" class="menu-overlay" style="display: none;">
+        <ul>
+          <li onclick="showLeaderboard()">🏆 Leaderboard</li>
+          <li onclick="toggleSound()">🔊 Sound: <span id="soundStatus">On</span></li>
+          <li onclick="goToRanking()">📊 Ranking</li>
+          <li onclick="exitGame()">❌ Exit</li>
+        </ul>
+      </div>
+
+      <button onclick="stepBack()" class="back-icon" title="Go Back">←</button>
+      <button onclick="toggleFullscreen()" class="fullscreen-icon" title="Toggle Fullscreen">🖵</button>
+    <div id="progressBar">
+      <div id="progress"></div>
+    </div>
+    <div class="mode-selection" id="modeSelection">
+      <button onclick="selectMode('Player')">Let's Go</button>
+    </div>
+    <div class="name-input" id="nameInput" style="display: none;">
+      <input type="text" id="player1Name" placeholder="Enter Player 1 Name" required>
+      <input type="text" id="player2Name" placeholder="Enter Player 2 Name (or Computer)" required>
+      <button onclick="showIconSelection()">Next</button>
+    </div>
+    <div class="icon-selection" id="iconSelection" style="display: none;">
+      <h2>Select Player Icons</h2>
+      <div>
+        <h3>Player 1</h3>
+        <div id="player1Icons"></div>
+      </div>
+      <div>
+        <h3>Player 2</h3>
+        <div id="player2Icons"></div>
+      </div>
+      <button onclick="startGame()" class="attractive" aria-label="Start the Game">Start Game</button>
+    </div>
+    <div class="category-selection" id="categorySelection" style="display: none;">
+      <h2>Select Icon Category</h2>
+      <div>
+        <button onclick="selectCategory('Fruits')" class="attractive" aria-label="Select Fruits Category">Fruits</button>
+        <button onclick="selectCategory('Animals')" class="attractive" aria-label="Select Animals Category">Animals</button>
+        <button onclick="selectCategory('Sports')" class="attractive" aria-label="Select Sports Category">Sports</button>
+        <button onclick="selectCategory('Vehicles')" class="attractive" aria-label="Select Vehicles Category">Vehicles</button>
+        <button onclick="selectCategory('Food')" class="attractive" aria-label="Select Food Category">Food</button>
+        <button onclick="selectCategory('Weather')" class="attractive" aria-label="Select Weather Category">Weather</button>
+        <button onclick="selectCategory('Miscellaneous')" class="attractive" aria-label="Select Miscellaneous Category">Miscellaneous</button>
+      </div>
+    </div>
+    <div class="scoreboard" id="scoreboard" style="display: none;">
+      <div class="player" id="player1Display">
+        <img id="player1Icon" src="" alt="Player 1 Icon">
+        <p id="player1Score">Player 1: 0</p>
+      </div>
+      <div class="player" id="player2Display">
+        <img id="player2Icon" src="" alt="Player 2 Icon">
+        <p id="player2Score">Player 2: 0</p>
+      </div>
+    </div>
+    <div class="game-board" id="gameBoard" style="display: none;"></div>
+    <div class="popup" id="popup">
+      <p id="popupMessage"></p>
+      <button onclick="rematch()">Rematch</button>
+      <button onclick="resetGame()">Quit</button>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboardModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; color: #fff; padding: 2rem; border-radius: 10px; z-index: 1001; width: 95%; max-width: 800px; overflow-y: auto; max-height: 90vh;">
+      <h2 style="text-align: center; margin-bottom: 1rem;">🏆 Custom Leaderboard</h2>
+      <table style="width: 100%; margin-bottom: 2rem; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #444;">
+            <th style="padding: 0.5rem;">#</th>
+            <th style="padding: 0.5rem;">Player</th>
+            <th style="padding: 0.5rem;">Games Played</th>
+            <th style="padding: 0.5rem;">Games Won</th>
+            <th style="padding: 0.5rem;">Ties</th>
+            <th style="padding: 0.5rem;">Win Rate</th>
+          </tr>
+        </thead>
+        <tbody id="fullLeaderboardBody"></tbody>
+      </table>
+
+      <h2 style="text-align: center; margin-bottom: 1rem;">🕹️ Recent 5 Games</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #444;">
+            <th style="padding: 0.5rem;">#</th>
+            <th style="padding: 0.5rem;">Player 1</th>
+            <th style="padding: 0.5rem;">Player 2</th>
+            <th style="padding: 0.5rem;">Winner</th>
+            <th style="padding: 0.5rem;">Date</th>
+          </tr>
+        </thead>
+        <tbody id="lastMatchesBody"></tbody>
+      </table>
+
+      <div style="text-align: center; margin-top: 1.5rem;">
+        <button onclick="closeLeaderboard()" class="attractive">Close</button>
+        <button onclick="resetCustomLeaderboard()" class="attractive">Reset</button>
+      </div>
+    </div>
+  <script>
+    const icons = [
+        // Fruits
+        '🍎', '🍌', '🍇', '🍓', '🍒', '🍍', '🥝', '🍉', '🍋', '🍊', '🥭', '🍑',
+        
+        // Animals
+        '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮',
+        '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦉', '🦄', '🐢', '🐍', '🐙',
+
+        // Sports
+        '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🥊', '🥋',
+
+        // Vehicles
+        '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚜', '🚲', '🛴',
+
+        // Food
+        '🍔', '🍟', '🌭', '🍕', '🥪', '🌮', '🌯', '🥗', '🍿', '🍩', '🍪', '🎂',
+
+        // Weather
+        '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️', '🌧️', '⛈️', '🌩️', '🌨️', '❄️', '🌪️',
+
+        // Miscellaneous
+        '🎃', '🎄', '🎆', '🎇', '✨', '🎈', '🎉', '🎊', '🎁', '🎍', '🎎', '🎏'
+    ];
+    const gameIcons = [
+        'icons/icons8-circled-female-user-skin-type-1-and-2.gif',
+        'icons/icons8-male-user.gif',
+        'icons/icons8-caveman-100.png',
+        'icons/icons8-nerd-hair-100.png',
+        'icons/icons8-user-100 (1).png',
+        'icons/icons8-person-female-100.png',
+        'icons/icons8-user-100.png',
+        'icons/icons8-user-male-100.png'
+    ];
+
+    let gameMode = null;
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let player1Score = 0;
+    let player2Score = 0;
+    let currentPlayer = 1;
+    let player1Name = 'Player 1';
+    let player2Name = 'Player 2';
+    let player1Icon = '';
+    let player2Icon = '';
+
+    const flipSound = new Audio('Assets/flip.mp3');
+    const matchSound = new Audio('Assets/match.mp3');
+    const winSound = new Audio('Assets/win.mp3');
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+    function updateTurnHighlight() {
+        const player1Display = document.getElementById('player1Display');
+        const player2Display = document.getElementById('player2Display');
+
+        if (currentPlayer === 1) {
+            player1Display.classList.add('active');
+            player2Display.classList.remove('active');
+        } else {
+            player2Display.classList.add('active');
+            player1Display.classList.remove('active');
+        }
+    }
+    function goBackToHome() {
+      const container = document.getElementById("pageContainer");
+
+      // Animate exit
+      container.classList.add("page-exit");
+
+      setTimeout(() => {
+        // If there is history, go back (user opened from another HTML page)
+        if (window.history.length > 1 && document.referrer !== "") {
+          window.history.back();
+        } else {
+          // Else, reset internal screens (stay on this page)
+          document.getElementById('modeSelection').style.display = 'flex';
+          document.getElementById('nameInput').style.display = 'none';
+          document.getElementById('iconSelection').style.display = 'none';
+          document.getElementById('scoreboard').style.display = 'none';
+          document.getElementById('gameBoard').style.display = 'none';
+          document.getElementById('popup').style.display = 'none';
+
+          matchedPairs = 0;
+          player1Score = 0;
+          player2Score = 0;
+          currentPlayer = 1;
+          flippedCards = [];
+
+          // Remove animation class after reset
+          container.classList.remove("page-exit");
+        }
+      }, 500);
+    }
+
+    function selectMode(mode) {
+      gameMode = mode;
+      document.getElementById('modeSelection').style.display = 'none';
+      document.getElementById('nameInput').style.display = 'flex';
+      if (mode === 'Computer') {
+        document.getElementById('player2Name').value = 'Computer';
+        document.getElementById('player2Name').disabled = true;
+      }
+    }
+    function sanitizeInput(input) {
+  const div = document.createElement('div');
+  div.textContent = input.trim(); // Trim extra spaces and escape HTML
+  return div.innerHTML;
+}
+
+function showIconSelection() {
+  const player1Input = document.getElementById('player1Name').value;
+  const player2Input = document.getElementById('player2Name').value;
+
+  // Validate inputs
+  if (!player1Input.trim() || !player2Input.trim()) {
+    alert('Please enter valid names for both players.');
+    return;
+  }
+  if (player1Input.length > 20 || player2Input.length > 20) {
+    alert('Player names should not exceed 20 characters.');
+    return;
+  }
+
+  // Sanitize and set player names
+  player1Name = sanitizeInput(player1Input) || 'Player 1';
+  player2Name = sanitizeInput(player2Input) || 'Player 2';
+
+  // Proceed to icon selection
+  document.getElementById('nameInput').style.display = 'none';
+  document.getElementById('iconSelection').style.display = 'flex';
+
+  const player1IconsDiv = document.getElementById('player1Icons');
+  const player2IconsDiv = document.getElementById('player2Icons');
+  player1IconsDiv.innerHTML = '';
+  player2IconsDiv.innerHTML = '';
+
+  gameIcons.forEach((icon, index) => {
+    const img1 = document.createElement('img');
+    img1.src = icon;
+    img1.onclick = () => selectIcon('player1', icon);
+    player1IconsDiv.appendChild(img1);
+
+    const img2 = document.createElement('img');
+    img2.src = icon;
+    img2.onclick = () => selectIcon('player2', icon);
+    player2IconsDiv.appendChild(img2);
+  });
+}
+
+function selectIcon(player, icon) {
+  if (player === 'player1') {
+    player1Icon = icon;
+    document.querySelectorAll('#player1Icons img').forEach(img => img.classList.remove('selected'));
+    document.querySelector(`#player1Icons img[src="${icon}"]`).classList.add('selected');
+  } else {
+    player2Icon = icon;
+    document.querySelectorAll('#player2Icons img').forEach(img => img.classList.remove('selected'));
+    document.querySelector(`#player2Icons img[src="${icon}"]`).classList.add('selected');
+  }
+
+  // Show category selection after both icons are selected
+  if (player1Icon && player2Icon) {
+    document.getElementById('iconSelection').style.display = 'none';
+    document.getElementById('categorySelection').style.display = 'flex';
+  }
+}
+    let selectedCategory = '';
+
+function selectCategory(category) {
+  selectedCategory = category;
+
+  // Highlight the selected category button
+  document.querySelectorAll('.category-selection button').forEach(button => {
+    button.style.backgroundColor = '#333';
+  });
+  document.querySelector(`.category-selection button[onclick="selectCategory('${category}')"]`).style.backgroundColor = '#03a9f4';
+
+  document.getElementById('categorySelection').style.display = 'none';
+  document.getElementById('scoreboard').style.display = 'flex';
+  document.getElementById('gameBoard').style.display = 'grid';
+
+  startGame();
+}
+
+function startGame() {
+  if (!player1Icon || !player2Icon) {
+    alert('Please select icons for both players!');
+    return;
+  }
+
+  document.getElementById('categorySelection').style.display = 'none';
+  document.getElementById('scoreboard').style.display = 'flex';
+  document.getElementById('gameBoard').style.display = 'grid';
+
+  document.getElementById('player1Icon').src = player1Icon;
+  document.getElementById('player1Score').textContent = `${player1Name}: 0`;
+  document.getElementById('player2Icon').src = player2Icon;
+  document.getElementById('player2Score').textContent = `${player2Name}: 0`;
+
+  updateTurnHighlight();
+  initGame();
+}
+    function initGame() {
+    const CATEGORY_RANGES = {
+      Fruits: [0, 12],
+      Animals: [12, 36],
+      Sports: [36, 48],
+      Vehicles: [48, 60],
+      Food: [60, 72],
+      Weather: [72, 84],
+      Miscellaneous: [84, 96],
+    };
+
+  // Ensure selectedCategory is valid
+  const [start, end] = CATEGORY_RANGES[selectedCategory] || CATEGORY_RANGES['Fruits'];
+  const selectedIcons = icons.slice(start, end);
+  console.log('Selected Category:', selectedCategory);
+  console.log('Icons showing:', selectedIcons);
+
+
+  if (!selectedIcons.length) {
+    alert('No icons available for the selected category.');
+    return;
+  }
+
+  const gameIcons = [...selectedIcons, ...selectedIcons];
+  shuffle(gameIcons);
+
+  console.log('Selected Category:', selectedCategory);
+  console.log('Selected Icons:', selectedIcons);
+  console.log('Game Icons:', gameIcons);
+
+  const gameBoard = document.getElementById('gameBoard');
+  gameBoard.innerHTML = '';
+
+  gameIcons.forEach((icon, index) => {
+    const card = document.createElement('div');
+    card.classList.add('card');
+    card.dataset.icon = icon;
+    card.dataset.index = index;
+    card.addEventListener('click', handleCardClick);
+    gameBoard.appendChild(card);
+  });
+}
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function handleCardClick(event) {
+      const card = event.target;
+      if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+      flipSound.play();
+      card.classList.add('flipped');
+      card.textContent = card.dataset.icon;
+      flippedCards.push(card);
+
+      if (flippedCards.length === 2) {
+        const [card1, card2] = flippedCards;
+
+        if (card1.dataset.icon === card2.dataset.icon) {
+          matchSound.play();
+          card1.classList.add('matched');
+          card2.classList.add('matched');
+          matchedPairs++;
+
+          if (currentPlayer === 1) {
+            player1Score++;
+            document.getElementById('player1Score').textContent = `${player1Name}: ${player1Score}`;
+          } else {
+            player2Score++;
+            document.getElementById('player2Score').textContent = `${player2Name}: ${player2Score}`;
+          }
+
+          updateProgress();
+          updateBackground();
+
+          if (matchedPairs === 12) {
+            winSound.play();
+            showPopup(`${getWinner()} wins! 🎉`);
+          }
+        } else {
+          setTimeout(() => {
+            card1.classList.remove('flipped');
+            card2.classList.remove('flipped');
+            card1.textContent = '';
+            card2.textContent = '';
+          }, 1000);
+
+          if (gameMode === 'Player') {
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            updateTurnHighlight();
+          }
+        }
+
+        flippedCards = [];
+      }
+
+      if (gameMode === 'Computer' && currentPlayer === 2 && flippedCards.length === 0) {
+        setTimeout(computerTurn, 1000);
+      }
+    }
+    function computerTurn() {
+      const unflippedCards = Array.from(document.querySelectorAll('.card:not(.flipped):not(.matched)'));
+      if (unflippedCards.length < 2) return;
+
+      const card1 = unflippedCards[Math.floor(Math.random() * unflippedCards.length)];
+      card1.click();
+
+      const card2 = unflippedCards.filter(card => card !== card1)[Math.floor(Math.random() * (unflippedCards.length - 1))];
+      setTimeout(() => card2.click(), 500);
+    }
+
+    function getWinner() {
+      if (player1Score > player2Score) return player1Name;
+      if (player2Score > player1Score) return player2Name;
+      return 'No one, it\'s a tie';
+    }
+
+    function showPopup(message) {
+      const popup = document.getElementById('popup');
+      document.getElementById('popupMessage').textContent = message;
+      // Update leaderboard
+      const leaderboard = JSON.parse(localStorage.getItem('memoryGameLeaderboard')) || [];
+      let player1 = leaderboard.find(p => p.name === player1Name);
+      let player2 = leaderboard.find(p => p.name === player2Name);
+
+      if (!player1) {
+        player1 = { name: player1Name, gamesPlayed: 0, gamesWon: 0 };
+        leaderboard.push(player1);
+      }
+      if (!player2 && gameMode === 'Player') {
+        player2 = { name: player2Name, gamesPlayed: 0, gamesWon: 0 };
+        leaderboard.push(player2);
+      }
+
+      player1.gamesPlayed++;
+      if (message.includes(player1Name)) player1.gamesWon++;
+
+      if (gameMode === 'Player') {
+        player2.gamesPlayed++;
+        if (message.includes(player2Name)) player2.gamesWon++;
+      }
+
+      const isTie = player1Score === player2Score;
+      if (isTie) {
+        if (!player1.ties) player1.ties = 0;
+        if (!player2.ties) player2.ties = 0;
+        player1.ties++;
+        player2.ties++;
+      }
+
+      localStorage.setItem('memoryGameLeaderboard', JSON.stringify(leaderboard));
+
+      // 🟢 Add match to memoryGameHistory
+      const history = JSON.parse(localStorage.getItem('memoryGameHistory')) || [];
+      const newMatch = {
+        player1: player1Name,
+        player2: player2Name,
+        winner: message.includes(player1Name)
+                  ? player1Name
+                  : message.includes(player2Name)
+                    ? player2Name
+                    : "Tie",
+        date: new Date().toLocaleString()
+      };
+      history.push(newMatch);
+      localStorage.setItem('memoryGameHistory', JSON.stringify(history));
+
+      popup.style.display = 'block';
+    }
+
+      function rematch() {
+        matchedPairs = 0;
+        player1Score = 0;
+        player2Score = 0;
+        currentPlayer = 1;
+
+        document.getElementById('player1Score').textContent = `${player1Name}: 0`;
+        document.getElementById('player2Score').textContent = `${player2Name}: 0`;
+        document.getElementById('popup').style.display = 'none';
+
+        initGame();
+      }
+
+      function resetGame() {
+        location.reload();
+      }
+
+      function updateProgress() {
+        const progress = document.getElementById('progress');
+        progress.style.width = `${(matchedPairs / 12) * 100}%`;
+      }
+
+      function updateBackground() {
+        const colors = ['#121212', '#1a1a1a', '#222', '#2a2a2a'];
+        document.body.style.backgroundColor = colors[matchedPairs % colors.length];
+      }
+      function getLeaderboard() {
+          try {
+              return JSON.parse(localStorage.getItem('leaderboard')) || [];
+          } catch (error) {
+            console.error('Error accessing leaderboard data:', error);
+          return [];
+          }
+      }
+
+      function saveLeaderboard(leaderboard) {
+          try {
+              localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+          } catch (error) {
+              console.error('Error saving leaderboard data:', error);
+          }
+      }
+      function showLeaderboard() {
+        // 🎯 Full Leaderboard
+        const leaderboard = JSON.parse(localStorage.getItem("memoryGameLeaderboard")) || [];
+        leaderboard.sort((a, b) => (b.gamesWon / b.gamesPlayed || 0) - (a.gamesWon / a.gamesPlayed || 0));
+        const fullBody = document.getElementById("fullLeaderboardBody");
+        fullBody.innerHTML = "";
+
+        leaderboard.forEach((p, i) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td style="padding: 0.5rem; text-align: center;">${i + 1}</td>
+            <td style="padding: 0.5rem; text-align: center;">${p.name}</td>
+            <td style="padding: 0.5rem; text-align: center;">${p.gamesPlayed}</td>
+            <td style="padding: 0.5rem; text-align: center;">${p.gamesWon}</td>
+            <td style="padding: 0.5rem; text-align: center;">${p.ties || 0}</td>
+            <td style="padding: 0.5rem; text-align: center;">${((p.gamesWon / p.gamesPlayed) * 100).toFixed(2)}%</td>
+          `;
+          fullBody.appendChild(row);
+        });
+
+        // 🕹️ Last 5 Matches
+        const history = JSON.parse(localStorage.getItem("memoryGameHistory")) || [];
+        const lastFive = history.slice(-5).reverse();
+        const matchBody = document.getElementById("lastMatchesBody");
+        matchBody.innerHTML = "";
+
+        lastFive.forEach((match, i) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td style="padding: 0.5rem; text-align: center;">${i + 1}</td>
+            <td style="padding: 0.5rem; text-align: center;">${match.player1}</td>
+            <td style="padding: 0.5rem; text-align: center;">${match.player2}</td>
+            <td style="padding: 0.5rem; text-align: center;">${match.winner}</td>
+            <td style="padding: 0.5rem; text-align: center;">${match.date}</td>
+          `;
+          matchBody.appendChild(row);
+        });
+
+        document.getElementById("leaderboardModal").style.display = "block";
+      }
+
+    // Close leaderboard modal
+
+    function closeLeaderboard() {
+    document.getElementById('leaderboardModal').style.display = 'none';
+    }
+    function resetLeaderboard() {
+        if (confirm('Are you sure you want to reset the leaderboard?')) {
+            localStorage.removeItem('leaderboard');
+            showLeaderboard();
+        }
+    }
+
+    function closeLeaderboard() {
+      document.getElementById("leaderboardModal").style.display = "none";
+    }
+
+    function resetCustomLeaderboard() {
+      if (confirm("Are you sure you want to reset leaderboard and recent games?")) {
+        localStorage.removeItem("memoryGameLeaderboard");
+        localStorage.removeItem("memoryGameHistory");
+        showLeaderboard();
+      }
+    }
+
+    // Add event listener to close leaderboard modal when clicking outside of it
+    window.addEventListener('click', function(event) {
+      const modal = document.getElementById('leaderboardModal');
+      if (event.target === modal) {
+        closeLeaderboard();
+      }
+    });
+
+
+    let soundOn = true;
+
+    function toggleMenu() {
+      const overlay = document.getElementById('menuOverlay');
+      overlay.style.display = overlay.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function toggleSound() {
+      soundOn = !soundOn;
+      document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
+      flipSound.muted = !soundOn;
+      matchSound.muted = !soundOn;
+      winSound.muted = !soundOn;
+    }
+
+    function goToRanking() {
+      alert("Ranking page coming soon! 🚀");
+    }
+
+    function exitGame() {
+      document.getElementById('scoreboard').style.display = 'none';
+      document.getElementById('gameBoard').style.display = 'none';
+      document.getElementById('categorySelection').style.display = 'none';
+      document.getElementById('iconSelection').style.display = 'none';
+      document.getElementById('nameInput').style.display = 'none';
+      document.getElementById('modeSelection').style.display = 'flex';
+    }
+
+    function stepBack() {
+      if (document.getElementById('categorySelection').style.display === 'flex') {
+        document.getElementById('categorySelection').style.display = 'none';
+        document.getElementById('iconSelection').style.display = 'flex';
+      } else if (document.getElementById('iconSelection').style.display === 'flex') {
+        document.getElementById('iconSelection').style.display = 'none';
+        document.getElementById('nameInput').style.display = 'flex';
+      } else if (document.getElementById('nameInput').style.display === 'flex') {
+        document.getElementById('nameInput').style.display = 'none';
+        document.getElementById('modeSelection').style.display = 'flex';
+      }
+    }
+    document.addEventListener("DOMContentLoaded", function () {
+      const loader = document.getElementById("loadingScreen");
+      const game = document.getElementById("pageContainer");
+
+      setTimeout(() => {
+        loader.style.opacity = '0';
+        loader.style.pointerEvents = 'none';
+        loader.style.transition = 'opacity 0.5s ease';
+
+        setTimeout(() => {
+          loader.style.display = 'none';
+          game.style.display = 'block'; // 🎯 Game show now
+        }, 500);
+      }, 2000);
+    });
+  </script>
+</body>
+</html>

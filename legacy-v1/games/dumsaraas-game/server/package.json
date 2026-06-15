@@ -1,0 +1,21 @@
+{
+  "name": "dumsaraas-game-server",
+  "version": "1.0.0",
+  "description": "Backend server for the Dumsaraas game using Node, Express, and Socket.IO.",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "build": "echo 'No build step required for JavaScript'"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "socket.io": "^4.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.0"
+  },
+  "author": "Your Name",
+  "license": "MIT"
+}

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Who's The Spy</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1e1e2f;
+      margin: 0;
+      padding: 0;
+      color: white;
+    }
+    #setup {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+    input {
+      width: 200px;
+    }
+    button {
+      background: #00b894;
+      color: white;
+      cursor: pointer;
+    }
+    #playersContainer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 20px;
+    }
+    .player-card {
+      background: #2d2d44;
+      width: 250px;
+      height: 300px;
+      margin: 10px;
+      border-radius: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .reveal-btn {
+      background: #0984e3;
+      padding: 10px 20px;
+      border-radius: 8px;
+      margin-top: 10px;
+      cursor: pointer;
+      color: white;
+    }
+    textarea {
+      width: 80%;
+      height: 80px;
+      margin-top: 20px;
+      border-radius: 10px;
+      border: none;
+      padding: 10px;
+      font-size: 14px;
+      resize: none;
+    }
+    .overlay {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.9);
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      display: none;
+      flex-direction: column;
+    }
+    .overlay.show {
+      display: flex;
+    }
+    .fade-in {
+        animation: fadeIn 0.8s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div id="setup">
+    <h2>Who's the Spy? Game Setup</h2>
+    <input type="number" id="numPlayers" placeholder="Number of Players" min="3" max="12">
+    <input type="text" id="commonWord" placeholder="Common Word">
+    <input type="text" id="spyWord" placeholder="Spy Word">
+    <button onclick="startGame()">Start</button>
+  </div>
+
+  <div id="playersContainer"></div>
+  <div id="voteSection" style="text-align:center; display:none; margin: 20px;">
+    <h3 id="timerDisplay" style="color:#f39c12; margin-bottom:10px;">⏳ Timer: 60s</h3>
+    <button onclick="startVoting()">Start Voting</button>
+    <div id="votingArea" style="margin-top: 20px;"></div>
+    <button id="submitVoteBtn" onclick="submitVotes()" style="display:none; margin-top:10px;">Submit Vote</button>
+  </div>
+  
+  <div id="resultSection" style="text-align:center; display:none; margin: 20px;">
+    <h2 id="resultText"></h2>
+    <button onclick="nextRound()">Next Round</button>
+  </div>
+  
+
+  <script>
+    let words = [];
+    let forbiddenWord = '';
+    let votes = [];
+    let spyIndexGlobal = -1;
+    let currentRound = 1;
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    function startGame() {
+      const num = parseInt(document.getElementById('numPlayers').value);
+      const common = document.getElementById('commonWord').value.trim();
+      const spy = document.getElementById('spyWord').value.trim();
+      if (num < 3 || !common || !spy) {
+        alert("Minimum 3 players and both words required!");
+        return;
+      }
+
+      words = Array(num).fill(common);
+      const spyIndex = Math.floor(Math.random() * num);
+      words[spyIndex] = spy;
+      forbiddenWord = common.toLowerCase();
+
+      shuffleArray(words);
+
+      generatePlayers(words);
+      document.getElementById('setup').style.display = "none";
+      document.getElementById('voteSection').style.display = "block";
+      votes = Array(num).fill(null);
+      startRoundTimer(); // ⏲ starts timer
+    }
+    function startVoting() {
+        const votingArea = document.getElementById('votingArea');
+        votingArea.innerHTML = "";
+        document.getElementById('submitVoteBtn').style.display = "inline-block";
+
+        words.forEach((_, index) => {
+            const div = document.createElement("div");
+            div.style.margin = "10px";
+
+            const label = document.createElement("label");
+            label.textContent = `Player ${index + 1} votes: `;
+
+            const select = document.createElement("select");
+            select.setAttribute("data-player", index);
+
+            const defaultOption = document.createElement("option");
+            defaultOption.text = "-- Select --";
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            select.appendChild(defaultOption);
+
+            words.forEach((_, i) => {
+            if (i !== index) {
+                const opt = document.createElement("option");
+                opt.value = i;
+                opt.text = `Player ${i + 1}`;
+                select.appendChild(opt);
+            }
+            });
+            div.appendChild(label);
+            div.appendChild(select);
+            votingArea.appendChild(div);
+        });
+    }
+
+    function submitVotes() {
+        const selects = document.querySelectorAll("#votingArea select");
+        let allVoted = true;
+        let voteCount = {};
+
+        selects.forEach(select => {
+            const voter = parseInt(select.getAttribute("data-player"));
+            const votedFor = parseInt(select.value);
+
+            if (isNaN(votedFor)) {
+            allVoted = false;
+            } else {
+            votes[votedFor] = (votes[votedFor] || 0) + 1;
+            }
+        });
+
+        if (!allVoted) {
+            alert("All players must vote!");
+            return;
+        }
+
+        // Find who got max votes
+        let maxVotes = -1;
+        let accused = -1;
+
+        votes.forEach((count, i) => {
+            if (count !== null && count > maxVotes) {
+            maxVotes = count;
+            accused = i;
+            }
+        });
+
+        document.getElementById("resultSection").style.display = "block";
+        if (accused === spyIndexGlobal) {
+            document.getElementById("resultText").innerHTML = `🎯 Spy was <strong>Player ${spyIndexGlobal + 1}</strong> — You caught them!`;
+        } else {
+            document.getElementById("resultText").innerHTML = `❌ Spy was <strong>Player ${spyIndexGlobal + 1}</strong> — You missed!`;
+        }
+
+        document.getElementById("voteSection").style.display = "none";
+    }
+
+    function nextRound() {
+        currentRound++;
+        document.getElementById("resultSection").style.display = "none";
+        document.getElementById("voteSection").style.display = "block";
+
+        startGame(); // reuse same logic to reshuffle players and spy
+    }
+
+    function generatePlayers(wordList) {
+      const container = document.getElementById("playersContainer");
+      container.innerHTML = "";
+      container.classList.add("fade-in");
+      setTimeout(() => container.classList.remove("fade-in"), 800);
+
+
+      wordList.forEach((word, index) => {
+        const card = document.createElement("div");
+        card.className = "player-card";
+
+        const overlay = document.createElement("div");
+        overlay.className = "overlay";
+        overlay.innerHTML = `
+          <p>Tap to reveal your word</p>
+          <button class="reveal-btn" onclick="this.parentElement.innerHTML='Your word is: <strong>${word}</strong>'; setTimeout(()=>{this.parentElement.classList.remove('show');}, 3000)">Reveal</button>
+        `;
+        card.innerHTML = `<h3>Player ${index + 1}</h3>
+                          <textarea placeholder="Write your hint..." oninput="checkForbidden(this)"></textarea>`;
+        card.appendChild(overlay);
+        card.addEventListener("click", () => {
+          overlay.classList.add("show");
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    function checkForbidden(el) {
+      if (el.value.toLowerCase().includes(forbiddenWord)) {
+        alert(`You can't use the word "${forbiddenWord}"!`);
+        el.value = el.value.replace(new RegExp(forbiddenWord, 'gi'), '');
+      }
+    }
+
+    let roundTime = 60; // seconds
+    let timerInterval;
+
+    function startRoundTimer() {
+        let timeLeft = roundTime;
+        const display = document.getElementById("timerDisplay");
+        display.textContent = `⏳ Timer: ${timeLeft}s`;
+
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            display.textContent = `⏳ Timer: ${timeLeft}s`;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                autoRevealAll();
+                startVoting(); // move to voting automatically
+            }
+        }, 1000);
+    }
+
+    function autoRevealAll() {
+        const overlays = document.querySelectorAll(".overlay");
+        overlays.forEach((overlay, idx) => {
+            overlay.innerHTML = `Auto-revealed<br>Your word is: <strong>${words[idx]}</strong>`;
+            overlay.classList.add("show");
+            setTimeout(() => overlay.classList.remove("show"), 3000);
+        });
+    }
+  </script>
+</body>
+</html>

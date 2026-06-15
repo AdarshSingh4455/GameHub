@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cricket Match — Multiplayer</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background:#000; color:#fff; height:100vh; display:flex; flex-direction:column; overflow:hidden;
+  }
+  h1 { text-align:center; margin-top:10px; font-weight:800; letter-spacing:.5px; }
+
+  /* PANELS — keep the original shapes */
+  .topPanel, .bottomPanel { position:relative; display:flex; justify-content:center; }
+  .topPanel {
+    flex:1; align-items:flex-start; padding-top:12px;
+    border-bottom-left-radius:50% 50%; border-bottom-right-radius:50% 50%;
+    background:transparent; /* set via JS backgroundImage */
+  }
+  .bottomPanel {
+    flex:1; align-items:flex-end; padding-bottom:12px;
+    border-top-left-radius:50% 50%; border-top-right-radius:50% 50%;
+    background:transparent; /* set via JS backgroundImage */
+  }
+
+  /* Middle black strip */
+  .middleArea { flex:0 0 96px; background:#060606; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  #commentaryBox { min-height:24px; color:#d8d8d8; font-style:italic; }
+  #timer { margin-top:6px; font-size:36px; font-weight:800; }
+
+  /* Number buttons pinned to edges of their panels */
+  .numButtons { position:absolute; display:flex; gap:8px; }
+  .topPanel .numButtons{ top:8px; }
+  .bottomPanel .numButtons{ bottom:8px; }
+  .numButtons button {
+    width:44px; height:44px; border-radius:50%; border:none; background:#fff; color:#000; font-weight:800; cursor:pointer;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .numButtons button:hover { transform:scale(1.06); box-shadow:0 4px 10px rgba(0,0,0,.35); }
+  .numButtons button:active { transform:scale(.95); }
+
+  /* Scoreboard (vertical left semicircle) */
+  #scoreboard {
+    position:fixed; left:0; top:50%; transform:translateY(-50%);
+    width:72px; height:160px; padding:.6rem;
+    display:flex; align-items:center; justify-content:center;
+    writing-mode:vertical-rl; text-align:center; font-weight:800;
+    border-top-right-radius:50px; border-bottom-right-radius:50px;
+    background:#1976d2; /* overridden to match batting panel via JS (backgroundImage) */
+    z-index:50;
+  }
+  #scoreText { font-size:.95rem; line-height:1.15; filter:drop-shadow(0 0 2px rgba(0,0,0,.35)); }
+
+  /* Exit semicircle (right) */
+  #exitBtn {
+    position:fixed; right:0; top:50%; transform:translateY(-50%);
+    width:56px; height:88px; background:#ffb300;
+    border-top-left-radius:60px; border-bottom-left-radius:60px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  #exitBtn:hover { filter:brightness(1.07); }
+
+  /* Color change buttons (green, icon-only) */
+  .colorBtn { position:absolute; width:36px; height:36px; border-radius:50%; background:#4caf50; border:none; color:#fff; cursor:pointer; }
+  .topPanel .colorBtn { left:12px; top:12px; }
+  .bottomPanel .colorBtn { right:12px; bottom:12px; }
+  .colorBtn:hover { filter:brightness(1.08); transform:scale(1.05); }
+
+  /* Runs/OUT popup */
+  .popup {
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+    background:#03a9f4; color:#001018; padding:12px 20px; border-radius:12px; font-weight:900; display:none; z-index:120;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+
+  /* Overlays */
+  #inningsOverlay, #endOverlay, #setupOverlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:200; }
+  #inningsOverlay, #endOverlay { background:rgba(0,0,0,.88); animation:fadeIn .35s; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  #inningsMsg { font-size:2rem; font-weight:900; letter-spacing:.6px; }
+
+  #endOverlay .card {
+    background:rgba(17,17,17,.85); backdrop-filter:blur(6px);
+    padding:18px 22px; border-radius:14px; text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .btn {
+    padding:10px 14px; border-radius:10px; border:none; cursor:pointer; font-weight:800; margin:6px;
+  }
+  .btn.yellow { background:#ffd966; color:#000; }
+  .btn.gray { background:#2b2b2b; color:#fff; }
+
+  /* Premium Setup Popup */
+  #setupOverlay { background:rgba(0,0,0,.7); backdrop-filter: blur(4px); }
+  .setupCard {
+    width:min(90vw,520px);
+    background: rgba(15,15,15,.9); color:#fff; border-radius:18px; padding:20px 22px;
+    border:1px solid rgba(255,255,255,.08); position:relative; overflow:hidden;
+    box-shadow:0 14px 40px rgba(0,0,0,.5);
+    transform: scale(.95); opacity:0; animation: cardIn .35s forwards;
+  }
+  @keyframes cardIn { to{ transform:scale(1); opacity:1; } }
+
+  .glowBorder {
+    position:absolute; inset:-2px;
+    background: conic-gradient(from 0deg,var(--themeA,#1e88e5), var(--themeB,#1565c0), var(--themeC,#1e88e5));
+    filter: blur(16px); opacity:.35; z-index:0; pointer-events:none;
+  }
+  .setupInner { position:relative; z-index:1; display:flex; flex-direction:column; gap:14px; }
+  .setupTitle { font-size:1.2rem; font-weight:900; letter-spacing:.4px; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; }
+  .counter { display:flex; align-items:center; gap:10px; }
+  .roundBtn {
+    width:36px; height:36px; border-radius:50%; border:none; font-weight:900; cursor:pointer; background:#00eaff; color:#000;
+    box-shadow:0 6px 14px rgba(0,234,255,.3);
+  }
+  .valueBox { min-width:38px; text-align:center; font-size:1.25rem; font-weight:900; }
+  .startBtn {
+    align-self:center; padding:12px 20px; border-radius:12px; border:none; font-weight:900; cursor:pointer;
+    background:linear-gradient(135deg,#00ffa3,#00eaff); color:#001b18;
+    box-shadow:0 12px 30px rgba(0,255,200,.25); margin-top:6px; animation:pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{ transform:scale(1)} 50%{ transform:scale(1.04)} }
+
+  /* Fireworks canvas sits behind end card */
+  #fireworks { position:fixed; inset:0; display:none; z-index:190; pointer-events:none; }
+
+  @media (max-width:640px){
+    #timer{ font-size:28px } .numButtons button{ width:38px;height:38px }
+    #scoreboard{ width:68px; height:150px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Scoreboard (batting side only) -->
+<div id="scoreboard"><div id="scoreText">0/0 (0.0)</div></div>
+
+<!-- Exit (hold 2s) -->
+<div id="exitBtn" title="Hold to Quit">⏻</div>
+
+<!-- TOP (Player 1) -->
+<div class="topPanel" id="panelP1">
+  <button class="colorBtn" title="Change color" id="colorP1">🎨</button>
+  <div class="numButtons" id="buttonsP1"></div>
+</div>
+
+<!-- MIDDLE -->
+<div class="middleArea">
+  <div id="commentaryBox">Welcome! Set match options to begin.</div>
+  <div id="timer">—</div>
+</div>
+
+<!-- BOTTOM (Player 2) -->
+<div class="bottomPanel" id="panelP2">
+  <div class="numButtons" id="buttonsP2"></div>
+  <button class="colorBtn" title="Change color" id="colorP2">🎨</button>
+</div>
+
+<!-- Popups/Overlays -->
+<div id="popup" class="popup"></div>
+
+<div id="inningsOverlay"><h1 id="inningsMsg">Innings Change</h1></div>
+
+<canvas id="fireworks"></canvas>
+<div id="endOverlay">
+  <div class="card">
+    <h1 id="winnerText">Winner</h1>
+    <div style="margin-top:10px">
+      <button class="btn yellow" onclick="rematch()">Rematch</button>
+      <button class="btn gray" onclick="resetGame()">Exit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Premium Setup -->
+<div id="setupOverlay">
+  <div class="setupCard" id="setupCard">
+    <div class="glowBorder" id="glow"></div>
+    <div class="setupInner">
+      <div class="setupTitle" id="setupTitle">Match Setup</div>
+
+      <div class="row">
+        <div>Overs</div>
+        <div class="counter">
+          <button class="roundBtn" onclick="changeOvers(-1)">−</button>
+          <div class="valueBox" id="oversVal">2</div>
+          <button class="roundBtn" onclick="changeOvers(1)">+</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>Wickets</div>
+        <div class="counter">
+          <button class="roundBtn" onclick="changeWickets(-1)">−</button>
+          <div class="valueBox" id="wicketsVal">2</div>
+          <button class="roundBtn" onclick="changeWickets(1)">+</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>Batting First</div>
+        <div class="counter">
+          <button class="roundBtn" id="batP1">P1</button>
+          <button class="roundBtn" id="batP2">P2</button>
+        </div>
+      </div>
+
+      <button class="startBtn" id="startMatch">Start Match</button>
+    </div>
+  </div>
+</div>
+<audio id="cheerSound" src="./crowd_applause.m4a"></audio>
+<audio id="dissound" src="./crowd-disappointment-reaction-352718.mp3"></audio>
+<script>
+/* =======================
+   STATE
+   ======================= */
+let player1 = localStorage.getItem('player1Name') || 'Player 1';
+let player2 = localStorage.getItem('player2Name') || 'Player 2';
+const tossWinner = localStorage.getItem('tossWinner'); // string name or null
+const tossChoice  = localStorage.getItem('tossChoice'); // "bat" | "bowl" | null
+
+let overs = 2, totalWickets = 2;
+let ballsBowled = 0;
+let player1Score = 0, player2Score = 0;
+let player1Wickets = 0, player2Wickets = 0;
+let innings = 1;
+let isPlayer1Batting = true;   // set by toss/setup
+let target = null;
+
+let batterChoice = null, bowlerChoice = null;
+
+const commentary = {
+  out: ["Bowled him!", "Massive appeal... OUT!", "Edged and taken!", "He's gone!"],
+  0: ["Dot ball!", "Solid defense!"],
+  1: ["Quick single!", "Cheeky run!"],
+  2: ["Easy two!", "Great running!"],
+  3: ["Three taken!", "Brilliant running!"],
+  4: ["FOUR!", "Cracking shot!"],
+  5: ["Five runs! Overthrow!"],
+  6: ["SIX!", "What a hit!"]
+};
+
+const gradients = [
+  "linear-gradient(135deg,#1e88e5,#1565c0)",  // blue
+  "linear-gradient(135deg,#8e24aa,#6a1b9a)",  // purple
+  "linear-gradient(135deg,#00897b,#00695c)",  // teal
+  "linear-gradient(135deg,#fbc02d,#f57f17)",  // amber
+  "linear-gradient(135deg,#ef5350,#b71c1c)"   // red
+];
+const panelColorIndex = { panelP1:0, panelP2:4 };
+
+function applyPanelColors(){
+  document.getElementById('panelP1').style.backgroundImage = gradients[panelColorIndex.panelP1];
+  document.getElementById('panelP2').style.backgroundImage = gradients[panelColorIndex.panelP2];
+}
+function changePanelColor(panelId){
+  panelColorIndex[panelId] = (panelColorIndex[panelId]+1)%gradients.length;
+  document.getElementById(panelId).style.backgroundImage = gradients[panelColorIndex[panelId]];
+  updateScoreboard(); // keep scoreboard synced with batting side color
+}
+
+/* =======================
+   SETUP POPUP (theme = toss winner color)
+   ======================= */
+function inferBattingFromToss(){
+  if(!tossWinner || !tossChoice) return; // no preference
+  if(tossWinner === player1){ isPlayer1Batting = (tossChoice === 'bat'); }
+  else if(tossWinner === player2){ isPlayer1Batting = !(tossChoice === 'bat'); }
+}
+function themeSetupPopup(){
+  // Theme colors from the toss winner's panel gradient
+  const glow = document.getElementById('glow');
+  const title = document.getElementById('setupTitle');
+
+  let themeGrad = gradients[ panelColorIndex.panelP1 ];
+  if(tossWinner && tossWinner === player2) themeGrad = gradients[ panelColorIndex.panelP2 ];
+
+  // Extract two hex from gradient string (simple pick)
+  const match = themeGrad.match(/#([0-9a-f]{6}).*#([0-9a-f]{6})/i);
+  let c1='#1e88e5', c2='#1565c0';
+  if(match){ c1='#'+match[1]; c2='#'+match[2]; }
+  glow.style.setProperty('--themeA', c1);
+  glow.style.setProperty('--themeB', c2);
+  glow.style.setProperty('--themeC', c1);
+
+  title.textContent = `Match Setup ${tossWinner?`• Toss: ${tossWinner} chose to ${tossChoice||'—'}`:''}`;
+}
+
+function changeOvers(v){ overs = Math.max(1, overs+v); document.getElementById('oversVal').textContent = overs; }
+function changeWickets(v){ totalWickets = Math.max(1, totalWickets+v); document.getElementById('wicketsVal').textContent = totalWickets; }
+
+document.getElementById('batP1').addEventListener('click', ()=>{ isPlayer1Batting=true; highlightBatSel(); });
+document.getElementById('batP2').addEventListener('click', ()=>{ isPlayer1Batting=false; highlightBatSel(); });
+function highlightBatSel(){
+  document.getElementById('batP1').style.opacity = isPlayer1Batting ? '1' : '.6';
+  document.getElementById('batP2').style.opacity = isPlayer1Batting ? '.6' : '1';
+}
+
+/* =======================
+   SCOREBOARD + COMMENTARY
+   ======================= */
+function updateScoreboard(){
+  const overText = `${Math.floor(ballsBowled/6)}.${ballsBowled%6}`;
+  const scoreStr = isPlayer1Batting ? `${player1}: ${player1Score}/${player1Wickets}` : `${player2}: ${player2Score}/${player2Wickets}`;
+  let text = `${scoreStr} (${overText})`;
+  if(innings===2 && target) text += `  • Target: ${target}`;
+  document.getElementById('scoreText').textContent = text;
+
+  // color sync with batting panel
+  const panelId = isPlayer1Batting ? 'panelP1' : 'panelP2';
+  const colorImg = getComputedStyle(document.getElementById(panelId)).backgroundImage;
+  document.getElementById('scoreboard').style.backgroundImage = colorImg;
+}
+function showCommentary(key){
+  const arr = commentary[key] || ["Nice shot!"];
+  document.getElementById('commentaryBox').textContent = arr[Math.floor(Math.random()*arr.length)];
+}
+
+let countdownInterval = null;
+
+function renderButtons(){
+  const p1 = document.getElementById('buttonsP1');
+  const p2 = document.getElementById('buttonsP2');
+  p1.innerHTML=''; p2.innerHTML='';
+
+  // role 1 => batter, role 2 => bowler
+  for(let i=1;i<=6;i++){
+    // P1 buttons
+    p1.innerHTML += `<button onclick="selectNumber(${isPlayer1Batting?1:2},${i})">${i}</button>`;
+    // P2 buttons
+    p2.innerHTML += `<button onclick="selectNumber(${isPlayer1Batting?2:1},${i})">${i}</button>`;
+  }
+}
+
+function startCountdown(){
+  clearInterval(countdownInterval);
+  let t=3;
+  document.getElementById('timer').textContent = t;
+  countdownInterval = setInterval(()=>{
+    t--;
+    document.getElementById('timer').textContent = t;
+    if(t<=0){
+      clearInterval(countdownInterval);
+      processTurn();
+    }
+  },1000);
+}
+
+function newBall(){
+  batterChoice=null; bowlerChoice=null;
+  renderButtons();
+  startCountdown();
+}
+
+function selectNumber(role, num){
+  // Prevent double-select after resolve
+  if(document.getElementById('popup').style.display === 'block') return;
+
+  if(role===1) batterChoice = num;
+  if(role===2) bowlerChoice = num;
+  if(batterChoice!==null && bowlerChoice!==null){
+    clearInterval(countdownInterval);
+    processTurn();
+  }
+}
+
+function processTurn(){
+  ballsBowled++;
+  const popup = document.getElementById('popup');
+
+  if(batterChoice===bowlerChoice){
+    popup.textContent = "OUT!";
+    document.getElementById('dissound').play();
+    showCommentary('out');
+    if(isPlayer1Batting) player1Wickets++; else player2Wickets++;
+  } else {
+    const runs = batterChoice || 1; // in case one side failed to click
+    popup.textContent = `${runs} RUNS!`;
+    showCommentary(runs);
+    if(isPlayer1Batting) player1Score += runs; else player2Score += runs;
+  }
+
+  popup.style.display='block';
+  setTimeout(()=> popup.style.display='none', 700);
+
+  updateScoreboard();
+
+  if(checkEnd()) return;
+  setTimeout(newBall, 900);
+}
+
+function showInningsChange(msg){
+  const ov = document.getElementById('inningsOverlay');
+  document.getElementById('inningsMsg').textContent = msg;
+  ov.style.display='flex';
+  setTimeout(()=>{ ov.style.display='none'; updateScoreboard(); newBall(); }, 1600);
+}
+
+function checkEnd(){
+  if(innings===1){
+    const wicketsDown = isPlayer1Batting ? player1Wickets>=totalWickets : player2Wickets>=totalWickets;
+    const oversDone = ballsBowled >= overs*6;
+    if(wicketsDown || oversDone){
+      target = (isPlayer1Batting ? player1Score : player2Score) + 1;
+      innings = 2;
+      isPlayer1Batting = !isPlayer1Batting; // swap roles
+      ballsBowled = 0;
+      showInningsChange("Second Innings Begins");
+      return true;
+    }
+    return false;
+  } else {
+    const battingScore = isPlayer1Batting ? player1Score : player2Score;
+    const wicketsDown = isPlayer1Batting ? player1Wickets>=totalWickets : player2Wickets>=totalWickets;
+    const oversDone = ballsBowled >= overs*6;
+    if(oversDone || wicketsDown || (target && battingScore >= target)){
+      endMatch();
+      return true;
+    }
+    return false;
+  }
+}
+
+function endMatch(){
+  let text="";
+  if(player1Score > player2Score){ 
+    text = `${player1} wins!`;
+    document.getElementById('cheerSound').play();
+  }
+  else if(player2Score > player1Score){
+    text = `${player2} wins!`;
+    document.getElementById('cheerSound').play();
+  }
+  else text = "Match Tied!";
+
+  document.getElementById('winnerText').textContent = text;
+  // Fireworks + overlay
+  startFireworks();
+  document.getElementById('endOverlay').style.display='flex';
+}
+
+/* =======================
+   FIREWORKS
+   ======================= */
+let fwCanvas, fwCtx, fwReq;
+function startFireworks(){
+  fwCanvas = document.getElementById('fireworks');
+  fwCtx = fwCanvas.getContext('2d');
+  fwCanvas.style.display='block';
+  resizeFW();
+  window.addEventListener('resize', resizeFW);
+
+  const particles = [];
+  const gravity = 0.06;
+
+  function burst(x,y,colors){
+    for(let i=0;i<120;i++){
+      const angle = Math.random()*Math.PI*2;
+      const speed = Math.random()*3+2;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle)*speed,
+        vy: Math.sin(angle)*speed,
+        life: 60 + Math.random()*30,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        alpha: 1
+      });
+    }
+  }
+
+  // initial bursts
+  const cols = ['#00eaff','#00ffa3','#ffd966','#ff6b6b','#7c4dff'];
+  const w = fwCanvas.width, h = fwCanvas.height;
+  burst(w*0.3, h*0.4, cols);
+  setTimeout(()=>burst(w*0.7, h*0.35, cols), 300);
+  setTimeout(()=>burst(w*0.5, h*0.5, cols), 600);
+
+  function tick(){
+    fwCtx.fillStyle = 'rgba(0,0,0,0.15)';
+    fwCtx.fillRect(0,0,fwCanvas.width, fwCanvas.height);
+
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.vy += gravity;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 1;
+      p.alpha = Math.max(0, p.life/90);
+      fwCtx.globalAlpha = p.alpha;
+      fwCtx.fillStyle = p.color;
+      fwCtx.beginPath();
+      fwCtx.arc(p.x,p.y,2,0,Math.PI*2);
+      fwCtx.fill();
+      if(p.life<=0) particles.splice(i,1);
+    }
+    fwCtx.globalAlpha = 1;
+
+    fwReq = requestAnimationFrame(tick);
+  }
+  tick();
+}
+function resizeFW(){
+  const c = document.getElementById('fireworks');
+  c.width = window.innerWidth; c.height = window.innerHeight;
+}
+function stopFireworks(){
+  if(fwReq) cancelAnimationFrame(fwReq);
+  window.removeEventListener('resize', resizeFW);
+  const c = document.getElementById('fireworks');
+  c.style.display='none';
+}
+
+function rematch(){ location.reload(); }
+function resetGame(){ stopFireworks(); localStorage.removeItem('tossWinner'); localStorage.removeItem('tossChoice'); window.location.href='main.html'; }
+
+/* Hold-to-exit */
+let holdTimer=null;
+const exitBtn = document.getElementById('exitBtn');
+exitBtn.addEventListener('mousedown', ()=>{ holdTimer=setTimeout(resetGame,2000); });
+['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> exitBtn.addEventListener(ev, ()=> clearTimeout(holdTimer)));
+exitBtn.addEventListener('touchstart', ()=>{ holdTimer=setTimeout(resetGame,2000); }, {passive:true});
+
+
+function startMatch(){
+  document.getElementById('setupOverlay').style.display='none';
+  document.getElementById('commentaryBox').textContent = `${isPlayer1Batting?player1:player2} to bat first`;
+  document.getElementById('timer').textContent = '3';
+  updateScoreboard();
+  newBall();
+}
+
+// Setup initial values/UI and show setup popup
+(function init(){
+  // default panel colors
+  applyPanelColors();
+
+  // infer batting from toss (if set)
+  inferBattingFromToss();
+
+  // write names to scoreboard initial text
+  updateScoreboard();
+
+  // wire color buttons
+  document.getElementById('colorP1').addEventListener('click', ()=> changePanelColor('panelP1'));
+  document.getElementById('colorP2').addEventListener('click', ()=> changePanelColor('panelP2'));
+
+  // setup popup values
+  document.getElementById('oversVal').textContent = overs;
+  document.getElementById('wicketsVal').textContent = totalWickets;
+  highlightBatSel();
+  themeSetupPopup();
+
+  // allow user override batting side
+  document.getElementById('startMatch').addEventListener('click', startMatch);
+
+  // show setup
+  document.getElementById('setupOverlay').style.display='flex';
+})();
+
+/* Expose some for console debugging (optional) */
+window._state = ()=>({overs,totalWickets,innings,isPlayer1Batting,ballsBowled,player1Score,player2Score,player1Wickets,player2Wickets,target});
+</script>
+</body>
+</html>

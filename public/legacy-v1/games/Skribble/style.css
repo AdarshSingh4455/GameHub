@@ -1,0 +1,53 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #eef;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  
+  #modeSelection, #gameContainer {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  
+  #infoPanel {
+    margin-bottom: 15px;
+    font-size: 18px;
+  }
+  
+  #gameArea {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  #canvasContainer {
+    margin-right: 20px;
+  }
+  
+  canvas {
+    border: 1px solid #ccc;
+    background-color: #fff;
+  }
+  
+  #tools {
+    margin-top: 10px;
+  }
+  
+  #guessArea {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+  #guessInput {
+    padding: 10px;
+    font-size: 16px;
+    margin-bottom: 10px;
+  }

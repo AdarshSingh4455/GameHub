@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RPS - Mobile Battle</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #111;
+      color: #fff;
+      overflow: hidden;
+    }
+    .half {
+      position: absolute;
+      width: 100%;
+      height: 40%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      clip-path: ellipse(80% 100% at 50% 130%);
+    }
+    .top {
+      top: 0;
+      background: radial-gradient(circle at center, #0066ff 50%, #54a3db);
+      transform: rotate(180deg);
+    }
+    .bottom {
+      bottom: 0;
+      background: radial-gradient(circle at center, #ff0033 50%, #cd5b5b);
+    }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      padding: 15px;
+    }
+    .buttons button {
+      padding: 12px 24px;
+      font-size: 18px;
+      border: none;
+      border-radius: 20px;
+      background: #fff;
+      color: #000;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      transition: 0.2s;
+    }
+    .buttons button:hover {
+      transform: scale(1.1);
+      background: #f0f0f0;
+    }
+    #timer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 84px;
+      font-weight: bold;
+      color: gold;
+      z-index: 10;
+    }
+    #result {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      background: rgba(0,0,0,0.7);
+      padding: 10px 20px;
+      border-radius: 12px;
+      display: none;
+      z-index: 20;
+    }
+    .side-score {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      background: #fff;
+      border-radius: 50% 50% 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 15;
+    }
+    .blue-score {
+      top: 41%;
+      left: 10px;
+      color: #0066ff;
+    }
+    .red-score {
+      top: 50%;
+      left: 10px;
+      transform: rotate(180deg);
+      color: #ff0033;
+    }
+    .start-overlay, .end-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 100vw;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      flex-direction: column;
+    }
+    .start-overlay button,
+    .end-overlay button {
+      padding: 20px 40px;
+      font-size: 24px;
+      border: none;
+      border-radius: 15px;
+      margin: 10px;
+      cursor: pointer;
+      background: #00ffcc;
+      color: #000;
+    }
+    .popup-result {
+      font-size: 28px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 20px;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="start-overlay" id="startOverlay">
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <div class="end-overlay" id="endOverlay" style="display: none;">
+    <div class="popup-result" id="finalResult"></div>
+    <button onclick="restartGame()">Restart</button>
+    <button onclick="window.location.href='index.html'">Quit</button>
+  </div>
+
+  <div id="timer">4</div>
+  <div id="result"></div>
+  <div class="side-score blue-score" id="blueScore">0</div>
+  <div class="side-score red-score" id="redScore">0</div>
+
+<div class="game-area" id="gameArea" style="display:none;"></div>
+  <div class="half top">
+    <div class="buttons" id="blue-options">
+      <button onclick="choose('blue', 'rock')">Rock</button>
+      <button onclick="choose('blue', 'paper')">Paper</button>
+      <button onclick="choose('blue', 'scissors')">Scissors</button>
+    </div>
+  </div>
+  <div class="half bottom">
+    <div class="buttons" id="red-options">
+      <button onclick="choose('red', 'rock')">Rock</button>
+      <button onclick="choose('red', 'paper')">Paper</button>
+      <button onclick="choose('red', 'scissors')">Scissors</button>
+    </div>
+  </div>
+
+  <script>
+    let timer = 3;
+    let interval;
+    let blueChoice = null;
+    let redChoice = null;
+    let blueWins = 0;
+    let redWins = 0;
+    let round = 1;
+
+    function updateScoreUI() {
+      document.getElementById("blueScore").innerText = blueWins;
+      document.getElementById("redScore").innerText = redWins;
+    }
+
+
+    function startGame() {
+      document.getElementById("startOverlay").style.display = "none";
+      document.getElementById("gameArea").style.display = "flex";
+      startRound();
+    }
+
+    function startRound() {
+      blueChoice = null;
+      redChoice = null;
+      document.getElementById("result").style.display = "none";
+      timer = 4;
+      document.getElementById("timer").innerText = timer;
+      interval = setInterval(() => {
+        timer--;
+        document.getElementById("timer").innerText = timer;
+        if (timer === 0) {
+          clearInterval(interval);
+          evaluateRound();
+        }
+      }, 1000);
+    }
+
+    function choose(player, choice) {
+      if (player === 'blue') blueChoice = choice;
+      else redChoice = choice;
+    }
+
+    function evaluateRound() {
+      let resultText = "";
+      if (!blueChoice && redChoice) {
+        redWins++;
+        resultText = "Red Wins This Round (Blue didn't choose)";
+      } else if (!redChoice && blueChoice) {
+        blueWins++;
+        resultText = "Blue Wins This Round (Red didn't choose)";
+      } else if (!blueChoice && !redChoice) {
+        resultText = "No One Chose. Round Draw!";
+      } else {
+        if (blueChoice === redChoice) {
+          resultText = "Draw!";
+        } else if (
+          (blueChoice === 'rock' && redChoice === 'scissors') ||
+          (blueChoice === 'paper' && redChoice === 'rock') ||
+          (blueChoice === 'scissors' && redChoice === 'paper')
+        ) {
+          blueWins++;
+          resultText = `Blue Wins This Round (${blueChoice} beats ${redChoice})`;
+        } else {
+          redWins++;
+          resultText = `Red Wins This Round (${redChoice} beats ${blueChoice})`;
+        }
+      }
+
+      updateScoreUI();
+      document.getElementById("result").innerText = resultText;
+      document.getElementById("result").style.display = "block";
+
+      if (blueWins === 2 || redWins === 2 || round === 3) {
+        setTimeout(() => {
+          endGame();
+        }, 1500);
+      } else {
+        round++;
+        setTimeout(startRound, 1500);
+      }
+    }
+
+    function endGame() {
+      document.getElementById("gameArea").style.display = "none";
+      const finalResult = blueWins > redWins ? "Blue Wins the Game!" : (redWins > blueWins ? "Red Wins the Game!" : "It's a Draw!");
+      document.getElementById("finalResult").innerText = finalResult;
+      document.getElementById("endOverlay").style.display = "flex";
+    }
+
+    function restartGame() {
+      blueWins = 0;
+      redWins = 0;
+      round = 1;
+      updateScoreUI();
+      document.getElementById("result").innerText = "";
+      document.getElementById("endOverlay").style.display = "none";
+      document.getElementById("gameArea").style.display = "block";
+      startRound();
+    }
+
+  </script>
+</body>
+</html>

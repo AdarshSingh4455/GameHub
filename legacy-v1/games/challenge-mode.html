@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2048 Challenge Mode</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1f1c2c, #928dab);
+      color: white;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .section {
+      margin-bottom: 3rem;
+    }
+    .section h2 {
+      margin-bottom: 1rem;
+      border-bottom: 2px solid white;
+      padding-bottom: 0.5rem;
+      text-align: center;
+    }
+    .challenge-grid {
+      display: grid;
+      gap: 12px;
+    }
+    .easy-grid { grid-template-columns: repeat(4, 1fr); }
+    .medium-grid { grid-template-columns: repeat(4, 1fr); }
+    .hard-grid { grid-template-columns: repeat(4, 1fr); }
+
+    .challenge {
+      background: #ffffff22;
+      padding: 1rem;
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.3s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .challenge:hover {
+      background: #ffffff44;
+    }
+    .challenge h3 {
+      margin-bottom: 0.3rem;
+      font-size: 1.2rem;
+    }
+    .objective {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .challenge.locked {
+      opacity: 0.5;
+      pointer-events: none;
+      filter: grayscale(1);
+      position: relative;
+    }
+
+    .challenge .tick {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      font-size: 1.3rem;
+      color: limegreen;
+    }
+  </style>
+</head>
+<body>
+  <h1>2048 Challenge Mode</h1>
+
+  <!-- Easy Challenges -->
+  <div class="section">
+    <h2>Easy Challenges</h2>
+    <div class="challenge-grid easy-grid">
+      <!-- 16 Easy Levels with progressive targets -->
+      <div class="challenge" data-mode="easy" data-level="1" data-objective="32"><h3>Level 1</h3><div class="objective">Make 32</div></div>
+      <div class="challenge" data-mode="easy" data-level="2" data-objective="32"><h3>Level 2</h3><div class="objective">Make 32</div></div>
+      <div class="challenge" data-mode="easy" data-level="3" data-objective="32"><h3>Level 3</h3><div class="objective">Make 32</div></div>
+      <div class="challenge" data-mode="easy" data-level="4" data-objective="32"><h3>Level 4</h3><div class="objective">Make 32</div></div>
+      <div class="challenge" data-mode="easy" data-level="5" data-objective="64"><h3>Level 5</h3><div class="objective">Make 64</div></div>
+      <div class="challenge" data-mode="easy" data-level="6" data-objective="64"><h3>Level 6</h3><div class="objective">Make 64</div></div>
+      <div class="challenge" data-mode="easy" data-level="7" data-objective="64"><h3>Level 7</h3><div class="objective">Make 64</div></div>
+      <div class="challenge" data-mode="easy" data-level="8" data-objective="64"><h3>Level 8</h3><div class="objective">Make 64</div></div>
+      <div class="challenge" data-mode="easy" data-level="9" data-objective="128"><h3>Level 9</h3><div class="objective">Make 128</div></div>
+      <div class="challenge" data-mode="easy" data-level="10" data-objective="128"><h3>Level 10</h3><div class="objective">Make 128</div></div>
+      <div class="challenge" data-mode="easy" data-level="11" data-objective="128"><h3>Level 11</h3><div class="objective">Make 128</div></div>
+      <div class="challenge" data-mode="easy" data-level="12" data-objective="128"><h3>Level 12</h3><div class="objective">Make 128</div></div>
+      <div class="challenge" data-mode="easy" data-level="13" data-objective="256"><h3>Level 13</h3><div class="objective">Make 256</div></div>
+      <div class="challenge" data-mode="easy" data-level="14" data-objective="256"><h3>Level 14</h3><div class="objective">Make 256</div></div>
+      <div class="challenge" data-mode="easy" data-level="15" data-objective="256"><h3>Level 15</h3><div class="objective">Make 256</div></div>
+      <div class="challenge" data-mode="easy" data-level="16" data-objective="256"><h3>Level 16</h3><div class="objective">Make 256</div></div>
+    </div>
+  </div>
+
+  <!-- Medium Challenges -->
+  <div class="section">
+    <h2>Medium Challenges (Format: 0/X Tile)</h2>
+    <div class="challenge-grid medium-grid">
+      <!-- 12 Medium Levels -->
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="16" data-count="3"><h3>Level 1</h3><div class="objective">0/3 16</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="32" data-count="2"><h3>Level 2</h3><div class="objective">0/2 32</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="64" data-count="1"><h3>Level 3</h3><div class="objective">0/1 64</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="16" data-count="2"><h3>Level 4</h3><div class="objective">0/2 16</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="8" data-count="4"><h3>Level 5</h3><div class="objective">0/4 8</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="128" data-count="1"><h3>Level 6</h3><div class="objective">0/1 128</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="32" data-count="3"><h3>Level 7</h3><div class="objective">0/3 32</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="64" data-count="2"><h3>Level 8</h3><div class="objective">0/2 64</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="256" data-count="1"><h3>Level 9</h3><div class="objective">0/1 256</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="8" data-count="3"><h3>Level 10</h3><div class="objective">0/3 8</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="128" data-count="2"><h3>Level 11</h3><div class="objective">0/2 128</div></div>
+      <div class="challenge" data-level="2" data-mode="medium" data-objective="512" data-count="1"><h3>Level 12</h3><div class="objective">0/1 512</div></div>
+    </div>
+  </div>
+
+  <!-- Hard Challenges -->
+  <div class="section">
+    <h2>Hard Challenges (Dual Objective)</h2>
+    <div class="challenge-grid hard-grid">
+      <!-- 8 Hard Levels -->
+      <div class="challenge"><h3>Level 1</h3><div class="objective">0/3 16, 0/1 64</div></div>
+      <div class="challenge"><h3>Level 2</h3><div class="objective">0/2 32, 0/1 128</div></div>
+      <div class="challenge"><h3>Level 3</h3><div class="objective">0/4 8, 0/1 64</div></div>
+      <div class="challenge"><h3>Level 4</h3><div class="objective">0/3 16, 0/2 32</div></div>
+      <div class="challenge"><h3>Level 5</h3><div class="objective">0/2 64, 0/1 256</div></div>
+      <div class="challenge"><h3>Level 6</h3><div class="objective">0/3 32, 0/2 64</div></div>
+      <div class="challenge"><h3>Level 7</h3><div class="objective">0/3 8, 0/1 128</div></div>
+      <div class="challenge"><h3>Level 8</h3><div class="objective">0/4 16, 0/1 64</div></div>
+    </div>
+  </div>
+  <footer style="text-align: center; margin-top: 3rem; color: #ccc;">
+    <p>&copy; 2023 GameHub. All rights reserved.</p>
+    <p>Developed by Adarsh Kumar</p>
+  </footer>
+
+<script>
+
+  const easyObjectives = [32, 64, 128, 256, 32, 64, 128, 256, 32, 64, 128, 256, 32, 64, 128, 256];
+  const unlockedEasy = parseInt(localStorage.getItem("unlocked_easy")) || 1;
+  const easyGrid = document.querySelector('.easy-grid');
+
+  easyGrid.innerHTML = easyObjectives.map((goal, i) => {
+    const level = i + 1;
+    const unlocked = level <= unlockedEasy;
+    const completed = localStorage.getItem(`completed_easy_${level}`) === "true";
+    return `
+      <div class="challenge ${unlocked ? '' : 'locked'}" 
+          data-level="${level}" 
+          data-mode="easy" 
+          data-objective="${goal}">
+        <h3>Level ${level}</h3>
+        <div class="objective">Make ${goal}</div>
+        ${completed ? '<div class="tick">✔️</div>' : ''}
+      </div>
+    `;
+  }).join('');
+  
+
+  // MEDIUM MODE (12 levels)
+  const mediumObjectives = [
+    { tile: 16, count: 3 },
+    { tile: 32, count: 2 },
+    { tile: 64, count: 1 },
+    { tile: 16, count: 2 },
+    { tile: 8, count: 4 },
+    { tile: 128, count: 1 },
+    { tile: 32, count: 3 },
+    { tile: 64, count: 2 },
+    { tile: 256, count: 1 },
+    { tile: 8, count: 3 },
+    { tile: 128, count: 2 },
+    { tile: 512, count: 1 }
+  ];
+
+
+  // HARD MODE (8 levels)
+  const hardObjectives = [
+    [{ tile: 16, count: 3 }, { tile: 64, count: 1 }],
+    [{ tile: 32, count: 2 }, { tile: 128, count: 1 }],
+    [{ tile: 8, count: 4 }, { tile: 64, count: 1 }],
+    [{ tile: 16, count: 3 }, { tile: 32, count: 2 }],
+    [{ tile: 64, count: 2 }, { tile: 256, count: 1 }],
+    [{ tile: 32, count: 3 }, { tile: 64, count: 2 }],
+    [{ tile: 8, count: 3 }, { tile: 128, count: 1 }],
+    [{ tile: 16, count: 4 }, { tile: 64, count: 1 }]
+  ];
+
+
+  const unlockedMedium = parseInt(localStorage.getItem("unlocked_medium")) || 1;
+  const unlockedHard = parseInt(localStorage.getItem("unlocked_hard")) || 1;
+
+  const mediumChallenges = [
+    { tile: 16, count: 3 },
+    { tile: 32, count: 2 },
+    { tile: 64, count: 1 },
+    { tile: 16, count: 2 },
+    { tile: 8, count: 4 },
+    { tile: 128, count: 1 },
+    { tile: 32, count: 3 },
+    { tile: 64, count: 2 },
+    { tile: 256, count: 1 },
+    { tile: 8, count: 3 },
+    { tile: 128, count: 2 },
+    { tile: 512, count: 1 }
+  ];
+  const hardChallenges = [
+    [{ tile: 16, count: 3 }, { tile: 64, count: 1 }],
+    [{ tile: 32, count: 2 }, { tile: 128, count: 1 }],
+    [{ tile: 8, count: 4 }, { tile: 64, count: 1 }],
+    [{ tile: 16, count: 3 }, { tile: 32, count: 2 }],
+    [{ tile: 64, count: 2 }, { tile: 256, count: 1 }],
+    [{ tile: 32, count: 3 }, { tile: 64, count: 2 }],
+    [{ tile: 8, count: 3 }, { tile: 128, count: 1 }],
+    [{ tile: 16, count: 4 }, { tile: 64, count: 1 }]
+  ];
+
+  const hardGrid = document.querySelector('.hard-grid');
+
+  hardGrid.innerHTML = hardChallenges.map((goals, i) => {
+    const level = i + 1;
+    const unlocked = level <= unlockedHard;
+    const completed = localStorage.getItem(`completed_hard_${level}`) === "true";
+
+    return `
+      <div class="challenge ${unlocked ? '' : 'locked'}"
+          data-level="${level}" 
+          data-mode="hard" 
+          data-objectives='${JSON.stringify(goals)}'>
+        <h3>Level ${level}</h3>
+        <div class="objective">
+          ${goals.map(g => `${g.count}×${g.tile}`).join(', ')}
+        </div>
+        ${completed ? '<div class="tick">✔️</div>' : ''}
+      </div>`;
+  }).join('');
+
+  const mediumGrid = document.querySelector('.medium-grid');
+  // Bind click for medium challenges
+  mediumGrid.innerHTML = mediumChallenges.map((goal, i) => {
+    const level = i + 1;
+    const unlocked = level <= unlockedMedium;
+    const completed = localStorage.getItem(`completed_medium_${level}`) === "true";
+    return `
+      <div class="challenge ${unlocked ? '' : 'locked'}" 
+          data-level="${level}" 
+          data-mode="medium" 
+          data-objective="${goal.tile}" 
+          data-count="${goal.count}">
+        <h3>Level ${level}</h3>
+        <div class="objective">Make ${goal.count} × ${goal.tile}</div>
+        ${completed ? '<div class="tick">✔️</div>' : ''}
+      </div>
+    `;
+  }).join('');
+
+    // ✅ Re-bind click after innerHTML is set
+  document.querySelectorAll('.challenge').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('locked')) return;
+
+      const level = Number(btn.dataset.level);
+      const mode = btn.dataset.mode;
+
+      let objectives;
+      if (mode === 'easy') {
+        objectives = [{ tile: Number(btn.dataset.objective), count: 1 }];
+      } else if (mode === 'medium') {
+        objectives = [{ 
+          tile: Number(btn.dataset.objective), 
+          count: Number(btn.dataset.count || 1) 
+        }];
+      } else if (mode === 'hard') {
+        objectives = JSON.parse(btn.dataset.objectives); // ✅ full array
+      }
+
+      localStorage.setItem('challengeData', JSON.stringify({
+        level,
+        mode,
+        objectives
+      }));
+
+      window.location.replace("2048.html");
+    });
+  });
+</script>
+
+</body>
+</html>

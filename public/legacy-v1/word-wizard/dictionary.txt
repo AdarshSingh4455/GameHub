@@ -1,0 +1,20 @@
+CAT
+DOG
+RAT
+BIRD
+TREE
+WORD
+WIZARD
+SPELL
+MAGIC
+STAR
+COW
+BAT
+BALL
+
+
+Bhai score system aur stars bhi chahiye har level me"
+"Bhai game ko responsive bana do phone ke liye bhi"
+"Bhai sound effect aur animations bhi chahiye"
+Bhai timer ya score system bhi chahiye"
+"Bhai dark theme + sound effect daal do

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Number Guessing Game</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    #attempts, #timer {
+      margin: 5px 0;
+      font-size: 16px;
+      color: #ccc;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 15, 25, 0.95);
+      backdrop-filter: blur(10px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    .modal-content {
+      background: #ffffff0d;
+      border: 1px solid #ffffff22;
+      border-radius: 16px;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.05);
+      animation: zoomIn 0.8s ease-in-out;
+    }
+
+    .modal-content h2 {
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    .modal-content button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      font-size: 16px;
+      background: linear-gradient(135deg, #00c6ff, #007bff);
+      transition: all 0.3s ease;
+    }
+
+    .modal-content button:hover {
+      background: linear-gradient(135deg, #00ffcc, #00c6ff);
+      transform: scale(1.03);
+    }
+  </style>
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+</head>
+<body>
+  <!-- Difficulty Modal -->
+  <div class="modal" id="difficultyModal">
+    <div class="modal-content">
+      <h2>🎯 Choose Difficulty</h2>
+      <button onclick="startGame('easy')">Easy<br><small>15 attempts (1–150)</small></button>
+      <button onclick="startGame('medium')">Medium<br><small>10 attempts (1–100)</small></button>
+      <button onclick="startGame('hard')">Hard<br><small>45 sec timer (1–100)</small></button>
+    </div>
+  </div>
+
+  <div class="game-container" data-aos="fade-up" data-aos-delay="300">
+    <h1>🎯 Number Guessing Game</h1>
+    
+    <div class="cover" id="cover">Guess It!</div>
+    <div class="number" id="number">??</div>
+
+    <input type="number" id="guessInput" placeholder="Enter your guess" />
+    <button onclick="checkGuess()">Submit Guess</button>
+
+    <p id="hint"></p>
+    <p id="attempts">Attempts left: 10</p>
+    <p id="timer" style="display:none;">⏳ Time left: <span id="timeLeft">45</span>s</p>
+
+    <button onclick="restartGame()" class="restart">🔁 Restart</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="script.js"></script>
+  <script>
+
+    AOS.init();
+  </script>
+</body>
+</html>

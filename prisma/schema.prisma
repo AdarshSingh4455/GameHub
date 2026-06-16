@@ -378,11 +378,12 @@ model MultiplayerRoom {
 }
 
 model MultiplayerRoomPlayer {
-  id       String            @id @default(cuid())
-  roomId   String
-  userId   String
-  status   PlayerReadyStatus @default(NOT_READY)
-  joinedAt DateTime          @default(now())
+  id             String            @id @default(cuid())
+  roomId         String
+  userId         String
+  status         PlayerReadyStatus @default(NOT_READY)
+  joinedAt       DateTime          @default(now())
+  disconnectedAt DateTime?
 
   room     MultiplayerRoom   @relation(fields: [roomId], references: [id], onDelete: Cascade)
   profile  Profile           @relation("PlayerRooms", fields: [userId], references: [userId], onDelete: Cascade)

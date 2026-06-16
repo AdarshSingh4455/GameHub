@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
+import { useSocket } from '@/lib/contexts/SocketContext'
 
 interface Player {
   userId: string
@@ -26,10 +27,16 @@ export default function MultiplayerHandCricketGame({
   onLeave
 }: CricketGameProps) {
   const { addToast } = useToast()
+  const { socket } = useSocket()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const gameState = session.gameState || {}
   const { stage, tossWinnerId, battingUserId, bowlingUserId, innings, runs, wickets, balls, maxOvers, maxWickets, target, moves = {}, history = [], commentary = [], replayVotes = {} } = gameState
+
+  // Reset submitting state when state updates from the server
+  React.useEffect(() => {
+    setIsSubmitting(false)
+  }, [stage, innings, runs, wickets, balls, session.status])
 
   // Helper to map user ID to username
   const getUsername = (uid: string) => {
@@ -42,71 +49,41 @@ export default function MultiplayerHandCricketGame({
   }
 
   // Handle Toss Selection
-  const handleTossChoice = async (choice: 'BAT' | 'BOWL') => {
+  const handleTossChoice = (choice: 'BAT' | 'BOWL') => {
+    if (!socket) return
     setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/multiplayer/game/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomCode,
-          move: { type: 'toss', choice }
-        })
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to submit toss choice')
-      }
-    } catch (err: any) {
-      addToast('error', 'Toss Error', err.message)
-    } finally {
+    socket.emit('submit-move', { roomCode, move: { type: 'toss', choice } }, (res: any) => {
       setIsSubmitting(false)
-    }
+      if (res?.error) {
+        addToast('error', 'Toss Error', res.error)
+      }
+    })
   }
 
   // Handle Play Ball Selection
-  const handlePlayBall = async (number: number) => {
-    if (moves[currentUserId] !== undefined) return // Already submitted
+  const handlePlayBall = (number: number) => {
+    if (!socket || moves[currentUserId] !== undefined) return // Already submitted
     setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/multiplayer/game/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomCode,
-          move: { type: 'play', number }
-        })
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to submit move')
-      }
-    } catch (err: any) {
-      addToast('error', 'Play Error', err.message)
-    } finally {
+    socket.emit('submit-move', { roomCode, move: { type: 'play', number } }, (res: any) => {
       setIsSubmitting(false)
-    }
+      if (res?.error) {
+        addToast('error', 'Play Error', res.error)
+      }
+    })
   }
 
   // Handle Vote Play Again
-  const handlePlayAgain = async () => {
+  const handlePlayAgain = () => {
+    if (!socket) return
     setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/multiplayer/game/replay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode })
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to vote play again')
-      }
-      addToast('success', 'Vote Registered', 'Waiting for opponent to accept play again.')
-    } catch (err: any) {
-      addToast('error', 'Error', err.message)
-    } finally {
+    socket.emit('vote-replay', { roomCode }, (res: any) => {
       setIsSubmitting(false)
-    }
+      if (res?.error) {
+        addToast('error', 'Error', res.error)
+      } else {
+        addToast('success', 'Vote Registered', 'Waiting for opponent to accept play again.')
+      }
+    })
   }
 
   const formatOvers = (bCount: number) => {

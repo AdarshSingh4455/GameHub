@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
+import { useSocket } from '@/lib/contexts/SocketContext'
 
 interface Player {
   userId: string
@@ -26,10 +27,21 @@ export default function MultiplayerDotsBoxesGame({
   onLeave
 }: DotsBoxesProps) {
   const { addToast } = useToast()
+  const { socket } = useSocket()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [optimisticLines, setOptimisticLines] = useState<string[]>([])
 
   const gameState = session.gameState || {}
   const { horizontalLines = [], verticalLines = [], completedBoxes = [], playerScores = {}, currentTurn, replayVotes = {}, dotsSize = 6 } = gameState
+
+  // Synchronize optimisticLines and reset isSubmitting on official state changes
+  React.useEffect(() => {
+    setOptimisticLines(prev => prev.filter(l => !horizontalLines.includes(l) && !verticalLines.includes(l)))
+    setIsSubmitting(false)
+  }, [horizontalLines, verticalLines, currentTurn, session.status])
+
+  const allHorizontal = Array.from(new Set([...horizontalLines, ...optimisticLines.filter(l => l.startsWith('h-'))]))
+  const allVertical = Array.from(new Set([...verticalLines, ...optimisticLines.filter(l => l.startsWith('v-'))]))
 
   const opponentUserId = players.find(p => p.userId !== currentUserId)?.userId || ''
 
@@ -42,54 +54,44 @@ export default function MultiplayerDotsBoxesGame({
     return players.find(p => p.userId === uid)
   }
 
-  const handleLineClick = async (lineId: string) => {
+  const handleLineClick = (lineId: string) => {
     console.log(`[CLIENT handleLineClick] lineId=${lineId} currentTurn=${currentTurn} currentUserId=${currentUserId} isSubmitting=${isSubmitting} status=${session?.status}`)
     if (session?.status === 'FINISHED' || isSubmitting) return
     if (currentTurn !== currentUserId) {
       addToast('warning', "Not Your Turn", "Please wait for your opponent's move.")
       return
     }
-
-    setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/multiplayer/game/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomCode,
-          move: { lineId }
-        })
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to draw line')
-      }
-    } catch (err: any) {
-      console.error('[CLIENT handleLineClick ERROR]', err)
-      addToast('error', 'Move Error', err.message)
-    } finally {
-      setIsSubmitting(false)
+    if (horizontalLines.includes(lineId) || verticalLines.includes(lineId) || optimisticLines.includes(lineId)) {
+      return // Already claimed
     }
+    if (!socket) return
+
+    // Optimistically draw the line locally
+    setOptimisticLines(prev => [...prev, lineId])
+    setIsSubmitting(true)
+
+    socket.emit('submit-move', { roomCode, move: { lineId } }, (res: any) => {
+      setIsSubmitting(false)
+      if (res?.error) {
+        console.error('[CLIENT handleLineClick ERROR]', res.error)
+        addToast('error', 'Move Error', res.error)
+        // Rollback on rejection
+        setOptimisticLines(prev => prev.filter(id => id !== lineId))
+      }
+    })
   }
 
-  const handlePlayAgain = async () => {
+  const handlePlayAgain = () => {
+    if (!socket) return
     setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/multiplayer/game/replay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode })
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to request play again')
-      }
-      addToast('success', 'Vote Registered', 'Waiting for opponent to accept play again.')
-    } catch (err: any) {
-      addToast('error', 'Replay Error', err.message)
-    } finally {
+    socket.emit('vote-replay', { roomCode }, (res: any) => {
       setIsSubmitting(false)
-    }
+      if (res?.error) {
+        addToast('error', 'Replay Error', res.error)
+      } else {
+        addToast('success', 'Vote Registered', 'Waiting for opponent to accept play again.')
+      }
+    })
   }
 
   // Active status styles
@@ -248,9 +250,10 @@ export default function MultiplayerDotsBoxesGame({
                 <React.Fragment key={`lines-${r}-${c}`}>
                   {renderHorizontal && (() => {
                     const lineId = `h-${r}-${c}`
-                    const isClaimed = horizontalLines.includes(lineId)
+                    const isClaimed = allHorizontal.includes(lineId)
+                    const isOptimistic = optimisticLines.includes(lineId)
                     const owner = gameState.lineOwners?.[lineId]
-                    const isMine = owner === currentUserId
+                    const isMine = owner === currentUserId || isOptimistic
 
                     const hoverClass = isMyTurn ? 'hover-h-p1' : 'hover-h-p2'
 
@@ -286,7 +289,10 @@ export default function MultiplayerDotsBoxesGame({
                               : 'none',
                             borderRadius: 3,
                             transition: 'all 0.2s ease-in-out',
-                            opacity: isClaimed ? 1 : 0.25,
+                            opacity: isClaimed 
+                              ? isOptimistic ? 0.6 : 1 
+                              : 0.25,
+                            border: isOptimistic ? '1px dashed hsl(210 100% 70% / 0.5)' : 'none'
                           }}
                           className={`db-line-inner ${!isClaimed && !isFinished && isMyTurn ? hoverClass : ''}`}
                         />
@@ -296,9 +302,10 @@ export default function MultiplayerDotsBoxesGame({
 
                   {renderVertical && (() => {
                     const lineId = `v-${r}-${c}`
-                    const isClaimed = verticalLines.includes(lineId)
+                    const isClaimed = allVertical.includes(lineId)
+                    const isOptimistic = optimisticLines.includes(lineId)
                     const owner = gameState.lineOwners?.[lineId]
-                    const isMine = owner === currentUserId
+                    const isMine = owner === currentUserId || isOptimistic
 
                     const hoverClass = isMyTurn ? 'hover-v-p1' : 'hover-v-p2'
 
@@ -334,7 +341,10 @@ export default function MultiplayerDotsBoxesGame({
                               : 'none',
                             borderRadius: 3,
                             transition: 'all 0.2s ease-in-out',
-                            opacity: isClaimed ? 1 : 0.25,
+                            opacity: isClaimed 
+                              ? isOptimistic ? 0.6 : 1 
+                              : 0.25,
+                            border: isOptimistic ? '1px dashed hsl(210 100% 70% / 0.5)' : 'none'
                           }}
                           className={`db-line-inner ${!isClaimed && !isFinished && isMyTurn ? hoverClass : ''}`}
                         />

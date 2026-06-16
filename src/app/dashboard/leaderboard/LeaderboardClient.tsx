@@ -76,7 +76,7 @@ export default function LeaderboardClient() {
   }, [timeframe, game, scope])
 
   return (
-    <div className="animate-fadeIn" style={{ maxWidth: 760, margin: '0 auto' }}>
+    <div className="animate-fadeIn safe-bottom-padding" style={{ maxWidth: 760, margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}>🏆 Leaderboard</h1>
         <p style={{ color: 'hsl(220 10% 55%)' }}>Top players ranked by performance. Change filters below to see rankings.</p>

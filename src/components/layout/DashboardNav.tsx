@@ -57,7 +57,7 @@ export default function DashboardNav({ user }: Props) {
   })
 
   // Detect game page to hide mobile top header and bottom nav
-  const isGamePage = pathname.startsWith('/dashboard/games/') && pathname !== '/dashboard/games'
+  const isGamePage = (pathname.startsWith('/dashboard/games/') && pathname !== '/dashboard/games') || pathname.startsWith('/dashboard/multiplayer/play/')
 
   // Inject body class for global styling adjustments when in a game
   useEffect(() => {

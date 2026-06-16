@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { isRateLimited } from '@/lib/rateLimit'
+import { useSocket } from '@/lib/contexts/SocketContext'
 
 interface Player {
   id: string
@@ -67,7 +68,8 @@ type Screen = 'MENU' | 'CREATE' | 'JOIN' | 'LOBBY'
 
 const SUPPORTED_MULTIPLAYER_GAMES = [
   { slug: 'cricket', name: 'Hand Cricket', emoji: '🏏', desc: 'Strategic hand cricket duel with turns.' },
-  { slug: 'dots-boxes', name: 'Dots & Boxes', emoji: '✏️', desc: 'Classic grid-based territory conquest.' }
+  { slug: 'dots-boxes', name: 'Dots & Boxes', emoji: '✏️', desc: 'Classic grid-based territory conquest.' },
+  { slug: 'tic-tac-toe', name: 'Tic-Tac-Toe', emoji: '⭕', desc: 'Classic 3×3 noughts-and-crosses.' }
 ]
 
 const SESSION_KEY = 'mp_screen'
@@ -108,8 +110,9 @@ export default function MultiplayerPage() {
   const { user } = useGameSession()
   const { addToast } = useToast()
   const router = useRouter()
+  const { socket } = useSocket()
 
-  const [screen, setScreenState] = useState<Screen>('MENU')
+  const [screen, setScreenState] = useState<Screen>(() => getPersistedScreen())
   const [selectedGame, setSelectedGame] = useState('cricket')
   const [maxPlayers, setMaxPlayers] = useState(4)
   const [roomCodeInput, setRoomCodeInput] = useState('')
@@ -120,7 +123,7 @@ export default function MultiplayerPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [hostUserId, setHostUserId] = useState<string | null>(null)
   const [roomStatus, setRoomStatus] = useState<string>('WAITING')
-  const [lobbyRoomCode, setLobbyRoomCodeState] = useState<string>('')
+  const [lobbyRoomCode, setLobbyRoomCodeState] = useState<string>(() => getPersistedRoomCode())
 
   // New social states
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
@@ -135,6 +138,11 @@ export default function MultiplayerPage() {
   const chatPollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const socialPollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const playersRef = useRef<Player[]>([])
+  playersRef.current = players
+  const roomRef = useRef<Room | null>(null)
+  roomRef.current = room
 
   const currentUserId = getClientUserId(user)
 
@@ -336,130 +344,117 @@ export default function MultiplayerPage() {
     }
   }, [])
 
-  // 4. Room detail polling (2000ms - Slower) and automatic redirect
+  // 4. Real-time Socket Lobby updates & Global invite listener
   useEffect(() => {
-    let active = true
-    if (screen === 'LOBBY' && lobbyRoomCode) {
-      const fetchRoomDetails = async () => {
-        try {
-          const res = await fetch(`/api/multiplayer/room/${lobbyRoomCode}`, { cache: 'no-store' })
-          if (!active) return
-          if (!res.ok) {
-            if (res.status === 404) {
-              addToast('warning', 'Room Closed', 'The host has left or closed this room.')
-              leaveRoomCleanup()
-            }
-            return
-          }
-          const data = await res.json()
-          if (!active) return
-          setRoom(data.room)
-          setPlayers(data.players || [])
-          setHostUserId(data.room.hostUserId)
-          setRoomStatus(data.room.status)
+    if (!socket) return
 
-          console.log(`[MULTIPLAYER REDIRECT CHECK] Room code: ${lobbyRoomCode}, Status: ${data.room.status}`)
-          if (data.room.status === 'STARTING' || data.room.status === 'PLAYING') {
-            console.log(`[MULTIPLAYER REDIRECT EXECUTED] Redirecting user to /dashboard/multiplayer/play/${lobbyRoomCode}`)
-            router.push(`/dashboard/multiplayer/play/${lobbyRoomCode}`)
-          }
-        } catch (err) {
-          console.error('Failed to poll room details:', err)
-        } finally {
-          if (active) {
-            pollingIntervalRef.current = setTimeout(fetchRoomDetails, 2000)
-          }
-        }
-      }
-
-      fetchRoomDetails()
-    }
+    // Global invite listener across dashboard
+    socket.on('invite-received', (invite: any) => {
+      addToast('info', 'Invite Received', `You received a room invite from ${invite.sender?.username || 'a friend'}`)
+      setInvites(prev => [invite, ...prev])
+    })
 
     return () => {
-      active = false
-      if (pollingIntervalRef.current) clearTimeout(pollingIntervalRef.current)
+      socket.off('invite-received')
+    }
+  }, [socket, addToast])
+
+  useEffect(() => {
+    if (!socket || screen !== 'LOBBY' || !lobbyRoomCode) return
+
+    const joinLobbyRoom = () => {
+      socket.emit('join-room', { roomCode: lobbyRoomCode }, (response: any) => {
+        if (response?.error) {
+          addToast('error', 'Join Error', response.error)
+          leaveRoomCleanup()
+        }
+      })
+    }
+
+    // Join room immediately
+    joinLobbyRoom()
+
+    // Re-join on reconnection
+    socket.on('connect', joinLobbyRoom)
+
+    const handleRoomUpdate = (data: any) => {
+      setRoom(data.room)
+      setPlayers(data.players || [])
+      setHostUserId(data.room.hostUserId)
+      setRoomStatus(data.room.status)
+
+      console.log(`[SOCKET LOBBY UPDATE] Room status: ${data.room.status}`)
+      if (data.room.status === 'STARTING' || data.room.status === 'PLAYING') {
+        console.log(`[SOCKET LOBBY REDIRECT] Redirecting user to /dashboard/multiplayer/play/${lobbyRoomCode}`)
+        router.push(`/dashboard/multiplayer/play/${lobbyRoomCode}`)
+      }
+    }
+
+    const handleChatMessage = (msg: any) => {
+      setChatMessages(prev => [...prev, msg])
+    }
+
+    const handlePlayerDisconnected = ({ userId }: { userId: string }) => {
+      const p = playersRef.current.find(player => player.userId === userId)
+      if (p) {
+        addToast('warning', 'Player Disconnected', `${p.username} lost connection. Grace timeout started.`)
+      }
+    }
+
+    const handlePlayerReconnected = ({ userId }: { userId: string }) => {
+      const p = playersRef.current.find(player => player.userId === userId)
+      if (p) {
+        addToast('success', 'Player Restored', `${p.username} reconnected.`)
+      }
+    }
+
+    // Room-specific listeners
+    socket.on('room-update', handleRoomUpdate)
+    socket.on('chat-message', handleChatMessage)
+    socket.on('player-disconnected', handlePlayerDisconnected)
+    socket.on('player-reconnected', handlePlayerReconnected)
+
+    return () => {
+      socket.off('connect', joinLobbyRoom)
+      const currentStatus = roomRef.current?.status
+      if (currentStatus !== 'STARTING' && currentStatus !== 'PLAYING') {
+        socket.emit('leave-room', { roomId: roomRef.current?.id })
+      }
+      socket.off('room-update', handleRoomUpdate)
+      socket.off('chat-message', handleChatMessage)
+      socket.off('player-disconnected', handlePlayerDisconnected)
+      socket.off('player-reconnected', handlePlayerReconnected)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, lobbyRoomCode, router])
-
-  // 5. Lobby chat message polling (2000ms - Slower)
-  useEffect(() => {
-    let active = true
-    if (screen === 'LOBBY' && lobbyRoomCode) {
-      const fetchChatMessages = async () => {
-        try {
-          const res = await fetch(`/api/multiplayer/chat/${lobbyRoomCode}`, { cache: 'no-store' })
-          if (!active) return
-          if (res.ok) {
-            const data = await res.json()
-            if (!active) return
-            setChatMessages(data.messages || [])
-          }
-        } catch (err) {
-          console.error('Failed to poll chat messages:', err)
-        } finally {
-          if (active) {
-            chatPollingIntervalRef.current = setTimeout(fetchChatMessages, 2000)
-          }
-        }
-      }
-
-      fetchChatMessages()
-    }
-
-    return () => {
-      active = false
-      if (chatPollingIntervalRef.current) clearTimeout(chatPollingIntervalRef.current)
-    }
-  }, [screen, lobbyRoomCode])
+  }, [socket, screen, lobbyRoomCode, router, addToast])
 
   // Actions
-  const handleCreateRoom = async () => {
+  const handleCreateRoom = () => {
+    if (!socket) return
     setIsLoading(true)
-    try {
-      const res = await fetch('/api/multiplayer/create-room', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameSlug: selectedGame, maxPlayers })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to create room')
-
-      addToast('success', 'Room Created', `Room code ${data.roomCode} created!`)
-      setLobbyRoomCode(data.roomCode)
-      setScreen('LOBBY')
-    } catch (err: any) {
-      addToast('error', 'Error', err.message)
-    } finally {
+    socket.emit('create-room', { gameSlug: selectedGame, maxPlayers }, (response: any) => {
       setIsLoading(false)
-    }
+      if (response?.error) {
+        addToast('error', 'Error', response.error)
+      } else if (response?.roomCode) {
+        addToast('success', 'Room Created', `Room code ${response.roomCode} created!`)
+        setLobbyRoomCode(response.roomCode)
+        setScreen('LOBBY')
+      }
+    })
   }
 
-  const handleJoinRoom = async () => {
+  const handleJoinRoom = () => {
     const code = roomCodeInput.trim()
     if (!code || code.toLowerCase() === 'undefined') {
       addToast('warning', 'Missing Code', 'Please enter a valid room code.')
       return
     }
-    setIsLoading(true)
-    try {
-      const res = await fetch('/api/multiplayer/join-room', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode: code })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to join room')
-
-      addToast('success', 'Joined Room', `Joined room ${data.roomCode} successfully!`)
-      setLobbyRoomCode(data.roomCode)
-      setScreen('LOBBY')
-      setRoomCodeInput('')
-    } catch (err: any) {
-      addToast('error', 'Error', err.message)
-    } finally {
-      setIsLoading(false)
-    }
+    if (!socket) return
+    // Just trigger lobby screen, the socket join-room emission will be automatically handled by useEffect
+    setLobbyRoomCode(code)
+    setScreen('LOBBY')
+    setRoomCodeInput('')
   }
 
   const handleQuickJoin = async (gameSlug: string) => {
@@ -483,88 +478,45 @@ export default function MultiplayerPage() {
     }
   }
 
-  const handleToggleReady = async () => {
-    if (!room) return
-    try {
-      const res = await fetch('/api/multiplayer/toggle-ready', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: room.id })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to toggle ready')
-    } catch (err: any) {
-      addToast('error', 'Error', err.message)
-    }
+  const handleToggleReady = () => {
+    if (!socket || !room) return
+    socket.emit('toggle-ready', { roomId: room.id })
   }
 
-  const handleLeaveRoom = async () => {
-    if (!room) return
+  const handleLeaveRoom = () => {
+    if (!socket || !room) return
     setIsLoading(true)
-    try {
-      const res = await fetch('/api/multiplayer/leave-room', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: room.id })
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to leave room')
-      }
+    socket.emit('leave-room', { roomId: room.id }, (response: any) => {
+      setIsLoading(false)
       addToast('info', 'Left Room', 'You have left the lobby.')
       leaveRoomCleanup()
-    } catch (err: any) {
-      addToast('error', 'Error', err.message)
-    } finally {
-      setIsLoading(false)
-    }
+    })
   }
 
-  const handleStartGame = async () => {
-    if (!room) return
+  const handleStartGame = () => {
+    if (!socket || !room) return
     setIsLoading(true)
-    try {
-      const res = await fetch('/api/multiplayer/start-game', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: room.id })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to start game')
-      addToast('success', 'Game Starting', 'Game is launching!')
-    } catch (err: any) {
-      addToast('error', 'Error', err.message)
-    } finally {
+    socket.emit('start-game', { roomId: room.id }, (response: any) => {
       setIsLoading(false)
-    }
+      if (response?.error) {
+        addToast('error', 'Error', response.error)
+      } else {
+        addToast('success', 'Game Starting', 'Game is launching!')
+      }
+    })
   }
 
-  const handleSendChat = async (e: React.FormEvent) => {
+  const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!chatInput.trim() || !lobbyRoomCode) return
+    if (!chatInput.trim() || !lobbyRoomCode || !socket) return
     const msg = chatInput.trim()
     setChatInput('')
 
-    try {
-      const res = await fetch('/api/multiplayer/chat/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode: lobbyRoomCode, message: msg })
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        addToast('error', 'Chat Error', data.error || 'Could not send message.')
-      } else {
-        // Snappy local fetch
-        const chatRes = await fetch(`/api/multiplayer/chat/${lobbyRoomCode}`, { cache: 'no-store' })
-        if (chatRes.ok) {
-          const data = await chatRes.json()
-          setChatMessages(data.messages || [])
-        }
+    socket.emit('send-chat', { roomCode: lobbyRoomCode, message: msg }, (response: any) => {
+      if (response?.error) {
+        addToast('error', 'Chat Error', response.error)
       }
-    } catch (err: any) {
-      addToast('error', 'Chat Error', err.message)
-    }
+    })
   }
 
   const handleSendInvite = async (friendUserId: string, friendUsername: string) => {
@@ -726,7 +678,8 @@ export default function MultiplayerPage() {
   const isHost = hostUserId === currentUserId
   const myPlayerInfo = players.find(p => p.userId === currentUserId)
   const myReady = myPlayerInfo?.status === 'READY'
-  const allPlayersReady = players.length >= 2 && players.every(p => p.status === 'READY')
+  const activePlayers = players.slice(0, 2)
+  const allPlayersReady = activePlayers.length >= 2 && activePlayers.every(p => p.status === 'READY')
   const selectedGameInfo = SUPPORTED_MULTIPLAYER_GAMES.find(
     g => g.slug === (room?.gameSlug || selectedGame)
   )
@@ -780,7 +733,7 @@ export default function MultiplayerPage() {
     <div
       data-screen={screen}
       style={{ maxWidth: 1000, margin: '0 auto', padding: '1rem' }}
-      className="animate-fadeIn"
+      className="animate-fadeIn safe-bottom-padding"
     >
       {/* ── Screen: MENU ── */}
       {screen === 'MENU' && (

@@ -1,360 +1,955 @@
+import path from 'path'
+import dotenv from 'dotenv'
+
+// Load environment variables from the parent root folders
+dotenv.config({ path: path.join(__dirname, '../../.env.local') })
+dotenv.config({ path: path.join(__dirname, '../../.env') })
+
 import express from 'express'
 import http from 'http'
 import cors from 'cors'
-import { Server } from 'socket.io'
+import { Server, Socket } from 'socket.io'
+import { createAdapter } from '@socket.io/redis-adapter'
+import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import pg from 'pg'
+
+// Monitoring & Logging Utilities
+import { logger, initSentry, logError } from './utils/logger'
+import { recordDisconnect, recordReconnectSuccess, startMetricsReporting } from './utils/metrics'
+
+// Middleware & Utilities
+import { socketAuthMiddleware, AuthenticatedSocket } from './middleware/auth'
+import { connectRedis, redisClient } from './utils/redis'
+import { setUserPresence, UserPresenceState } from './utils/presence'
+import { getRoomQueue, deleteRoomQueue } from './utils/queue'
+import {
+  createRoomLimiter,
+  joinRoomLimiter,
+  sendChatLimiter,
+  submitMoveLimiter,
+  checkRateLimit
+} from './middleware/rateLimit'
+
+// In-Memory Game Controllers
+import { processCricketMove, deleteCricketSession, getCricketSession, saveCricketSession } from './games/cricket'
+import { processDotsBoxesMove, deleteDotsBoxesSession, getDotsBoxesSession, saveDotsBoxesSession } from './games/dotsBoxes'
+import { processTicTacToeMove, deleteTicTacToeSession, getTicTacToeSession, saveTicTacToeSession } from './games/ticTacToe'
+import { INITIAL_STATES, handleMatchCompletion } from './games/framework'
+
+// Initialize Sentry SDK
+initSentry()
 
 const app = express()
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000' }))
 app.use(express.json())
 
 const server = http.createServer(app)
-
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST']
   },
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  transports: ['websocket'] // Enforce WebSocket-only transport for horizontal scaling compatibility
 })
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime(), rooms: Object.keys(rooms).length })
+// Initialize Prisma Client connection pool using PostgreSQL adapter
+const connectionString = process.env.DATABASE_URL
+const pool = new pg.Pool({
+  connectionString,
+  ssl: connectionString?.includes('localhost') || connectionString?.includes('127.0.0.1')
+    ? false
+    : { rejectUnauthorized: false }
 })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Connection tracking maps
+const userSockets = new Map<string, string>() // maps userId -> socketId
+const disconnectTimers = new Map<string, NodeJS.Timeout>() // maps userId -> Timeout
 
-export interface Player {
-  id: string
-  name: string
-  score: number
-}
+// Health check endpoint
+app.get('/health', async (_req, res) => {
+  let dbStatus = 'ok'
+  let redisStatus = 'ok'
 
-export interface Room {
-  players: Player[]
-  hostId: string
-  gameSlug: string
-  settings: Record<string, unknown>
-  gameStarted: boolean
-  currentWord?: string
-  currentTimeLeft?: number
-  guessedPlayers?: Set<string>
-  dotsBoxesState?: {
-    size: number
-    lines: string[]
-    boxes: Record<string, string>
-    turnId: string
-    scores: Record<string, number>
+  try {
+    await prisma.$queryRaw`SELECT 1`
+  } catch (err) {
+    dbStatus = 'error'
   }
-}
 
-export const rooms: Record<string, Room> = {}
+  if (!redisClient.isReady) {
+    redisStatus = 'error'
+  }
 
-export function generateRoomCode(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
-}
-
-// ─── Socket events ────────────────────────────────────────────────────────────
-
-io.on('connection', (socket) => {
-  console.log(`[+] Connected: ${socket.id}`)
-
-  // Create room
-  socket.on('create-room', (
-    { username, gameSlug, settings }: { username: string; gameSlug: string; settings?: Record<string, unknown> },
-    callback: (code: string) => void
-  ) => {
-    const roomCode = generateRoomCode()
-    rooms[roomCode] = {
-      players: [{ id: socket.id, name: username, score: 0 }],
-      hostId: socket.id,
-      gameSlug,
-      settings: settings ?? {},
-      gameStarted: false,
-    }
-    socket.join(roomCode)
-    callback(roomCode)
-    console.log(`Room ${roomCode} created by ${username} [${gameSlug}]`)
+  res.json({
+    status: dbStatus === 'ok' && redisStatus === 'ok' ? 'ok' : 'degraded',
+    uptime: process.uptime(),
+    database: dbStatus,
+    redis: redisStatus,
+    activeConnections: io.engine.clientsCount
   })
+})
 
-  // Join room
-  socket.on('join-room', (
-    { username, roomCode }: { username: string; roomCode: string },
-    callback: (res: { success?: boolean; error?: string; players?: Player[] }) => void
-  ) => {
-    const room = rooms[roomCode]
-    if (!room) return callback({ error: 'Room not found' })
-    if (room.gameStarted) return callback({ error: 'Game already started' })
-    if (room.players.some(p => p.name === username)) return callback({ error: 'Username taken in this room' })
+// Bind local JWT auth middleware
+io.use(socketAuthMiddleware)
 
-    room.players.push({ id: socket.id, name: username, score: 0 })
-    socket.join(roomCode)
-    callback({ success: true, players: room.players })
-    io.to(roomCode).emit('player-joined', room.players)
-  })
+// Setup Redis Adapter for horizontal scalability if Redis is connected
+connectRedis().then(() => {
+  if (redisClient.isReady) {
+    const pubClient = redisClient.duplicate()
+    const subClient = redisClient.duplicate()
+    Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+      io.adapter(createAdapter(pubClient, subClient))
+      logger.info('🔌 Redis adapter integrated for horizontal scaling.')
+    }).catch(err => {
+      logger.error({ err }, 'Failed to configure Redis Adapter')
+    })
+  }
+})
 
-  // Leave room
-  socket.on('leave-room', ({ roomCode }: { roomCode: string }) => {
-    leaveRoom(socket.id, roomCode)
-  })
+// Socket Connection Handler
+io.on('connection', async (rawSocket) => {
+  const socket = rawSocket as AuthenticatedSocket
+  const user = socket.data.user
+  if (!user) {
+    logger.warn('Socket connected without user auth data, disconnecting...')
+    socket.disconnect()
+    return
+  }
 
-  // Disconnect
-  socket.on('disconnect', () => {
-    console.log(`[-] Disconnected: ${socket.id}`)
-    for (const code of Object.keys(rooms)) {
-      leaveRoom(socket.id, code)
-    }
-  })
+  const { userId, username } = user
+  logger.info(`[+] Connected: userId=${userId} socketId=${socket.id} (${username})`)
 
-  // ── Scribble ──────────────────────────────────────────────────────────────
+  // Register socket mappings
+  userSockets.set(userId, socket.id)
+  setUserPresence(userId, 'ONLINE').catch(err => logError(err, { userId }))
 
-  const WORD_BANK = [
-    'elephant', 'laptop', 'banana', 'mountain', 'airplane', 'rainbow', 'guitar',
-    'umbrella', 'cactus', 'lighthouse', 'dragon', 'telescope', 'volcano', 'compass',
-    'dinosaur', 'submarine', 'tornado', 'pyramid', 'jellyfish', 'waterfall',
-    'basketball', 'saxophone', 'helicopter', 'thunderstorm', 'constellation',
-  ]
+  // Check if player is returning from a disconnect grace period
+  if (disconnectTimers.has(userId)) {
+    logger.info(`[RECONNECT RECOVERY] User reconnected within grace period: ${username} (${userId})`)
+    clearTimeout(disconnectTimers.get(userId)!)
+    disconnectTimers.delete(userId)
+    recordReconnectSuccess()
 
-  socket.on('scribble:start-turn', ({ roomCode }: { roomCode: string }) => {
-    const shuffled = [...WORD_BANK].sort(() => Math.random() - 0.5)
-    io.to(socket.id).emit('scribble:choose-word', shuffled.slice(0, 3))
-  })
+    // Restore status in active room player profiles and re-join socket rooms (non-blocking)
+    prisma.multiplayerRoomPlayer.findMany({
+      where: { userId, NOT: { disconnectedAt: null } },
+      include: { room: true }
+    }).then(async (disconnectedProfiles: any) => {
+      if (disconnectedProfiles.length > 0) {
+        await prisma.multiplayerRoomPlayer.updateMany({
+          where: { userId, NOT: { disconnectedAt: null } },
+          data: { disconnectedAt: null }
+        })
 
-  socket.on('scribble:word-chosen', ({ roomCode, word }: { roomCode: string; word: string }) => {
-    const room = rooms[roomCode]
-    if (!room) return
-    room.currentWord = word
-    room.guessedPlayers = new Set()
-    const display = word.split('').map(() => '_').join(' ')
-    io.to(roomCode).emit('scribble:round-start', { displayWord: display, wordLength: word.length })
-    startScribbleTimer(roomCode, word, room)
-  })
-
-  socket.on('scribble:drawing-data', ({ roomCode, drawing }: { roomCode: string; drawing: unknown }) => {
-    socket.to(roomCode).emit('scribble:receive-drawing', { drawing })
-  })
-
-  socket.on('scribble:clear-canvas', ({ roomCode }: { roomCode: string }) => {
-    socket.to(roomCode).emit('scribble:canvas-cleared')
-  })
-
-  socket.on('scribble:chat', ({ roomCode, playerName, message }: { roomCode: string; playerName: string; message: string }) => {
-    const room = rooms[roomCode]
-    if (!room?.currentWord) return
-
-    const correct = message.toLowerCase().trim() === room.currentWord.toLowerCase().trim()
-    if (correct && !room.guessedPlayers?.has(socket.id)) {
-      room.guessedPlayers?.add(socket.id)
-      const points = 50 + (room.currentTimeLeft ?? 0) * 2
-
-      const player = room.players.find(p => p.id === socket.id)
-      if (player) player.score += points
-      const host = room.players.find(p => p.id === room.hostId)
-      if (host) host.score += 25
-
-      io.to(roomCode).emit('scribble:correct-guess', { playerName, points })
-      io.to(roomCode).emit('scribble:update-scores', room.players)
-    } else if (!correct) {
-      io.to(roomCode).emit('scribble:chat-message', { playerName, message })
-    }
-  })
-
-  // ── Charades ──────────────────────────────────────────────────────────────
-
-  const PHRASES = [
-    'The Lion King', 'Avengers Endgame', 'Jurassic Park', 'Harry Potter',
-    'The Dark Knight', 'Inception', 'Interstellar', 'Spider-Man', 'Frozen',
-    'Finding Nemo', 'The Matrix', 'Titanic', 'Gladiator', 'The Godfather',
-  ]
-
-  socket.on('charades:start', ({ roomCode }: { roomCode: string }) => {
-    const room = rooms[roomCode]
-    if (!room) return
-    const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)]
-    room.currentWord = phrase
-    room.guessedPlayers = new Set()
-    io.to(socket.id).emit('charades:phrase-assigned', { phrase })
-    io.to(roomCode).emit('charades:round-started', { actorId: socket.id })
-  })
-
-  socket.on('charades:hint', ({ roomCode, hintText }: { roomCode: string; hintText: string }) => {
-    socket.to(roomCode).emit('charades:hint-broadcast', { hintText })
-  })
-
-  socket.on('charades:guess', ({ roomCode, playerName, guess }: { roomCode: string; playerName: string; guess: string }) => {
-    const room = rooms[roomCode]
-    if (!room?.currentWord) return
-    const correct = guess.toLowerCase().trim() === room.currentWord.toLowerCase().trim()
-    if (correct && !room.guessedPlayers?.has(socket.id)) {
-      room.guessedPlayers?.add(socket.id)
-      const player = room.players.find(p => p.id === socket.id)
-      if (player) player.score += 100
-      io.to(roomCode).emit('charades:correct-guess', { playerName, phrase: room.currentWord })
-      io.to(roomCode).emit('charades:update-scores', room.players)
-    } else {
-      io.to(roomCode).emit('charades:wrong-guess', { playerName })
-    }
-  })
-
-  // ── Dots & Boxes ──────────────────────────────────────────────────────────
-
-  socket.on('dotsboxes:start', ({ roomCode, size }: { roomCode: string; size: number }) => {
-    const room = rooms[roomCode]
-    if (!room) return
-    room.dotsBoxesState = {
-      size,
-      lines: [],
-      boxes: {},
-      turnId: room.players[0].id,
-      scores: room.players.reduce((acc, p) => ({ ...acc, [p.id]: 0 }), {})
-    }
-    room.gameStarted = true
-    io.to(roomCode).emit('dotsboxes:started', room.dotsBoxesState)
-  })
-
-  socket.on('dotsboxes:draw-line', ({ roomCode, lineId }: { roomCode: string; lineId: string }) => {
-    const room = rooms[roomCode]
-    if (!room || !room.dotsBoxesState) return
-    const state = room.dotsBoxesState
-
-    // 1. Verify correct player turn
-    if (state.turnId !== socket.id) {
-      return socket.emit('error', 'Not your turn')
-    }
-
-    // 2. Verify line is not already claimed
-    if (state.lines.includes(lineId)) {
-      return socket.emit('error', 'Line already drawn')
-    }
-
-    // 3. Verify move is legal
-    const parts = lineId.split('-')
-    if (parts.length !== 3) return socket.emit('error', 'Invalid line format')
-    const type = parts[0]
-    const r = parseInt(parts[1], 10)
-    const c = parseInt(parts[2], 10)
-    const size = state.size
-    if (type === 'h') {
-      if (r < 0 || r >= size || c < 0 || c >= size - 1) return socket.emit('error', 'Out of bounds')
-    } else if (type === 'v') {
-      if (r < 0 || r >= size - 1 || c < 0 || c >= size) return socket.emit('error', 'Out of bounds')
-    } else {
-      return socket.emit('error', 'Invalid line type')
-    }
-
-    // 4. Claim the line
-    state.lines.push(lineId)
-
-    // 5. Check if box completed
-    let boxCompleted = false
-    const sizeBoxes = size - 1
-
-    const checkAndClaimBox = (br: number, bc: number) => {
-      if (br < 0 || br >= sizeBoxes || bc < 0 || bc >= sizeBoxes) return false
-      const boxKey = `${br},${bc}`
-      if (state.boxes[boxKey]) return false
-
-      const top = `h-${br}-${bc}`
-      const bottom = `h-${br + 1}-${bc}`
-      const left = `v-${br}-${bc}`
-      const right = `v-${br}-${bc + 1}`
-
-      const isCompleted = state.lines.includes(top) &&
-                          state.lines.includes(bottom) &&
-                          state.lines.includes(left) &&
-                          state.lines.includes(right)
-
-      if (isCompleted) {
-        state.boxes[boxKey] = socket.id
-        state.scores[socket.id] = (state.scores[socket.id] || 0) + 1
-
-        const player = room.players.find(p => p.id === socket.id)
-        if (player) player.score = state.scores[socket.id]
-
-        return true
+        // Re-join socket to all active rooms and broadcast recovery
+        for (const p of disconnectedProfiles) {
+          if (p.room) {
+            const roomCode = p.room.roomCode
+            socket.join(`room:${roomCode}`)
+            if (p.room.status === 'PLAYING') {
+              socket.join(`game:${roomCode}`)
+            }
+            io.to(`room:${roomCode}`).emit('player-reconnected', { userId })
+            io.to(`game:${roomCode}`).emit('player-reconnected', { userId })
+            await broadcastRoomUpdate(roomCode)
+            logger.info(`[RECONNECT RECOVERY] Re-joined room:${roomCode} and broadcast update`)
+          }
+        }
       }
-      return false
-    }
+    }).catch((err: any) => {
+      logError(err, { userId })
+    })
+  }
 
-    if (type === 'h') {
-      if (checkAndClaimBox(r, c)) boxCompleted = true
-      if (checkAndClaimBox(r - 1, c)) boxCompleted = true
-    } else {
-      if (checkAndClaimBox(r, c)) boxCompleted = true
-      if (checkAndClaimBox(r, c - 1)) boxCompleted = true
-    }
+  // Heartbeat ping keepalive updates presence state in Redis
+  socket.on('heartbeat', async () => {
+    await setUserPresence(userId, 'ONLINE')
+  })
 
-    // 6. Turn synchronization
-    if (!boxCompleted) {
-      const otherPlayer = room.players.find(p => p.id !== socket.id)
-      if (otherPlayer) {
-        state.turnId = otherPlayer.id
+  // ─── LOBBY EVENTS ──────────────────────────────────────────────────────────
+
+  // Create Room
+  socket.on('create-room', async (
+    { gameSlug, maxPlayers }: { gameSlug: string; maxPlayers?: number },
+    callback: (res: { roomCode?: string; error?: string }) => void
+  ) => {
+    if (!(await checkRateLimit(socket, createRoomLimiter, 'create-room', callback))) return
+
+    try {
+      // Generate a unique 6-character room code
+      let roomCode = ''
+      let isUnique = false
+      let attempts = 0
+      while (!isUnique && attempts < 50) {
+        roomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+        const existing = await prisma.multiplayerRoom.findUnique({ where: { roomCode } })
+        if (!existing) isUnique = true
+        attempts++
       }
+
+      if (!isUnique) throw new Error('Failed to generate unique room code')
+
+      const room = await prisma.multiplayerRoom.create({
+        data: {
+          roomCode,
+          gameSlug,
+          hostUserId: userId,
+          maxPlayers: maxPlayers ?? 4,
+          status: 'WAITING',
+          players: {
+            create: {
+              userId,
+              status: 'NOT_READY'
+            }
+          }
+        }
+      })
+
+      socket.join(`room:${roomCode}`)
+      callback({ roomCode })
+      logger.info(`[ROOM CREATED] code=${roomCode} host=${username} game=${gameSlug}`)
+    } catch (err: any) {
+      logError(err, { userId, gameSlug })
+      callback({ error: err.message || 'Failed to create room' })
     }
+  })
 
-    // 7. Check if game is completed
-    const totalLinesCount = size * (size - 1) * 2
-    const gameFinished = state.lines.length === totalLinesCount
+  // Join Room
+  socket.on('join-room', async (
+    { roomCode }: { roomCode: string },
+    callback: (res: { success?: boolean; error?: string; gameSlug?: string }) => void
+  ) => {
+    if (!(await checkRateLimit(socket, joinRoomLimiter, 'join-room', callback))) return
 
-    // 8. Broadcast update
-    io.to(roomCode).emit('dotsboxes:updated', {
-      state,
-      lastMove: { playerId: socket.id, lineId, boxCompleted },
-      gameFinished,
-      players: room.players
+    try {
+      const normalizedCode = roomCode.trim().toUpperCase()
+      const room = await prisma.multiplayerRoom.findUnique({
+        where: { roomCode: normalizedCode },
+        include: { players: true }
+      })
+
+      if (!room) return callback({ error: 'Room not found' })
+      if (room.status !== 'WAITING') return callback({ error: 'Game already started' })
+      const existingPlayer = room.players.find(p => p.userId === userId)
+      if (!existingPlayer && room.players.length >= room.maxPlayers) {
+        return callback({ error: 'Room is full' })
+      }
+
+      if (!existingPlayer) {
+        await prisma.multiplayerRoomPlayer.create({
+          data: {
+            roomId: room.id,
+            userId,
+            status: 'NOT_READY'
+          }
+        })
+      } else {
+        // Reset status if they previously left/disconnected
+        await prisma.multiplayerRoomPlayer.update({
+          where: { id: existingPlayer.id },
+          data: { status: 'NOT_READY', disconnectedAt: null }
+        })
+      }
+
+      socket.join(`room:${normalizedCode}`)
+      callback({ success: true, gameSlug: room.gameSlug })
+
+      // Broadcast updated player list
+      await broadcastRoomUpdate(normalizedCode)
+      logger.info(`[ROOM JOINED] code=${normalizedCode} user=${username}`)
+    } catch (err: any) {
+      logError(err, { userId, roomCode })
+      callback({ error: err.message || 'Failed to join room' })
+    }
+  })
+
+  // Toggle Ready Status
+  socket.on('toggle-ready', async ({ roomId }: { roomId: string }, callback?: any) => {
+    try {
+      const player = await prisma.multiplayerRoomPlayer.findUnique({
+        where: { roomId_userId: { roomId, userId } },
+        include: { room: true }
+      })
+
+      if (!player) throw new Error('Player profile not found in room')
+
+      const nextStatus = player.status === 'READY' ? 'NOT_READY' : 'READY'
+      await prisma.multiplayerRoomPlayer.update({
+        where: { id: player.id },
+        data: { status: nextStatus }
+      })
+
+      await broadcastRoomUpdate(player.room.roomCode)
+      if (callback) callback({ success: true })
+    } catch (err: any) {
+      logError(err, { userId, roomId })
+      if (callback) callback({ error: err.message })
+    }
+  })
+
+  // Leave Room
+  socket.on('leave-room', async ({ roomId }: { roomId: string }, callback?: any) => {
+    try {
+      const player = await prisma.multiplayerRoomPlayer.findUnique({
+        where: { roomId_userId: { roomId, userId } },
+        include: { room: true }
+      })
+
+      if (!player) {
+        if (callback) callback({ success: true })
+        return
+      }
+
+      const roomCode = player.room.roomCode
+      socket.leave(`room:${roomCode}`)
+
+      // Delete player record
+      await prisma.multiplayerRoomPlayer.delete({ where: { id: player.id } })
+
+      // Fetch remaining players
+      const remaining = await prisma.multiplayerRoomPlayer.findMany({
+        where: { roomId },
+        orderBy: { joinedAt: 'asc' }
+      })
+
+      if (remaining.length === 0) {
+        // Clean up empty room and session
+        await prisma.multiplayerRoom.delete({ where: { id: roomId } })
+        deleteRoomQueue(roomCode)
+        await deleteCricketSession(roomCode)
+        await deleteDotsBoxesSession(roomCode)
+        logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`)
+      } else {
+        // If host left, perform host migration
+        if (player.room.hostUserId === userId) {
+          const newHost = remaining[0]
+          await prisma.multiplayerRoom.update({
+            where: { id: roomId },
+            data: { hostUserId: newHost.userId }
+          })
+          logger.info(`[HOST MIGRATED] room=${roomCode} newHost=${newHost.userId}`)
+        }
+
+        await broadcastRoomUpdate(roomCode)
+      }
+
+      if (callback) callback({ success: true })
+    } catch (err: any) {
+      logError(err, { userId, roomId })
+      if (callback) callback({ error: err.message })
+    }
+  })
+
+  // Start Game
+  socket.on('start-game', async ({ roomId }: { roomId: string }, callback?: any) => {
+    try {
+      const room = await prisma.multiplayerRoom.findUnique({
+        where: { id: roomId },
+        include: { players: true }
+      })
+
+      if (!room) throw new Error('Room not found')
+      if (room.hostUserId !== userId) throw new Error('Only the host can start the game')
+      if (room.players.length < 2) throw new Error('Need at least 2 players to start')
+      
+      const activePlayers = room.players
+        .sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime())
+        .slice(0, 2)
+      const allReady = activePlayers.every(p => p.status === 'READY' || p.userId === room.hostUserId)
+      if (!allReady) throw new Error('All players must be ready to start')
+
+      // Set initial game states
+      let initialGameState: any = {}
+      if (room.gameSlug === 'cricket') {
+        initialGameState = INITIAL_STATES['cricket'](activePlayers, room.hostUserId)
+      } else if (room.gameSlug === 'dots-boxes') {
+        initialGameState = INITIAL_STATES['dots-boxes'](activePlayers, room.hostUserId)
+      } else if (room.gameSlug === 'tic-tac-toe') {
+        initialGameState = INITIAL_STATES['tic-tac-toe'](activePlayers, room.hostUserId)
+      } else {
+        throw new Error('Unsupported game slug')
+      }
+
+      // Update room status
+      await prisma.multiplayerRoom.update({
+        where: { id: roomId },
+        data: { status: 'STARTING' }
+      })
+
+      // Create active game session in DB
+      await prisma.multiplayerGameSession.upsert({
+        where: { roomId },
+        create: {
+          roomId,
+          gameSlug: room.gameSlug,
+          status: 'PLAYING',
+          gameState: initialGameState,
+          currentTurn: initialGameState.currentTurn || null
+        },
+        update: {
+          status: 'PLAYING',
+          gameState: initialGameState,
+          currentTurn: initialGameState.currentTurn || null
+        }
+      })
+
+      // Cache game state in Redis
+      if (room.gameSlug === 'cricket') {
+        await saveCricketSession(room.roomCode, initialGameState)
+      } else if (room.gameSlug === 'dots-boxes') {
+        await saveDotsBoxesSession(room.roomCode, initialGameState)
+      } else if (room.gameSlug === 'tic-tac-toe') {
+        await saveTicTacToeSession(room.roomCode, initialGameState)
+      }
+
+      await broadcastRoomUpdate(room.roomCode)
+      io.to(`room:${room.roomCode}`).emit('game-started', { roomCode: room.roomCode })
+      logger.info(`[GAME STARTING] room=${room.roomCode} game=${room.gameSlug}`)
+      if (callback) callback({ success: true })
+    } catch (err: any) {
+      logError(err, { userId, roomId })
+      if (callback) callback({ error: err.message })
+    }
+  })
+
+  // Chat
+  socket.on('send-chat', async (
+    { roomCode, message }: { roomCode: string; message: string },
+    callback?: any
+  ) => {
+    if (!(await checkRateLimit(socket, sendChatLimiter, 'send-chat', callback))) return
+
+    try {
+      const room = await prisma.multiplayerRoom.findUnique({
+        where: { roomCode }
+      })
+      if (!room) throw new Error('Room not found')
+
+      const chatMsg = await prisma.multiplayerChatMessage.create({
+        data: {
+          roomId: room.id,
+          userId,
+          message
+        },
+        include: {
+          profile: {
+            select: { username: true, avatarUrl: true }
+          }
+        }
+      })
+
+      const packet = {
+        id: chatMsg.id,
+        userId: chatMsg.userId,
+        username: chatMsg.profile.username,
+        avatarUrl: chatMsg.profile.avatarUrl,
+        message: chatMsg.message,
+        createdAt: chatMsg.createdAt
+      }
+
+      io.to(`room:${roomCode}`).emit('chat-message', packet)
+      if (callback) callback({ success: true })
+    } catch (err: any) {
+      logError(err, { userId, roomCode })
+      if (callback) callback({ error: err.message })
+    }
+  })
+
+  // ─── GAMEPLAY EVENTS ────────────────────────────────────────────────────────
+
+  // Join Active Game
+  socket.on('join-game', async (
+    { roomCode }: { roomCode: string },
+    callback?: (res: { success?: boolean; error?: string }) => void
+  ) => {
+    logger.info(`[JOIN-GAME] user=${username} (${userId}) roomCode=${roomCode}`)
+    try {
+      const normalizedCode = roomCode.trim().toUpperCase()
+      const room = await prisma.multiplayerRoom.findUnique({
+        where: { roomCode: normalizedCode },
+        include: { players: true }
+      })
+
+      if (!room) throw new Error('Room not found')
+      const isPlayer = room.players.some(p => p.userId === userId)
+      if (!isPlayer) throw new Error('Not authorized to access this match')
+
+      // Set presence to IN_GAME
+      setUserPresence(userId, 'IN_GAME').catch(err => logError(err, { userId }))
+
+      socket.join(`game:${normalizedCode}`)
+
+      // Retrieve cached or database game session
+      let gameState = null
+      if (room.gameSlug === 'cricket') {
+        gameState = await getCricketSession(normalizedCode, room.id, prisma).catch(() => null)
+      } else if (room.gameSlug === 'dots-boxes') {
+        gameState = await getDotsBoxesSession(normalizedCode, room.id, prisma).catch(() => null)
+      } else if (room.gameSlug === 'tic-tac-toe') {
+        gameState = await getTicTacToeSession(normalizedCode, room.id, prisma).catch(() => null)
+      }
+
+      if (callback) callback({ success: true })
+      
+      // Send current state
+      const dbSession = await prisma.multiplayerGameSession.findUnique({
+        where: { roomId: room.id }
+      })
+
+      logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${(gameState ?? dbSession?.gameState)?.stage} gameSlug=${room.gameSlug}`)
+
+      socket.emit('game-state', {
+        room,
+        gameSession: {
+          ...dbSession,
+          gameState: gameState ?? dbSession?.gameState
+        },
+        players: room.players.map(p => ({
+          userId: p.userId,
+          status: p.status
+        }))
+      })
+
+    } catch (err: any) {
+      logger.error(`[JOIN-GAME ERROR] user=${username} roomCode=${roomCode} error=${err.message}`)
+      logError(err, { userId, roomCode })
+      if (callback) callback({ error: err.message })
+    }
+  })
+
+  // Submit Move (Room-Level Sequential Queue processing)
+  socket.on('submit-move', async (
+    { roomCode, move }: { roomCode: string; move: any },
+    callback?: (res: { success?: boolean; error?: string }) => void
+  ) => {
+    if (!(await checkRateLimit(socket, submitMoveLimiter, 'submit-move', callback))) return
+
+    const queue = getRoomQueue(roomCode)
+    
+    // Process move inside the FIFO queue sequentially to prevent race conditions
+    queue.add(async () => {
+      try {
+        const room = await prisma.multiplayerRoom.findUnique({
+          where: { roomCode },
+          include: {
+            players: {
+              include: {
+                profile: true
+              }
+            }
+          }
+        })
+
+        if (!room) throw new Error('Room not found')
+        const isPlayer = room.players.some(p => p.userId === userId)
+        if (!isPlayer) throw new Error('Unauthorized move submission')
+
+        // Only pass the 2 active players (sorted by join order) to game engines
+        // Spectators (3rd+ players) must never receive X/O symbol assignments
+        const mappedPlayers = room.players
+          .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
+          .slice(0, 2)
+          .map(p => ({
+            userId: p.userId,
+            username: p.profile?.username || 'Player'
+          }))
+
+        let result: any = null
+
+        // Execute engine calculations
+        if (room.gameSlug === 'cricket') {
+          result = await processCricketMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
+        } else if (room.gameSlug === 'dots-boxes') {
+          result = await processDotsBoxesMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
+        } else if (room.gameSlug === 'tic-tac-toe') {
+          result = await processTicTacToeMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
+        } else {
+          throw new Error('Unsupported game engine')
+        }
+
+        const { state, gameFinished, winnerId } = result
+
+        // Emit update to all room clients
+        io.to(`game:${roomCode}`).emit('game-update', {
+          gameState: state,
+          gameFinished,
+          winnerId,
+          lastMove: { userId, move }
+        })
+
+        if (gameFinished) {
+          await handleMatchCompletion(room, state, winnerId, prisma)
+          deleteRoomQueue(roomCode)
+        }
+
+        if (callback) callback({ success: true })
+      } catch (err: any) {
+        logError(err, { userId, roomCode, move })
+        if (callback) callback({ error: err.message })
+      }
+    }).catch(err => {
+      if (callback) callback({ error: err.message })
+    })
+  })
+
+  // Vote Replay
+  socket.on('vote-replay', async (
+    { roomCode }: { roomCode: string },
+    callback?: (res: { success?: boolean; error?: string }) => void
+  ) => {
+    const queue = getRoomQueue(roomCode)
+    
+    queue.add(async () => {
+      try {
+        const room = await prisma.multiplayerRoom.findUnique({
+          where: { roomCode },
+          include: { players: { include: { profile: true } } }
+        })
+
+        if (!room) throw new Error('Room not found')
+        const isPlayer = room.players.some(p => p.userId === userId)
+        if (!isPlayer) throw new Error('Unauthorized')
+
+        const session = await prisma.multiplayerGameSession.findUnique({
+          where: { roomId: room.id }
+        })
+
+        if (!session) throw new Error('Session not found')
+
+        let gameState = null
+        if (room.gameSlug === 'cricket') {
+          gameState = await getCricketSession(roomCode, room.id, prisma)
+        } else if (room.gameSlug === 'dots-boxes') {
+          gameState = await getDotsBoxesSession(roomCode, room.id, prisma)
+        } else if (room.gameSlug === 'tic-tac-toe') {
+          gameState = await getTicTacToeSession(roomCode, room.id, prisma)
+        }
+
+        if (!gameState) {
+          gameState = typeof session.gameState === 'string' ? JSON.parse(session.gameState) : session.gameState
+        }
+
+        if (!gameState.replayVotes) {
+          gameState.replayVotes = {}
+        }
+
+        gameState.replayVotes[userId] = true
+
+        const votesCount = Object.keys(gameState.replayVotes).filter(k => gameState.replayVotes[k] === true).length
+
+        // Determine the two active players (first two by join order)
+        const activePlayers = room.players
+          .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
+          .slice(0, 2)
+        const activePlayerIds = activePlayers.map(p => p.userId)
+
+        // Only count votes from active players (not spectators)
+        const activeVoteCount = activePlayerIds.filter(id => gameState.replayVotes[id] === true).length
+
+        let updatedStatus = session.status
+        let updatedWinnerId = session.winnerId
+        let updatedTurn = session.currentTurn
+        let finalGameState = gameState
+
+        logger.info(`[VOTE-REPLAY] room=${roomCode} voter=${userId} votesCount=${votesCount} activeVoteCount=${activeVoteCount} activePlayers=${activePlayerIds.join(',')}`)
+
+        if (activeVoteCount >= activePlayers.length) {
+          updatedStatus = 'PLAYING'
+          updatedWinnerId = null
+
+          if (room.gameSlug === 'cricket') {
+            finalGameState = INITIAL_STATES['cricket'](activePlayers, room.hostUserId)
+            updatedTurn = null // Toss choice determines roles
+            await saveCricketSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'dots-boxes') {
+            finalGameState = INITIAL_STATES['dots-boxes'](activePlayers, room.hostUserId)
+            updatedTurn = finalGameState.currentTurn
+            await saveDotsBoxesSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'tic-tac-toe') {
+            finalGameState = INITIAL_STATES['tic-tac-toe'](activePlayers, room.hostUserId)
+            updatedTurn = finalGameState.currentTurn
+            await saveTicTacToeSession(roomCode, finalGameState)
+          }
+
+          logger.info(`[VOTE-REPLAY] room=${roomCode} RESET → fresh board, nextTurn=${updatedTurn}`)
+
+          // Update Room status to STARTING so it gets resolved properly
+          await prisma.multiplayerRoom.update({
+            where: { id: room.id },
+            data: { status: 'STARTING' }
+          })
+        } else {
+          // Warm cache with updated vote state
+          if (room.gameSlug === 'cricket') {
+            await saveCricketSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'dots-boxes') {
+            await saveDotsBoxesSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'tic-tac-toe') {
+            await saveTicTacToeSession(roomCode, finalGameState)
+          }
+        }
+
+        const now = new Date()
+        await prisma.multiplayerGameSession.update({
+          where: { id: session.id },
+          data: {
+            status: updatedStatus,
+            winnerId: updatedWinnerId,
+            currentTurn: updatedTurn,
+            gameState: finalGameState,
+            lastActivityAt: now,
+            updatedAt: now
+          }
+        })
+
+        io.to(`game:${roomCode}`).emit('game-update', {
+          gameState: finalGameState,
+          gameFinished: updatedStatus === 'FINISHED',
+          winnerId: updatedWinnerId,
+          lastMove: { userId, type: 'replay_vote' }
+        })
+
+        if (activeVoteCount >= activePlayers.length) {
+          // Trigger client re-sync after replay reset
+          io.to(`game:${roomCode}`).emit('game-started', { roomCode })
+        }
+
+        if (callback) callback({ success: true })
+      } catch (err: any) {
+        logError(err, { userId, roomCode })
+        if (callback) callback({ error: err.message })
+      }
+    }).catch(err => {
+      if (callback) callback({ error: err.message })
+    })
+  })
+
+  // Disconnect Handler
+  socket.on('disconnect', async () => {
+    logger.info(`[-] Disconnected: userId=${userId} socketId=${socket.id}`)
+    userSockets.delete(userId)
+    await setUserPresence(userId, 'OFFLINE')
+    recordDisconnect()
+
+    // Start 30-second grace timer for reconnection
+    const timer = setTimeout(async () => {
+      disconnectTimers.delete(userId)
+      logger.info(`[GRACE PERIOD EXPIRED] Player abandoned connection: ${username} (${userId})`)
+
+      try {
+        // Find if player is in any active rooms
+        const activeRooms = await prisma.multiplayerRoomPlayer.findMany({
+          where: { userId, NOT: { status: 'LEFT' } },
+          include: { room: true }
+        })
+
+        for (const playerProfile of activeRooms) {
+          const room = playerProfile.room
+          const roomId = room.id
+          const roomCode = room.roomCode
+
+          if (room.status === 'PLAYING') {
+            // Player abandoned active game -> Forfeit and award victory to opponent
+            const remainingPlayers = await prisma.multiplayerRoomPlayer.findMany({
+              where: { roomId, NOT: { userId } }
+            })
+
+            const opponentId = remainingPlayers[0]?.userId || null
+            logger.info(`[FORFEIT MATCH] room=${roomCode} user=${username} forfeited to winnerId=${opponentId}`)
+
+            // Update Game Session
+            await prisma.multiplayerGameSession.update({
+              where: { roomId },
+              data: {
+                status: 'FINISHED',
+                winnerId: opponentId ?? 'DRAW',
+                gameState: { stage: 'FINISHED', commentary: [`🔴 Forfeit! Player ${username} disconnected.`] }
+              }
+            })
+
+            // Update Room Status
+            await prisma.multiplayerRoom.update({
+              where: { id: roomId },
+              data: { status: 'FINISHED' }
+            })
+
+            io.to(`game:${roomCode}`).emit('game-update', {
+              gameFinished: true,
+              winnerId: opponentId ?? 'DRAW',
+              gameState: { stage: 'FINISHED', commentary: [`Forfeit! Player ${username} disconnected.`] }
+            })
+
+            deleteRoomQueue(roomCode)
+            await deleteCricketSession(roomCode)
+            await deleteDotsBoxesSession(roomCode)
+
+          } else if (room.status === 'WAITING') {
+            // Player abandoned waiting lobby -> Clean remove
+            await prisma.multiplayerRoomPlayer.delete({
+              where: { id: playerProfile.id }
+            })
+
+            const remaining = await prisma.multiplayerRoomPlayer.findMany({
+              where: { roomId },
+              orderBy: { joinedAt: 'asc' }
+            })
+
+            if (remaining.length === 0) {
+              await prisma.multiplayerRoom.delete({ where: { id: roomId } })
+            } else {
+              if (room.hostUserId === userId) {
+                const newHost = remaining[0]
+                await prisma.multiplayerRoom.update({
+                  where: { id: roomId },
+                  data: { hostUserId: newHost.userId }
+                })
+              }
+              await broadcastRoomUpdate(roomCode)
+            }
+          }
+        }
+      } catch (err: any) {
+        logError(err, { userId })
+      }
+    }, 30000) // 30 seconds
+
+    disconnectTimers.set(userId, timer)
+
+    // Mark status as DISCONNECTED in database during grace period (only for active rooms)
+    try {
+      await prisma.multiplayerRoomPlayer.updateMany({
+        where: { userId, NOT: { status: 'LEFT' } },
+        data: { disconnectedAt: new Date() }
+      })
+
+      // Broadcast disconnection alert to rooms
+      const userRooms = await prisma.multiplayerRoomPlayer.findMany({
+        where: { userId },
+        include: { room: true }
+      })
+
+      for (const p of userRooms) {
+        if (p.room) {
+          io.to(`room:${p.room.roomCode}`).emit('player-disconnected', { userId })
+          io.to(`game:${p.room.roomCode}`).emit('player-disconnected', { userId })
+          await broadcastRoomUpdate(p.room.roomCode)
+        }
+      }
+    } catch (err: any) {
+      logError(err, { userId })
+    }
+  })
+})
+
+/**
+ * Fetch room data and broadcast it to all connections in room
+ */
+async function broadcastRoomUpdate(roomCode: string) {
+  try {
+    const room = await prisma.multiplayerRoom.findUnique({
+      where: { roomCode },
+      include: {
+        players: {
+          include: {
+            profile: {
+              select: { username: true, avatarUrl: true, level: true }
+            }
+          },
+          orderBy: { joinedAt: 'asc' }
+        }
+      }
     })
 
-    if (gameFinished) {
-      room.gameStarted = false
-    }
-  })
-})
+    if (!room) return
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+    const playersData = room.players.map(p => ({
+      userId: p.userId,
+      status: p.disconnectedAt ? 'DISCONNECTED' : p.status,
+      joinedAt: p.joinedAt,
+      username: p.profile.username,
+      avatarUrl: p.profile.avatarUrl,
+      level: p.profile.level
+    }))
 
-function leaveRoom(socketId: string, roomCode: string) {
-  const room = rooms[roomCode]
-  if (!room) return
-  room.players = room.players.filter(p => p.id !== socketId)
-  if (room.players.length === 0) {
-    delete rooms[roomCode]
-  } else {
-    io.to(roomCode).emit('player-left', room.players)
-    // Reassign host if needed
-    if (room.hostId === socketId) {
-      room.hostId = room.players[0].id
-      io.to(roomCode).emit('host-changed', { newHostId: room.hostId })
-    }
+    io.to(`room:${roomCode}`).emit('room-update', {
+      room: {
+        id: room.id,
+        roomCode: room.roomCode,
+        gameSlug: room.gameSlug,
+        hostUserId: room.hostUserId,
+        status: room.status,
+        maxPlayers: room.maxPlayers
+      },
+      players: playersData
+    })
+  } catch (err: any) {
+    logError(err, { roomCode })
   }
 }
 
-function startScribbleTimer(roomCode: string, word: string, room: Room) {
-  let timeLeft = 60
-  room.currentTimeLeft = timeLeft
-  const revealed = word.split('').map(() => '_')
-  const indexes = word.split('').map((_, i) => i).sort(() => Math.random() - 0.5)
+/**
+ * Starts a background loop to reconcile active game states from cache/Redis to PostgreSQL
+ * to ensure that no game state is lost if asynchronous move snapshots fail.
+ */
+function startReconciliationLoop() {
+  setInterval(async () => {
+    try {
+      const activeRooms = await prisma.multiplayerRoom.findMany({
+        where: { status: 'PLAYING' }
+      })
 
-  const interval = setInterval(() => {
-    if (!rooms[roomCode]) { clearInterval(interval); return }
-    timeLeft--
-    rooms[roomCode].currentTimeLeft = timeLeft
+      if (activeRooms.length === 0) return
 
-    if (timeLeft % 20 === 0 && indexes.length > 0) {
-      const idx = indexes.shift()!
-      revealed[idx] = word[idx]
-      io.to(roomCode).emit('scribble:hint', revealed.join(' '))
+      logger.info(`[RECONCILIATION] Starting sync for ${activeRooms.length} active games.`)
+
+      for (const room of activeRooms) {
+        try {
+          let gameState: any = null
+
+          if (room.gameSlug === 'cricket') {
+            gameState = await getCricketSession(room.roomCode, room.id, prisma)
+          } else if (room.gameSlug === 'dots-boxes') {
+            gameState = await getDotsBoxesSession(room.roomCode, room.id, prisma)
+          } else if (room.gameSlug === 'tic-tac-toe') {
+            gameState = await getTicTacToeSession(room.roomCode, room.id, prisma)
+          }
+
+          if (gameState) {
+            const winnerId = gameState.winnerId || null
+            const currentTurn = gameState.currentTurn || null
+            await prisma.multiplayerGameSession.update({
+              where: { roomId: room.id },
+              data: {
+                gameState,
+                winnerId,
+                currentTurn,
+                lastActivityAt: new Date()
+              }
+            })
+          }
+        } catch (err: any) {
+          logError(err, { roomCode: room.roomCode, context: 'reconciliation-room' })
+        }
+      }
+    } catch (err: any) {
+      logError(err, { context: 'reconciliation-loop' })
     }
-
-    io.to(roomCode).emit('scribble:timer', timeLeft)
-
-    if (timeLeft <= 0) {
-      clearInterval(interval)
-      io.to(roomCode).emit('scribble:turn-ended', { word })
-    }
-  }, 1000)
+  }, 30000) // Reconcile every 30 seconds
 }
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+// Start Observability Metrics reporting loop
+startMetricsReporting(io)
 
+// Start active game state reconciliation loop
+startReconciliationLoop()
+
+// Start Server
 const PORT = parseInt(process.env.PORT || '5000', 10)
 server.listen(PORT, () => {
-  console.log(`🎮 GameHub Socket.IO server → http://localhost:${PORT}`)
+  logger.info(`🎮 GameHub Socket.IO server → http://localhost:${PORT}`)
 })

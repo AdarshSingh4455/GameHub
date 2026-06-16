@@ -23,7 +23,7 @@ dns.setDefaultResultOrder('ipv4first')
 const PORT = 3003
 const BASE_URL = `http://localhost:${PORT}`
 const MP_URL = `${BASE_URL}/dashboard/multiplayer`
-const outputDir = 'C:\\Users\\adars\\.gemini\\antigravity\\brain\\8e5712d6-2a1d-4d28-81b7-8aa44ac712a6'
+const outputDir = 'C:\\Users\\adars\\.gemini\\antigravity\\brain\\2fa26a86-1c47-4065-b02c-d9b870f62a8c'
 
 // ── Prisma setup ──────────────────────────────────────────────────────────────
 const connectionString = process.env.DATABASE_URL
@@ -207,7 +207,7 @@ async function goToMenu(page, label = '') {
 console.log('--- STARTING DOTS & BOXES MULTIPLAYER E2E TEST ---')
 console.log(`Starting Next.js server on port ${PORT}...`)
 
-const devServer = spawn('npm.cmd', ['run', 'start', '--', '-p', String(PORT)], {
+const devServer = spawn('npx.cmd', ['next', 'dev', '-p', String(PORT)], {
   cwd: process.cwd(),
   env: { ...process.env, MOCK_AUTH: 'true' },
   shell: true,

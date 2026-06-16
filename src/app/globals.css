@@ -695,7 +695,8 @@ body.game-page-active .app-content {
 
   /* 2. Compact layout spacing */
   .app-content {
-    padding: 0.75rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
   }
 
   /* 3. Two-column grid with touch-friendly min sizes */
@@ -851,6 +852,10 @@ body.game-page-active .app-content {
   .safe-bottom-padding {
     padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom)) !important;
   }
+}
+
+.game-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom) !important;
 }
 
 /* --- Sprint 4 Custom Keyframes --- */

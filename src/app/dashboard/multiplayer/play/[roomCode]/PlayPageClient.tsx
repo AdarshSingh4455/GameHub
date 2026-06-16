@@ -6,6 +6,8 @@ import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import MultiplayerHandCricketGame from '@/components/games/MultiplayerHandCricketGame'
 import MultiplayerDotsBoxesGame from '@/components/games/MultiplayerDotsBoxesGame'
+import MultiplayerTicTacToeGame from '@/components/games/MultiplayerTicTacToeGame'
+import { useSocket } from '@/lib/contexts/SocketContext'
 
 interface PlayPageClientProps {
   roomCode: string
@@ -29,6 +31,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const { user } = useGameSession()
   const { addToast } = useToast()
   const router = useRouter()
+  const { socket } = useSocket()
 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -36,85 +39,107 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const [session, setSession] = useState<any>(null)
   const [players, setPlayers] = useState<any[]>([])
 
+  const playersRef = useRef<any[]>([])
+  playersRef.current = players
+  // Guard: prevent emitting join-game twice when socket fires both the
+  // immediate call AND the 'connect' event during an initial connection.
+  const joinedRef = useRef(false)
+
   const currentUserId = getClientId(user)
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  console.log('[PLAY PAGE CLIENT RENDER]', { socket: !!socket, roomCode, currentUserId })
 
   useEffect(() => {
-    let isPollingActive = true
+    console.log('[PLAY PAGE CLIENT EFFECT RUN]', { socket: !!socket, roomCode })
+    if (!socket) return
 
-    const fetchGameSession = async () => {
-      try {
-        const res = await fetch(`/api/multiplayer/game/${roomCode}?t=${Date.now()}`, { cache: 'no-store' })
-        if (!isPollingActive) return
-        if (!res.ok) {
-          if (res.status === 404) {
-            console.log(`[PLAY PAGE RECONNECT FAIL] 404 received for roomCode=${roomCode}. Cleaning up...`)
-            if (pollingIntervalRef.current) {
-              clearTimeout(pollingIntervalRef.current)
-            }
-            try {
-              sessionStorage.removeItem('mp_screen')
-              sessionStorage.removeItem('mp_lobby_room_code')
-              localStorage.removeItem('mp_screen')
-              localStorage.removeItem('mp_lobby_room_code')
-            } catch (e) {}
-            addToast('warning', 'Previous match expired', 'Previous match expired')
-            router.push('/dashboard/multiplayer')
-            return
-          }
-          const data = await res.json().catch(() => ({}))
-          throw new Error(data.error || 'Failed to fetch game session')
+    // Reset join guard when effect re-runs (new socket instance or roomCode)
+    joinedRef.current = false
+
+    const joinGameRoom = () => {
+      if (joinedRef.current) return  // Suppress duplicate emits on the same connection
+      joinedRef.current = true
+      console.log('[PLAY PAGE CLIENT JOIN GAME EMIT]', { roomCode })
+      socket.emit('join-game', { roomCode }, (response: any) => {
+        console.log('[PLAY PAGE CLIENT JOIN GAME CALLBACK]', { response })
+        if (response?.error) {
+          setError(response.error)
+          setIsLoading(false)
         }
-        const data = await res.json()
-        if (!isPollingActive) return
-        setRoom(data.room)
-        setSession(data.gameSession)
-        setPlayers(data.players || [])
-        setIsLoading(false)
-        setError(null)
-      } catch (err: any) {
-        if (!isPollingActive) return
-        console.error('Error polling game session:', err)
-        setError(err.message)
-        setIsLoading(false)
-      } finally {
-        if (isPollingActive) {
-          pollingIntervalRef.current = setTimeout(fetchGameSession, 1000)
-        }
-      }
+      })
     }
 
-    fetchGameSession()
+    // Join game room immediately
+    joinGameRoom()
+
+    // Re-join on reconnection (reset guard first so the re-join is allowed)
+    const handleReconnect = () => {
+      joinedRef.current = false
+      joinGameRoom()
+    }
+    socket.on('connect', handleReconnect)
+
+    // Set up event listeners
+    socket.on('game-state', (data: any) => {
+      console.log('[PLAY PAGE CLIENT GAME STATE RECEIVED]', { gameSlug: data.gameSession?.gameSlug, status: data.gameSession?.status })
+      setSession((prev: any) => {
+        // Never overwrite a FINISHED session with stale PLAYING data
+        if (prev?.status === 'FINISHED' && data.gameSession?.status !== 'FINISHED') {
+          return prev
+        }
+        return data.gameSession
+      })
+      setRoom(data.room)
+      setPlayers(data.players || [])
+      setIsLoading(false)
+      setError(null)
+    })
+
+    socket.on('game-update', (data: any) => {
+      // Update session state locally
+      setSession((prev: any) => {
+        if (!prev) return null
+        return {
+          ...prev,
+          gameState: data.gameState,
+          winnerId: data.winnerId,
+          status: data.gameFinished ? 'FINISHED' : prev.status
+        }
+      })
+    })
+
+    socket.on('player-disconnected', ({ userId }: { userId: string }) => {
+      const p = playersRef.current.find(p => p.userId === userId)
+      const name = p ? p.username : 'Opponent'
+      addToast('warning', 'Opponent Disconnected', `${name} disconnected. Match will forfeit in 30s.`)
+    })
+
+    socket.on('player-reconnected', ({ userId }: { userId: string }) => {
+      const p = playersRef.current.find(p => p.userId === userId)
+      const name = p ? p.username : 'Opponent'
+      addToast('success', 'Opponent Returned', `${name} reconnected. Match resuming.`)
+    })
 
     return () => {
-      isPollingActive = false
-      if (pollingIntervalRef.current) {
-        clearTimeout(pollingIntervalRef.current)
-      }
+      socket.off('connect', handleReconnect)
+      socket.off('game-state')
+      socket.off('game-update')
+      socket.off('player-disconnected')
+      socket.off('player-reconnected')
     }
-  }, [roomCode, router, addToast])
+  }, [socket, roomCode, addToast])
 
-  const handleLeaveRoom = async () => {
-    if (pollingIntervalRef.current) {
-      clearTimeout(pollingIntervalRef.current)
+  const handleLeaveRoom = () => {
+    if (!socket || !room) {
+      router.push('/dashboard/multiplayer')
+      return
     }
     setIsLoading(true)
-    try {
-      const res = await fetch('/api/multiplayer/leave-room', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: room?.id })
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to leave room')
-      }
+    socket.emit('leave-room', { roomId: room.id }, (response: any) => {
+      setIsLoading(false)
       addToast('info', 'Left Room', 'You have left the match.')
       router.push('/dashboard/multiplayer')
-    } catch (err: any) {
-      addToast('error', 'Error Leaving', err.message)
-      router.push('/dashboard/multiplayer')
-    }
+    })
   }
 
   if (isLoading) {
@@ -191,25 +216,43 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
 
   if (session?.gameSlug === 'cricket') {
     return (
-      <MultiplayerHandCricketGame
-        roomCode={roomCode}
-        session={session}
-        players={players}
-        currentUserId={currentUserId}
-        onLeave={handleLeaveRoom}
-      />
+      <div className="game-safe-bottom">
+        <MultiplayerHandCricketGame
+          roomCode={roomCode}
+          session={session}
+          players={players}
+          currentUserId={currentUserId}
+          onLeave={handleLeaveRoom}
+        />
+      </div>
     )
   }
 
   if (session?.gameSlug === 'dots-boxes') {
     return (
-      <MultiplayerDotsBoxesGame
-        roomCode={roomCode}
-        session={session}
-        players={players}
-        currentUserId={currentUserId}
-        onLeave={handleLeaveRoom}
-      />
+      <div className="game-safe-bottom">
+        <MultiplayerDotsBoxesGame
+          roomCode={roomCode}
+          session={session}
+          players={players}
+          currentUserId={currentUserId}
+          onLeave={handleLeaveRoom}
+        />
+      </div>
+    )
+  }
+
+  if (session?.gameSlug === 'tic-tac-toe') {
+    return (
+      <div className="game-safe-bottom">
+        <MultiplayerTicTacToeGame
+          roomCode={roomCode}
+          session={session}
+          players={players}
+          currentUserId={currentUserId}
+          onLeave={handleLeaveRoom}
+        />
+      </div>
     )
   }
 

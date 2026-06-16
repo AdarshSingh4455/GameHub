@@ -274,7 +274,7 @@ export default function StorePage() {
   const activeCategoryItems = items.filter((item) => item.type === activeCategory)
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }} className="animate-fadeIn">
+    <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }} className="animate-fadeIn safe-bottom-padding">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>

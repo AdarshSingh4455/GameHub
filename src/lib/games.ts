@@ -62,7 +62,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     category: 'Dual Player',
     emoji: '⭕',
     description: 'Classic 3×3 noughts-and-crosses with an XP twist. Ranked and unranked modes.',
-    multiplayer: false,
+    multiplayer: true,
     type: 'internal',
     badge: 'Ranked',
     componentName: 'ttt',

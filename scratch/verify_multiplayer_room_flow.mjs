@@ -25,7 +25,7 @@ dns.setDefaultResultOrder('ipv4first')
 const PORT = 3001
 const BASE_URL = `http://localhost:${PORT}`
 const MP_URL = `${BASE_URL}/dashboard/multiplayer`
-const outputDir = 'C:\\Users\\adars\\.gemini\\antigravity\\brain\\ac6db846-2591-4818-9980-d4cc3e03b7eb'
+const outputDir = 'C:\\Users\\adars\\.gemini\\antigravity\\brain\\2fa26a86-1c47-4065-b02c-d9b870f62a8c'
 
 // ── Prisma setup ──────────────────────────────────────────────────────────────
 const connectionString = process.env.DATABASE_URL
@@ -116,7 +116,7 @@ async function goToMenu(page) {
 console.log('--- STARTING E2E MULTIPLAYER TEST SUITE ---')
 console.log(`Starting Next.js production server on port ${PORT}...`)
 
-const devServer = spawn('npm.cmd', ['run', 'start', '--', '-p', String(PORT)], {
+const devServer = spawn('npx.cmd', ['next', 'dev', '-p', String(PORT)], {
   cwd: process.cwd(),
   env: { ...process.env, MOCK_AUTH: 'true' },
   shell: true,
@@ -286,6 +286,9 @@ try {
   // TEST 5: Joiner joins valid room
   // ════════════════════════════════════════════════════════════════════════
   console.log(`\n=== TEST 5: Joiner joins room ${roomCode} ===`)
+  await joinerPage.click('#multiplayer-join-room-btn')
+  await waitForScreen(joinerPage, 'JOIN', 10000)
+  await joinerPage.waitForSelector('#multiplayer-room-input', { timeout: 10000 })
   // Clear the input field
   await joinerPage.evaluate(() => {
     const inp = document.getElementById('multiplayer-room-input')

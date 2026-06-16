@@ -21,7 +21,7 @@ export default async function SettingsPage() {
   const avatarUrl = profile?.avatarUrl ?? ''
 
   return (
-    <div className="animate-fadeIn" style={{ maxWidth: 620 }}>
+    <div className="animate-fadeIn safe-bottom-padding" style={{ maxWidth: 620 }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}>⚙️ Settings</h1>
         <p style={{ color: 'hsl(220 10% 55%)' }}>Manage your account preferences.</p>

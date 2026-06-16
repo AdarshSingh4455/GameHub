@@ -56,7 +56,7 @@ export async function GET(
     const players = room.players.map(p => ({
       id: p.id,
       userId: p.userId,
-      status: p.status, // READY, NOT_READY, DISCONNECTED, LEFT
+      status: p.disconnectedAt ? 'DISCONNECTED' : p.status, // READY, NOT_READY, DISCONNECTED, LEFT
       joinedAt: p.joinedAt,
       username: p.profile.username,
       avatarUrl: p.profile.avatarUrl,

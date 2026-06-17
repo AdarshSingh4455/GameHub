@@ -1,0 +1,47 @@
+services:
+  # 1. Socket.IO Real-time Game Server (Web Service)
+  - type: web
+    name: gamehub-socket-server
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: "npm install && npx prisma generate --schema=../prisma/schema.prisma && npm run build"
+    startCommand: "npm run start"
+    healthCheckPath: "/health"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      
+      # Suppress development auth bypass in production
+      - key: MOCK_AUTH
+        value: "false"
+      
+      # Client Vercel URL - CORS origin constraint
+      - key: CLIENT_URL
+        sync: false
+        placeholder: "https://your-gamehub.vercel.app"
+
+      # Supabase JWT Secret for verification
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+        placeholder: "Your Supabase JWT Secret (found in API Settings)"
+
+      # PostgreSQL Database URL (pooled connection)
+      - key: DATABASE_URL
+        sync: false
+        placeholder: "postgresql://postgres.xxx:password@host:5432/postgres"
+
+      # Redis connection string injected from the private Redis service below
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: gamehub-redis
+          property: connectionString
+
+  # 2. Managed Redis Presence & Rate Limiting Cache (Optional Service)
+  - type: redis
+    name: gamehub-redis
+    plan: free
+    ipAllowList: [] # Restricts access to internal Render services only (secure by default)

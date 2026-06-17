@@ -467,34 +467,7 @@ export default function SinglePlayerXPModal({ data, onClose }: Props) {
           </div>
         </div>
 
-        {/* Achievements list if unlocked */}
-        {unlockedAchievements.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'left', position: 'relative', zIndex: 1 }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'hsl(220 10% 50%)', textTransform: 'uppercase' }}>
-              Badge Unlocked!
-            </div>
-            {unlockedAchievements.map((ach, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: 'linear-gradient(135deg, hsl(45 100% 60% / 0.08), hsl(38 95% 55% / 0.08))',
-                  border: '1px solid hsl(45 100% 50% / 0.25)',
-                  padding: '0.6rem 0.8rem',
-                  borderRadius: 12,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                }}
-              >
-                <span style={{ fontSize: '1.2rem' }}>🏅</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.8rem', color: 'hsl(45 100% 65%)' }}>{ach.name}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 60%)' }}>{ach.description}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+
 
         {/* Guest Warning */}
         {isGuest && (

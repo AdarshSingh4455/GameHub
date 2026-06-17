@@ -1297,6 +1297,20 @@ export default function NeonTetrisGame() {
             }}
             id="nt-board"
           >
+            {/* Danger Zone Indicator Warning Line */}
+            <div
+              style={{
+                gridColumn: '1 / 11',
+                gridRow: '1',
+                height: '2px',
+                background: 'linear-gradient(90deg, transparent, #eab308, #f97316, #eab308, transparent)',
+                zIndex: 10,
+                alignSelf: 'end',
+                pointerEvents: 'none',
+                animation: 'dangerPulse 1.5s infinite ease-in-out',
+                position: 'relative'
+              }}
+            />
             {board.map((row, r) =>
               row.map((cellColor, c) => {
                 // Determine if this cell contains current falling piece
@@ -1508,6 +1522,16 @@ export default function NeonTetrisGame() {
 
       {/* Styles */}
       <style jsx global>{`
+        @keyframes dangerPulse {
+          0%, 100% {
+            opacity: 0.6;
+            box-shadow: 0 0 6px #f97316, 0 0 12px #eab308;
+          }
+          50% {
+            opacity: 1.0;
+            box-shadow: 0 0 16px #ef4444, 0 0 28px #f97316;
+          }
+        }
         .screen-shake {
           animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both;
         }

@@ -198,6 +198,21 @@ export function GameSessionProvider({
   async function triggerPostGameFlow(payload: GameResultPayload) {
     setModalData(payload)
     
+    // Trigger toast notifications for unlocked badges/achievements
+    if (payload.unlockedAchievements && payload.unlockedAchievements.length > 0) {
+      payload.unlockedAchievements.forEach((ach: any) => {
+        window.dispatchEvent(
+          new CustomEvent('gamehub_toast', {
+            detail: {
+              type: 'new_badge',
+              title: '🏅 Badge Unlocked!',
+              message: `${ach.name}\n${ach.description}`
+            }
+          })
+        )
+      })
+    }
+    
     let activeAd = null
     try {
       const adRes = await fetch(`/api/ads?gameSlug=${payload.gameSlug}`)

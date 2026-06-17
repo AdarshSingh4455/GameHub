@@ -133,6 +133,8 @@ export default function MultiplayerPage() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [dashboardLoading, setDashboardLoading] = useState(true)
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [staleRoom, setStaleRoom] = useState<{ roomCode: string; roomId: string } | null>(null)
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const chatPollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -247,9 +249,7 @@ export default function MultiplayerPage() {
               router.push(`/dashboard/multiplayer/play/${active.roomCode}`)
               return
             } else if (active.status === 'WAITING') {
-              addToast('info', 'Restored Lobby', `Restored you to active lobby: ${active.roomCode}`)
-              setLobbyRoomCode(active.roomCode)
-              setScreen('LOBBY')
+              setStaleRoom({ roomCode: active.roomCode, roomId: active.roomId })
             }
           }
         }
@@ -257,34 +257,27 @@ export default function MultiplayerPage() {
         console.error('Active room check failed:', err)
       }
 
-      // Check URL parameters for invites
+      // Check URL parameters for invites and redirects
       const params = new URLSearchParams(window.location.search)
-      const joinCode = params.get('room') || params.get('join')
-      if (joinCode && joinCode.toLowerCase() !== 'undefined' && joinCode.trim() !== '') {
-        const normalized = joinCode.toUpperCase().trim()
+      const action = params.get('action')
+      const game = params.get('game')
+      const code = params.get('code') || params.get('room') || params.get('join')
+
+      if (action === 'create' && game) {
+        setSelectedGame(game)
+        setScreen('CREATE')
+      } else if (action === 'join' && code && code.trim() !== '' && code.toLowerCase() !== 'undefined') {
+        const normalized = code.toUpperCase().trim()
         setRoomCodeInput(normalized)
         setScreen('JOIN')
-        // Automatically trigger join-room request
-        setIsLoading(true)
-        try {
-          const res = await fetch('/api/multiplayer/join-room', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ roomCode: normalized })
-          })
-          const data = await res.json()
-          if (res.ok) {
-            addToast('success', 'Joined Lobby', `Joined room ${data.roomCode}`)
-            setLobbyRoomCode(data.roomCode)
-            setScreen('LOBBY')
-          } else {
-            addToast('error', 'Join Failed', data.error || 'Could not join lobby.')
-          }
-        } catch (err: any) {
-          addToast('error', 'Join Failed', err.message)
-        } finally {
-          setIsLoading(false)
-        }
+        setLobbyRoomCode(normalized)
+        setScreen('LOBBY')
+      } else if (code && code.toLowerCase() !== 'undefined' && code.trim() !== '') {
+        const normalized = code.toUpperCase().trim()
+        setRoomCodeInput(normalized)
+        setScreen('JOIN')
+        setLobbyRoomCode(normalized)
+        setScreen('LOBBY')
       }
 
       // If LOBBY state is currently active, load it
@@ -301,6 +294,23 @@ export default function MultiplayerPage() {
     checkActiveRoomAndInit()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Intercept back button when in lobby
+  useEffect(() => {
+    if (screen !== 'LOBBY') return
+
+    window.history.pushState(null, '', window.location.href)
+
+    const handlePopState = (e: PopStateEvent) => {
+      setShowLeaveConfirm(true)
+      window.history.pushState(null, '', window.location.href)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [screen])
 
   // 3. Social Polling: Fetch friends & invites list every 4 seconds
   useEffect(() => {
@@ -363,7 +373,16 @@ export default function MultiplayerPage() {
     if (!socket || screen !== 'LOBBY' || !lobbyRoomCode) return
 
     const joinLobbyRoom = () => {
+      setIsLoading(true)
+      const timeoutId = setTimeout(() => {
+        setIsLoading(false)
+        addToast('error', 'Timeout', 'Server did not respond to join request.')
+        leaveRoomCleanup()
+      }, 5000)
+
       socket.emit('join-room', { roomCode: lobbyRoomCode }, (response: any) => {
+        clearTimeout(timeoutId)
+        setIsLoading(false)
         if (response?.error) {
           addToast('error', 'Join Error', response.error)
           leaveRoomCleanup()
@@ -408,11 +427,33 @@ export default function MultiplayerPage() {
       }
     }
 
+    const handleHostTransferred = ({ newHostId, newHostUsername }: { newHostId: string; newHostUsername: string }) => {
+      setHostUserId(newHostId)
+      if (roomRef.current) {
+        setRoom(prev => prev ? { ...prev, hostUserId: newHostId } : null)
+      }
+      addToast('info', 'Host Transferred', `${newHostUsername} is now the host.`)
+    }
+
+    const handleRoomClosed = () => {
+      addToast('warning', 'Lobby Closed', 'Your previous room is no longer available.')
+      leaveRoomCleanup()
+    }
+
+    const handleReconnectFailed = () => {
+      addToast('error', 'Reconnection Failed', 'Your previous room is no longer available.')
+      leaveRoomCleanup()
+      router.push('/dashboard/multiplayer')
+    }
+
     // Room-specific listeners
     socket.on('room-update', handleRoomUpdate)
     socket.on('chat-message', handleChatMessage)
     socket.on('player-disconnected', handlePlayerDisconnected)
     socket.on('player-reconnected', handlePlayerReconnected)
+    socket.on('host-transferred', handleHostTransferred)
+    socket.on('room-closed', handleRoomClosed)
+    socket.on('reconnect-failed', handleReconnectFailed)
 
     return () => {
       socket.off('connect', joinLobbyRoom)
@@ -424,15 +465,47 @@ export default function MultiplayerPage() {
       socket.off('chat-message', handleChatMessage)
       socket.off('player-disconnected', handlePlayerDisconnected)
       socket.off('player-reconnected', handlePlayerReconnected)
+      socket.off('host-transferred', handleHostTransferred)
+      socket.off('room-closed', handleRoomClosed)
+      socket.off('reconnect-failed', handleReconnectFailed)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, screen, lobbyRoomCode, router, addToast])
 
   // Actions
+  const handleDiscardStaleRoom = async () => {
+    if (!staleRoom) return
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/multiplayer/leave-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: staleRoom.roomId })
+      })
+      if (res.ok) {
+        addToast('info', 'Room Discarded', 'Your previous room has been cleared.')
+        setStaleRoom(null)
+      } else {
+        const data = await res.json()
+        addToast('error', 'Error', data.error || 'Failed to clear stale room.')
+      }
+    } catch (err: any) {
+      addToast('error', 'Error', err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleCreateRoom = () => {
     if (!socket) return
     setIsLoading(true)
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false)
+      addToast('error', 'Timeout', 'Server did not respond to create request.')
+    }, 5000)
+
     socket.emit('create-room', { gameSlug: selectedGame, maxPlayers }, (response: any) => {
+      clearTimeout(timeoutId)
       setIsLoading(false)
       if (response?.error) {
         addToast('error', 'Error', response.error)
@@ -1622,6 +1695,149 @@ export default function MultiplayerPage() {
           </div>
         </div>
       )}
+
+      {/* Leave Confirmation Modal */}
+      {showLeaveConfirm && (
+        <div className="modal-overlay">
+          <div className="card glass modal-card">
+            <h3>Leave Room?</h3>
+            <p>Are you sure you want to leave the multiplayer lobby? Your session will be closed.</p>
+            <div className="modal-buttons">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowLeaveConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => {
+                  setShowLeaveConfirm(false)
+                  handleLeaveRoom()
+                }}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stale Room Recovery Modal */}
+      {staleRoom && (
+        <div className="modal-overlay">
+          <div className="card glass modal-card">
+            <h3>Active Room Found</h3>
+            <p>You have a previous active room lobby (Code: <strong>{staleRoom.roomCode}</strong>). Would you like to resume or discard it?</p>
+            <div className="modal-buttons">
+              <button
+                className="btn btn-secondary"
+                onClick={handleDiscardStaleRoom}
+                disabled={isLoading}
+              >
+                Create New
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setLobbyRoomCode(staleRoom.roomCode)
+                  setScreen('LOBBY')
+                  setStaleRoom(null)
+                }}
+                disabled={isLoading}
+              >
+                Resume Lobby
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Styles & Mobile Responsiveness */}
+      <style jsx global>{`
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background-color: rgba(0, 0, 0, 0.65);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          padding: 1rem;
+        }
+        .modal-card {
+          max-width: 400px;
+          width: 100%;
+          padding: 2rem;
+          border: 1px solid hsl(var(--border-subtle)) !important;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          background-color: hsl(var(--bg-surface) / 0.98) !important;
+        }
+        .modal-card h3 {
+          font-size: 1.35rem;
+          font-weight: 800;
+          color: hsl(var(--text-primary));
+          margin: 0;
+        }
+        .modal-card p {
+          font-size: 0.9rem;
+          color: hsl(var(--text-secondary));
+          line-height: 1.5;
+          margin: 0;
+        }
+        .modal-buttons {
+          display: flex;
+          gap: 1rem;
+          margin-top: 0.5rem;
+        }
+        .modal-buttons button {
+          flex: 1;
+        }
+        .btn-danger {
+          background-color: hsl(var(--danger)) !important;
+          color: white !important;
+        }
+        .btn-danger:hover {
+          background-color: hsl(var(--danger) / 0.85) !important;
+        }
+
+        /* Mobile Responsiveness Rules */
+        @media (max-width: 768px) {
+          .safe-bottom-padding {
+            padding-bottom: 3rem;
+          }
+          [data-screen="LOBBY"] > div {
+            grid-template-columns: 1fr !important;
+          }
+          [data-screen="LOBBY"] .card.glass {
+            padding: 1rem !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
+          [data-screen="LOBBY"] .card.glass > div {
+            width: 100% !important;
+          }
+          [data-screen="LOBBY"] .card.glass > div:last-child {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 1rem !important;
+          }
+          [data-screen="LOBBY"] button {
+            width: 100% !important;
+          }
+          .btn {
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

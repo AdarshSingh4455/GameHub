@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { incrementDailyChallengeProgress } from '@/lib/dailyChallenges'
@@ -21,6 +22,7 @@ interface GameState {
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000'
 
 export default function DotsAndBoxesGame() {
+  const router = useRouter()
   const { user, submitGameResult } = useGameSession()
   const { addToast } = useToast()
   const toastCompat = (id: string, title: string, message: string) => {
@@ -68,26 +70,7 @@ export default function DotsAndBoxesGame() {
 
   // --- Socket.IO Room Setup ---
   const createOnlineRoom = () => {
-    if (loading) return
-    setLoading(true)
-    setLobbyError(null)
-
-    const socket = io(SOCKET_URL)
-    socketRef.current = socket
-
-    const size = getDotsCount(boardSize)
-
-    socket.emit('create-room', { username, gameSlug: 'dots-boxes' }, (code: string) => {
-      setRoomCode(code)
-      roomCodeRef.current = code
-      myPlayerIdRef.current = socket.id || ''
-      setIsHost(true)
-      setGameMode('online')
-      setDotsSize(size)
-      setLoading(false)
-    })
-
-    setupSocketListeners(socket)
+    router.push('/dashboard/multiplayer?action=create&game=dots-boxes')
   }
 
   const joinOnlineRoom = () => {
@@ -95,29 +78,7 @@ export default function DotsAndBoxesGame() {
       setLobbyError('Please enter a room code.')
       return
     }
-    setLoading(true)
-    setLobbyError(null)
-
-    const socket = io(SOCKET_URL)
-    socketRef.current = socket
-
-    socket.emit('join-room', { username, roomCode: joinCode.toUpperCase() }, (res: any) => {
-      if (res.error) {
-        setLobbyError(res.error)
-        socket.disconnect()
-        setLoading(false)
-        return
-      }
-
-      setRoomCode(joinCode.toUpperCase())
-      roomCodeRef.current = joinCode.toUpperCase()
-      myPlayerIdRef.current = socket.id || ''
-      setIsHost(false)
-      setGameMode('online')
-      setLoading(false)
-    })
-
-    setupSocketListeners(socket)
+    router.push(`/dashboard/multiplayer?action=join&game=dots-boxes&code=${joinCode.trim().toUpperCase()}`)
   }
 
   const startOnlineGame = () => {

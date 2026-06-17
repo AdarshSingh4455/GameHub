@@ -5,6 +5,7 @@ exports.saveCricketSession = saveCricketSession;
 exports.deleteCricketSession = deleteCricketSession;
 exports.processCricketMove = processCricketMove;
 const redis_1 = require("../utils/redis");
+const logger_1 = require("../utils/logger");
 // Active Game Cache TTL: 2 hours
 const GAME_CACHE_TTL = 7200;
 /**
@@ -68,24 +69,22 @@ async function deleteCricketSession(roomCode) {
 /**
  * Persists a snapshot of the current game session state to PostgreSQL
  */
-async function persistSnapshot(roomId, state, status, winnerId, prisma) {
-    try {
-        const now = new Date();
-        await prisma.multiplayerGameSession.update({
-            where: { roomId },
-            data: {
-                status,
-                winnerId,
-                gameState: state,
-                lastActivityAt: now,
-                updatedAt: now
-            }
-        });
-        console.log(`[SNAPSHOT SUCCESS] Persisted cricket game state to PostgreSQL for roomId=${roomId}`);
-    }
-    catch (err) {
-        console.error(`[SNAPSHOT ERROR] Failed to persist game state to DB for roomId=${roomId}:`, err);
-    }
+function persistSnapshot(roomId, state, status, winnerId, prisma) {
+    const now = new Date();
+    prisma.multiplayerGameSession.update({
+        where: { roomId },
+        data: {
+            status,
+            winnerId,
+            gameState: state,
+            lastActivityAt: now,
+            updatedAt: now
+        }
+    }).then(() => {
+        logger_1.logger.info(`[SNAPSHOT SUCCESS] Persisted cricket game state to PostgreSQL for roomId=${roomId}`);
+    }).catch((err) => {
+        (0, logger_1.logError)(err, { roomId, context: 'cricket-snapshot' });
+    });
 }
 /**
  * Processes Hand Cricket game moves
@@ -130,7 +129,7 @@ async function processCricketMove(roomCode, roomId, userId, move, players, prism
         currentGameState.stage = 'FIRST_INNINGS';
         currentGameState.commentary.unshift(`🏏 ${getUsername(currentGameState.battingUserId)} will BAT first. ${getUsername(currentGameState.bowlingUserId)} will BOWL.`);
         // Persist snapshot on stage transitions (toss complete)
-        await persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma);
+        persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma);
         snapshotPersisted = true;
     }
     else if (type === 'play') {
@@ -197,7 +196,7 @@ async function processCricketMove(roomCode, roomId, userId, move, players, prism
                     currentGameState.balls = 0;
                     currentGameState.commentary.unshift(`🔄 Innings over. ${getUsername(currentGameState.battingUserId)} needs ${target} runs to win.`);
                     // Persist snapshot on innings switch
-                    await persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma);
+                    persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma);
                     snapshotPersisted = true;
                 }
             }
@@ -226,7 +225,7 @@ async function processCricketMove(roomCode, roomId, userId, move, players, prism
                     updatedStatus = 'FINISHED';
                     gameFinished = true;
                     // Persist final match snapshot and clear cache
-                    await persistSnapshot(roomId, currentGameState, updatedStatus, winnerId, prisma);
+                    persistSnapshot(roomId, currentGameState, updatedStatus, winnerId, prisma);
                     await deleteCricketSession(roomCode);
                     snapshotPersisted = true;
                 }
@@ -234,7 +233,7 @@ async function processCricketMove(roomCode, roomId, userId, move, players, prism
         }
         // Persist snapshot periodically: every 5 moves (meaning 10 player actions), if game ends, OR if Redis is down
         if (!snapshotPersisted && (currentGameState.moveCount % 10 === 0 || !redis_1.redisClient.isReady)) {
-            await persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma);
+            persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma);
             snapshotPersisted = true;
         }
     }

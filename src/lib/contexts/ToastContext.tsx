@@ -42,10 +42,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       
       setToasts((prev) => [...prev, newToast])
 
-      // Auto dismiss after 4 seconds
+      // Auto dismiss after 5 seconds
       setTimeout(() => {
         dismissToast(id)
-      }, 4000)
+      }, 5000)
     },
     [dismissToast]
   )

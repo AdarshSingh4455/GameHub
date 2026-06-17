@@ -28,6 +28,8 @@ const rateLimit_1 = require("./middleware/rateLimit");
 // In-Memory Game Controllers
 const cricket_1 = require("./games/cricket");
 const dotsBoxes_1 = require("./games/dotsBoxes");
+const ticTacToe_1 = require("./games/ticTacToe");
+const framework_1 = require("./games/framework");
 // Initialize Sentry SDK
 (0, logger_1.initSentry)();
 const app = (0, express_1.default)();
@@ -105,43 +107,74 @@ io.on('connection', async (rawSocket) => {
     logger_1.logger.info(`[+] Connected: userId=${userId} socketId=${socket.id} (${username})`);
     // Register socket mappings
     userSockets.set(userId, socket.id);
-    await (0, presence_1.setUserPresence)(userId, 'ONLINE');
+    (0, presence_1.setUserPresence)(userId, 'ONLINE').catch(err => (0, logger_1.logError)(err, { userId }));
     // Check if player is returning from a disconnect grace period
     if (disconnectTimers.has(userId)) {
         logger_1.logger.info(`[RECONNECT RECOVERY] User reconnected within grace period: ${username} (${userId})`);
         clearTimeout(disconnectTimers.get(userId));
         disconnectTimers.delete(userId);
         (0, metrics_1.recordReconnectSuccess)();
-        // Restore status in active room player profiles and re-join socket rooms
-        try {
-            const disconnectedProfiles = await prisma.multiplayerRoomPlayer.findMany({
-                where: { userId, NOT: { disconnectedAt: null } },
-                include: { room: true }
-            });
-            if (disconnectedProfiles.length > 0) {
-                await prisma.multiplayerRoomPlayer.updateMany({
-                    where: { userId, NOT: { disconnectedAt: null } },
-                    data: { disconnectedAt: null }
-                });
-                // Re-join socket to all active rooms and broadcast recovery
-                for (const p of disconnectedProfiles) {
-                    if (p.room) {
-                        const roomCode = p.room.roomCode;
-                        socket.join(`room:${roomCode}`);
-                        if (p.room.status === 'PLAYING') {
-                            socket.join(`game:${roomCode}`);
-                        }
-                        io.to(`room:${roomCode}`).emit('player-reconnected', { userId });
-                        io.to(`game:${roomCode}`).emit('player-reconnected', { userId });
-                        await broadcastRoomUpdate(roomCode);
-                        logger_1.logger.info(`[RECONNECT RECOVERY] Re-joined room:${roomCode} and broadcast update`);
+        // Restore status in active room player profiles and re-join socket rooms (non-blocking)
+        prisma.multiplayerRoomPlayer.findMany({
+            where: { userId, NOT: { status: 'LEFT' } },
+            include: { room: { include: { players: true } } }
+        }).then(async (profiles) => {
+            let validationPassed = true;
+            for (const p of profiles) {
+                const room = p.room;
+                // 1. Verify room still exists in DB
+                if (!room) {
+                    logger_1.logger.warn(`[RECONNECT VALIDATION FAILED] Room does not exist for player ${userId}`);
+                    validationPassed = false;
+                    break;
+                }
+                // 2. Verify player was previously part of that room (p exists)
+                // 3. Verify room status allows reconnection (WAITING, STARTING, PLAYING)
+                const allowedStatuses = ['WAITING', 'STARTING', 'PLAYING'];
+                if (!allowedStatuses.includes(room.status)) {
+                    logger_1.logger.warn(`[RECONNECT VALIDATION FAILED] Room status ${room.status} does not allow reconnection`);
+                    validationPassed = false;
+                    break;
+                }
+                // 4. Prevent duplicate player entries: check if there is already another socket with active connection for this userId
+                const existingSocketId = userSockets.get(userId);
+                if (existingSocketId && existingSocketId !== socket.id) {
+                    const sockets = await io.in(existingSocketId).fetchSockets();
+                    if (sockets.length > 0) {
+                        logger_1.logger.warn(`[RECONNECT VALIDATION FAILED] Duplicate entry detected for player ${userId}`);
+                        validationPassed = false;
+                        break;
                     }
                 }
             }
-        }
-        catch (err) {
+            if (!validationPassed || profiles.length === 0) {
+                logger_1.logger.warn(`[RECONNECT RECOVERY] Validation failed, emitting reconnect-failed for user=${userId}`);
+                socket.emit('reconnect-failed');
+                return;
+            }
+            // Restore status: set disconnectedAt to null
+            await prisma.multiplayerRoomPlayer.updateMany({
+                where: { userId, NOT: { status: 'LEFT' } },
+                data: { disconnectedAt: null }
+            });
+            // Re-join socket to rooms and broadcast recovery
+            for (const p of profiles) {
+                if (p.room) {
+                    const roomCode = p.room.roomCode;
+                    socket.join(`room:${roomCode}`);
+                    if (p.room.status === 'PLAYING') {
+                        socket.join(`game:${roomCode}`);
+                    }
+                    io.to(`room:${roomCode}`).emit('player-reconnected', { userId });
+                    io.to(`game:${roomCode}`).emit('player-reconnected', { userId });
+                    await broadcastRoomUpdate(roomCode);
+                    logger_1.logger.info(`[RECONNECT RECOVERY] Re-joined roomCode=${roomCode} and broadcast recovery`);
+                }
+            }
+        }).catch((err) => {
             (0, logger_1.logError)(err, { userId });
-        }
+            socket.emit('reconnect-failed');
+        });
     }
     // Heartbeat ping keepalive updates presence state in Redis
     socket.on('heartbeat', async () => {
@@ -281,22 +314,20 @@ io.on('connection', async (rawSocket) => {
                 orderBy: { joinedAt: 'asc' }
             });
             if (remaining.length === 0) {
-                // Clean up empty room and session
-                await prisma.multiplayerRoom.delete({ where: { id: roomId } });
-                (0, queue_1.deleteRoomQueue)(roomCode);
-                await (0, cricket_1.deleteCricketSession)(roomCode);
-                await (0, dotsBoxes_1.deleteDotsBoxesSession)(roomCode);
-                logger_1.logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`);
+                const playerUserIds = [userId];
+                if (await canDestroyRoom(roomCode, playerUserIds)) {
+                    // Clean up empty room and session
+                    await prisma.multiplayerRoom.delete({ where: { id: roomId } });
+                    (0, queue_1.deleteRoomQueue)(roomCode);
+                    await (0, cricket_1.deleteCricketSession)(roomCode);
+                    await (0, dotsBoxes_1.deleteDotsBoxesSession)(roomCode);
+                    logger_1.logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`);
+                }
             }
             else {
                 // If host left, perform host migration
                 if (player.room.hostUserId === userId) {
-                    const newHost = remaining[0];
-                    await prisma.multiplayerRoom.update({
-                        where: { id: roomId },
-                        data: { hostUserId: newHost.userId }
-                    });
-                    logger_1.logger.info(`[HOST MIGRATED] room=${roomCode} newHost=${newHost.userId}`);
+                    await handleHostMigration(roomId, userId, roomCode);
                 }
                 await broadcastRoomUpdate(roomCode);
             }
@@ -322,37 +353,22 @@ io.on('connection', async (rawSocket) => {
                 throw new Error('Only the host can start the game');
             if (room.players.length < 2)
                 throw new Error('Need at least 2 players to start');
-            const allReady = room.players.every(p => p.status === 'READY' || p.userId === room.hostUserId);
+            const activePlayers = room.players
+                .sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime())
+                .slice(0, 2);
+            const allReady = activePlayers.every(p => p.status === 'READY' || p.userId === room.hostUserId);
             if (!allReady)
                 throw new Error('All players must be ready to start');
             // Set initial game states
             let initialGameState = {};
             if (room.gameSlug === 'cricket') {
-                const tossWinner = room.players[Math.floor(Math.random() * room.players.length)].userId;
-                initialGameState = {
-                    stage: 'TOSS',
-                    tossWinnerId: tossWinner,
-                    runs: 0,
-                    wickets: 0,
-                    balls: 0,
-                    maxOvers: 2,
-                    maxWickets: 3,
-                    innings: 1,
-                    history: [],
-                    commentary: ['Coin tossed! Waiting for toss winner selection.'],
-                    moves: {}
-                };
+                initialGameState = framework_1.INITIAL_STATES['cricket'](activePlayers, room.hostUserId);
             }
             else if (room.gameSlug === 'dots-boxes') {
-                initialGameState = {
-                    dotsSize: 6,
-                    horizontalLines: [],
-                    verticalLines: [],
-                    completedBoxes: [],
-                    playerScores: {},
-                    currentTurn: room.hostUserId,
-                    moveCount: 0
-                };
+                initialGameState = framework_1.INITIAL_STATES['dots-boxes'](activePlayers, room.hostUserId);
+            }
+            else if (room.gameSlug === 'tic-tac-toe') {
+                initialGameState = framework_1.INITIAL_STATES['tic-tac-toe'](activePlayers, room.hostUserId);
             }
             else {
                 throw new Error('Unsupported game slug');
@@ -370,15 +386,24 @@ io.on('connection', async (rawSocket) => {
                     gameSlug: room.gameSlug,
                     status: 'PLAYING',
                     gameState: initialGameState,
-                    currentTurn: room.gameSlug === 'dots-boxes' ? room.hostUserId : null
+                    currentTurn: initialGameState.currentTurn || null
                 },
                 update: {
                     status: 'PLAYING',
                     gameState: initialGameState,
-                    currentTurn: room.gameSlug === 'dots-boxes' ? room.hostUserId : null
+                    currentTurn: initialGameState.currentTurn || null
                 }
             });
             // Cache game state in Redis
+            if (room.gameSlug === 'cricket') {
+                await (0, cricket_1.saveCricketSession)(room.roomCode, initialGameState);
+            }
+            else if (room.gameSlug === 'dots-boxes') {
+                await (0, dotsBoxes_1.saveDotsBoxesSession)(room.roomCode, initialGameState);
+            }
+            else if (room.gameSlug === 'tic-tac-toe') {
+                await (0, ticTacToe_1.saveTicTacToeSession)(room.roomCode, initialGameState);
+            }
             await broadcastRoomUpdate(room.roomCode);
             io.to(`room:${room.roomCode}`).emit('game-started', { roomCode: room.roomCode });
             logger_1.logger.info(`[GAME STARTING] room=${room.roomCode} game=${room.gameSlug}`);
@@ -447,19 +472,18 @@ io.on('connection', async (rawSocket) => {
             if (!isPlayer)
                 throw new Error('Not authorized to access this match');
             // Set presence to IN_GAME
-            await (0, presence_1.setUserPresence)(userId, 'IN_GAME');
+            (0, presence_1.setUserPresence)(userId, 'IN_GAME').catch(err => (0, logger_1.logError)(err, { userId }));
             socket.join(`game:${normalizedCode}`);
             // Retrieve cached or database game session
             let gameState = null;
             if (room.gameSlug === 'cricket') {
-                gameState = await (0, cricket_1.processCricketMove)(normalizedCode, room.id, '', { type: 'toss', choice: 'BAT' }, [], prisma)
-                    .then(res => res.state)
-                    .catch(() => null);
+                gameState = await (0, cricket_1.getCricketSession)(normalizedCode, room.id, prisma).catch(() => null);
             }
             else if (room.gameSlug === 'dots-boxes') {
-                gameState = await (0, dotsBoxes_1.processDotsBoxesMove)(normalizedCode, room.id, '', { lineId: '' }, [], prisma)
-                    .then(res => res.state)
-                    .catch(() => null);
+                gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(normalizedCode, room.id, prisma).catch(() => null);
+            }
+            else if (room.gameSlug === 'tic-tac-toe') {
+                gameState = await (0, ticTacToe_1.getTicTacToeSession)(normalizedCode, room.id, prisma).catch(() => null);
             }
             if (callback)
                 callback({ success: true });
@@ -510,7 +534,12 @@ io.on('connection', async (rawSocket) => {
                 const isPlayer = room.players.some(p => p.userId === userId);
                 if (!isPlayer)
                     throw new Error('Unauthorized move submission');
-                const mappedPlayers = room.players.map(p => ({
+                // Only pass the 2 active players (sorted by join order) to game engines
+                // Spectators (3rd+ players) must never receive X/O symbol assignments
+                const mappedPlayers = room.players
+                    .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
+                    .slice(0, 2)
+                    .map(p => ({
                     userId: p.userId,
                     username: p.profile?.username || 'Player'
                 }));
@@ -521,6 +550,9 @@ io.on('connection', async (rawSocket) => {
                 }
                 else if (room.gameSlug === 'dots-boxes') {
                     result = await (0, dotsBoxes_1.processDotsBoxesMove)(roomCode, room.id, userId, move, mappedPlayers, prisma);
+                }
+                else if (room.gameSlug === 'tic-tac-toe') {
+                    result = await (0, ticTacToe_1.processTicTacToeMove)(roomCode, room.id, userId, move, mappedPlayers, prisma);
                 }
                 else {
                     throw new Error('Unsupported game engine');
@@ -534,12 +566,7 @@ io.on('connection', async (rawSocket) => {
                     lastMove: { userId, move }
                 });
                 if (gameFinished) {
-                    logger_1.logger.info(`[MATCH FINISHED] room=${roomCode} game=${room.gameSlug} winner=${winnerId || 'DRAW'}`);
-                    // Complete room status in PostgreSQL
-                    await prisma.multiplayerRoom.update({
-                        where: { id: room.id },
-                        data: { status: 'FINISHED' }
-                    });
+                    await (0, framework_1.handleMatchCompletion)(room, state, winnerId, prisma);
                     (0, queue_1.deleteRoomQueue)(roomCode);
                 }
                 if (callback)
@@ -562,7 +589,7 @@ io.on('connection', async (rawSocket) => {
             try {
                 const room = await prisma.multiplayerRoom.findUnique({
                     where: { roomCode },
-                    include: { players: true }
+                    include: { players: { include: { profile: true } } }
                 });
                 if (!room)
                     throw new Error('Room not found');
@@ -581,6 +608,9 @@ io.on('connection', async (rawSocket) => {
                 else if (room.gameSlug === 'dots-boxes') {
                     gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(roomCode, room.id, prisma);
                 }
+                else if (room.gameSlug === 'tic-tac-toe') {
+                    gameState = await (0, ticTacToe_1.getTicTacToeSession)(roomCode, room.id, prisma);
+                }
                 if (!gameState) {
                     gameState = typeof session.gameState === 'string' ? JSON.parse(session.gameState) : session.gameState;
                 }
@@ -589,61 +619,53 @@ io.on('connection', async (rawSocket) => {
                 }
                 gameState.replayVotes[userId] = true;
                 const votesCount = Object.keys(gameState.replayVotes).filter(k => gameState.replayVotes[k] === true).length;
+                // Determine the two active players (first two by join order)
+                const activePlayers = room.players
+                    .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
+                    .slice(0, 2);
+                const activePlayerIds = activePlayers.map(p => p.userId);
+                // Only count votes from active players (not spectators)
+                const activeVoteCount = activePlayerIds.filter(id => gameState.replayVotes[id] === true).length;
                 let updatedStatus = session.status;
                 let updatedWinnerId = session.winnerId;
                 let updatedTurn = session.currentTurn;
                 let finalGameState = gameState;
-                if (votesCount === 2) {
+                logger_1.logger.info(`[VOTE-REPLAY] room=${roomCode} voter=${userId} votesCount=${votesCount} activeVoteCount=${activeVoteCount} activePlayers=${activePlayerIds.join(',')}`);
+                if (activeVoteCount >= activePlayers.length) {
                     updatedStatus = 'PLAYING';
                     updatedWinnerId = null;
                     if (room.gameSlug === 'cricket') {
-                        const tossWinnerId = room.players[Math.floor(Math.random() * room.players.length)].userId;
+                        finalGameState = framework_1.INITIAL_STATES['cricket'](activePlayers, room.hostUserId);
                         updatedTurn = null; // Toss choice determines roles
-                        finalGameState = {
-                            stage: 'TOSS',
-                            tossWinnerId,
-                            tossChoice: null,
-                            innings: 1,
-                            runs: 0,
-                            wickets: 0,
-                            balls: 0,
-                            maxOvers: 2,
-                            maxWickets: 3,
-                            battingUserId: null,
-                            bowlingUserId: null,
-                            moves: {},
-                            history: [],
-                            commentary: [`🪙 New Match! Coin tossed. Waiting for choice.`],
-                            replayVotes: {}
-                        };
                         await (0, cricket_1.saveCricketSession)(roomCode, finalGameState);
                     }
                     else if (room.gameSlug === 'dots-boxes') {
-                        updatedTurn = room.players[Math.floor(Math.random() * room.players.length)].userId;
-                        finalGameState = {
-                            dotsSize: 6,
-                            horizontalLines: [],
-                            verticalLines: [],
-                            completedBoxes: [],
-                            playerScores: room.players.reduce((acc, p) => ({ ...acc, [p.userId]: 0 }), {}),
-                            currentTurn: updatedTurn,
-                            replayVotes: {}
-                        };
+                        finalGameState = framework_1.INITIAL_STATES['dots-boxes'](activePlayers, room.hostUserId);
+                        updatedTurn = finalGameState.currentTurn;
                         await (0, dotsBoxes_1.saveDotsBoxesSession)(roomCode, finalGameState);
                     }
-                    // Update Room status to WAITING or STARTING so it gets resolved properly
+                    else if (room.gameSlug === 'tic-tac-toe') {
+                        finalGameState = framework_1.INITIAL_STATES['tic-tac-toe'](activePlayers, room.hostUserId);
+                        updatedTurn = finalGameState.currentTurn;
+                        await (0, ticTacToe_1.saveTicTacToeSession)(roomCode, finalGameState);
+                    }
+                    logger_1.logger.info(`[VOTE-REPLAY] room=${roomCode} RESET → fresh board, nextTurn=${updatedTurn}`);
+                    // Update Room status to STARTING so it gets resolved properly
                     await prisma.multiplayerRoom.update({
                         where: { id: room.id },
                         data: { status: 'STARTING' }
                     });
                 }
                 else {
-                    // Warm cache
+                    // Warm cache with updated vote state
                     if (room.gameSlug === 'cricket') {
                         await (0, cricket_1.saveCricketSession)(roomCode, finalGameState);
                     }
                     else if (room.gameSlug === 'dots-boxes') {
                         await (0, dotsBoxes_1.saveDotsBoxesSession)(roomCode, finalGameState);
+                    }
+                    else if (room.gameSlug === 'tic-tac-toe') {
+                        await (0, ticTacToe_1.saveTicTacToeSession)(roomCode, finalGameState);
                     }
                 }
                 const now = new Date();
@@ -664,8 +686,8 @@ io.on('connection', async (rawSocket) => {
                     winnerId: updatedWinnerId,
                     lastMove: { userId, type: 'replay_vote' }
                 });
-                if (votesCount === 2) {
-                    // Trigger client redirect check or state check
+                if (activeVoteCount >= activePlayers.length) {
+                    // Trigger client re-sync after replay reset
                     io.to(`game:${roomCode}`).emit('game-started', { roomCode });
                 }
                 if (callback)
@@ -687,7 +709,22 @@ io.on('connection', async (rawSocket) => {
         userSockets.delete(userId);
         await (0, presence_1.setUserPresence)(userId, 'OFFLINE');
         (0, metrics_1.recordDisconnect)();
-        // Start 30-second grace timer for reconnection
+        // Determine grace period based on active rooms: 30s if in active match, 5s if in waiting lobby
+        let gracePeriod = 5000;
+        try {
+            const activeRooms = await prisma.multiplayerRoomPlayer.findMany({
+                where: { userId, NOT: { status: 'LEFT' } },
+                include: { room: true }
+            });
+            const hasPlayingRoom = activeRooms.some(p => p.room && p.room.status === 'PLAYING');
+            if (hasPlayingRoom) {
+                gracePeriod = 30000;
+            }
+        }
+        catch (err) {
+            (0, logger_1.logError)(err, { userId, context: 'disconnect-grace-period-lookup' });
+        }
+        // Start grace timer for reconnection
         const timer = setTimeout(async () => {
             disconnectTimers.delete(userId);
             logger_1.logger.info(`[GRACE PERIOD EXPIRED] Player abandoned connection: ${username} (${userId})`);
@@ -699,6 +736,8 @@ io.on('connection', async (rawSocket) => {
                 });
                 for (const playerProfile of activeRooms) {
                     const room = playerProfile.room;
+                    if (!room)
+                        continue;
                     const roomId = room.id;
                     const roomCode = room.roomCode;
                     if (room.status === 'PLAYING') {
@@ -727,9 +766,14 @@ io.on('connection', async (rawSocket) => {
                             winnerId: opponentId ?? 'DRAW',
                             gameState: { stage: 'FINISHED', commentary: [`Forfeit! Player ${username} disconnected.`] }
                         });
-                        (0, queue_1.deleteRoomQueue)(roomCode);
-                        await (0, cricket_1.deleteCricketSession)(roomCode);
-                        await (0, dotsBoxes_1.deleteDotsBoxesSession)(roomCode);
+                        const playerUserIds = remainingPlayers.map(p => p.userId).concat(userId);
+                        if (await canDestroyRoom(roomCode, playerUserIds)) {
+                            await prisma.multiplayerRoom.delete({ where: { id: roomId } });
+                            (0, queue_1.deleteRoomQueue)(roomCode);
+                            await (0, cricket_1.deleteCricketSession)(roomCode);
+                            await (0, dotsBoxes_1.deleteDotsBoxesSession)(roomCode);
+                            logger_1.logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`);
+                        }
                     }
                     else if (room.status === 'WAITING') {
                         // Player abandoned waiting lobby -> Clean remove
@@ -741,15 +785,15 @@ io.on('connection', async (rawSocket) => {
                             orderBy: { joinedAt: 'asc' }
                         });
                         if (remaining.length === 0) {
-                            await prisma.multiplayerRoom.delete({ where: { id: roomId } });
+                            const playerUserIds = [userId];
+                            if (await canDestroyRoom(roomCode, playerUserIds)) {
+                                await prisma.multiplayerRoom.delete({ where: { id: roomId } });
+                                logger_1.logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`);
+                            }
                         }
                         else {
                             if (room.hostUserId === userId) {
-                                const newHost = remaining[0];
-                                await prisma.multiplayerRoom.update({
-                                    where: { id: roomId },
-                                    data: { hostUserId: newHost.userId }
-                                });
+                                await handleHostMigration(roomId, userId, roomCode);
                             }
                             await broadcastRoomUpdate(roomCode);
                         }
@@ -759,7 +803,7 @@ io.on('connection', async (rawSocket) => {
             catch (err) {
                 (0, logger_1.logError)(err, { userId });
             }
-        }, 30000); // 30 seconds
+        }, gracePeriod);
         disconnectTimers.set(userId, timer);
         // Mark status as DISCONNECTED in database during grace period (only for active rooms)
         try {
@@ -785,6 +829,57 @@ io.on('connection', async (rawSocket) => {
         }
     });
 });
+/**
+ * Helper to handle host migration and emit HOST_TRANSFERRED to all players
+ */
+async function handleHostMigration(roomId, currentHostId, roomCode) {
+    try {
+        const remaining = await prisma.multiplayerRoomPlayer.findMany({
+            where: { roomId, NOT: { userId: currentHostId } },
+            include: { profile: { select: { username: true } } },
+            orderBy: { joinedAt: 'asc' }
+        });
+        if (remaining.length > 0) {
+            const newHost = remaining[0];
+            await prisma.multiplayerRoom.update({
+                where: { id: roomId },
+                data: { hostUserId: newHost.userId }
+            });
+            logger_1.logger.info(`[HOST MIGRATED] room=${roomCode} newHost=${newHost.userId}`);
+            // Broadcast HOST_TRANSFERRED events
+            io.to(`room:${roomCode}`).emit('host-transferred', {
+                newHostId: newHost.userId,
+                newHostUsername: newHost.profile?.username || 'Player'
+            });
+            io.to(`game:${roomCode}`).emit('host-transferred', {
+                newHostId: newHost.userId,
+                newHostUsername: newHost.profile?.username || 'Player'
+            });
+        }
+    }
+    catch (err) {
+        (0, logger_1.logError)(err, { roomId, currentHostId, context: 'host-migration' });
+    }
+}
+/**
+ * GC Safety: checks if a room can be safely destroyed
+ */
+async function canDestroyRoom(roomCode, playerUserIds) {
+    // 1. Verify no connected sockets remain in the room
+    const socketsInRoom = await io.in(`room:${roomCode}`).fetchSockets();
+    if (socketsInRoom.length > 0) {
+        logger_1.logger.info(`[GC SAFETY] Cannot delete room ${roomCode}: ${socketsInRoom.length} connected sockets remain.`);
+        return false;
+    }
+    // 2. Verify no reconnect grace timer is active for any player
+    for (const userId of playerUserIds) {
+        if (disconnectTimers.has(userId)) {
+            logger_1.logger.info(`[GC SAFETY] Cannot delete room ${roomCode}: Reconnect grace timer is active for user ${userId}.`);
+            return false;
+        }
+    }
+    return true;
+}
 /**
  * Fetch room data and broadcast it to all connections in room
  */
@@ -829,8 +924,59 @@ async function broadcastRoomUpdate(roomCode) {
         (0, logger_1.logError)(err, { roomCode });
     }
 }
+/**
+ * Starts a background loop to reconcile active game states from cache/Redis to PostgreSQL
+ * to ensure that no game state is lost if asynchronous move snapshots fail.
+ */
+function startReconciliationLoop() {
+    setInterval(async () => {
+        try {
+            const activeRooms = await prisma.multiplayerRoom.findMany({
+                where: { status: 'PLAYING' }
+            });
+            if (activeRooms.length === 0)
+                return;
+            logger_1.logger.info(`[RECONCILIATION] Starting sync for ${activeRooms.length} active games.`);
+            for (const room of activeRooms) {
+                try {
+                    let gameState = null;
+                    if (room.gameSlug === 'cricket') {
+                        gameState = await (0, cricket_1.getCricketSession)(room.roomCode, room.id, prisma);
+                    }
+                    else if (room.gameSlug === 'dots-boxes') {
+                        gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(room.roomCode, room.id, prisma);
+                    }
+                    else if (room.gameSlug === 'tic-tac-toe') {
+                        gameState = await (0, ticTacToe_1.getTicTacToeSession)(room.roomCode, room.id, prisma);
+                    }
+                    if (gameState) {
+                        const winnerId = gameState.winnerId || null;
+                        const currentTurn = gameState.currentTurn || null;
+                        await prisma.multiplayerGameSession.update({
+                            where: { roomId: room.id },
+                            data: {
+                                gameState,
+                                winnerId,
+                                currentTurn,
+                                lastActivityAt: new Date()
+                            }
+                        });
+                    }
+                }
+                catch (err) {
+                    (0, logger_1.logError)(err, { roomCode: room.roomCode, context: 'reconciliation-room' });
+                }
+            }
+        }
+        catch (err) {
+            (0, logger_1.logError)(err, { context: 'reconciliation-loop' });
+        }
+    }, 30000); // Reconcile every 30 seconds
+}
 // Start Observability Metrics reporting loop
 (0, metrics_1.startMetricsReporting)(io);
+// Start active game state reconciliation loop
+startReconciliationLoop();
 // Start Server
 const PORT = parseInt(process.env.PORT || '5000', 10);
 server.listen(PORT, () => {

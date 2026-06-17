@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import {
   TossResolver,
@@ -16,6 +17,7 @@ import {
 type GameStep = 'setup' | 'toss' | 'toss_result' | 'play' | 'ended'
 
 export default function CricketGame() {
+  const router = useRouter()
   const { submitGameResult } = useGameSession()
 
   // Match Configuration
@@ -36,6 +38,12 @@ export default function CricketGame() {
   const [isAnimating, setIsAnimating] = useState<boolean>(false)
   const [commentary, setCommentary] = useState<string[]>([])
 
+  // Special Animations State
+  const [showSixAnimation, setShowSixAnimation] = useState(false)
+  const [showWicketAnimation, setShowWicketAnimation] = useState(false)
+  const [shakeStumps, setShakeStumps] = useState(false)
+  const [sixCoins, setSixCoins] = useState<{ id: number; tx: number; ty: number }[]>([])
+
   // Reset function
   const handleReset = () => {
     setOvers(2)
@@ -48,6 +56,10 @@ export default function CricketGame() {
     setLastBall(null)
     setIsAnimating(false)
     setCommentary([])
+    setShowSixAnimation(false)
+    setShowWicketAnimation(false)
+    setShakeStumps(false)
+    setSixCoins([])
   }
 
   // Listen to global replay event
@@ -136,6 +148,26 @@ export default function CricketGame() {
         setLastBall(ballRecord)
         setIsAnimating(false)
 
+        // Evaluate ball result for animations
+        if (ballRecord.isOut) {
+          setShowWicketAnimation(true)
+          setShakeStumps(true)
+          setTimeout(() => setShowWicketAnimation(false), 2000)
+          setTimeout(() => setShakeStumps(false), 1000)
+        } else if (ballRecord.runs === 6) {
+          setShowSixAnimation(true)
+          const coins = Array.from({ length: 15 }, (_, i) => ({
+            id: i,
+            tx: (Math.random() - 0.5) * 300,
+            ty: (Math.random() - 0.5) * 300 - 100
+          }))
+          setSixCoins(coins)
+          setTimeout(() => {
+            setShowSixAnimation(false)
+            setSixCoins([])
+          }, 2000)
+        }
+
         // Generate commentary line
         const currentInnings = nextState.phase === 'innings2' && !nextState.innings2?.isCompleted
           ? nextState.innings2
@@ -156,7 +188,8 @@ export default function CricketGame() {
 
         // Handle transitions
         if (nextState.phase === 'innings2' && matchState.phase === 'innings1') {
-          newCommentary.unshift(`🔄 Innings 1 over! CPU needs ${nextState.target} runs to win.`)
+          const isUserChasing = nextState.innings2?.battingTeam === 'player'
+          newCommentary.unshift(`🔄 Innings 1 over! ${isUserChasing ? 'You need' : 'CPU needs'} ${nextState.target} runs to win.`)
           setLastBall(null) // Reset display matchup
         } else if (nextState.phase === 'ended') {
           const winnerText = nextState.winner === 'player' 
@@ -221,7 +254,7 @@ export default function CricketGame() {
   // 1. Setup Screen
   if (step === 'setup') {
     return (
-      <div className="card shadow-lg animate-fadeIn" style={{ padding: '2.5rem', maxWidth: 500, margin: '2rem auto', border: '1px solid hsl(220 20% 20%)', background: 'hsl(220 20% 12% / 0.8)', backdropFilter: 'blur(12px)', borderRadius: 20 }}>
+      <div className="card shadow-lg animate-fadeIn" style={{ padding: 'clamp(1rem, 5vw, 2.5rem)', maxWidth: 500, margin: '2rem auto', border: '1px solid hsl(220 20% 20%)', background: 'hsl(220 20% 12% / 0.8)', backdropFilter: 'blur(12px)', borderRadius: 20 }}>
         <div style={{ fontSize: '4rem', textAlign: 'center', marginBottom: '1rem' }}>🏏</div>
         <h2 style={{ fontWeight: 800, fontSize: '1.75rem', textAlign: 'center', marginBottom: '0.5rem', color: 'hsl(220 15% 92%)' }}>Hand Cricket Setup</h2>
         <p style={{ color: 'hsl(220 10% 55%)', textAlign: 'center', marginBottom: '2rem', fontSize: '0.9rem', lineHeight: 1.6 }}>
@@ -231,7 +264,7 @@ export default function CricketGame() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'hsl(220 10% 70%)', marginBottom: '0.5rem' }}>Select Overs Limit</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.5rem' }}>
               {[1, 2, 5, 10].map(o => (
                 <button
                   key={o}
@@ -247,7 +280,7 @@ export default function CricketGame() {
 
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'hsl(220 10% 70%)', marginBottom: '0.5rem' }}>Select Wickets Limit</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.5rem' }}>
               {[1, 3, 5, 10].map(w => (
                 <button
                   key={w}
@@ -269,6 +302,15 @@ export default function CricketGame() {
           id="cricket-go-toss"
         >
           🪙 Proceed to Toss
+        </button>
+
+        <button
+          className="btn btn-secondary btn-lg"
+          style={{ width: '100%', borderRadius: 12, padding: '0.75rem', marginTop: '0.75rem', background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.15), hsl(270 80% 60% / 0.15))', borderColor: 'hsl(220 100% 60% / 0.35)', color: 'hsl(220 100% 85%)' }}
+          onClick={() => router.push('/dashboard/multiplayer?action=create&game=cricket')}
+          id="cricket-play-friends"
+        >
+          🌐 Play With Friends
         </button>
       </div>
     )
@@ -539,6 +581,218 @@ export default function CricketGame() {
             <div style={{ fontSize: '0.8rem', color: 'hsl(220 10% 45%)', fontStyle: 'italic' }}>No balls bowled yet.</div>
           )}
         </div>
+
+        {/* Six Animation Overlay */}
+        {showSixAnimation && (
+          <div className="six-overlay-container">
+            <div className="six-flash" />
+            <div className="six-ball-trail" />
+            <div className="six-ball-emoji">🥎</div>
+            <div className="six-text">SIX!</div>
+            {sixCoins.map(coin => (
+              <div
+                key={coin.id}
+                className="six-coin"
+                style={{
+                  '--tx': `${coin.tx}px`,
+                  '--ty': `${coin.ty}px`,
+                } as any}
+              >
+                🪙
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Wicket Animation Overlay */}
+        {showWicketAnimation && (
+          <div className="wicket-overlay-container">
+            <div className="wicket-flash" />
+            <div className="wicket-stump-container">
+              <div className={`wicket-stumps ${shakeStumps ? 'shake-active' : ''}`}>
+                ❌🏏❌
+              </div>
+            </div>
+            <div className="wicket-text">OUT!</div>
+            <div className="wicket-crowd-text">
+              {['What a delivery!', 'Clean Bowled!', 'Stunned Silence!', 'Back to the pavilion!'][Math.floor(Math.random() * 4)]}
+            </div>
+          </div>
+        )}
+
+        {/* CSS Styles */}
+        <style jsx global>{`
+          /* Six Animation Styles */
+          .six-overlay-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+          }
+          .six-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 223, 0, 0.25);
+            animation: flashEffect 0.5s ease-out forwards;
+          }
+          .six-ball-emoji {
+            font-size: 4rem;
+            position: absolute;
+            animation: ballFly 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+          }
+          .six-ball-trail {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,223,0,0) 70%);
+            border-radius: 50%;
+            filter: blur(2px);
+            animation: trailFly 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+          }
+          .six-text {
+            font-size: 6rem;
+            font-weight: 950;
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 140, 0, 0.6);
+            z-index: 10;
+            transform: scale(0);
+            animation: textPop 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+          }
+          .six-coin {
+            position: absolute;
+            font-size: 1.5rem;
+            animation: coinScatter 1.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+          }
+
+          /* Wicket Animation Styles */
+          .wicket-overlay-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+          }
+          .wicket-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(239, 68, 68, 0.3);
+            animation: flashEffect 0.6s ease-out forwards;
+          }
+          .wicket-stump-container {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            z-index: 10;
+          }
+          .wicket-stumps.shake-active {
+            animation: stumpBreak 0.8s ease-in-out forwards;
+          }
+          .wicket-text {
+            font-size: 6rem;
+            font-weight: 950;
+            color: #ef4444;
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(220, 38, 38, 0.6);
+            z-index: 10;
+            transform: scale(0);
+            animation: textPop 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+          }
+          .wicket-crowd-text {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #f3f4f6;
+            margin-top: 1rem;
+            z-index: 10;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 1s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+
+          /* Keyframes */
+          @keyframes flashEffect {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+          }
+          @keyframes ballFly {
+            0% {
+              transform: translate(-300px, 300px) scale(0.5) rotate(0deg);
+              opacity: 1;
+            }
+            50% {
+              transform: translate(0px, -200px) scale(1.5) rotate(360deg);
+              opacity: 1;
+            }
+            100% {
+              transform: translate(300px, -500px) scale(0.2) rotate(720deg);
+              opacity: 0;
+            }
+          }
+          @keyframes trailFly {
+            0% {
+              transform: translate(-300px, 300px) scale(1);
+              opacity: 0.8;
+              box-shadow: 0 0 8px 8px rgba(255, 223, 0, 0.8);
+            }
+            50% {
+              transform: translate(0px, -200px) scale(2);
+              opacity: 0.5;
+              box-shadow: 0 0 20px 20px rgba(255, 223, 0, 0.5);
+            }
+            100% {
+              transform: translate(300px, -500px) scale(0.5);
+              opacity: 0;
+              box-shadow: 0 0 4px 4px rgba(255, 223, 0, 0);
+            }
+          }
+          @keyframes textPop {
+            0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+            20% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+            45% { transform: scale(1) rotate(0deg); opacity: 1; }
+            80% { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(0.8) rotate(0deg); opacity: 0; }
+          }
+          @keyframes coinScatter {
+            0% {
+              transform: translate(0, 0) rotate(0deg) scale(0.5);
+              opacity: 1;
+            }
+            100% {
+              transform: translate(var(--tx), var(--ty)) rotate(720deg) scale(1);
+              opacity: 0;
+            }
+          }
+          @keyframes stumpBreak {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-10px, 5px) rotate(-15deg); }
+            20% { transform: translate(15px, -10px) rotate(20deg); }
+            30% { transform: translate(-10px, -5px) rotate(-10deg); }
+            40% { transform: translate(10px, 10px) rotate(15deg); }
+            50% { transform: translate(-5px, -5px) rotate(-5deg); }
+            60% { transform: translate(5px, 5px) rotate(5deg); }
+            100% { transform: translate(0, 10px) rotate(0deg); opacity: 0.5; }
+          }
+          @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
       </div>
     )
   }
@@ -563,24 +817,41 @@ export default function CricketGame() {
           {isPlayerWin ? 'Great chase / defense! Your rewards have been sent.' : isCpuWin ? 'Hard luck. Get back in the nets!' : 'Equal scores. A perfectly balanced match!'}
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'hsl(220 20% 9%)', padding: '1.25rem', borderRadius: 16, marginBottom: '2rem', border: '1px solid hsl(220 20% 15%)' }}>
-          <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Your Score</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'hsl(220 100% 65%)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', background: 'hsl(220 20% 9%)', padding: '1.5rem', borderRadius: 16, marginBottom: '2rem', border: '1px solid hsl(220 20% 15%)', textAlign: 'left' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid hsl(220 20% 16%)', paddingBottom: '0.5rem' }}>
+            <span style={{ fontWeight: 600, color: 'hsl(220 10% 60%)', fontSize: '0.9rem' }}>Your Score</span>
+            <span style={{ fontWeight: 800, color: 'hsl(220 100% 65%)', fontFamily: 'monospace', fontSize: '1.05rem' }}>
               {playerInnings ? `${playerInnings.score}/${playerInnings.wicketsLost}` : '0/0'}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', marginTop: '0.1rem' }}>
-              ({playerInnings ? formatOvers(playerInnings.ballsBowled) : '0'} Ov)
-            </div>
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid hsl(220 20% 16%)', paddingBottom: '0.5rem' }}>
+            <span style={{ fontWeight: 600, color: 'hsl(220 10% 60%)', fontSize: '0.9rem' }}>CPU Score</span>
+            <span style={{ fontWeight: 800, color: 'hsl(0 80% 60%)', fontFamily: 'monospace', fontSize: '1.05rem' }}>
+              {cpuInnings ? `${cpuInnings.score}/${cpuInnings.wicketsLost}` : '0/0'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid hsl(220 20% 16%)', paddingBottom: '0.5rem' }}>
+            <span style={{ fontWeight: 600, color: 'hsl(220 10% 60%)', fontSize: '0.9rem' }}>Result</span>
+            <span style={{ fontWeight: 800, color: isPlayerWin ? 'hsl(142 70% 55%)' : isCpuWin ? 'hsl(0 80% 60%)' : 'hsl(220 15% 90%)', fontSize: '1.05rem' }}>
+              {isPlayerWin ? 'Victory' : isCpuWin ? 'Defeat' : 'Tie'}
+            </span>
           </div>
 
-          <div style={{ borderLeft: '1px solid hsl(220 20% 16%)' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>CPU Score</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'hsl(0 80% 60%)' }}>
-              {cpuInnings ? `${cpuInnings.score}/${cpuInnings.wicketsLost}` : '0/0'}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', marginTop: '0.1rem' }}>
-              ({cpuInnings ? formatOvers(cpuInnings.ballsBowled) : '0'} Ov)
+          <div style={{ marginTop: '0.5rem' }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Your Batting Stats</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+              <div style={{ background: 'hsl(220 20% 12%)', padding: '0.5rem', borderRadius: 8 }}>
+                <div style={{ fontSize: '0.6rem', color: 'hsl(220 10% 50%)', fontWeight: 600 }}>OVERS</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'white', fontFamily: 'monospace' }}>{playerInnings ? formatOvers(playerInnings.ballsBowled) : '0.0'}</div>
+              </div>
+              <div style={{ background: 'hsl(220 20% 12%)', padding: '0.5rem', borderRadius: 8 }}>
+                <div style={{ fontSize: '0.6rem', color: 'hsl(220 10% 50%)', fontWeight: 600 }}>WICKETS</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'white', fontFamily: 'monospace' }}>{playerInnings ? playerInnings.wicketsLost : 0}</div>
+              </div>
+              <div style={{ background: 'hsl(220 20% 12%)', padding: '0.5rem', borderRadius: 8 }}>
+                <div style={{ fontSize: '0.6rem', color: 'hsl(220 10% 50%)', fontWeight: 600 }}>STRIKE RATE</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'white', fontFamily: 'monospace' }}>{playerInnings && playerInnings.ballsBowled > 0 ? ((playerInnings.score / playerInnings.ballsBowled) * 100).toFixed(1) : '0.0'}</div>
+              </div>
             </div>
           </div>
         </div>

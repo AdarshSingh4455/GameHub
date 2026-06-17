@@ -35,14 +35,15 @@ export async function GET(request: Request) {
       }
     })
 
-    if (!activePlayerRoom || !activePlayerRoom.room || !activePlayerRoom.room.gameSession) {
+    if (!activePlayerRoom || !activePlayerRoom.room) {
       return NextResponse.json({ roomCode: null }, { status: 200 })
     }
 
     return NextResponse.json({
       roomCode: activePlayerRoom.room.roomCode,
       status: activePlayerRoom.room.status,
-      gameSlug: activePlayerRoom.room.gameSlug
+      gameSlug: activePlayerRoom.room.gameSlug,
+      roomId: activePlayerRoom.room.id
     }, { status: 200 })
   } catch (err: unknown) {
     console.error('[GET /api/multiplayer/active-room]', err)

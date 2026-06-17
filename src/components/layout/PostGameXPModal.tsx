@@ -446,40 +446,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           </div>
         </div>
 
-        {/* Unlocked Achievements List */}
-        {unlockedAchievements.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', position: 'relative', zIndex: 1 }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Achievements Unlocked
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {unlockedAchievements.map((ach, idx) => (
-                <div
-                  key={idx}
-                  className={`card animate-slideUp achievement-stagger-${idx + 1}`}
-                  style={{
-                    background: 'linear-gradient(135deg, hsl(45 100% 60% / 0.1), hsl(38 95% 55% / 0.1))',
-                    border: '1px solid hsl(45 100% 50% / 0.3)',
-                    padding: '0.75rem 1rem',
-                    borderRadius: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                  }}
-                >
-                  <span style={{ fontSize: '1.5rem' }}>🏅</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'hsl(45 100% 65%)' }}>{ach.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)' }}>{ach.description}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: 'hsl(45 100% 65%)' }}>
-                    +{ach.xpReward} XP
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {/* Next Achievement Progress */}
         {nextAchievement && unlockedAchievements.length === 0 && (

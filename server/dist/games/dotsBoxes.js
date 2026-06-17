@@ -5,6 +5,7 @@ exports.saveDotsBoxesSession = saveDotsBoxesSession;
 exports.deleteDotsBoxesSession = deleteDotsBoxesSession;
 exports.processDotsBoxesMove = processDotsBoxesMove;
 const redis_1 = require("../utils/redis");
+const logger_1 = require("../utils/logger");
 // Active Game Cache TTL: 2 hours
 const GAME_CACHE_TTL = 7200;
 /**
@@ -68,25 +69,23 @@ async function deleteDotsBoxesSession(roomCode) {
 /**
  * Persists a snapshot of the current game session state to PostgreSQL
  */
-async function persistSnapshot(roomId, state, status, winnerId, nextTurn, prisma) {
-    try {
-        const now = new Date();
-        await prisma.multiplayerGameSession.update({
-            where: { roomId },
-            data: {
-                status,
-                winnerId,
-                currentTurn: nextTurn,
-                gameState: state,
-                lastActivityAt: now,
-                updatedAt: now
-            }
-        });
-        console.log(`[SNAPSHOT SUCCESS] Persisted dots & boxes game state to PostgreSQL for roomId=${roomId}`);
-    }
-    catch (err) {
-        console.error(`[SNAPSHOT ERROR] Failed to persist game state to DB for roomId=${roomId}:`, err);
-    }
+function persistSnapshot(roomId, state, status, winnerId, nextTurn, prisma) {
+    const now = new Date();
+    prisma.multiplayerGameSession.update({
+        where: { roomId },
+        data: {
+            status,
+            winnerId,
+            currentTurn: nextTurn,
+            gameState: state,
+            lastActivityAt: now,
+            updatedAt: now
+        }
+    }).then(() => {
+        logger_1.logger.info(`[SNAPSHOT SUCCESS] Persisted dots & boxes game state to PostgreSQL for roomId=${roomId}`);
+    }).catch((err) => {
+        (0, logger_1.logError)(err, { roomId, context: 'dots-boxes-snapshot' });
+    });
 }
 /**
  * Processes Dots & Boxes game moves
@@ -208,13 +207,13 @@ async function processDotsBoxesMove(roomCode, roomId, userId, move, players, pri
         updatedStatus = 'FINISHED';
         gameFinished = true;
         // Persist final match state and clean up Redis cache
-        await persistSnapshot(roomId, currentGameState, updatedStatus, winnerId, nextTurn, prisma);
+        persistSnapshot(roomId, currentGameState, updatedStatus, winnerId, nextTurn, prisma);
         await deleteDotsBoxesSession(roomCode);
         snapshotPersisted = true;
     }
     // Persist snapshot periodically: every 5 moves (meaning 5 lines drawn), if game ends, OR if Redis is down
     if (!snapshotPersisted && (currentGameState.moveCount % 5 === 0 || !redis_1.redisClient.isReady)) {
-        await persistSnapshot(roomId, currentGameState, updatedStatus, winnerId, nextTurn, prisma);
+        persistSnapshot(roomId, currentGameState, updatedStatus, winnerId, nextTurn, prisma);
         snapshotPersisted = true;
     }
     if (!gameFinished) {

@@ -137,32 +137,71 @@ io.on('connection', async (rawSocket) => {
 
     // Restore status in active room player profiles and re-join socket rooms (non-blocking)
     prisma.multiplayerRoomPlayer.findMany({
-      where: { userId, NOT: { disconnectedAt: null } },
-      include: { room: true }
-    }).then(async (disconnectedProfiles: any) => {
-      if (disconnectedProfiles.length > 0) {
-        await prisma.multiplayerRoomPlayer.updateMany({
-          where: { userId, NOT: { disconnectedAt: null } },
-          data: { disconnectedAt: null }
-        })
-
-        // Re-join socket to all active rooms and broadcast recovery
-        for (const p of disconnectedProfiles) {
-          if (p.room) {
-            const roomCode = p.room.roomCode
-            socket.join(`room:${roomCode}`)
-            if (p.room.status === 'PLAYING') {
-              socket.join(`game:${roomCode}`)
-            }
-            io.to(`room:${roomCode}`).emit('player-reconnected', { userId })
-            io.to(`game:${roomCode}`).emit('player-reconnected', { userId })
-            await broadcastRoomUpdate(roomCode)
-            logger.info(`[RECONNECT RECOVERY] Re-joined room:${roomCode} and broadcast update`)
+      where: { userId, NOT: { status: 'LEFT' } },
+      include: { room: { include: { players: true } } }
+    }).then(async (profiles: any) => {
+      let validationPassed = true
+      
+      for (const p of profiles) {
+        const room = p.room
+        
+        // 1. Verify room still exists in DB
+        if (!room) {
+          logger.warn(`[RECONNECT VALIDATION FAILED] Room does not exist for player ${userId}`)
+          validationPassed = false
+          break
+        }
+        
+        // 2. Verify player was previously part of that room (p exists)
+        // 3. Verify room status allows reconnection (WAITING, STARTING, PLAYING)
+        const allowedStatuses = ['WAITING', 'STARTING', 'PLAYING']
+        if (!allowedStatuses.includes(room.status)) {
+          logger.warn(`[RECONNECT VALIDATION FAILED] Room status ${room.status} does not allow reconnection`)
+          validationPassed = false
+          break
+        }
+        
+        // 4. Prevent duplicate player entries: check if there is already another socket with active connection for this userId
+        const existingSocketId = userSockets.get(userId)
+        if (existingSocketId && existingSocketId !== socket.id) {
+          const sockets = await io.in(existingSocketId).fetchSockets()
+          if (sockets.length > 0) {
+            logger.warn(`[RECONNECT VALIDATION FAILED] Duplicate entry detected for player ${userId}`)
+            validationPassed = false
+            break
           }
+        }
+      }
+
+      if (!validationPassed || profiles.length === 0) {
+        logger.warn(`[RECONNECT RECOVERY] Validation failed, emitting reconnect-failed for user=${userId}`)
+        socket.emit('reconnect-failed')
+        return
+      }
+
+      // Restore status: set disconnectedAt to null
+      await prisma.multiplayerRoomPlayer.updateMany({
+        where: { userId, NOT: { status: 'LEFT' } },
+        data: { disconnectedAt: null }
+      })
+
+      // Re-join socket to rooms and broadcast recovery
+      for (const p of profiles) {
+        if (p.room) {
+          const roomCode = p.room.roomCode
+          socket.join(`room:${roomCode}`)
+          if (p.room.status === 'PLAYING') {
+            socket.join(`game:${roomCode}`)
+          }
+          io.to(`room:${roomCode}`).emit('player-reconnected', { userId })
+          io.to(`game:${roomCode}`).emit('player-reconnected', { userId })
+          await broadcastRoomUpdate(roomCode)
+          logger.info(`[RECONNECT RECOVERY] Re-joined roomCode=${roomCode} and broadcast recovery`)
         }
       }
     }).catch((err: any) => {
       logError(err, { userId })
+      socket.emit('reconnect-failed')
     })
   }
 
@@ -318,21 +357,19 @@ io.on('connection', async (rawSocket) => {
       })
 
       if (remaining.length === 0) {
-        // Clean up empty room and session
-        await prisma.multiplayerRoom.delete({ where: { id: roomId } })
-        deleteRoomQueue(roomCode)
-        await deleteCricketSession(roomCode)
-        await deleteDotsBoxesSession(roomCode)
-        logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`)
+        const playerUserIds = [userId]
+        if (await canDestroyRoom(roomCode, playerUserIds)) {
+          // Clean up empty room and session
+          await prisma.multiplayerRoom.delete({ where: { id: roomId } })
+          deleteRoomQueue(roomCode)
+          await deleteCricketSession(roomCode)
+          await deleteDotsBoxesSession(roomCode)
+          logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`)
+        }
       } else {
         // If host left, perform host migration
         if (player.room.hostUserId === userId) {
-          const newHost = remaining[0]
-          await prisma.multiplayerRoom.update({
-            where: { id: roomId },
-            data: { hostUserId: newHost.userId }
-          })
-          logger.info(`[HOST MIGRATED] room=${roomCode} newHost=${newHost.userId}`)
+          await handleHostMigration(roomId, userId, roomCode)
         }
 
         await broadcastRoomUpdate(roomCode)
@@ -736,7 +773,22 @@ io.on('connection', async (rawSocket) => {
     await setUserPresence(userId, 'OFFLINE')
     recordDisconnect()
 
-    // Start 30-second grace timer for reconnection
+    // Determine grace period based on active rooms: 30s if in active match, 5s if in waiting lobby
+    let gracePeriod = 5000
+    try {
+      const activeRooms = await prisma.multiplayerRoomPlayer.findMany({
+        where: { userId, NOT: { status: 'LEFT' } },
+        include: { room: true }
+      })
+      const hasPlayingRoom = activeRooms.some(p => p.room && p.room.status === 'PLAYING')
+      if (hasPlayingRoom) {
+        gracePeriod = 30000
+      }
+    } catch (err: any) {
+      logError(err, { userId, context: 'disconnect-grace-period-lookup' })
+    }
+
+    // Start grace timer for reconnection
     const timer = setTimeout(async () => {
       disconnectTimers.delete(userId)
       logger.info(`[GRACE PERIOD EXPIRED] Player abandoned connection: ${username} (${userId})`)
@@ -750,6 +802,7 @@ io.on('connection', async (rawSocket) => {
 
         for (const playerProfile of activeRooms) {
           const room = playerProfile.room
+          if (!room) continue
           const roomId = room.id
           const roomCode = room.roomCode
 
@@ -784,9 +837,14 @@ io.on('connection', async (rawSocket) => {
               gameState: { stage: 'FINISHED', commentary: [`Forfeit! Player ${username} disconnected.`] }
             })
 
-            deleteRoomQueue(roomCode)
-            await deleteCricketSession(roomCode)
-            await deleteDotsBoxesSession(roomCode)
+            const playerUserIds = remainingPlayers.map(p => p.userId).concat(userId)
+            if (await canDestroyRoom(roomCode, playerUserIds)) {
+              await prisma.multiplayerRoom.delete({ where: { id: roomId } })
+              deleteRoomQueue(roomCode)
+              await deleteCricketSession(roomCode)
+              await deleteDotsBoxesSession(roomCode)
+              logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`)
+            }
 
           } else if (room.status === 'WAITING') {
             // Player abandoned waiting lobby -> Clean remove
@@ -800,14 +858,14 @@ io.on('connection', async (rawSocket) => {
             })
 
             if (remaining.length === 0) {
-              await prisma.multiplayerRoom.delete({ where: { id: roomId } })
+              const playerUserIds = [userId]
+              if (await canDestroyRoom(roomCode, playerUserIds)) {
+                await prisma.multiplayerRoom.delete({ where: { id: roomId } })
+                logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`)
+              }
             } else {
               if (room.hostUserId === userId) {
-                const newHost = remaining[0]
-                await prisma.multiplayerRoom.update({
-                  where: { id: roomId },
-                  data: { hostUserId: newHost.userId }
-                })
+                await handleHostMigration(roomId, userId, roomCode)
               }
               await broadcastRoomUpdate(roomCode)
             }
@@ -816,7 +874,7 @@ io.on('connection', async (rawSocket) => {
       } catch (err: any) {
         logError(err, { userId })
       }
-    }, 30000) // 30 seconds
+    }, gracePeriod)
 
     disconnectTimers.set(userId, timer)
 
@@ -845,6 +903,63 @@ io.on('connection', async (rawSocket) => {
     }
   })
 })
+
+/**
+ * Helper to handle host migration and emit HOST_TRANSFERRED to all players
+ */
+async function handleHostMigration(roomId: string, currentHostId: string, roomCode: string) {
+  try {
+    const remaining = await prisma.multiplayerRoomPlayer.findMany({
+      where: { roomId, NOT: { userId: currentHostId } },
+      include: { profile: { select: { username: true } } },
+      orderBy: { joinedAt: 'asc' }
+    })
+
+    if (remaining.length > 0) {
+      const newHost = remaining[0]
+      await prisma.multiplayerRoom.update({
+        where: { id: roomId },
+        data: { hostUserId: newHost.userId }
+      })
+
+      logger.info(`[HOST MIGRATED] room=${roomCode} newHost=${newHost.userId}`)
+      
+      // Broadcast HOST_TRANSFERRED events
+      io.to(`room:${roomCode}`).emit('host-transferred', {
+        newHostId: newHost.userId,
+        newHostUsername: newHost.profile?.username || 'Player'
+      })
+      io.to(`game:${roomCode}`).emit('host-transferred', {
+        newHostId: newHost.userId,
+        newHostUsername: newHost.profile?.username || 'Player'
+      })
+    }
+  } catch (err: any) {
+    logError(err, { roomId, currentHostId, context: 'host-migration' })
+  }
+}
+
+/**
+ * GC Safety: checks if a room can be safely destroyed
+ */
+async function canDestroyRoom(roomCode: string, playerUserIds: string[]): Promise<boolean> {
+  // 1. Verify no connected sockets remain in the room
+  const socketsInRoom = await io.in(`room:${roomCode}`).fetchSockets()
+  if (socketsInRoom.length > 0) {
+    logger.info(`[GC SAFETY] Cannot delete room ${roomCode}: ${socketsInRoom.length} connected sockets remain.`)
+    return false
+  }
+
+  // 2. Verify no reconnect grace timer is active for any player
+  for (const userId of playerUserIds) {
+    if (disconnectTimers.has(userId)) {
+      logger.info(`[GC SAFETY] Cannot delete room ${roomCode}: Reconnect grace timer is active for user ${userId}.`)
+      return false
+    }
+  }
+
+  return true
+}
 
 /**
  * Fetch room data and broadcast it to all connections in room

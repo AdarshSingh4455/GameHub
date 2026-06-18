@@ -1,8 +1,35 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { useSocket } from '@/lib/contexts/SocketContext'
+import MultiplayerHeader from './MultiplayerHeader'
+import MatchReactions from './MatchReactions'
+
+function playTurnNotificationSound() {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContext) return
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(660, ctx.currentTime) // E5 note, clean beep
+    
+    gain.gain.setValueAtTime(0, ctx.currentTime)
+    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.04)
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35)
+    
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.4)
+  } catch (e) {
+    console.warn('[SOUND ERROR]', e)
+  }
+}
 
 interface Player {
   userId: string
@@ -30,15 +57,40 @@ export default function MultiplayerDotsBoxesGame({
   const { socket } = useSocket()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [optimisticLines, setOptimisticLines] = useState<string[]>([])
+  
+  const [lastMoveLine, setLastMoveLine] = useState<string | null>(null)
+  const [showGlow, setShowGlow] = useState(false)
+  const wasMyTurnRef = useRef(false)
 
   const gameState = session.gameState || {}
   const { horizontalLines = [], verticalLines = [], completedBoxes = [], playerScores = {}, currentTurn, replayVotes = {}, dotsSize = 6 } = gameState
 
   // Synchronize optimisticLines and reset isSubmitting on official state changes
-  React.useEffect(() => {
+  useEffect(() => {
     setOptimisticLines(prev => prev.filter(l => !horizontalLines.includes(l) && !verticalLines.includes(l)))
     setIsSubmitting(false)
   }, [horizontalLines, verticalLines, currentTurn, session.status])
+
+  // Track lastMove highlight
+  useEffect(() => {
+    if (session.lastMove?.move?.lineId) {
+      setLastMoveLine(session.lastMove.move.lineId)
+      setShowGlow(true)
+      const timer = setTimeout(() => {
+        setShowGlow(false)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [session.lastMove])
+
+  // Trigger synthesized audio on turn transition to Me
+  useEffect(() => {
+    const isMyTurn = currentTurn === currentUserId
+    if (isMyTurn && !wasMyTurnRef.current && session.status === 'PLAYING') {
+      playTurnNotificationSound()
+    }
+    wasMyTurnRef.current = isMyTurn
+  }, [currentTurn, currentUserId, session.status])
 
   const allHorizontal = Array.from(new Set([...horizontalLines, ...optimisticLines.filter(l => l.startsWith('h-'))]))
   const allVertical = Array.from(new Set([...verticalLines, ...optimisticLines.filter(l => l.startsWith('v-'))]))
@@ -46,8 +98,13 @@ export default function MultiplayerDotsBoxesGame({
   const opponentUserId = players.find(p => p.userId !== currentUserId)?.userId || ''
 
   const getUsername = (uid: string) => {
+    if (!uid) return 'Player'
     const p = players.find(player => player.userId === uid)
-    return p ? p.username : 'Player'
+    if (p?.username) return p.username
+    const index = players.findIndex(player => player.userId === uid)
+    if (index === 0) return 'Blue'
+    if (index === 1) return 'Red'
+    return uid === currentUserId ? 'Blue' : 'Red'
   }
 
   const getPlayerDetails = (uid: string) => {
@@ -128,44 +185,15 @@ export default function MultiplayerDotsBoxesGame({
   return (
     <div style={{ maxWidth: 450, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
       
-      {/* Scoreboard HUD */}
-      <div className="card glass" style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-around', textAlign: 'center', borderRadius: 16 }}>
-        <div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'hsl(210 100% 55%)' }}>{myScore}</div>
-          <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))', fontWeight: 700 }}>
-            You (Blue)
-          </div>
-        </div>
-        <div style={{ borderLeft: '1px solid hsl(var(--border-subtle))', paddingLeft: '1.5rem' }}>
-          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'hsl(355 100% 55%)' }}>{opponentScore}</div>
-          <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))', fontWeight: 700 }}>
-            {getUsername(opponentUserId)} (Red)
-          </div>
-        </div>
-      </div>
-
-      {/* Turn Indicator Banner */}
-      <div id="dots-boxes-turn-banner" style={{
-        textAlign: 'center',
-        fontWeight: 900,
-        fontSize: '1.1rem',
-        color: turnColor,
-        backgroundColor: turnBg,
-        border: `1px solid ${turnBorder}`,
-        padding: '0.65rem 1.25rem',
-        borderRadius: 14,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        boxShadow: `0 0 15px ${turnColor}22`,
-        textShadow: `0 0 8px ${turnColor}44`,
-        animation: !isFinished ? 'pulse-slow 2s infinite ease-in-out' : 'none',
-        transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-      }}>
-        <span>{turnIcon}</span>
-        <span>{turnText}</span>
-      </div>
+      {/* Polished Multiplayer Header */}
+      <MultiplayerHeader
+        players={players}
+        currentUserId={currentUserId}
+        currentTurn={currentTurn}
+        turnExpiration={gameState.turnExpiration}
+        scores={playerScores}
+        gameFinished={isFinished}
+      />
 
       {/* Responsive Board */}
       <div style={{
@@ -276,22 +304,28 @@ export default function MultiplayerDotsBoxesGame({
                         <div
                           style={{
                             width: '100%',
-                            height: isClaimed ? 6 : 3,
-                            background: isClaimed
-                              ? isMine
-                                ? 'hsl(210 100% 50%)'
-                                : 'hsl(355 100% 55%)'
-                              : 'hsl(220 15% 18%)',
-                            boxShadow: isClaimed
-                              ? isMine
-                                ? '0 0 10px hsl(210 100% 50%)'
-                                : '0 0 10px hsl(355 100% 55%)'
-                              : 'none',
+                            height: isClaimed ? (lineId === lastMoveLine && showGlow ? 8 : 6) : 3,
+                            background: lineId === lastMoveLine && showGlow
+                              ? 'hsl(45 100% 55%)'
+                              : isClaimed
+                                ? isMine
+                                  ? 'hsl(210 100% 50%)'
+                                  : 'hsl(355 100% 55%)'
+                                : 'hsl(220 15% 18%)',
+                            boxShadow: lineId === lastMoveLine && showGlow
+                              ? '0 0 20px hsl(45 100% 55%), 0 0 8px hsl(45 100% 55%)'
+                              : isClaimed
+                                ? isMine
+                                  ? '0 0 10px hsl(210 100% 50%)'
+                                  : '0 0 10px hsl(355 100% 55%)'
+                                : 'none',
                             borderRadius: 3,
                             transition: 'all 0.2s ease-in-out',
-                            opacity: isClaimed 
-                              ? isOptimistic ? 0.6 : 1 
-                              : 0.25,
+                            opacity: lineId === lastMoveLine && showGlow
+                              ? 1
+                              : isClaimed 
+                                ? isOptimistic ? 0.6 : 1 
+                                : 0.25,
                             border: isOptimistic ? '1px dashed hsl(210 100% 70% / 0.5)' : 'none'
                           }}
                           className={`db-line-inner ${!isClaimed && !isFinished && isMyTurn ? hoverClass : ''}`}
@@ -328,22 +362,28 @@ export default function MultiplayerDotsBoxesGame({
                         <div
                           style={{
                             height: '100%',
-                            width: isClaimed ? 6 : 3,
-                            background: isClaimed
-                              ? isMine
-                                ? 'hsl(210 100% 50%)'
-                                : 'hsl(355 100% 55%)'
-                              : 'hsl(220 15% 18%)',
-                            boxShadow: isClaimed
-                              ? isMine
-                                ? '0 0 10px hsl(210 100% 50%)'
-                                : '0 0 10px hsl(355 100% 55%)'
-                              : 'none',
+                            width: isClaimed ? (lineId === lastMoveLine && showGlow ? 8 : 6) : 3,
+                            background: lineId === lastMoveLine && showGlow
+                              ? 'hsl(45 100% 55%)'
+                              : isClaimed
+                                ? isMine
+                                  ? 'hsl(210 100% 50%)'
+                                  : 'hsl(355 100% 55%)'
+                                : 'hsl(220 15% 18%)',
+                            boxShadow: lineId === lastMoveLine && showGlow
+                              ? '0 0 20px hsl(45 100% 55%), 0 0 8px hsl(45 100% 55%)'
+                              : isClaimed
+                                ? isMine
+                                  ? '0 0 10px hsl(210 100% 50%)'
+                                  : '0 0 10px hsl(355 100% 55%)'
+                                : 'none',
                             borderRadius: 3,
                             transition: 'all 0.2s ease-in-out',
-                            opacity: isClaimed 
-                              ? isOptimistic ? 0.6 : 1 
-                              : 0.25,
+                            opacity: lineId === lastMoveLine && showGlow
+                              ? 1
+                              : isClaimed 
+                                ? isOptimistic ? 0.6 : 1 
+                                : 0.25,
                             border: isOptimistic ? '1px dashed hsl(210 100% 70% / 0.5)' : 'none'
                           }}
                           className={`db-line-inner ${!isClaimed && !isFinished && isMyTurn ? hoverClass : ''}`}
@@ -428,6 +468,16 @@ export default function MultiplayerDotsBoxesGame({
             🏳️ Leave Match
           </button>
         </div>
+      )}
+
+      {/* Live Match reactions triggers & float overlay */}
+      {session.status === 'PLAYING' && (
+        <MatchReactions
+          socket={socket}
+          roomCode={roomCode}
+          currentUserId={currentUserId}
+          players={players}
+        />
       )}
 
       {/* Style overrides for hover line triggers */}

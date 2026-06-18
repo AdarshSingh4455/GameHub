@@ -29,6 +29,9 @@ const rateLimit_1 = require("./middleware/rateLimit");
 const cricket_1 = require("./games/cricket");
 const dotsBoxes_1 = require("./games/dotsBoxes");
 const ticTacToe_1 = require("./games/ticTacToe");
+const memory_1 = require("./games/memory");
+const rps_1 = require("./games/rps");
+const numberGuessing_1 = require("./games/numberGuessing");
 const framework_1 = require("./games/framework");
 // Initialize Sentry SDK
 (0, logger_1.initSentry)();
@@ -58,6 +61,165 @@ const prisma = new client_1.PrismaClient({ adapter });
 // Connection tracking maps
 const userSockets = new Map(); // maps userId -> socketId
 const disconnectTimers = new Map(); // maps userId -> Timeout
+const roomTurnTimeouts = new Map(); // maps roomCode -> Turn Timeout
+function clearTurnTimer(roomCode) {
+    const timeout = roomTurnTimeouts.get(roomCode);
+    if (timeout) {
+        clearTimeout(timeout);
+        roomTurnTimeouts.delete(roomCode);
+    }
+}
+function startTurnTimer(roomCode) {
+    clearTurnTimer(roomCode);
+    const timeout = setTimeout(async () => {
+        logger_1.logger.info(`[TURN TIMEOUT] roomCode=${roomCode} - executing auto move`);
+        const queue = (0, queue_1.getRoomQueue)(roomCode);
+        queue.add(async () => {
+            try {
+                const room = await prisma.multiplayerRoom.findUnique({
+                    where: { roomCode },
+                    include: {
+                        players: {
+                            include: {
+                                profile: true
+                            }
+                        }
+                    }
+                });
+                if (!room || room.status !== 'PLAYING')
+                    return;
+                const session = await prisma.multiplayerGameSession.findUnique({
+                    where: { roomId: room.id }
+                });
+                if (!session || session.status !== 'PLAYING')
+                    return;
+                const currentTurnUserId = session.currentTurn;
+                if (!currentTurnUserId)
+                    return;
+                const activePlayers = room.players
+                    .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
+                    .slice(0, 2);
+                const mappedPlayers = activePlayers.map(p => ({
+                    userId: p.userId,
+                    username: p.profile?.username || 'Player'
+                }));
+                let result = null;
+                let lastMoveApplied = null;
+                if (room.gameSlug === 'dots-boxes') {
+                    const state = await (0, dotsBoxes_1.getDotsBoxesSession)(roomCode, room.id, prisma);
+                    const randomMove = (0, dotsBoxes_1.getRandomDotsBoxesMove)(state);
+                    if (randomMove) {
+                        result = await (0, dotsBoxes_1.processDotsBoxesMove)(roomCode, room.id, currentTurnUserId, randomMove, mappedPlayers, prisma);
+                        lastMoveApplied = randomMove;
+                    }
+                }
+                else if (room.gameSlug === 'memory') {
+                    const state = await (0, memory_1.getMemorySession)(roomCode, room.id, prisma);
+                    if (state && state.cards) {
+                        if (state.flippedIndices.length === 0) {
+                            const unmatchedIdxs = state.cards
+                                .map((c, i) => ({ c, i }))
+                                .filter(({ c }) => !c.isMatched && !c.isFlipped)
+                                .map(({ i }) => i);
+                            if (unmatchedIdxs.length >= 2) {
+                                const card1 = unmatchedIdxs[Math.floor(Math.random() * unmatchedIdxs.length)];
+                                let res = await (0, memory_1.processMemoryMove)(roomCode, room.id, currentTurnUserId, { cardIndex: card1 }, mappedPlayers, prisma, io);
+                                lastMoveApplied = { cardIndex: card1 };
+                                await new Promise(resolve => setTimeout(resolve, 800));
+                                const unmatchedIdxs2 = res.state.cards
+                                    .map((c, i) => ({ c, i }))
+                                    .filter(({ c }) => !c.isMatched && !c.isFlipped)
+                                    .map(({ i }) => i);
+                                if (unmatchedIdxs2.length > 0) {
+                                    const card2 = unmatchedIdxs2[Math.floor(Math.random() * unmatchedIdxs2.length)];
+                                    result = await (0, memory_1.processMemoryMove)(roomCode, room.id, currentTurnUserId, { cardIndex: card2 }, mappedPlayers, prisma, io);
+                                    lastMoveApplied = { cardIndex: card2 };
+                                }
+                            }
+                        }
+                        else if (state.flippedIndices.length === 1) {
+                            const firstCardIdx = state.flippedIndices[0];
+                            const unmatchedIdxs = state.cards
+                                .map((c, i) => ({ c, i }))
+                                .filter(({ c, i }) => !c.isMatched && i !== firstCardIdx)
+                                .map(({ i }) => i);
+                            if (unmatchedIdxs.length > 0) {
+                                const card2 = unmatchedIdxs[Math.floor(Math.random() * unmatchedIdxs.length)];
+                                result = await (0, memory_1.processMemoryMove)(roomCode, room.id, currentTurnUserId, { cardIndex: card2 }, mappedPlayers, prisma, io);
+                                lastMoveApplied = { cardIndex: card2 };
+                            }
+                        }
+                    }
+                }
+                else if (room.gameSlug === 'rps') {
+                    const state = await (0, rps_1.getRpsSession)(roomCode, room.id, prisma);
+                    if (state && state.stage !== 'FINISHED') {
+                        const choices = ['rock', 'paper', 'scissors'];
+                        const p1 = mappedPlayers[0];
+                        const p2 = mappedPlayers[1];
+                        let p1Choice = state.moves?.[p1.userId];
+                        let p2Choice = state.moves?.[p2.userId];
+                        if (!p1Choice) {
+                            const r1 = choices[Math.floor(Math.random() * 3)];
+                            logger_1.logger.info(`[RPS TIMEOUT] player1=${p1.username} auto-move=${r1}`);
+                            let res = await (0, rps_1.processRpsMove)(roomCode, room.id, p1.userId, { choice: r1 }, mappedPlayers, prisma);
+                            result = res;
+                            p1Choice = r1;
+                        }
+                        if (!p2Choice) {
+                            const r2 = choices[Math.floor(Math.random() * 3)];
+                            logger_1.logger.info(`[RPS TIMEOUT] player2=${p2.username} auto-move=${r2}`);
+                            let res = await (0, rps_1.processRpsMove)(roomCode, room.id, p2.userId, { choice: r2 }, mappedPlayers, prisma);
+                            result = res;
+                        }
+                        lastMoveApplied = { isAutoMove: true };
+                    }
+                }
+                else if (room.gameSlug === 'number-guessing') {
+                    const state = await (0, numberGuessing_1.getNumberGuessingSession)(roomCode, room.id, prisma);
+                    if (state && state.stage !== 'FINISHED') {
+                        const minBound = state.minBound || 1;
+                        const maxBound = state.maxBound || 100;
+                        const randomGuess = Math.floor(Math.random() * (maxBound - minBound + 1)) + minBound;
+                        logger_1.logger.info(`[NUMBER GUESS TIMEOUT] activePlayer=${currentTurnUserId} auto-guess=${randomGuess}`);
+                        result = await (0, numberGuessing_1.processNumberGuessingMove)(roomCode, room.id, currentTurnUserId, { guess: randomGuess }, mappedPlayers, prisma);
+                        lastMoveApplied = { guess: randomGuess };
+                    }
+                }
+                if (result) {
+                    const { state, gameFinished, winnerId } = result;
+                    let broadcastState = state;
+                    if (room.gameSlug === 'rps' && state.moves && Object.keys(state.moves).length > 0) {
+                        broadcastState = (0, rps_1.getMaskedRpsState)(state);
+                    }
+                    else if (room.gameSlug === 'number-guessing') {
+                        broadcastState = (0, numberGuessing_1.getMaskedNumberGuessingState)(state);
+                    }
+                    io.to(`game:${roomCode}`).emit('game-update', {
+                        gameState: broadcastState,
+                        gameFinished,
+                        winnerId,
+                        lastMove: { userId: currentTurnUserId, move: lastMoveApplied, isAutoMove: true }
+                    });
+                    if (gameFinished) {
+                        await (0, framework_1.handleMatchCompletion)(room, state, winnerId, prisma);
+                        (0, queue_1.deleteRoomQueue)(roomCode);
+                        clearTurnTimer(roomCode);
+                    }
+                    else {
+                        startTurnTimer(roomCode);
+                    }
+                }
+            }
+            catch (err) {
+                logger_1.logger.error(`[TURN TIMEOUT ERROR] roomCode=${roomCode} error=${err.message}`);
+            }
+        }).catch(err => {
+            logger_1.logger.error(`[TURN TIMEOUT QUEUE ERROR] roomCode=${roomCode} error=${err.message}`);
+        });
+    }, 60000); // 60s turn timer
+    roomTurnTimeouts.set(roomCode, timeout);
+}
 // Health check endpoint
 app.get('/health', async (_req, res) => {
     let dbStatus = 'ok';
@@ -319,8 +481,12 @@ io.on('connection', async (rawSocket) => {
                     // Clean up empty room and session
                     await prisma.multiplayerRoom.delete({ where: { id: roomId } });
                     (0, queue_1.deleteRoomQueue)(roomCode);
+                    clearTurnTimer(roomCode);
                     await (0, cricket_1.deleteCricketSession)(roomCode);
                     await (0, dotsBoxes_1.deleteDotsBoxesSession)(roomCode);
+                    await (0, memory_1.deleteMemorySession)(roomCode);
+                    await (0, rps_1.deleteRpsSession)(roomCode);
+                    await (0, numberGuessing_1.deleteNumberGuessingSession)(roomCode);
                     logger_1.logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`);
                 }
             }
@@ -370,6 +536,15 @@ io.on('connection', async (rawSocket) => {
             else if (room.gameSlug === 'tic-tac-toe') {
                 initialGameState = framework_1.INITIAL_STATES['tic-tac-toe'](activePlayers, room.hostUserId);
             }
+            else if (room.gameSlug === 'memory') {
+                initialGameState = framework_1.INITIAL_STATES['memory'](activePlayers, room.hostUserId);
+            }
+            else if (room.gameSlug === 'rps') {
+                initialGameState = framework_1.INITIAL_STATES['rps'](activePlayers, room.hostUserId);
+            }
+            else if (room.gameSlug === 'number-guessing') {
+                initialGameState = framework_1.INITIAL_STATES['number-guessing'](activePlayers, room.hostUserId);
+            }
             else {
                 throw new Error('Unsupported game slug');
             }
@@ -404,8 +579,20 @@ io.on('connection', async (rawSocket) => {
             else if (room.gameSlug === 'tic-tac-toe') {
                 await (0, ticTacToe_1.saveTicTacToeSession)(room.roomCode, initialGameState);
             }
+            else if (room.gameSlug === 'memory') {
+                await (0, memory_1.saveMemorySession)(room.roomCode, initialGameState);
+            }
+            else if (room.gameSlug === 'rps') {
+                await (0, rps_1.saveRpsSession)(room.roomCode, initialGameState);
+            }
+            else if (room.gameSlug === 'number-guessing') {
+                await (0, numberGuessing_1.saveNumberGuessingSession)(room.roomCode, initialGameState);
+            }
             await broadcastRoomUpdate(room.roomCode);
             io.to(`room:${room.roomCode}`).emit('game-started', { roomCode: room.roomCode });
+            if (room.gameSlug === 'dots-boxes' || room.gameSlug === 'memory' || room.gameSlug === 'rps' || room.gameSlug === 'number-guessing') {
+                startTurnTimer(room.roomCode);
+            }
             logger_1.logger.info(`[GAME STARTING] room=${room.roomCode} game=${room.gameSlug}`);
             if (callback)
                 callback({ success: true });
@@ -464,7 +651,16 @@ io.on('connection', async (rawSocket) => {
             const normalizedCode = roomCode.trim().toUpperCase();
             const room = await prisma.multiplayerRoom.findUnique({
                 where: { roomCode: normalizedCode },
-                include: { players: true }
+                include: {
+                    players: {
+                        include: {
+                            profile: {
+                                select: { username: true, avatarUrl: true, level: true }
+                            }
+                        },
+                        orderBy: { joinedAt: 'asc' }
+                    }
+                }
             });
             if (!room)
                 throw new Error('Room not found');
@@ -485,22 +681,45 @@ io.on('connection', async (rawSocket) => {
             else if (room.gameSlug === 'tic-tac-toe') {
                 gameState = await (0, ticTacToe_1.getTicTacToeSession)(normalizedCode, room.id, prisma).catch(() => null);
             }
+            else if (room.gameSlug === 'memory') {
+                gameState = await (0, memory_1.getMemorySession)(normalizedCode, room.id, prisma).catch(() => null);
+            }
+            else if (room.gameSlug === 'rps') {
+                gameState = await (0, rps_1.getRpsSession)(normalizedCode, room.id, prisma).catch(() => null);
+            }
+            else if (room.gameSlug === 'number-guessing') {
+                gameState = await (0, numberGuessing_1.getNumberGuessingSession)(normalizedCode, room.id, prisma).catch(() => null);
+            }
             if (callback)
                 callback({ success: true });
             // Send current state
             const dbSession = await prisma.multiplayerGameSession.findUnique({
                 where: { roomId: room.id }
             });
-            logger_1.logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${(gameState ?? dbSession?.gameState)?.stage} gameSlug=${room.gameSlug}`);
+            let broadcastState = gameState ?? dbSession?.gameState;
+            if (room.gameSlug === 'rps' && broadcastState && broadcastState.moves) {
+                const maskedMoves = {};
+                Object.keys(broadcastState.moves).forEach(uid => {
+                    maskedMoves[uid] = uid === userId ? broadcastState.moves[uid] : 'hidden';
+                });
+                broadcastState = { ...broadcastState, moves: maskedMoves };
+            }
+            else if (room.gameSlug === 'number-guessing' && broadcastState) {
+                broadcastState = (0, numberGuessing_1.getMaskedNumberGuessingState)(broadcastState);
+            }
+            logger_1.logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${broadcastState?.stage} gameSlug=${room.gameSlug}`);
             socket.emit('game-state', {
                 room,
                 gameSession: {
                     ...dbSession,
-                    gameState: gameState ?? dbSession?.gameState
+                    gameState: broadcastState
                 },
                 players: room.players.map(p => ({
                     userId: p.userId,
-                    status: p.status
+                    status: p.disconnectedAt ? 'DISCONNECTED' : p.status,
+                    username: p.profile?.username || 'Player',
+                    avatarUrl: p.profile?.avatarUrl || null,
+                    level: p.profile?.level || 1
                 }))
             });
         }
@@ -554,20 +773,40 @@ io.on('connection', async (rawSocket) => {
                 else if (room.gameSlug === 'tic-tac-toe') {
                     result = await (0, ticTacToe_1.processTicTacToeMove)(roomCode, room.id, userId, move, mappedPlayers, prisma);
                 }
+                else if (room.gameSlug === 'memory') {
+                    result = await (0, memory_1.processMemoryMove)(roomCode, room.id, userId, move, mappedPlayers, prisma, io);
+                }
+                else if (room.gameSlug === 'rps') {
+                    result = await (0, rps_1.processRpsMove)(roomCode, room.id, userId, move, mappedPlayers, prisma, io);
+                }
+                else if (room.gameSlug === 'number-guessing') {
+                    result = await (0, numberGuessing_1.processNumberGuessingMove)(roomCode, room.id, userId, move, mappedPlayers, prisma);
+                }
                 else {
                     throw new Error('Unsupported game engine');
                 }
                 const { state, gameFinished, winnerId } = result;
-                // Emit update to all room clients
+                // Emit update to all room clients, masking choices if it's RPS and not yet evaluated
+                let broadcastState = state;
+                if (room.gameSlug === 'rps' && state.moves && Object.keys(state.moves).length > 0) {
+                    broadcastState = (0, rps_1.getMaskedRpsState)(state);
+                }
+                else if (room.gameSlug === 'number-guessing') {
+                    broadcastState = (0, numberGuessing_1.getMaskedNumberGuessingState)(state);
+                }
                 io.to(`game:${roomCode}`).emit('game-update', {
-                    gameState: state,
+                    gameState: broadcastState,
                     gameFinished,
                     winnerId,
                     lastMove: { userId, move }
                 });
                 if (gameFinished) {
+                    clearTurnTimer(roomCode);
                     await (0, framework_1.handleMatchCompletion)(room, state, winnerId, prisma);
                     (0, queue_1.deleteRoomQueue)(roomCode);
+                }
+                else if (room.gameSlug === 'dots-boxes' || room.gameSlug === 'memory' || room.gameSlug === 'rps' || room.gameSlug === 'number-guessing') {
+                    startTurnTimer(roomCode);
                 }
                 if (callback)
                     callback({ success: true });
@@ -611,6 +850,15 @@ io.on('connection', async (rawSocket) => {
                 else if (room.gameSlug === 'tic-tac-toe') {
                     gameState = await (0, ticTacToe_1.getTicTacToeSession)(roomCode, room.id, prisma);
                 }
+                else if (room.gameSlug === 'memory') {
+                    gameState = await (0, memory_1.getMemorySession)(roomCode, room.id, prisma);
+                }
+                else if (room.gameSlug === 'rps') {
+                    gameState = await (0, rps_1.getRpsSession)(roomCode, room.id, prisma);
+                }
+                else if (room.gameSlug === 'number-guessing') {
+                    gameState = await (0, numberGuessing_1.getNumberGuessingSession)(roomCode, room.id, prisma);
+                }
                 if (!gameState) {
                     gameState = typeof session.gameState === 'string' ? JSON.parse(session.gameState) : session.gameState;
                 }
@@ -649,6 +897,21 @@ io.on('connection', async (rawSocket) => {
                         updatedTurn = finalGameState.currentTurn;
                         await (0, ticTacToe_1.saveTicTacToeSession)(roomCode, finalGameState);
                     }
+                    else if (room.gameSlug === 'memory') {
+                        finalGameState = framework_1.INITIAL_STATES['memory'](activePlayers, room.hostUserId);
+                        updatedTurn = finalGameState.currentTurn;
+                        await (0, memory_1.saveMemorySession)(roomCode, finalGameState);
+                    }
+                    else if (room.gameSlug === 'rps') {
+                        finalGameState = framework_1.INITIAL_STATES['rps'](activePlayers, room.hostUserId);
+                        updatedTurn = null;
+                        await (0, rps_1.saveRpsSession)(roomCode, finalGameState);
+                    }
+                    else if (room.gameSlug === 'number-guessing') {
+                        finalGameState = framework_1.INITIAL_STATES['number-guessing'](activePlayers, room.hostUserId);
+                        updatedTurn = finalGameState.currentTurn;
+                        await (0, numberGuessing_1.saveNumberGuessingSession)(roomCode, finalGameState);
+                    }
                     logger_1.logger.info(`[VOTE-REPLAY] room=${roomCode} RESET → fresh board, nextTurn=${updatedTurn}`);
                     // Update Room status to STARTING so it gets resolved properly
                     await prisma.multiplayerRoom.update({
@@ -666,6 +929,15 @@ io.on('connection', async (rawSocket) => {
                     }
                     else if (room.gameSlug === 'tic-tac-toe') {
                         await (0, ticTacToe_1.saveTicTacToeSession)(roomCode, finalGameState);
+                    }
+                    else if (room.gameSlug === 'memory') {
+                        await (0, memory_1.saveMemorySession)(roomCode, finalGameState);
+                    }
+                    else if (room.gameSlug === 'rps') {
+                        await (0, rps_1.saveRpsSession)(roomCode, finalGameState);
+                    }
+                    else if (room.gameSlug === 'number-guessing') {
+                        await (0, numberGuessing_1.saveNumberGuessingSession)(roomCode, finalGameState);
                     }
                 }
                 const now = new Date();
@@ -703,27 +975,18 @@ io.on('connection', async (rawSocket) => {
                 callback({ error: err.message });
         });
     });
+    // Match Reactions (temporary overlay broadcast)
+    socket.on('match-reaction', ({ roomCode, emoji }) => {
+        socket.to(`game:${roomCode}`).emit('match-reaction', { userId, emoji });
+    });
     // Disconnect Handler
     socket.on('disconnect', async () => {
         logger_1.logger.info(`[-] Disconnected: userId=${userId} socketId=${socket.id}`);
         userSockets.delete(userId);
         await (0, presence_1.setUserPresence)(userId, 'OFFLINE');
         (0, metrics_1.recordDisconnect)();
-        // Determine grace period based on active rooms: 30s if in active match, 5s if in waiting lobby
-        let gracePeriod = 5000;
-        try {
-            const activeRooms = await prisma.multiplayerRoomPlayer.findMany({
-                where: { userId, NOT: { status: 'LEFT' } },
-                include: { room: true }
-            });
-            const hasPlayingRoom = activeRooms.some(p => p.room && p.room.status === 'PLAYING');
-            if (hasPlayingRoom) {
-                gracePeriod = 30000;
-            }
-        }
-        catch (err) {
-            (0, logger_1.logError)(err, { userId, context: 'disconnect-grace-period-lookup' });
-        }
+        // Determine grace period based on active rooms: 60s for WAITING or PLAYING
+        const gracePeriod = 60000;
         // Start grace timer for reconnection
         const timer = setTimeout(async () => {
             disconnectTimers.delete(userId);
@@ -747,6 +1010,7 @@ io.on('connection', async (rawSocket) => {
                         });
                         const opponentId = remainingPlayers[0]?.userId || null;
                         logger_1.logger.info(`[FORFEIT MATCH] room=${roomCode} user=${username} forfeited to winnerId=${opponentId}`);
+                        clearTurnTimer(roomCode);
                         // Update Game Session
                         await prisma.multiplayerGameSession.update({
                             where: { roomId },
@@ -770,8 +1034,12 @@ io.on('connection', async (rawSocket) => {
                         if (await canDestroyRoom(roomCode, playerUserIds)) {
                             await prisma.multiplayerRoom.delete({ where: { id: roomId } });
                             (0, queue_1.deleteRoomQueue)(roomCode);
+                            clearTurnTimer(roomCode);
                             await (0, cricket_1.deleteCricketSession)(roomCode);
                             await (0, dotsBoxes_1.deleteDotsBoxesSession)(roomCode);
+                            await (0, memory_1.deleteMemorySession)(roomCode);
+                            await (0, rps_1.deleteRpsSession)(roomCode);
+                            await (0, numberGuessing_1.deleteNumberGuessingSession)(roomCode);
                             logger_1.logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`);
                         }
                     }
@@ -948,6 +1216,15 @@ function startReconciliationLoop() {
                     }
                     else if (room.gameSlug === 'tic-tac-toe') {
                         gameState = await (0, ticTacToe_1.getTicTacToeSession)(room.roomCode, room.id, prisma);
+                    }
+                    else if (room.gameSlug === 'memory') {
+                        gameState = await (0, memory_1.getMemorySession)(room.roomCode, room.id, prisma);
+                    }
+                    else if (room.gameSlug === 'rps') {
+                        gameState = await (0, rps_1.getRpsSession)(room.roomCode, room.id, prisma);
+                    }
+                    else if (room.gameSlug === 'number-guessing') {
+                        gameState = await (0, numberGuessing_1.getNumberGuessingSession)(room.roomCode, room.id, prisma);
                     }
                     if (gameState) {
                         const winnerId = gameState.winnerId || null;

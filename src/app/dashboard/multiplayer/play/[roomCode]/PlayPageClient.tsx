@@ -7,6 +7,9 @@ import { useToast } from '@/lib/contexts/ToastContext'
 import MultiplayerHandCricketGame from '@/components/games/MultiplayerHandCricketGame'
 import MultiplayerDotsBoxesGame from '@/components/games/MultiplayerDotsBoxesGame'
 import MultiplayerTicTacToeGame from '@/components/games/MultiplayerTicTacToeGame'
+import MultiplayerMemoryMatchGame from '@/components/games/MultiplayerMemoryMatchGame'
+import MultiplayerRockPaperScissorsGame from '@/components/games/MultiplayerRockPaperScissorsGame'
+import MultiplayerNumberGuessingGame from '@/components/games/MultiplayerNumberGuessingGame'
 import { useSocket } from '@/lib/contexts/SocketContext'
 
 interface PlayPageClientProps {
@@ -103,7 +106,8 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
           ...prev,
           gameState: data.gameState,
           winnerId: data.winnerId,
-          status: data.gameFinished ? 'FINISHED' : prev.status
+          status: data.gameFinished ? 'FINISHED' : prev.status,
+          lastMove: data.lastMove
         }
       })
     })
@@ -111,13 +115,15 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     socket.on('player-disconnected', ({ userId }: { userId: string }) => {
       const p = playersRef.current.find(p => p.userId === userId)
       const name = p ? p.username : 'Opponent'
-      addToast('warning', 'Opponent Disconnected', `${name} disconnected. Match will forfeit in 30s.`)
+      addToast('warning', 'Opponent Disconnected', `${name} disconnected. Match will forfeit in 60s.`)
+      setPlayers(prev => prev.map(pl => pl.userId === userId ? { ...pl, status: 'DISCONNECTED' } : pl))
     })
 
     socket.on('player-reconnected', ({ userId }: { userId: string }) => {
       const p = playersRef.current.find(p => p.userId === userId)
       const name = p ? p.username : 'Opponent'
       addToast('success', 'Opponent Returned', `${name} reconnected. Match resuming.`)
+      setPlayers(prev => prev.map(pl => pl.userId === userId ? { ...pl, status: 'READY' } : pl))
     })
 
     return () => {
@@ -246,6 +252,48 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     return (
       <div className="game-safe-bottom">
         <MultiplayerTicTacToeGame
+          roomCode={roomCode}
+          session={session}
+          players={players}
+          currentUserId={currentUserId}
+          onLeave={handleLeaveRoom}
+        />
+      </div>
+    )
+  }
+
+  if (session?.gameSlug === 'memory') {
+    return (
+      <div className="game-safe-bottom">
+        <MultiplayerMemoryMatchGame
+          roomCode={roomCode}
+          session={session}
+          players={players}
+          currentUserId={currentUserId}
+          onLeave={handleLeaveRoom}
+        />
+      </div>
+    )
+  }
+
+  if (session?.gameSlug === 'rps') {
+    return (
+      <div className="game-safe-bottom">
+        <MultiplayerRockPaperScissorsGame
+          roomCode={roomCode}
+          session={session}
+          players={players}
+          currentUserId={currentUserId}
+          onLeave={handleLeaveRoom}
+        />
+      </div>
+    )
+  }
+
+  if (session?.gameSlug === 'number-guessing') {
+    return (
+      <div className="game-safe-bottom">
+        <MultiplayerNumberGuessingGame
           roomCode={roomCode}
           session={session}
           players={players}

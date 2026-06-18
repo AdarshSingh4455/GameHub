@@ -45,7 +45,8 @@ exports.INITIAL_STATES = {
             playerScores: players.reduce((acc, p) => ({ ...acc, [p.userId]: 0 }), {}),
             currentTurn: startTurn,
             moveCount: 0,
-            replayVotes: {}
+            replayVotes: {},
+            turnExpiration: new Date(Date.now() + 60000).toISOString()
         };
     },
     'tic-tac-toe': (players, hostUserId) => {
@@ -57,6 +58,65 @@ exports.INITIAL_STATES = {
             replayVotes: {},
             turnExpiration: null,
             spectators: []
+        };
+    },
+    'memory': (players, hostUserId) => {
+        const startTurn = players[Math.floor(Math.random() * players.length)].userId;
+        const EMOJIS = [
+            '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼',
+            '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
+            '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺',
+            '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞'
+        ];
+        const pairsCount = 8;
+        const selectedEmojis = EMOJIS.slice(0, pairsCount);
+        const cardList = [];
+        selectedEmojis.forEach((emoji, index) => {
+            cardList.push({ id: index * 2, emoji, isFlipped: false, isMatched: false });
+            cardList.push({ id: index * 2 + 1, emoji, isFlipped: false, isMatched: false });
+        });
+        // Shuffle cards
+        for (let i = cardList.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [cardList[i], cardList[j]] = [cardList[j], cardList[i]];
+        }
+        return {
+            gridSize: '4x4',
+            cards: cardList,
+            flippedIndices: [],
+            playerScores: players.reduce((acc, p) => ({ ...acc, [p.userId]: 0 }), {}),
+            currentTurn: startTurn,
+            moveCount: 0,
+            replayVotes: {},
+            turnExpiration: new Date(Date.now() + 60000).toISOString()
+        };
+    },
+    'rps': (players) => {
+        return {
+            stage: 'PLAYING',
+            round: 1,
+            moves: {},
+            playerScores: players.reduce((acc, p) => ({ ...acc, [p.userId]: 0 }), {}),
+            history: [],
+            commentary: ['✊ Match started! Make your choice.'],
+            replayVotes: {},
+            turnExpiration: new Date(Date.now() + 60000).toISOString()
+        };
+    },
+    'number-guessing': (players) => {
+        const startTurn = players[Math.floor(Math.random() * players.length)].userId;
+        const secret = Math.floor(Math.random() * 100) + 1;
+        return {
+            stage: 'PLAYING',
+            minBound: 1,
+            maxBound: 100,
+            secretNumber: secret,
+            currentTurn: startTurn,
+            guessesHistory: [],
+            guessFeedback: 'Guess a secret number between 1 and 100!',
+            playerScores: players.reduce((acc, p) => ({ ...acc, [p.userId]: 0 }), {}),
+            replayVotes: {},
+            turnExpiration: new Date(Date.now() + 60000).toISOString()
         };
     }
 };
@@ -215,6 +275,14 @@ async function handleMatchCompletion(room, state, winnerId, prisma) {
                 else if (room.gameSlug === 'cricket') {
                     p1Score = state.runs || 0;
                     p2Score = state.opponentRuns || 0;
+                }
+                else if (room.gameSlug === 'memory' || room.gameSlug === 'rps') {
+                    p1Score = state.playerScores?.[p1.userId] || 0;
+                    p2Score = state.playerScores?.[p2.userId] || 0;
+                }
+                else if (room.gameSlug === 'number-guessing') {
+                    p1Score = winnerId === p1.userId ? 1 : 0;
+                    p2Score = winnerId === p2.userId ? 1 : 0;
                 }
                 // Create MatchRecord
                 await prisma.matchRecord.create({

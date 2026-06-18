@@ -4,6 +4,7 @@ exports.getDotsBoxesSession = getDotsBoxesSession;
 exports.saveDotsBoxesSession = saveDotsBoxesSession;
 exports.deleteDotsBoxesSession = deleteDotsBoxesSession;
 exports.processDotsBoxesMove = processDotsBoxesMove;
+exports.getRandomDotsBoxesMove = getRandomDotsBoxesMove;
 const redis_1 = require("../utils/redis");
 const logger_1 = require("../utils/logger");
 // Active Game Cache TTL: 2 hours
@@ -182,6 +183,7 @@ async function processDotsBoxesMove(roomCode, roomId, userId, move, players, pri
         nextTurn = opponentUserId;
     }
     currentGameState.currentTurn = nextTurn;
+    currentGameState.turnExpiration = nextTurn ? new Date(Date.now() + 60000).toISOString() : null;
     // Check if game finished (total lines for 6x6 is 60)
     const totalLines = dotsSize * (dotsSize - 1) * 2;
     const currentLinesCount = horizontalLines.length + verticalLines.length;
@@ -225,4 +227,30 @@ async function processDotsBoxesMove(roomCode, roomId, userId, move, players, pri
         gameFinished,
         winnerId
     };
+}
+/**
+ * Returns a random unclaimed line move for Dots & Boxes auto-play
+ */
+function getRandomDotsBoxesMove(state) {
+    const dotsSize = state.dotsSize || 6;
+    const horizontalLines = state.horizontalLines || [];
+    const verticalLines = state.verticalLines || [];
+    const allPossible = [];
+    // Horizontal lines
+    for (let r = 0; r < dotsSize; r++) {
+        for (let c = 0; c < dotsSize - 1; c++) {
+            allPossible.push(`h-${r}-${c}`);
+        }
+    }
+    // Vertical lines
+    for (let r = 0; r < dotsSize - 1; r++) {
+        for (let c = 0; c < dotsSize; c++) {
+            allPossible.push(`v-${r}-${c}`);
+        }
+    }
+    const unclaimed = allPossible.filter(lineId => !horizontalLines.includes(lineId) && !verticalLines.includes(lineId));
+    if (unclaimed.length === 0)
+        return null;
+    const randomLineId = unclaimed[Math.floor(Math.random() * unclaimed.length)];
+    return { lineId: randomLineId };
 }

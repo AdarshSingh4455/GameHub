@@ -207,6 +207,7 @@ export async function processDotsBoxesMove(
   }
 
   currentGameState.currentTurn = nextTurn
+  currentGameState.turnExpiration = nextTurn ? new Date(Date.now() + 60000).toISOString() : null
 
   // Check if game finished (total lines for 6x6 is 60)
   const totalLines = dotsSize * (dotsSize - 1) * 2
@@ -259,4 +260,36 @@ export async function processDotsBoxesMove(
     gameFinished,
     winnerId
   }
+}
+
+/**
+ * Returns a random unclaimed line move for Dots & Boxes auto-play
+ */
+export function getRandomDotsBoxesMove(state: any): { lineId: string } | null {
+  const dotsSize = state.dotsSize || 6
+  const horizontalLines = state.horizontalLines || []
+  const verticalLines = state.verticalLines || []
+  
+  const allPossible: string[] = []
+  
+  // Horizontal lines
+  for (let r = 0; r < dotsSize; r++) {
+    for (let c = 0; c < dotsSize - 1; c++) {
+      allPossible.push(`h-${r}-${c}`)
+    }
+  }
+  
+  // Vertical lines
+  for (let r = 0; r < dotsSize - 1; r++) {
+    for (let c = 0; c < dotsSize; c++) {
+      allPossible.push(`v-${r}-${c}`)
+    }
+  }
+  
+  const unclaimed = allPossible.filter(lineId => !horizontalLines.includes(lineId) && !verticalLines.includes(lineId))
+  
+  if (unclaimed.length === 0) return null
+  
+  const randomLineId = unclaimed[Math.floor(Math.random() * unclaimed.length)]
+  return { lineId: randomLineId }
 }

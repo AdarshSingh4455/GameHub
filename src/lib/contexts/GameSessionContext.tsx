@@ -1,12 +1,13 @@
 'use client'
 
-import React, { createContext, useContext, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import PostGameXPModal from '@/components/layout/PostGameXPModal'
 import { computeLevel } from '@/lib/xpUtils'
 import { incrementDailyChallengeProgress } from '@/lib/dailyChallenges'
 import { getGameBySlug } from '@/lib/games'
+import { createClient } from '@/lib/supabase/client'
 
 interface VendorDocument extends Document {
   webkitFullscreenElement?: Element
@@ -86,7 +87,23 @@ export function GameSessionProvider({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [modalData, setModalData] = useState<GameResultPayload | null>(null)
+
+  // Listen to auth state changes and refresh router to sync cookies with Server Components
+  useEffect(() => {
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`[AUTH STATE CHANGE] event=${event} session=${!!session}`)
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        router.refresh()
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [router])
 
   // Reset ad and post-game flow states on navigation to prevent leakage/retriggering
   React.useEffect(() => {

@@ -23,7 +23,13 @@ services:
         sync: false
         placeholder: "https://your-gamehub.vercel.app"
 
-      # Supabase JWT Secret for verification
+      # Supabase project URL — used to build the JWKS endpoint for ES256 JWT verification
+      # e.g. https://<project-id>.supabase.co
+      - key: SUPABASE_URL
+        sync: false
+        placeholder: "https://your-project-id.supabase.co"
+
+      # Supabase JWT Secret — kept as fallback for legacy HS256 tokens
       - key: SUPABASE_JWT_SECRET
         sync: false
         placeholder: "Your Supabase JWT Secret (found in API Settings)"

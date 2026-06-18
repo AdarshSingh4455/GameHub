@@ -8,24 +8,83 @@ const GAME_CACHE_TTL = 7200
  * Reusable initial state generators for multiplayer games
  */
 export const INITIAL_STATES: Record<string, (players: any[], hostUserId: string) => any> = {
-  'cricket': (players) => {
-    const tossWinnerId = players[Math.floor(Math.random() * players.length)].userId
+  'cricket': (players, hostUserId) => {
+    if (players.length === 2) {
+      const p1 = players[0].userId
+      const p2 = players[1].userId
+      const tossWinnerId = players[Math.floor(Math.random() * 2)].userId
+      return {
+        stage: 'TOSS',
+        tossWinnerId,
+        tossChoice: null,
+        innings: 1,
+        runs: 0,
+        wickets: 0,
+        balls: 0,
+        maxOvers: 2,
+        maxWickets: 1,
+        battingUserId: null,
+        bowlingUserId: null,
+        moves: {},
+        history: [],
+        commentary: [`🪙 New Match! Coin tossed. Waiting for choice.`],
+        replayVotes: {},
+        teams: {
+          'BLUE': { players: [p1], captain: p1 },
+          'GREEN': { players: [p2], captain: p2 }
+        },
+        playerRuns: { [p1]: 0, [p2]: 0 },
+        currentPartnership: 0,
+        quickChat: []
+      }
+    } else {
+      return {
+        stage: 'TEAM_SETUP',
+        hostUserId,
+        teams: {
+          'BLUE': { players: [], captain: null },
+          'GREEN': { players: [], captain: null }
+        },
+        innings: 1,
+        runs: 0,
+        wickets: 0,
+        balls: 0,
+        maxOvers: 2,
+        maxWickets: players.length / 2,
+        battingUserId: null,
+        bowlingUserId: null,
+        moves: {},
+        history: [],
+        commentary: [`🏏 Choose your teams (🔵 Blue Team or 🟢 Green Team).`],
+        replayVotes: {},
+        playerRuns: players.reduce((acc, p) => ({ ...acc, [p.userId]: 0 }), {}),
+        currentPartnership: 0,
+        quickChat: []
+      }
+    }
+  },
+  'scribble': (players, hostUserId) => {
     return {
-      stage: 'TOSS',
-      tossWinnerId,
-      tossChoice: null,
-      innings: 1,
-      runs: 0,
-      wickets: 0,
-      balls: 0,
-      maxOvers: 2,
-      maxWickets: 3,
-      battingUserId: null,
-      bowlingUserId: null,
-      moves: {},
-      history: [],
-      commentary: [`🪙 New Match! Coin tossed. Waiting for choice.`],
-      replayVotes: {}
+      stage: 'LOBBY_SETTINGS',
+      hostUserId,
+      timerDuration: 45,
+      round: 1,
+      maxRounds: 3,
+      drawerId: hostUserId,
+      drawerIndex: 0,
+      wordsToSelect: [],
+      selectedWord: '',
+      guessedPlayers: [],
+      playerScores: players.reduce((acc, p) => ({ ...acc, [p.userId]: 0 }), {}),
+      roundScores: players.reduce((acc, p) => ({ ...acc, [p.userId]: 0 }), {}),
+      hints: [],
+      hintString: '',
+      timerStart: Date.now(),
+      timerRemaining: 45,
+      canvasLines: [],
+      replayVotes: {},
+      lastDrawAt: Date.now(),
+      commentary: [`🎨 Welcome to Scribble! Host is selecting timer settings.`]
     }
   },
   'dots-boxes': (players, hostUserId) => {

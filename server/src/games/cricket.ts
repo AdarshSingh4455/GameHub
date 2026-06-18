@@ -1,24 +1,21 @@
 import { redisClient } from '../utils/redis'
 import { logger, logError } from '../utils/logger'
 
-
 interface Player {
   userId: string
   username: string
 }
 
 interface CricketMove {
-  type: 'toss' | 'play'
+  type: 'join-team' | 'start-match' | 'toss' | 'play' | 'quick-chat'
+  team?: 'BLUE' | 'GREEN'
   choice?: 'BAT' | 'BOWL'
   number?: number
+  message?: string
 }
 
-// Active Game Cache TTL: 2 hours
 const GAME_CACHE_TTL = 7200
 
-/**
- * Loads the active game session state from Redis, fallback to PostgreSQL
- */
 export async function getCricketSession(roomCode: string, roomId: string, prisma: any): Promise<any> {
   const redisKey = `game:cricket:${roomCode}`
   if (redisClient.isReady) {
@@ -32,7 +29,6 @@ export async function getCricketSession(roomCode: string, roomId: string, prisma
     }
   }
 
-  // Fallback to PostgreSQL
   const dbSession = await prisma.multiplayerGameSession.findUnique({
     where: { roomId }
   })
@@ -41,16 +37,12 @@ export async function getCricketSession(roomCode: string, roomId: string, prisma
       ? JSON.parse(dbSession.gameState) 
       : dbSession.gameState
     
-    // Warm up Redis cache
     await saveCricketSession(roomCode, parsedState)
     return parsedState
   }
   return null
 }
 
-/**
- * Saves active game session state to Redis
- */
 export async function saveCricketSession(roomCode: string, state: any): Promise<void> {
   const redisKey = `game:cricket:${roomCode}`
   if (redisClient.isReady) {
@@ -62,9 +54,6 @@ export async function saveCricketSession(roomCode: string, state: any): Promise<
   }
 }
 
-/**
- * Deletes game session state from Redis
- */
 export async function deleteCricketSession(roomCode: string): Promise<void> {
   const redisKey = `game:cricket:${roomCode}`
   if (redisClient.isReady) {
@@ -76,9 +65,6 @@ export async function deleteCricketSession(roomCode: string): Promise<void> {
   }
 }
 
-/**
- * Persists a snapshot of the current game session state to PostgreSQL
- */
 function persistSnapshot(roomId: string, state: any, status: string, winnerId: string | null, prisma: any): void {
   const now = new Date()
   prisma.multiplayerGameSession.update({
@@ -97,9 +83,6 @@ function persistSnapshot(roomId: string, state: any, status: string, winnerId: s
   })
 }
 
-/**
- * Processes Hand Cricket game moves
- */
 export async function processCricketMove(
   roomCode: string,
   roomId: string,
@@ -115,47 +98,144 @@ export async function processCricketMove(
   }
 
   const { type } = move
-  const playerIds = players.map(p => p.userId)
-  const opponentUserId = playerIds.find(id => id !== userId) || ''
-  
   let snapshotPersisted = false
   let gameFinished = false
   let winnerId: string | null = null
   let updatedStatus = 'PLAYING'
 
-  // Increment move count to determine snapshot intervals
   if (!currentGameState.moveCount) {
     currentGameState.moveCount = 0
   }
 
-  if (type === 'toss') {
+  const getUsername = (uid: string) => players.find(p => p.userId === uid)?.username || 'Player'
+
+  if (type === 'join-team') {
+    if (currentGameState.stage !== 'TEAM_SETUP') {
+      throw new Error('Cannot join teams outside setup stage')
+    }
+    const team = move.team
+    if (team !== 'BLUE' && team !== 'GREEN') {
+      throw new Error('Invalid team selection')
+    }
+
+    // Remove player from other team
+    const otherTeam = team === 'BLUE' ? 'GREEN' : 'BLUE'
+    currentGameState.teams[otherTeam].players = (currentGameState.teams[otherTeam].players || []).filter((id: string) => id !== userId)
+    if (currentGameState.teams[otherTeam].captain === userId) {
+      currentGameState.teams[otherTeam].captain = currentGameState.teams[otherTeam].players[0] || null
+    }
+
+    // Add to selected team
+    if (!currentGameState.teams[team].players.includes(userId)) {
+      currentGameState.teams[team].players.push(userId)
+    }
+    // Set captain if none exists
+    if (!currentGameState.teams[team].captain) {
+      currentGameState.teams[team].captain = userId
+    }
+
+    currentGameState.commentary.unshift(`🔵 ${getUsername(userId)} joined the ${team === 'BLUE' ? 'Blue' : 'Green'} Team!`)
+    await saveCricketSession(roomCode, currentGameState)
+
+  } else if (type === 'start-match') {
+    if (currentGameState.stage !== 'TEAM_SETUP') {
+      throw new Error('Match already started')
+    }
+    if (currentGameState.hostUserId !== userId) {
+      throw new Error('Only the host can start the match')
+    }
+
+    // Auto-balance teams
+    const totalPlayersCount = players.length
+    const targetSize = totalPlayersCount / 2
+    let blueList = [...(currentGameState.teams['BLUE'].players || [])]
+    let greenList = [...(currentGameState.teams['GREEN'].players || [])]
+
+    const activeUserIds = players.map(p => p.userId)
+    blueList = blueList.filter(id => activeUserIds.includes(id))
+    greenList = greenList.filter(id => activeUserIds.includes(id))
+
+    const unassigned = activeUserIds.filter(id => !blueList.includes(id) && !greenList.includes(id))
+
+    for (const uId of unassigned) {
+      if (blueList.length < targetSize) {
+        blueList.push(uId)
+      } else {
+        greenList.push(uId)
+      }
+    }
+
+    while (blueList.length > targetSize) {
+      const moved = blueList.pop()!
+      greenList.push(moved)
+    }
+    while (greenList.length > targetSize) {
+      const moved = greenList.pop()!
+      blueList.push(moved)
+    }
+
+    currentGameState.teams['BLUE'].players = blueList
+    currentGameState.teams['GREEN'].players = greenList
+
+    if (!currentGameState.teams['BLUE'].captain || !blueList.includes(currentGameState.teams['BLUE'].captain)) {
+      currentGameState.teams['BLUE'].captain = blueList[0] || null
+    }
+    if (!currentGameState.teams['GREEN'].captain || !greenList.includes(currentGameState.teams['GREEN'].captain)) {
+      currentGameState.teams['GREEN'].captain = greenList[0] || null
+    }
+
+    // Set Max wickets to team size
+    currentGameState.maxWickets = targetSize
+
+    // Select random Captain to win Toss
+    const captains = [currentGameState.teams['BLUE'].captain, currentGameState.teams['GREEN'].captain].filter(Boolean) as string[]
+    const tossWinnerId = captains[Math.floor(Math.random() * captains.length)]
+
+    currentGameState.tossWinnerId = tossWinnerId
+    currentGameState.stage = 'TOSS'
+    currentGameState.commentary.unshift(`🪙 Teams balanced! Coin tossed. Captain ${getUsername(tossWinnerId)} won the toss.`)
+
+    persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma)
+    snapshotPersisted = true
+
+  } else if (type === 'toss') {
     const { choice } = move
     if (currentGameState.stage !== 'TOSS') {
       throw new Error('Game is not in TOSS stage')
     }
     if (currentGameState.tossWinnerId !== userId) {
-      throw new Error('Only the toss winner can choose roles')
+      throw new Error('Only the toss winner captain can choose roles')
     }
     if (choice !== 'BAT' && choice !== 'BOWL') {
       throw new Error('Invalid toss choice')
     }
 
     currentGameState.tossChoice = choice
+
+    // Identify teams
+    const isBlueWinner = currentGameState.teams['BLUE'].players.includes(userId)
+    const tossWinnerTeam = isBlueWinner ? 'BLUE' : 'GREEN'
+    const opponentTeam = tossWinnerTeam === 'BLUE' ? 'GREEN' : 'BLUE'
+
     if (choice === 'BAT') {
-      currentGameState.battingUserId = userId
-      currentGameState.bowlingUserId = opponentUserId
+      currentGameState.battingTeam = tossWinnerTeam
+      currentGameState.bowlingTeam = opponentTeam
     } else {
-      currentGameState.battingUserId = opponentUserId
-      currentGameState.bowlingUserId = userId
+      currentGameState.battingTeam = opponentTeam
+      currentGameState.bowlingTeam = tossWinnerTeam
     }
 
-    const getUsername = (uid: string) => players.find(p => p.userId === uid)?.username || 'Player'
+    currentGameState.batsmanIndex = 0
+    currentGameState.battingUserId = currentGameState.teams[currentGameState.battingTeam].players[0]
+
+    currentGameState.bowlerIndex = 0
+    currentGameState.bowlingUserId = currentGameState.teams[currentGameState.bowlingTeam].players[0]
+
     currentGameState.stage = 'FIRST_INNINGS'
     currentGameState.commentary.unshift(
-      `🏏 ${getUsername(currentGameState.battingUserId)} will BAT first. ${getUsername(currentGameState.bowlingUserId)} will BOWL.`
+      `🏏 ${currentGameState.battingTeam === 'BLUE' ? '🔵 Blue Team' : '🟢 Green Team'} will BAT first. ${currentGameState.bowlingTeam === 'BLUE' ? '🔵 Blue Team' : '🟢 Green Team'} will BOWL.`
     )
 
-    // Persist snapshot on stage transitions (toss complete)
     persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma)
     snapshotPersisted = true
 
@@ -168,35 +248,41 @@ export async function processCricketMove(
       throw new Error('Game is not in an active innings stage')
     }
 
+    const { battingUserId, bowlingUserId } = currentGameState
+    if (userId !== battingUserId && userId !== bowlingUserId) {
+      throw new Error('You are not currently batting or bowling')
+    }
+
     if (!currentGameState.moves) {
       currentGameState.moves = {}
     }
     if (currentGameState.moves[userId] !== undefined && currentGameState.moves[userId] !== null) {
-      throw new Error('You have already submitted a move for this turn')
+      throw new Error('You have already submitted a move for this ball')
     }
 
-    // Register player move
     currentGameState.moves[userId] = number
     currentGameState.moveCount++
 
     const movesCount = Object.keys(currentGameState.moves).length
-    const getUsername = (uid: string) => players.find(p => p.userId === uid)?.username || 'Player'
 
     if (movesCount === 2) {
-      // Resolve simultaneous moves
-      const batMove = currentGameState.moves[currentGameState.battingUserId]
-      const bowlMove = currentGameState.moves[currentGameState.bowlingUserId]
+      // Resolve Ball
+      const batMove = currentGameState.moves[battingUserId]
+      const bowlMove = currentGameState.moves[bowlingUserId]
       const isOut = batMove === bowlMove
 
       currentGameState.balls += 1
 
       if (isOut) {
         currentGameState.wickets += 1
+        currentGameState.currentPartnership = 0
         currentGameState.commentary.unshift(
-          `🔴 OUT! Both players chose ${batMove}. ${getUsername(currentGameState.battingUserId)} is out.`
+          `❌ OUT! Both chose ${batMove}. ${getUsername(battingUserId)} is out!`
         )
       } else {
         currentGameState.runs += batMove
+        currentGameState.playerRuns[battingUserId] = (currentGameState.playerRuns[battingUserId] || 0) + batMove
+        currentGameState.currentPartnership += batMove
         currentGameState.commentary.unshift(
           `🏏 Runs: ${batMove} (Bat: ${batMove}, Bowl: ${bowlMove}). Score: ${currentGameState.runs}/${currentGameState.wickets}.`
         )
@@ -211,38 +297,62 @@ export async function processCricketMove(
         batMove,
         bowlMove,
         runs: isOut ? 0 : batMove,
-        isOut
+        isOut,
+        batsmanId: battingUserId,
+        bowlerId: bowlingUserId
       })
 
-      // Clear current turn moves
+      // Clear moves
       currentGameState.moves = {}
 
-      // Handle Innings Transitions
+      // Check bowler rotation after over (6 balls)
+      let overFinished = currentGameState.balls % 6 === 0
+
+      // Process stage conditions
       if (currentGameState.stage === 'FIRST_INNINGS') {
-        if (currentGameState.wickets >= currentGameState.maxWickets || currentGameState.balls >= currentGameState.maxOvers * 6) {
+        const isExhausted = currentGameState.wickets >= currentGameState.maxWickets || currentGameState.balls >= currentGameState.maxOvers * 6
+        
+        if (isExhausted) {
+          // Switch Innings
           const target = currentGameState.runs + 1
           currentGameState.stage = 'SECOND_INNINGS'
           currentGameState.innings = 2
           currentGameState.target = target
           currentGameState.innings1Score = currentGameState.runs
 
-          // Swap batting/bowling roles
-          const temp = currentGameState.battingUserId
-          currentGameState.battingUserId = currentGameState.bowlingUserId
-          currentGameState.bowlingUserId = temp
+          const tempTeam = currentGameState.battingTeam
+          currentGameState.battingTeam = currentGameState.bowlingTeam
+          currentGameState.bowlingTeam = tempTeam
 
-          // Reset scores
+          // Reset counts
           currentGameState.runs = 0
           currentGameState.wickets = 0
           currentGameState.balls = 0
+          currentGameState.batsmanIndex = 0
+          currentGameState.battingUserId = currentGameState.teams[currentGameState.battingTeam].players[0]
+          currentGameState.bowlerIndex = 0
+          currentGameState.bowlingUserId = currentGameState.teams[currentGameState.bowlingTeam].players[0]
+          currentGameState.currentPartnership = 0
 
           currentGameState.commentary.unshift(
-            `🔄 Innings over. ${getUsername(currentGameState.battingUserId)} needs ${target} runs to win.`
+            `🔄 Innings Over! ${currentGameState.battingTeam === 'BLUE' ? '🔵 Blue Team' : '🟢 Green Team'} needs ${target} runs to win.`
           )
 
-          // Persist snapshot on innings switch
           persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma)
           snapshotPersisted = true
+        } else {
+          // If wicket fell, rotate batsman
+          if (isOut) {
+            currentGameState.batsmanIndex++
+            currentGameState.battingUserId = currentGameState.teams[currentGameState.battingTeam].players[currentGameState.batsmanIndex]
+            currentGameState.commentary.unshift(`🏏 New Batter Arrives: ${getUsername(currentGameState.battingUserId)}.`)
+          }
+          // Rotate bowler if over complete
+          if (overFinished) {
+            currentGameState.bowlerIndex = (currentGameState.bowlerIndex + 1) % currentGameState.teams[currentGameState.bowlingTeam].players.length
+            currentGameState.bowlingUserId = currentGameState.teams[currentGameState.bowlingTeam].players[currentGameState.bowlerIndex]
+            currentGameState.commentary.unshift(`🎯 Over complete! New bowler: ${getUsername(currentGameState.bowlingUserId)}.`)
+          }
         }
       } else if (currentGameState.stage === 'SECOND_INNINGS') {
         const target = currentGameState.target
@@ -250,40 +360,80 @@ export async function processCricketMove(
 
         if (currentGameState.runs >= target) {
           isFinished = true
-          winnerId = currentGameState.battingUserId
+          winnerId = currentGameState.battingTeam
         } else if (currentGameState.wickets >= currentGameState.maxWickets || currentGameState.balls >= currentGameState.maxOvers * 6) {
           isFinished = true
           if (currentGameState.runs === target - 1) {
-            winnerId = null // Tie/Draw
+            winnerId = 'DRAW'
           } else {
-            winnerId = currentGameState.bowlingUserId
+            winnerId = currentGameState.bowlingTeam
           }
         }
 
         if (isFinished) {
           currentGameState.stage = 'FINISHED'
           currentGameState.innings2Score = currentGameState.runs
-          currentGameState.commentary.unshift(
-            winnerId
-              ? `🏆 Match Over! Winner: ${getUsername(winnerId)}.`
-              : `🤝 Match Over! It's a DRAW/TIE.`
-          )
+          
+          let winnerLabel = 'TIE/DRAW'
+          if (winnerId === 'BLUE') winnerLabel = '🔵 Blue Team Wins!'
+          else if (winnerId === 'GREEN') winnerLabel = '🟢 Green Team Wins!'
+
+          currentGameState.commentary.unshift(`🏆 Match Over! Outcome: ${winnerLabel}`)
 
           updatedStatus = 'FINISHED'
           gameFinished = true
 
-          // Persist final match snapshot and clear cache
+          // Persist snapshot and clean cache
           persistSnapshot(roomId, currentGameState, updatedStatus, winnerId, prisma)
           await deleteCricketSession(roomCode)
           snapshotPersisted = true
+        } else {
+          // Rotate batsman if out
+          if (isOut) {
+            currentGameState.batsmanIndex++
+            currentGameState.battingUserId = currentGameState.teams[currentGameState.battingTeam].players[currentGameState.batsmanIndex]
+            currentGameState.commentary.unshift(`🏏 New Batter Arrives: ${getUsername(currentGameState.battingUserId)}.`)
+          }
+          // Rotate bowler if over complete
+          if (overFinished) {
+            currentGameState.bowlerIndex = (currentGameState.bowlerIndex + 1) % currentGameState.teams[currentGameState.bowlingTeam].players.length
+            currentGameState.bowlingUserId = currentGameState.teams[currentGameState.bowlingTeam].players[currentGameState.bowlerIndex]
+            currentGameState.commentary.unshift(`🎯 Over complete! New bowler: ${getUsername(currentGameState.bowlingUserId)}.`)
+          }
         }
       }
     }
 
-    // Persist snapshot periodically: every 5 moves (meaning 10 player actions), if game ends, OR if Redis is down
     if (!snapshotPersisted && (currentGameState.moveCount % 10 === 0 || !redisClient.isReady)) {
       persistSnapshot(roomId, currentGameState, updatedStatus, null, prisma)
       snapshotPersisted = true
+    }
+
+  } else if (type === 'quick-chat') {
+    const { message } = move
+    const validMsgs = ["Nice Shot!", "Well Played!", "Bowl Tight!", "Great Ball!", "Let's Win!"]
+    if (message && validMsgs.includes(message)) {
+      const isBlue = currentGameState.teams['BLUE'].players.includes(userId)
+      const team = isBlue ? 'BLUE' : 'GREEN'
+
+      if (!currentGameState.quickChat) {
+        currentGameState.quickChat = []
+      }
+
+      currentGameState.quickChat.push({
+        userId,
+        username: getUsername(userId),
+        team,
+        message,
+        timestamp: Date.now()
+      })
+
+      // Keep only last 10
+      if (currentGameState.quickChat.length > 10) {
+        currentGameState.quickChat.shift()
+      }
+
+      await saveCricketSession(roomCode, currentGameState)
     }
   }
 

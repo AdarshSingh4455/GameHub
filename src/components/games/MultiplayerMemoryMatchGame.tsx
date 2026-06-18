@@ -204,7 +204,7 @@ export default function MultiplayerMemoryMatchGame({ roomCode, session, players,
                 position: 'relative',
                 transformStyle: 'preserve-3d',
                 transform: isRevealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                transition: 'transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               }}
             >
               {/* Card Back */}

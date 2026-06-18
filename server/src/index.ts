@@ -38,6 +38,7 @@ import { processTicTacToeMove, deleteTicTacToeSession, getTicTacToeSession, save
 import { processMemoryMove, deleteMemorySession, getMemorySession, saveMemorySession } from './games/memory'
 import { processRpsMove, deleteRpsSession, getRpsSession, saveRpsSession, getMaskedRpsState } from './games/rps'
 import { processNumberGuessingMove, deleteNumberGuessingSession, getNumberGuessingSession, saveNumberGuessingSession, getMaskedNumberGuessingState } from './games/numberGuessing'
+import { processScribbleMove, deleteScribbleSession, getScribbleSession, saveScribbleSession, getScribbleMaskedState, endScribbleRound, setupNextScribbleTurn, clearScribbleInactivityCheck } from './games/scribble'
 import { INITIAL_STATES, handleMatchCompletion } from './games/framework'
 
 // Initialize Sentry SDK
@@ -70,11 +71,11 @@ const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
 // Connection tracking maps
-const userSockets = new Map<string, string>() // maps userId -> socketId
+export const userSockets = new Map<string, string>() // maps userId -> socketId
 const disconnectTimers = new Map<string, NodeJS.Timeout>() // maps userId -> Timeout
-const roomTurnTimeouts = new Map<string, NodeJS.Timeout>() // maps roomCode -> Turn Timeout
+export const roomTurnTimeouts = new Map<string, NodeJS.Timeout>() // maps roomCode -> Turn Timeout
 
-function clearTurnTimer(roomCode: string) {
+export function clearTurnTimer(roomCode: string) {
   const timeout = roomTurnTimeouts.get(roomCode)
   if (timeout) {
     clearTimeout(timeout)
@@ -567,9 +568,22 @@ io.on('connection', async (rawSocket) => {
       if (room.hostUserId !== userId) throw new Error('Only the host can start the game')
       if (room.players.length < 2) throw new Error('Need at least 2 players to start')
       
-      const activePlayers = room.players
+      let activePlayers = room.players
         .sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime())
-        .slice(0, 2)
+
+      if (room.gameSlug === 'cricket') {
+        const pCount = room.players.length
+        if (pCount !== 2 && pCount !== 4 && pCount !== 6) {
+          throw new Error('Team Hand Cricket only supports 2, 4, or 6 players. Game cannot start with odd counts.')
+        }
+      } else if (room.gameSlug === 'scribble') {
+        if (room.players.length < 2) {
+          throw new Error('Scribble requires at least 2 players to start.')
+        }
+      } else {
+        activePlayers = activePlayers.slice(0, 2)
+      }
+
       const allReady = activePlayers.every(p => p.status === 'READY' || p.userId === room.hostUserId)
       if (!allReady) throw new Error('All players must be ready to start')
 
@@ -577,6 +591,8 @@ io.on('connection', async (rawSocket) => {
       let initialGameState: any = {}
       if (room.gameSlug === 'cricket') {
         initialGameState = INITIAL_STATES['cricket'](activePlayers, room.hostUserId)
+      } else if (room.gameSlug === 'scribble') {
+        initialGameState = INITIAL_STATES['scribble'](activePlayers, room.hostUserId)
       } else if (room.gameSlug === 'dots-boxes') {
         initialGameState = INITIAL_STATES['dots-boxes'](activePlayers, room.hostUserId)
       } else if (room.gameSlug === 'tic-tac-toe') {
@@ -617,6 +633,8 @@ io.on('connection', async (rawSocket) => {
       // Cache game state in Redis
       if (room.gameSlug === 'cricket') {
         await saveCricketSession(room.roomCode, initialGameState)
+      } else if (room.gameSlug === 'scribble') {
+        await saveScribbleSession(room.roomCode, initialGameState)
       } else if (room.gameSlug === 'dots-boxes') {
         await saveDotsBoxesSession(room.roomCode, initialGameState)
       } else if (room.gameSlug === 'tic-tac-toe') {
@@ -724,6 +742,8 @@ io.on('connection', async (rawSocket) => {
       let gameState = null
       if (room.gameSlug === 'cricket') {
         gameState = await getCricketSession(normalizedCode, room.id, prisma).catch(() => null)
+      } else if (room.gameSlug === 'scribble') {
+        gameState = await getScribbleSession(normalizedCode, room.id, prisma).catch(() => null)
       } else if (room.gameSlug === 'dots-boxes') {
         gameState = await getDotsBoxesSession(normalizedCode, room.id, prisma).catch(() => null)
       } else if (room.gameSlug === 'tic-tac-toe') {
@@ -752,6 +772,8 @@ io.on('connection', async (rawSocket) => {
         broadcastState = { ...broadcastState, moves: maskedMoves }
       } else if (room.gameSlug === 'number-guessing' && broadcastState) {
         broadcastState = getMaskedNumberGuessingState(broadcastState)
+      } else if (room.gameSlug === 'scribble' && broadcastState) {
+        broadcastState = getScribbleMaskedState(broadcastState, userId)
       }
 
       logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${broadcastState?.stage} gameSlug=${room.gameSlug}`)
@@ -805,21 +827,24 @@ io.on('connection', async (rawSocket) => {
         const isPlayer = room.players.some(p => p.userId === userId)
         if (!isPlayer) throw new Error('Unauthorized move submission')
 
-        // Only pass the 2 active players (sorted by join order) to game engines
-        // Spectators (3rd+ players) must never receive X/O symbol assignments
-        const mappedPlayers = room.players
+        // Slicing logic: do not slice for Cricket and Scribble
+        let activeRoomPlayers = room.players
           .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
-          .slice(0, 2)
-          .map(p => ({
-            userId: p.userId,
-            username: p.profile?.username || 'Player'
-          }))
+        if (room.gameSlug !== 'cricket' && room.gameSlug !== 'scribble') {
+          activeRoomPlayers = activeRoomPlayers.slice(0, 2)
+        }
+        const mappedPlayers = activeRoomPlayers.map(p => ({
+          userId: p.userId,
+          username: p.profile?.username || 'Player'
+        }))
 
         let result: any = null
 
         // Execute engine calculations
         if (room.gameSlug === 'cricket') {
           result = await processCricketMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
+        } else if (room.gameSlug === 'scribble') {
+          result = await processScribbleMove(roomCode, room.id, userId, move, mappedPlayers, prisma, io)
         } else if (room.gameSlug === 'dots-boxes') {
           result = await processDotsBoxesMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
         } else if (room.gameSlug === 'tic-tac-toe') {
@@ -844,12 +869,27 @@ io.on('connection', async (rawSocket) => {
           broadcastState = getMaskedNumberGuessingState(state)
         }
 
-        io.to(`game:${roomCode}`).emit('game-update', {
-          gameState: broadcastState,
-          gameFinished,
-          winnerId,
-          lastMove: { userId, move }
-        })
+        if (room.gameSlug === 'scribble') {
+          for (const player of room.players) {
+            const pSocketId = userSockets.get(player.userId)
+            if (pSocketId) {
+              const maskedState = getScribbleMaskedState(state, player.userId)
+              io.to(pSocketId).emit('game-update', {
+                gameState: maskedState,
+                gameFinished,
+                winnerId,
+                lastMove: { userId, move }
+              })
+            }
+          }
+        } else {
+          io.to(`game:${roomCode}`).emit('game-update', {
+            gameState: broadcastState,
+            gameFinished,
+            winnerId,
+            lastMove: { userId, move }
+          })
+        }
 
         if (gameFinished) {
           clearTurnTimer(roomCode)
@@ -1030,6 +1070,15 @@ io.on('connection', async (rawSocket) => {
     socket.to(`game:${roomCode}`).emit('match-reaction', { userId, emoji })
   })
 
+  // Scribble Canvas Synchronization (real-time broadcast)
+  socket.on('scribble-draw', ({ roomCode, drawData }: { roomCode: string; drawData: any }) => {
+    socket.to(`game:${roomCode}`).emit('scribble-draw', { drawData })
+  })
+
+  socket.on('scribble-clear', ({ roomCode }: { roomCode: string }) => {
+    socket.to(`game:${roomCode}`).emit('scribble-clear')
+  })
+
   // Disconnect Handler
   socket.on('disconnect', async () => {
     logger.info(`[-] Disconnected: userId=${userId} socketId=${socket.id}`)
@@ -1059,11 +1108,144 @@ io.on('connection', async (rawSocket) => {
           const roomCode = room.roomCode
 
           if (room.status === 'PLAYING') {
-            // Player abandoned active game -> Forfeit and award victory to opponent
+            // Player abandoned active game
             const remainingPlayers = await prisma.multiplayerRoomPlayer.findMany({
-              where: { roomId, NOT: { userId } }
+              where: { roomId, NOT: { userId } },
+              include: { profile: { select: { username: true } } }
             })
 
+            const remainingUserIds = remainingPlayers.map(p => p.userId)
+
+            // Game specific disconnect rules
+            if (room.gameSlug === 'cricket') {
+              const state = await getCricketSession(roomCode, roomId, prisma).catch(() => null)
+              if (state && state.teams) {
+                // Captain transfer
+                for (const teamKey of ['BLUE', 'GREEN'] as const) {
+                  const team = state.teams[teamKey]
+                  if (team.captain === userId) {
+                    const nextTeammate = team.players.find((id: string) => id !== userId && remainingUserIds.includes(id))
+                    if (nextTeammate) {
+                      team.captain = nextTeammate
+                      state.commentary.unshift(`👑 Captain disconnected. ${remainingPlayers.find(p => p.userId === nextTeammate)?.profile?.username || 'Teammate'} is promoted to Captain!`)
+                      await prisma.multiplayerGameSession.update({
+                        where: { roomId },
+                        data: { gameState: state }
+                      })
+                      await saveCricketSession(roomCode, state)
+                      io.to(`game:${roomCode}`).emit('game-update', {
+                        gameState: state,
+                        gameFinished: false,
+                        winnerId: null
+                      })
+                    }
+                  }
+                }
+
+                // Check if their team has no players left
+                const isBlue = state.teams['BLUE'].players.includes(userId)
+                const myTeamKey = isBlue ? 'BLUE' : 'GREEN'
+                const opponentTeamKey = isBlue ? 'GREEN' : 'BLUE'
+                const myTeamRemaining = state.teams[myTeamKey].players.filter((id: string) => remainingUserIds.includes(id))
+                
+                if (myTeamRemaining.length === 0) {
+                  const opponentCaptainId = state.teams[opponentTeamKey].captain || opponentTeamKey
+                  logger.info(`[FORFEIT MATCH] Cricket room=${roomCode} team=${myTeamKey} empty. Winner=${opponentTeamKey}`)
+                  
+                  clearTurnTimer(roomCode)
+                  state.stage = 'FINISHED'
+                  state.commentary.unshift(`🔴 Forfeit! All members of ${myTeamKey === 'BLUE' ? 'Blue Team' : 'Green Team'} disconnected.`)
+                  
+                  await prisma.multiplayerGameSession.update({
+                    where: { roomId },
+                    data: {
+                      status: 'FINISHED',
+                      winnerId: opponentCaptainId,
+                      gameState: state
+                    }
+                  })
+                  await prisma.multiplayerRoom.update({
+                    where: { id: roomId },
+                    data: { status: 'FINISHED' }
+                  })
+                  io.to(`game:${roomCode}`).emit('game-update', {
+                    gameFinished: true,
+                    winnerId: opponentCaptainId,
+                    gameState: state
+                  })
+
+                  const playerUserIds = remainingPlayers.map(p => p.userId).concat(userId)
+                  if (await canDestroyRoom(roomCode, playerUserIds)) {
+                    await prisma.multiplayerRoom.delete({ where: { id: roomId } })
+                    deleteRoomQueue(roomCode)
+                    clearTurnTimer(roomCode)
+                    await deleteCricketSession(roomCode)
+                  }
+                }
+                continue
+              }
+            } else if (room.gameSlug === 'scribble') {
+              const state = await getScribbleSession(roomCode, roomId, prisma).catch(() => null)
+              if (state) {
+                if (remainingPlayers.length >= 2) {
+                  if (state.drawerId === userId && state.stage === 'DRAWING') {
+                    state.commentary.unshift(`⚠️ Drawer ${username} disconnected! Skipping turn...`)
+                    await endScribbleRound(roomCode, roomId, state, remainingPlayers, prisma, io, true)
+                  } else if (state.drawerId === userId && state.stage === 'WORD_SELECTION') {
+                    state.commentary.unshift(`⚠️ Drawer ${username} disconnected during word selection! Skipping turn...`)
+                    await setupNextScribbleTurn(roomCode, roomId, state, remainingPlayers, prisma, io)
+                  } else {
+                    state.commentary.unshift(`👋 Player ${username} disconnected.`)
+                    await saveScribbleSession(roomCode, state)
+                    
+                    for (const player of remainingPlayers) {
+                      const pSocketId = userSockets.get(player.userId)
+                      if (pSocketId) {
+                        const maskedState = getScribbleMaskedState(state, player.userId)
+                        io.to(pSocketId).emit('game-update', {
+                          gameState: maskedState,
+                          gameFinished: false,
+                          winnerId: null
+                        })
+                      }
+                    }
+                  }
+                } else {
+                  const winnerId = remainingPlayers[0]?.userId || 'DRAW'
+                  clearTurnTimer(roomCode)
+                  clearScribbleInactivityCheck(roomCode)
+                  
+                  await prisma.multiplayerGameSession.update({
+                    where: { roomId },
+                    data: {
+                      status: 'FINISHED',
+                      winnerId,
+                      gameState: { stage: 'FINISHED', commentary: [`🔴 Forfeit! Fewer than 2 players left.`] }
+                    }
+                  })
+                  await prisma.multiplayerRoom.update({
+                    where: { id: roomId },
+                    data: { status: 'FINISHED' }
+                  })
+                  io.to(`game:${roomCode}`).emit('game-update', {
+                    gameFinished: true,
+                    winnerId,
+                    gameState: { stage: 'FINISHED', commentary: [`Forfeit! Fewer than 2 players left.`] }
+                  })
+
+                  const playerUserIds = remainingPlayers.map(p => p.userId).concat(userId)
+                  if (await canDestroyRoom(roomCode, playerUserIds)) {
+                    await prisma.multiplayerRoom.delete({ where: { id: roomId } })
+                    deleteRoomQueue(roomCode)
+                    clearTurnTimer(roomCode)
+                    await deleteScribbleSession(roomCode)
+                  }
+                }
+                continue
+              }
+            }
+
+            // Default 1v1 forfeit logic
             const opponentId = remainingPlayers[0]?.userId || null
             logger.info(`[FORFEIT MATCH] room=${roomCode} user=${username} forfeited to winnerId=${opponentId}`)
 

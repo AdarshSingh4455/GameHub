@@ -196,7 +196,7 @@ export default function MemoryMatchGame() {
         if (currentTurn === 'AI' && gameMode === 'vs-ai') {
           setAiMoveTrigger(prev => prev + 1)
         }
-      }, 500)
+      }, 250)
     } else {
       // NO MATCH
       setTimeout(() => {
@@ -216,7 +216,7 @@ export default function MemoryMatchGame() {
         } else {
           setCurrentTurn(currentTurn === 'Player 1' ? 'Player 2' : 'Player 1')
         }
-      }, 1000)
+      }, 500)
     }
   }
 
@@ -948,7 +948,7 @@ export default function MemoryMatchGame() {
                 position: 'relative',
                 transformStyle: 'preserve-3d',
                 transform: isRevealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                transition: 'transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               }}
             >
               {/* Card Back */}

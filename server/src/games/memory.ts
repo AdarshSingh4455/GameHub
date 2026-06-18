@@ -178,7 +178,7 @@ export async function processMemoryMove(
 
   if (card1.emoji === card2.emoji) {
     // MATCH FOUND
-    await new Promise(resolve => setTimeout(resolve, 600))
+    await new Promise(resolve => setTimeout(resolve, 300))
 
     card1.isMatched = true
     card2.isMatched = true
@@ -217,7 +217,7 @@ export async function processMemoryMove(
     return { state: currentGameState, gameFinished, winnerId }
   } else {
     // NO MATCH
-    await new Promise(resolve => setTimeout(resolve, 1200))
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     card1.isFlipped = false
     card2.isFlipped = false

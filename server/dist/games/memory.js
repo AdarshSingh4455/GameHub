@@ -142,7 +142,7 @@ async function processMemoryMove(roomCode, roomId, userId, move, players, prisma
     let winnerId = null;
     if (card1.emoji === card2.emoji) {
         // MATCH FOUND
-        await new Promise(resolve => setTimeout(resolve, 600));
+        await new Promise(resolve => setTimeout(resolve, 300));
         card1.isMatched = true;
         card2.isMatched = true;
         card1.isFlipped = false;
@@ -178,7 +178,7 @@ async function processMemoryMove(roomCode, roomId, userId, move, players, prisma
     }
     else {
         // NO MATCH
-        await new Promise(resolve => setTimeout(resolve, 1200));
+        await new Promise(resolve => setTimeout(resolve, 500));
         card1.isFlipped = false;
         card2.isFlipped = false;
         currentGameState.flippedIndices = [];

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import MultiplayerHandCricketGame from '@/components/games/MultiplayerHandCricketGame'
+import MultiplayerScribbleGame from '@/components/games/MultiplayerScribbleGame'
 import MultiplayerDotsBoxesGame from '@/components/games/MultiplayerDotsBoxesGame'
 import MultiplayerTicTacToeGame from '@/components/games/MultiplayerTicTacToeGame'
 import MultiplayerMemoryMatchGame from '@/components/games/MultiplayerMemoryMatchGame'
@@ -294,6 +295,20 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     return (
       <div className="game-safe-bottom">
         <MultiplayerNumberGuessingGame
+          roomCode={roomCode}
+          session={session}
+          players={players}
+          currentUserId={currentUserId}
+          onLeave={handleLeaveRoom}
+        />
+      </div>
+    )
+  }
+
+  if (session?.gameSlug === 'scribble') {
+    return (
+      <div className="game-safe-bottom">
+        <MultiplayerScribbleGame
           roomCode={roomCode}
           session={session}
           players={players}

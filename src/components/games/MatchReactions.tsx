@@ -92,8 +92,15 @@ export default function MatchReactions({ socket, roomCode, currentUserId, player
     }, 2500)
   }
 
+  const lastReactionTimeRef = useRef<number>(0)
+
   const sendReaction = (emoji: string) => {
     if (!socket) return
+    const now = Date.now()
+    if (now - lastReactionTimeRef.current < 2000) {
+      return // Cooldown active (2 seconds)
+    }
+    lastReactionTimeRef.current = now
     
     // Emit to server
     socket.emit('match-reaction', { roomCode, emoji })

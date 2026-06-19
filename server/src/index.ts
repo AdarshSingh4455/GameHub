@@ -59,6 +59,8 @@ const io = new Server(server, {
   transports: ['websocket'] // Enforce WebSocket-only transport for horizontal scaling compatibility
 })
 
+import { createPrismaMockProxy } from './utils/mockPrisma'
+
 // Initialize Prisma Client connection pool using PostgreSQL adapter
 const connectionString = process.env.DATABASE_URL
 const pool = new pg.Pool({
@@ -68,7 +70,10 @@ const pool = new pg.Pool({
     : { rejectUnauthorized: false }
 })
 const adapter = new PrismaPg(pool)
-const prisma = new PrismaClient({ adapter })
+const realPrisma = new PrismaClient({ adapter })
+export const prisma = process.env.MOCK_DB === 'true'
+  ? createPrismaMockProxy(realPrisma)
+  : realPrisma
 
 // Connection tracking maps
 export const userSockets = new Map<string, string>() // maps userId -> socketId

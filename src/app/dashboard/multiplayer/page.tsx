@@ -72,7 +72,8 @@ const SUPPORTED_MULTIPLAYER_GAMES = [
   { slug: 'tic-tac-toe', name: 'Tic-Tac-Toe', emoji: '⭕', desc: 'Classic 3×3 noughts-and-crosses.' },
   { slug: 'memory', name: 'Memory Match', emoji: '🃏', desc: 'Flip cards, find pairs. A timeless memory challenge.' },
   { slug: 'rps', name: 'Rock Paper Scissors', emoji: '✊', desc: 'Classic simultaneous choice duel.' },
-  { slug: 'number-guessing', name: 'Number Guessing', emoji: '🔢', desc: 'Guess the secret number between 1–100. Hot and cold feedback.' }
+  { slug: 'number-guessing', name: 'Number Guessing', emoji: '🔢', desc: 'Guess the secret number between 1–100. Hot and cold feedback.' },
+  { slug: 'scribble', name: 'Scribble', emoji: '🎨', desc: 'Draw and guess with friends in real time.' }
 ]
 
 const SESSION_KEY = 'mp_screen'

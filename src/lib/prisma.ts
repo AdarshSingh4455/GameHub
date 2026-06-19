@@ -3,11 +3,16 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import { parse } from 'pg-connection-string'
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
+import { createPrismaMockProxy } from './mockPrisma'
+
+const globalForPrisma = globalThis as unknown as { prisma: any }
 
 export const prisma =
   globalForPrisma.prisma ??
   (() => {
+    if (process.env.MOCK_DB === 'true') {
+      return createPrismaMockProxy(null) as any
+    }
     const connectionString = process.env.DATABASE_URL
     let config: pg.PoolConfig = {}
     if (connectionString) {

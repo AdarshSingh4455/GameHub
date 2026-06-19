@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getGameXP, computeLevel } from '@/lib/xp'
 import { checkAndUnlockAchievements } from '@/lib/achievements'
 import { recalculateLeaderboardRanks } from '@/lib/ranks'
+import { Prisma } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Submit game result in transaction
-    const responsePayload = await prisma.$transaction(async (tx) => {
+    const responsePayload = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Find game
       const game = await tx.game.findUnique({
         where: { slug: gameSlug },
@@ -237,7 +238,7 @@ export async function POST(request: NextRequest) {
         (await tx.userAchievement.findMany({
           where: { profileId: profile.id },
           select: { achievement: { select: { slug: true } } },
-        })).map((ua) => ua.achievement.slug)
+        })).map((ua: any) => ua.achievement.slug)
       )
 
       let nextAchievement = { name: 'Veteran Player', progress: 0, target: 10, current: 0 }

@@ -135,7 +135,7 @@ export function GameSessionProvider({
     const guestStats = JSON.parse(localStorage.getItem(GUEST_STATS_KEY) || '{"playCount":0,"winCount":0}')
     const guestAchievements = JSON.parse(localStorage.getItem(GUEST_ACHIEVEMENTS_KEY) || '[]')
 
-    const statsPayload = []
+    const statsPayload: any[] = []
     if (guestStats.playCount > 0) {
       statsPayload.push({
         gameSlug: 'tic-tac-toe',
@@ -230,7 +230,7 @@ export function GameSessionProvider({
       })
     }
     
-    let activeAd = null
+    let activeAd: any = null
     try {
       const adRes = await fetch(`/api/ads?gameSlug=${payload.gameSlug}`)
       if (adRes.ok) {

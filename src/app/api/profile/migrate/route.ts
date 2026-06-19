@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { computeLevel } from '@/lib/xp'
+import { Prisma } from '@prisma/client'
 
 interface GuestStat {
   gameSlug: string
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     // 4. Perform migration in transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Migrate profile XP, coins, streaks, and claims
       const finalXP = profile.xp + guestXP
       const finalLevel = computeLevel(finalXP)

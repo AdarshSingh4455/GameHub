@@ -348,7 +348,7 @@ export default function ProfilePage() {
 
   // Last 7 days activity calculator
   const getLast7Days = () => {
-    const dates = []
+    const dates: string[] = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)

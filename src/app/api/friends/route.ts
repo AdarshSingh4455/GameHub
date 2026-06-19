@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     })
 
     if (searchQuery) {
-      let matchingProfiles = []
+      let matchingProfiles: any[] = []
 
       // Check if it's a friend code
       if (searchQuery.toUpperCase().startsWith('GH-') && searchQuery.length === 11) {

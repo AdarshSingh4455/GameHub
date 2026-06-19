@@ -5,6 +5,7 @@ import { DAILY_REWARD_TABLE, getUtcDaysElapsed } from '@/lib/dailyRewards'
 import { checkAndUnlockAchievements } from '@/lib/achievements'
 import { computeLevel } from '@/lib/xp'
 import { recalculateLeaderboardRanks } from '@/lib/ranks'
+import { Prisma } from '@prisma/client'
 
 export async function GET() {
   try {
@@ -121,7 +122,7 @@ export async function POST() {
     }
 
     // 2. Perform reward claim transaction
-    const resultPayload = await prisma.$transaction(async (tx) => {
+    const resultPayload = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       let newStreak = 1
       let newRewardDay = 1
 

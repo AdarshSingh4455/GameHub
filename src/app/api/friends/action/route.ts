@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
+import { Prisma } from '@prisma/client'
 
 export async function POST(request: Request) {
   try {
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
       }
 
       // Accept the request using a transaction
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const updated = await tx.friendship.update({
           where: {
             requesterId_addresseeId: {

@@ -138,7 +138,7 @@ function createModelMock(modelName: string) {
           if (action === 'update') {
             const roomCode = params.where?.roomCode
             const id = params.where?.id
-            let room = null
+            let room: any = null
             if (roomCode) room = inMemoryRooms.get(roomCode)
             else if (id) room = Array.from(inMemoryRooms.values()).find(r => r.id === id)
             
@@ -164,7 +164,7 @@ function createModelMock(modelName: string) {
               room,
               profile: inMemoryProfiles.get(userId) || {
                 id: userId,
-                userId: data.userId,
+                userId,
                 username: `Player_${userId.substring(0, 5)}`,
                 xp: 100,
                 level: 1

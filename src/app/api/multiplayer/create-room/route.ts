@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateRoomCode, getAuthenticatedProfile } from '@/lib/multiplayer'
+import { Prisma } from '@prisma/client'
 
 export async function POST(request: Request) {
   try {
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     const roomCode = await generateRoomCode()
 
     // 4. Transaction to create room and add host as first player
-    const room = await prisma.$transaction(async (tx) => {
+    const room = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const newRoom = await tx.multiplayerRoom.create({
         data: {
           roomCode,

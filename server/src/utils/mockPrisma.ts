@@ -138,7 +138,7 @@ function createModelMock(modelName: string) {
           if (action === 'update') {
             const roomCode = params.where?.roomCode
             const id = params.where?.id
-            let room = null
+            let room: any = null
             if (roomCode) room = inMemoryRooms.get(roomCode)
             else if (id) room = Array.from(inMemoryRooms.values()).find(r => r.id === id)
             

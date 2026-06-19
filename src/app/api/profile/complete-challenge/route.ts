@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { computeLevel } from '@/lib/xp'
 import { recalculateLeaderboardRanks } from '@/lib/ranks'
+import { Prisma } from '@prisma/client'
 
 export async function POST(request: Request) {
   try {
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     // Perform update in transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Check if they already unlocked this XPEvent for today
       // Daily challenges start with prefix wc_ or db_
       const today = new Date()

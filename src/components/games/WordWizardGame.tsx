@@ -124,7 +124,7 @@ export default function WordWizardGame() {
     )
 
     let selectedTargets: string[] = []
-    let boardData = null
+    let boardData: any = null
     let validWords = new Set<string>()
 
     let found = false

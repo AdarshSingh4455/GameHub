@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { computeLevel } from '@/lib/xp'
+import { Prisma } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Unlock the achievement in a transaction
-    const responsePayload = await prisma.$transaction(async (tx) => {
+    const responsePayload = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Create user achievement record
       await tx.userAchievement.create({
         data: {

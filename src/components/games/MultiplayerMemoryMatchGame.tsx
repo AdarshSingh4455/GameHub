@@ -5,6 +5,7 @@ import { useSocket } from '@/lib/contexts/SocketContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import MultiplayerHeader from './MultiplayerHeader'
 import MatchReactions from './MatchReactions'
+import ProfileCardModal from '@/components/layout/ProfileCardModal'
 
 function playTurnNotificationSound() {
   try {
@@ -51,6 +52,7 @@ export default function MultiplayerMemoryMatchGame({ roomCode, session, players,
   const { socket } = useSocket()
   const { addToast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
   const wasMyTurnRef = useRef(false)
 
   const gameState = session.gameState || {}
@@ -129,7 +131,11 @@ export default function MultiplayerMemoryMatchGame({ roomCode, session, players,
   const opponentScore = opponent ? playerScores[opponent.userId] || 0 : 0
 
   const getWinnerMessage = () => {
-    if (winnerId === 'DRAW') return 'It is a tie game! 🤝'
+    // Guard against false 0-0 finished state
+    const totalScores = Object.values(playerScores as Record<string, number>).reduce((a, b) => a + b, 0)
+    if (winnerId === 'DRAW' || (totalScores === 0 && session.status === 'FINISHED')) {
+      return totalScores === 0 ? 'Match ended. 🤝' : 'It is a tie game! 🤝'
+    }
     if (winnerId === currentUserId) return '🏆 You win the match!'
     const winnerName = players.find(p => p.userId === winnerId)?.username || 'Opponent'
     return `🏆 ${winnerName} wins the match!`
@@ -318,6 +324,13 @@ export default function MultiplayerMemoryMatchGame({ roomCode, session, players,
           players={players}
         />
       )}
+
+      {/* Profile Preview Modal */}
+      <ProfileCardModal
+        profileId={selectedProfileId}
+        isOpen={!!selectedProfileId}
+        onClose={() => setSelectedProfileId(null)}
+      />
     </div>
   )
 }

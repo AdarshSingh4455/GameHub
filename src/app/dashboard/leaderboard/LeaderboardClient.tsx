@@ -157,7 +157,39 @@ export default function LeaderboardClient() {
       {/* Table Card */}
       <div className="card" style={{ overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: '3rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }}>Loading rankings...</div>
+          <div>
+            <style>{`
+              @keyframes lb-shimmer {
+                0% { background-position: -600px 0; }
+                100% { background-position: 600px 0; }
+              }
+              .lb-skel {
+                background: linear-gradient(90deg, hsl(222 20% 13%) 25%, hsl(222 20% 17%) 50%, hsl(222 20% 13%) 75%);
+                background-size: 600px 100%;
+                animation: lb-shimmer 1.4s infinite linear;
+                border-radius: 6px;
+              }
+            `}</style>
+            {/* Skeleton header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr 80px 100px 70px', gap: '1rem', padding: '0.75rem 1rem', borderBottom: '1px solid hsl(220 15% 20%)', background: 'hsl(222 20% 13%)' }}>
+              {['40px','60%','40px','50px','40px'].map((w, i) => (
+                <div key={i} className="lb-skel" style={{ height: 12, width: w }} />
+              ))}
+            </div>
+            {/* 8 skeleton rows */}
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '70px 1fr 80px 100px 70px', gap: '1rem', alignItems: 'center', padding: '0.85rem 1rem', borderBottom: i < 7 ? '1px solid hsl(220 15% 18%)' : 'none', opacity: 1 - i * 0.07 }}>
+                <div className="lb-skel" style={{ height: 14, width: 32 }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <div className="lb-skel" style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0 }} />
+                  <div className="lb-skel" style={{ height: 13, width: `${50 + Math.random() * 30}%` }} />
+                </div>
+                <div className="lb-skel" style={{ height: 13, width: 36 }} />
+                <div className="lb-skel" style={{ height: 13, width: 52 }} />
+                <div className="lb-skel" style={{ height: 13, width: 28 }} />
+              </div>
+            ))}
+          </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>

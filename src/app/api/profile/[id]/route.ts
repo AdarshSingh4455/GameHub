@@ -8,8 +8,26 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const supabase = await createClient()
-    const { data: { user: currentAuthUser } } = await supabase.auth.getUser()
+    let currentAuthUser: { id: string } | null = null
+
+    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+      const cookieHeader = request.headers.get('cookie') || ''
+      const cookies = Object.fromEntries(
+        cookieHeader.split(';').map(c => {
+          const eqIdx = c.indexOf('=')
+          if (eqIdx === -1) return [c.trim(), '']
+          const name = c.substring(0, eqIdx).trim()
+          const value = c.substring(eqIdx + 1).trim()
+          return [name, decodeURIComponent(value)]
+        })
+      )
+      const mockUserId = cookies['mock_user_id'] || 'mock-user-id'
+      currentAuthUser = { id: mockUserId }
+    } else {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
+      currentAuthUser = user
+    }
 
     // 1. Fetch profile
     const profile = await prisma.profile.findUnique({

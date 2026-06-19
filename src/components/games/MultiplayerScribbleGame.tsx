@@ -1,16 +1,16 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import { useToast } from '@/lib/contexts/ToastContext'
-import MultiplayerHeader from './MultiplayerHeader'
-import MatchReactions from './MatchReactions'
+import ProfileCardModal from '@/components/layout/ProfileCardModal'
 
 interface Player {
   userId: string
   username: string
   avatarUrl: string | null
   level: number
+  profileId?: string
 }
 
 interface ScribbleProps {
@@ -36,11 +36,16 @@ export default function MultiplayerScribbleGame({
   const [color, setColor] = useState('#ffffff')
   const [brushSize, setBrushSize] = useState(4)
   const [tool, setTool] = useState<'pencil' | 'eraser'>('pencil')
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
   
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const isDrawingRef = useRef(false)
   const lastPosRef = useRef({ x: 0, y: 0 })
   const localLinesRef = useRef<any[]>([])
+  
+  // Draw batching buffer
+  const pendingDrawRef = useRef<any[]>([])
+  const drawFlushIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const gameState = session.gameState || {}
   const {
@@ -64,6 +69,10 @@ export default function MultiplayerScribbleGame({
   const isDrawer = drawerId === currentUserId
   const hasGuessed = guessedPlayers.includes(currentUserId)
 
+  // Sort players by score descending (live)
+  const sortedPlayers = [...players].sort((a, b) => (playerScores[b.userId] || 0) - (playerScores[a.userId] || 0))
+  const leaderId = sortedPlayers[0]?.userId
+
   // 1. Draw existing lines on mount/update (Reconnect Canvas Recovery)
   useEffect(() => {
     const canvas = canvasRef.current
@@ -71,10 +80,8 @@ export default function MultiplayerScribbleGame({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Clear canvas first
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    // Redraw all lines from server state
     const lines = canvasLines || []
     lines.forEach((line: any) => {
       drawOnCanvas(ctx, line.x0, line.y0, line.x1, line.y1, line.color, line.width, line.isEraser)
@@ -92,8 +99,12 @@ export default function MultiplayerScribbleGame({
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      drawOnCanvas(ctx, drawData.x0, drawData.y0, drawData.x1, drawData.y1, drawData.color, drawData.width, drawData.isEraser)
-      localLinesRef.current.push(drawData)
+      // Support both single object and batched array
+      const draws = Array.isArray(drawData) ? drawData : [drawData]
+      draws.forEach((d: any) => {
+        drawOnCanvas(ctx, d.x0, d.y0, d.x1, d.y1, d.color, d.width, d.isEraser)
+        localLinesRef.current.push(d)
+      })
     }
 
     const handleRemoteClear = () => {
@@ -114,7 +125,22 @@ export default function MultiplayerScribbleGame({
     }
   }, [socket, isDrawer])
 
-  // 3. Real-time AFK warning listener
+  // Draw batching flush interval — emit buffered strokes every 33ms
+  useEffect(() => {
+    if (!isDrawer || stage !== 'DRAWING') return
+
+    drawFlushIntervalRef.current = setInterval(() => {
+      if (pendingDrawRef.current.length === 0 || !socket) return
+      const batch = pendingDrawRef.current.splice(0)
+      socket.emit('scribble-draw', { roomCode, drawData: batch })
+    }, 33)
+
+    return () => {
+      if (drawFlushIntervalRef.current) clearInterval(drawFlushIntervalRef.current)
+    }
+  }, [isDrawer, stage, socket, roomCode])
+
+  // 3. AFK warning listener
   useEffect(() => {
     if (!socket) return
 
@@ -133,42 +159,36 @@ export default function MultiplayerScribbleGame({
     }
   }, [socket, currentUserId, drawerId, players])
 
-  // Canvas helper drawing functions
   const drawOnCanvas = (
     ctx: CanvasRenderingContext2D,
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number,
-    strokeStyle: string,
-    lineWidth: number,
-    isEraser: boolean
+    x0: number, y0: number, x1: number, y1: number,
+    strokeStyle: string, lineWidth: number, isEraser: boolean
   ) => {
     ctx.beginPath()
     ctx.moveTo(x0, y0)
     ctx.lineTo(x1, y1)
-    ctx.strokeStyle = isEraser ? '#0a0b0d' : strokeStyle // match canvas background
+    ctx.strokeStyle = isEraser ? '#0a0b0d' : strokeStyle
     ctx.lineWidth = lineWidth
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.stroke()
   }
 
-  // 3. Drawing handlers for Mouse / Touch (Mobile optimized)
+  // Touch/Mouse coordinate helper — FIXED: changedTouches fallback
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent): { x: number; y: number } => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
     const rect = canvas.getBoundingClientRect()
-    
-    // Scale factor to map client rect size to internal canvas resolution (800x600)
     const scaleX = canvas.width / rect.width
     const scaleY = canvas.height / rect.height
 
     if ('touches' in e) {
-      if (e.touches.length === 0) return { x: 0, y: 0 }
+      // Use changedTouches[0] as fallback when touches is empty (touchend event)
+      const touch = e.touches.length > 0 ? e.touches[0] : e.changedTouches?.[0]
+      if (!touch) return lastPosRef.current // return last known position on release
       return {
-        x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top) * scaleY
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY
       }
     } else {
       return {
@@ -180,8 +200,6 @@ export default function MultiplayerScribbleGame({
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawer || stage !== 'DRAWING') return
-    // e.preventDefault() // prevent scroll on touch devices
-    
     isDrawingRef.current = true
     const pos = getCoordinates(e)
     lastPosRef.current = pos
@@ -190,7 +208,7 @@ export default function MultiplayerScribbleGame({
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current || !isDrawer || stage !== 'DRAWING') return
     if ('touches' in e) {
-      e.preventDefault() // prevent scrolling while drawing
+      e.preventDefault()
     }
 
     const canvas = canvasRef.current
@@ -203,7 +221,6 @@ export default function MultiplayerScribbleGame({
     const strokeWidth = brushSize
     const isEraser = tool === 'eraser'
 
-    // Draw locally
     drawOnCanvas(ctx, lastPosRef.current.x, lastPosRef.current.y, currentPos.x, currentPos.y, strokeColor, strokeWidth, isEraser)
 
     const drawData = {
@@ -217,11 +234,8 @@ export default function MultiplayerScribbleGame({
     }
 
     localLinesRef.current.push(drawData)
-
-    // Emit drawing step immediately to other players
-    if (socket) {
-      socket.emit('scribble-draw', { roomCode, drawData })
-    }
+    // Buffer for batch emission instead of immediate per-stroke emit
+    pendingDrawRef.current.push(drawData)
 
     lastPosRef.current = currentPos
   }
@@ -230,7 +244,13 @@ export default function MultiplayerScribbleGame({
     if (!isDrawingRef.current || !isDrawer || stage !== 'DRAWING') return
     isDrawingRef.current = false
 
-    // Periodically sync full lines state to server for reconnects
+    // Flush remaining buffer immediately on stroke end
+    if (pendingDrawRef.current.length > 0 && socket) {
+      const batch = pendingDrawRef.current.splice(0)
+      socket.emit('scribble-draw', { roomCode, drawData: batch })
+    }
+
+    // Sync full canvas state to server for reconnect recovery
     if (socket) {
       socket.emit('submit-move', { roomCode, move: { type: 'draw', lines: localLinesRef.current } })
     }
@@ -245,6 +265,7 @@ export default function MultiplayerScribbleGame({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     localLinesRef.current = []
+    pendingDrawRef.current = []
 
     if (socket) {
       socket.emit('scribble-clear', { roomCode })
@@ -252,120 +273,189 @@ export default function MultiplayerScribbleGame({
     }
   }
 
-  // 4. Pre-game Settings form
   const handleStartMatchWithSettings = (timerVal: number) => {
     if (!socket || isSubmitting) return
     setIsSubmitting(true)
     socket.emit('submit-move', { roomCode, move: { type: 'settings', timerDuration: timerVal } }, (res: any) => {
       setIsSubmitting(false)
-      if (res?.error) {
-        addToast('error', 'Setup Error', res.error)
-      }
+      if (res?.error) addToast('error', 'Setup Error', res.error)
     })
   }
 
-  // 5. Word Selection action
   const handleSelectWord = (word: string) => {
     if (!socket || isSubmitting) return
     setIsSubmitting(true)
     socket.emit('submit-move', { roomCode, move: { type: 'select-word', word } }, (res: any) => {
       setIsSubmitting(false)
-      if (res?.error) {
-        addToast('error', 'Select Word Error', res.error)
-      }
+      if (res?.error) addToast('error', 'Select Word Error', res.error)
     })
   }
 
-  // 6. Submit Guess
   const handleGuessSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!socket || !guess.trim() || isSubmitting || hasGuessed || isDrawer) return
-
     setIsSubmitting(true)
     socket.emit('submit-move', { roomCode, move: { type: 'guess', guess: guess.trim() } }, (res: any) => {
       setIsSubmitting(false)
-      if (res?.error) {
-        addToast('error', 'Guess Error', res.error)
-      } else {
-        setGuess('')
-      }
+      if (res?.error) addToast('error', 'Guess Error', res.error)
+      else setGuess('')
     })
   }
 
-  // Play again votes
   const handlePlayAgain = () => {
     if (!socket) return
     setIsSubmitting(true)
     socket.emit('vote-replay', { roomCode }, (res: any) => {
       setIsSubmitting(false)
-      if (res?.error) {
-        addToast('error', 'Replay Error', res.error)
-      } else {
-        addToast('success', 'Vote Registered', 'Waiting for others to accept.')
-      }
+      if (res?.error) addToast('error', 'Replay Error', res.error)
+      else addToast('success', 'Vote Registered', 'Waiting for others to accept.')
     })
   }
 
-  const getUsername = (uid: string) => {
-    return players.find(p => p.userId === uid)?.username || 'Opponent'
-  }
+  const getUsername = (uid: string) => players.find(p => p.userId === uid)?.username || 'Opponent'
 
-  // 7. Timer Remaining Calculations
+  // Timer
   const [timerRemaining, setTimerRemaining] = useState(0)
-
   useEffect(() => {
     if (stage === 'FINISHED' || stage === 'LOBBY_SETTINGS') return
-
     const limit = stage === 'WORD_SELECTION' ? 15 : stage === 'ROUND_SUMMARY' ? 8 : timerDuration
     const updateTimer = () => {
       const elapsed = Math.floor((Date.now() - timerStart) / 1000)
       setTimerRemaining(Math.max(0, limit - elapsed))
     }
-
     updateTimer()
     const interval = setInterval(updateTimer, 500)
     return () => clearInterval(interval)
   }, [stage, timerStart, timerDuration])
 
-  // Colors Palette
+  const timerPercent = stage === 'DRAWING' ? (timerRemaining / timerDuration) * 100 : 100
+
   const colors = [
-    '#ffffff', '#000000', '#ef4444', '#22c55e', '#3b82f6', 
+    '#ffffff', '#000000', '#ef4444', '#22c55e', '#3b82f6',
     '#eab308', '#f97316', '#a855f7', '#ec4899', '#06b6d4'
   ]
 
-  return (
-    <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
-      
-      {/* Header Bar */}
-      <MultiplayerHeader
-        players={players}
-        currentUserId={currentUserId}
-        currentTurn={drawerId}
-        turnExpiration={null} // custom timer used
-        scores={playerScores}
-        gameFinished={stage === 'FINISHED'}
-      />
+  // Word hint display
+  const wordDisplay = isDrawer
+    ? (selectedWord ? selectedWord.toUpperCase() : null)
+    : (hintString || (selectedWord ? '_'.repeat(selectedWord.length).split('').join(' ') : null))
+  const wordLength = selectedWord ? selectedWord.length : hintString.replace(/ /g, '').replace(/_/g, '').length || hintString.split(' ').filter(Boolean).length
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: '1rem', width: '100%' }} className="scribble-layout-grid">
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+
+      {/* ── Compact 3-Zone Header ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto 1fr',
+        alignItems: 'center',
+        gap: '0.75rem',
+        padding: '0.6rem 0.75rem',
+        background: 'hsl(222 20% 10%)',
+        border: '1px solid hsl(220 15% 18%)',
+        borderRadius: 14,
+      }}>
+        {/* LEFT: Timer */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+            <svg width="36" height="36" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(220 20% 18%)" strokeWidth="3" />
+              <circle
+                cx="18" cy="18" r="14" fill="none"
+                stroke={timerRemaining <= 10 ? 'hsl(0 80% 55%)' : 'hsl(220 100% 60%)'}
+                strokeWidth="3"
+                strokeDasharray={`${2 * Math.PI * 14}`}
+                strokeDashoffset={`${2 * Math.PI * 14 * (1 - timerPercent / 100)}`}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.5s linear' }}
+              />
+            </svg>
+            <span style={{
+              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '0.65rem', fontWeight: 800,
+              color: timerRemaining <= 10 ? 'hsl(0 80% 65%)' : 'white'
+            }}>
+              {stage === 'DRAWING' || stage === 'WORD_SELECTION' || stage === 'ROUND_SUMMARY' ? timerRemaining : '—'}
+            </span>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)' }}>
+            <div style={{ fontWeight: 700, color: 'white', fontSize: '0.8rem' }}>Round {round}/{maxRounds}</div>
+            <div>{stage === 'DRAWING' ? 'Drawing' : stage === 'WORD_SELECTION' ? 'Choosing' : stage === 'ROUND_SUMMARY' ? 'Summary' : stage}</div>
+          </div>
+        </div>
+
+        {/* CENTER: Word Reveal */}
+        <div style={{ textAlign: 'center', minWidth: 0 }}>
+          {stage === 'DRAWING' && (
+            <>
+              {isDrawer ? (
+                <div style={{ fontSize: '0.7rem', color: 'hsl(142 70% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  ✏️ Draw: <span style={{ color: 'hsl(142 70% 65%)', fontSize: '0.9rem' }}>{selectedWord}</span>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '0.18em', fontFamily: 'monospace', color: 'white' }}>
+                    {wordDisplay || '...'}
+                  </div>
+                  {wordLength > 0 && (
+                    <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 50%)', marginTop: '1px' }}>
+                      {wordLength} letters
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          {stage === 'WORD_SELECTION' && (
+            <div style={{ fontSize: '0.75rem', color: 'hsl(38 95% 60%)', fontWeight: 700 }}>
+              🤔 {isDrawer ? 'Choose your word!' : `${getUsername(drawerId)} is choosing...`}
+            </div>
+          )}
+          {stage === 'LOBBY_SETTINGS' && (
+            <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>
+              🎨 Scribble
+            </div>
+          )}
+          {stage === 'ROUND_SUMMARY' && (
+            <div style={{ fontSize: '0.75rem', color: 'hsl(142 70% 55%)', fontWeight: 700 }}>
+              🏁 Round Over — <span style={{ color: 'white' }}>{selectedWord?.toUpperCase()}</span>
+            </div>
+          )}
+          {stage === 'FINISHED' && (
+            <div style={{ fontSize: '0.75rem', color: 'hsl(45 100% 60%)', fontWeight: 700 }}>🏆 Match Finished</div>
+          )}
+        </div>
+
+        {/* RIGHT: Leave button */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={onLeave}
+            id="scribble-leave-btn"
+            style={{
+              padding: '0.35rem 0.8rem', fontSize: '0.78rem', borderRadius: 10,
+              border: '1px solid hsl(0 80% 40% / 0.5)', color: 'hsl(0 80% 65%)',
+              background: 'hsl(0 80% 50% / 0.08)', minWidth: 'auto', fontWeight: 700
+            }}
+          >
+            🚪 Leave
+          </button>
+        </div>
+      </div>
+
+      {/* ── Main Grid ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: '0.75rem', width: '100%' }} className="scribble-layout-grid">
         
-        {/* Left Column: Canvas & Control Screens */}
+        {/* Left: Canvas */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           
-          {/* Main Visual Board */}
+          {/* Canvas board */}
           <div style={{
-            position: 'relative',
-            width: '100%',
-            aspectRatio: '4/3',
-            background: '#0a0b0d',
-            borderRadius: 16,
+            position: 'relative', width: '100%', aspectRatio: '4/3',
+            background: '#0a0b0d', borderRadius: 16,
             border: '1px solid hsl(var(--border-subtle))',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+            overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
-            
-            {/* HTML5 drawing canvas */}
             <canvas
               ref={canvasRef}
               width={800}
@@ -378,19 +468,18 @@ export default function MultiplayerScribbleGame({
               onTouchMove={draw}
               onTouchEnd={stopDrawing}
               style={{
-                width: '100%',
-                height: '100%',
+                width: '100%', height: '100%',
                 display: stage === 'DRAWING' ? 'block' : 'none',
                 cursor: isDrawer && stage === 'DRAWING' ? 'crosshair' : 'default',
-                touchAction: 'none' // prevent browser swipe scroll gestures
+                touchAction: 'none'
               }}
             />
 
-            {/* STAGE: LOBBY_SETTINGS Overlay */}
+            {/* LOBBY_SETTINGS */}
             {stage === 'LOBBY_SETTINGS' && (
               <div style={{ padding: '2rem', textAlign: 'center', zIndex: 10 }}>
                 <span style={{ fontSize: '3rem' }}>🎨</span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.5rem', marginBottom: '1rem' }}>Pre-game Match Settings</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.5rem', marginBottom: '1rem' }}>Match Settings</h3>
                 {currentUserId === gameState.hostUserId ? (
                   <div>
                     <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
@@ -398,33 +487,25 @@ export default function MultiplayerScribbleGame({
                     </p>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                       {[30, 45, 60].map(time => (
-                        <button
-                          key={time}
-                          className="btn btn-primary"
-                          onClick={() => handleStartMatchWithSettings(time)}
-                          style={{ minWidth: 80, borderRadius: 10 }}
-                        >
+                        <button key={time} className="btn btn-primary" onClick={() => handleStartMatchWithSettings(time)} style={{ minWidth: 80, borderRadius: 10 }}>
                           ⏱ {time}s
                         </button>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  <div>
-                    <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.9rem' }}>
-                      Waiting for the host ({getUsername(gameState.hostUserId)}) to select round duration...
-                    </p>
-                  </div>
+                  <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.9rem' }}>
+                    Waiting for the host ({getUsername(gameState.hostUserId)}) to select round duration...
+                  </p>
                 )}
               </div>
             )}
 
-            {/* STAGE: WORD_SELECTION Overlay */}
+            {/* WORD_SELECTION */}
             {stage === 'WORD_SELECTION' && (
               <div style={{ padding: '2rem', textAlign: 'center', zIndex: 10 }}>
                 <span style={{ fontSize: '3rem', animation: 'bounce 1s infinite' }}>🤔</span>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.5rem', marginBottom: '0.5rem' }}>Word Selection</h3>
-                
                 {isDrawer ? (
                   <div>
                     <p style={{ color: 'hsl(var(--brand-primary))', fontWeight: 600, fontSize: '0.9rem', marginBottom: '1rem' }}>
@@ -432,12 +513,7 @@ export default function MultiplayerScribbleGame({
                     </p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxWidth: 360, margin: '0 auto' }}>
                       {(wordsToSelect as string[]).map((word: string) => (
-                        <button
-                          key={word}
-                          className="btn btn-primary"
-                          onClick={() => handleSelectWord(word)}
-                          style={{ padding: '0.75rem', borderRadius: 8, fontSize: '0.9rem', fontWeight: 700 }}
-                        >
+                        <button key={word} className="btn btn-primary" onClick={() => handleSelectWord(word)} style={{ padding: '0.75rem', borderRadius: 8, fontSize: '0.9rem', fontWeight: 700 }}>
                           {word}
                         </button>
                       ))}
@@ -449,28 +525,23 @@ export default function MultiplayerScribbleGame({
                       <strong style={{ color: 'white' }}>{getUsername(drawerId)}</strong> is choosing a word...
                     </p>
                     <div className="glass" style={{ display: 'inline-flex', padding: '0.5rem 1rem', borderRadius: 99, marginTop: '1rem', fontSize: '0.8rem', color: 'hsl(var(--text-muted))' }}>
-                      ⏳ Choice timer: {timerRemaining}s
+                      ⏳ {timerRemaining}s remaining
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* STAGE: ROUND_SUMMARY Overlay */}
+            {/* ROUND_SUMMARY */}
             {stage === 'ROUND_SUMMARY' && (
               <div style={{ padding: '2rem', textAlign: 'center', zIndex: 10, background: 'rgba(10,11,13,0.95)', position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <span style={{ fontSize: '3.5rem' }}>🏁</span>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '0.5rem', color: 'hsl(var(--brand-secondary))' }}>
-                  Round Over!
-                </h3>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '0.5rem', color: 'hsl(var(--brand-secondary))' }}>Round Over!</h3>
                 <p style={{ fontSize: '1.1rem', color: 'white', marginTop: '0.25rem', marginBottom: '1.5rem' }}>
                   The word was: <strong style={{ textTransform: 'uppercase', color: 'hsl(var(--success))', fontSize: '1.25rem' }}>{selectedWord}</strong>
                 </p>
-
                 <div className="glass" style={{ maxWidth: 400, margin: '0 auto', padding: '1rem', borderRadius: 12, width: '100%' }}>
-                  <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-                    Round Standings
-                  </h4>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Round Standings</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {players.map(p => {
                       const pts = roundScores[p.userId] || 0
@@ -478,50 +549,39 @@ export default function MultiplayerScribbleGame({
                       const isDr = p.userId === drawerId
                       return (
                         <div key={p.userId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                          <span>
-                            {isDr ? '🎨 ' : guessed ? '✅ ' : '❌ '} {p.username}
-                          </span>
-                          <span style={{ color: pts > 0 ? 'hsl(var(--success))' : 'white', fontWeight: 700 }}>
-                            +{pts} pts
-                          </span>
+                          <span>{isDr ? '🎨 ' : guessed ? '✅ ' : '❌ '} {p.username}</span>
+                          <span style={{ color: pts > 0 ? 'hsl(var(--success))' : 'white', fontWeight: 700 }}>+{pts} pts</span>
                         </div>
                       )
                     })}
                   </div>
                 </div>
-
-                <p style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', marginTop: '1rem' }}>
-                  Next round starts in {timerRemaining}s...
-                </p>
+                <p style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', marginTop: '1rem' }}>Next round in {timerRemaining}s...</p>
               </div>
             )}
 
-            {/* STAGE: FINISHED Overlay */}
+            {/* FINISHED overlay */}
             {stage === 'FINISHED' && (
-              <div style={{ padding: '2rem', textAlign: 'center', zIndex: 10, background: 'rgba(10,11,13,0.95)', position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{
+                padding: '2rem', textAlign: 'center', zIndex: 10,
+                background: 'rgba(10,11,13,0.94)', backdropFilter: 'blur(4px)',
+                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
+              }}>
                 <span style={{ fontSize: '4rem' }}>🏆</span>
                 <h3 style={{ fontSize: '1.75rem', fontWeight: 900, marginTop: '0.5rem' }}>Match Finished!</h3>
-                <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem' }}>
-                  Thanks for playing Scribble! Here are the final scores:
-                </p>
+                <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem' }}>Final Standings</p>
 
                 <div className="glass" style={{ maxWidth: 400, margin: '0 auto 1.5rem', padding: '1.25rem', borderRadius: 16, width: '100%' }}>
-                  {players
-                    .sort((a, b) => (playerScores[b.userId] || 0) - (playerScores[a.userId] || 0))
-                    .map((p, idx) => (
-                      <div key={p.userId} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: idx < players.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', fontSize: '0.9rem' }}>
-                        <span>
-                          {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '👤'} {p.username}
-                        </span>
-                        <strong style={{ color: 'hsl(var(--brand-primary))' }}>{playerScores[p.userId] || 0} pts</strong>
-                      </div>
-                    ))}
+                  {sortedPlayers.map((p, idx) => (
+                    <div key={p.userId} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: idx < sortedPlayers.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', fontSize: '0.9rem' }}>
+                      <span>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '👤'} {p.username}</span>
+                      <strong style={{ color: 'hsl(var(--brand-primary))' }}>{playerScores[p.userId] || 0} pts</strong>
+                    </div>
+                  ))}
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', maxWidth: 400, margin: '0 auto', width: '100%' }}>
-                  <button className="btn btn-secondary" onClick={onLeave} style={{ flex: 1, borderRadius: 12 }}>
-                    🚪 Leave Room
-                  </button>
+                  <button className="btn btn-secondary" onClick={onLeave} style={{ flex: 1, borderRadius: 12 }}>🚪 Leave Room</button>
                   <button
                     className="btn btn-primary"
                     onClick={handlePlayAgain}
@@ -535,231 +595,132 @@ export default function MultiplayerScribbleGame({
             )}
           </div>
 
-          {/* Canvas Tools Toolbar (Only shown for Drawer during Drawing) */}
+          {/* Canvas Toolbar */}
           {stage === 'DRAWING' && isDrawer && (
-            <div className="card glass" style={{
-              padding: '0.75rem',
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              borderRadius: 12
-            }}>
-              {/* Brush Tools */}
+            <div className="card glass" style={{ padding: '0.75rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', borderRadius: 12 }}>
               <div style={{ display: 'flex', gap: '0.4rem' }}>
-                <button
-                  onClick={() => setTool('pencil')}
-                  className="btn"
-                  style={{
-                    padding: '0.4rem 0.75rem',
-                    minWidth: 'auto',
-                    backgroundColor: tool === 'pencil' ? 'hsl(var(--brand-primary) / 0.2)' : 'transparent',
-                    border: tool === 'pencil' ? '1px solid hsl(var(--brand-primary))' : '1px solid transparent',
-                    color: 'white',
-                    fontSize: '0.8rem'
-                  }}
-                >
-                  ✏️ Pencil
-                </button>
-                <button
-                  onClick={() => setTool('eraser')}
-                  className="btn"
-                  style={{
-                    padding: '0.4rem 0.75rem',
-                    minWidth: 'auto',
-                    backgroundColor: tool === 'eraser' ? 'hsl(var(--brand-primary) / 0.2)' : 'transparent',
-                    border: tool === 'eraser' ? '1px solid hsl(var(--brand-primary))' : '1px solid transparent',
-                    color: 'white',
-                    fontSize: '0.8rem'
-                  }}
-                >
-                  🧽 Eraser
-                </button>
+                {(['pencil', 'eraser'] as const).map(t => (
+                  <button key={t} onClick={() => setTool(t)} className="btn" style={{ padding: '0.4rem 0.75rem', minWidth: 'auto', backgroundColor: tool === t ? 'hsl(var(--brand-primary) / 0.2)' : 'transparent', border: tool === t ? '1px solid hsl(var(--brand-primary))' : '1px solid transparent', color: 'white', fontSize: '0.8rem' }}>
+                    {t === 'pencil' ? '✏️ Pencil' : '🧽 Eraser'}
+                  </button>
+                ))}
               </div>
-
-              {/* Brush Size */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))' }}>Size:</span>
                 {[3, 6, 12, 20].map(sz => (
-                  <button
-                    key={sz}
-                    onClick={() => setBrushSize(sz)}
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      border: brushSize === sz ? '2px solid white' : '1px solid transparent',
-                      background: 'hsl(220 20% 18%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer'
-                    }}
-                  >
+                  <button key={sz} onClick={() => setBrushSize(sz)} style={{ width: 24, height: 24, borderRadius: '50%', border: brushSize === sz ? '2px solid white' : '1px solid transparent', background: 'hsl(220 20% 18%)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <div style={{ width: sz / 2 + 2, height: sz / 2 + 2, borderRadius: '50%', background: 'white' }} />
                   </button>
                 ))}
               </div>
-
-              {/* Color Palette */}
               <div style={{ display: 'flex', gap: '4px' }}>
                 {colors.map(col => (
-                  <button
-                    key={col}
-                    onClick={() => { setColor(col); setTool('pencil'); }}
-                    style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: '50%',
-                      border: color === col && tool === 'pencil' ? '2px solid white' : '1px solid rgba(255,255,255,0.1)',
-                      background: col,
-                      cursor: 'pointer'
-                    }}
-                  />
+                  <button key={col} onClick={() => { setColor(col); setTool('pencil') }} style={{ width: 20, height: 20, borderRadius: '50%', border: color === col && tool === 'pencil' ? '2px solid white' : '1px solid rgba(255,255,255,0.1)', background: col, cursor: 'pointer' }} />
                 ))}
               </div>
-
-              {/* Clear Canvas */}
-              <button
-                className="btn"
-                onClick={clearCanvas}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  minWidth: 'auto',
-                  border: '1px solid hsl(var(--danger) / 0.3)',
-                  color: 'hsl(var(--danger))',
-                  fontSize: '0.8rem',
-                  backgroundColor: 'transparent'
-                }}
-              >
+              <button className="btn" onClick={clearCanvas} style={{ padding: '0.4rem 0.75rem', minWidth: 'auto', border: '1px solid hsl(var(--danger) / 0.3)', color: 'hsl(var(--danger))', fontSize: '0.8rem', backgroundColor: 'transparent' }}>
                 🗑️ Clear
               </button>
             </div>
           )}
 
-          {/* Hint system strip for spectators, target label for drawer */}
-          {stage === 'DRAWING' && (
-            <div className="card glass text-center" style={{ padding: '0.75rem', borderRadius: 12 }}>
-              {isDrawer ? (
-                <div style={{ fontSize: '1.05rem', fontWeight: 800 }}>
-                  🎨 DRAW THIS WORD: <span style={{ color: 'hsl(var(--success))', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{selectedWord}</span>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Guess the Word ({selectedWord ? selectedWord.length : hintString.replace(/ /g, '').length} letters)
-                  </div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '0.15em', fontFamily: 'monospace' }}>
-                    {hintString || '...'}
-                  </div>
-                </div>
-              )}
+          {/* Word hint strip (only during drawing, for spectators) */}
+          {stage === 'DRAWING' && !isDrawer && (
+            <div className="card glass text-center" style={{ padding: '0.6rem', borderRadius: 12 }}>
+              <form onSubmit={handleGuessSubmit} style={{ display: 'flex', gap: '0.4rem' }}>
+                <input
+                  className="input"
+                  value={guess}
+                  onChange={e => setGuess(e.target.value)}
+                  placeholder={hasGuessed ? 'Correct! ✅ Waiting...' : 'Type your guess...'}
+                  disabled={hasGuessed || isSubmitting}
+                  style={{ flex: 1, fontSize: '0.85rem', minHeight: '40px', padding: '0.4rem 0.75rem' }}
+                  maxLength={24}
+                  id="scribble-guess-input"
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={hasGuessed || !guess.trim() || isSubmitting}
+                  style={{ minHeight: '40px', padding: '0.4rem 0.9rem', fontSize: '0.85rem', borderRadius: 8 }}
+                >
+                  Guess
+                </button>
+              </form>
             </div>
           )}
         </div>
 
-        {/* Right Column: Game Stats, Chat log & Input */}
+        {/* Right Column: Scoreboard + Commentary */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', height: '100%' }}>
-          
-          {/* Game Stats (Round, Timer) */}
-          <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', borderRadius: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <span style={{ color: 'hsl(var(--text-muted))' }}>Round:</span>
-              <strong style={{ color: 'white' }}>{round} / {maxRounds}</strong>
-            </div>
-            
-            {stage === 'DRAWING' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'hsl(var(--text-muted))' }}>Timer:</span>
-                  <span style={{ color: timerRemaining <= 10 ? 'hsl(var(--danger))' : 'white', fontWeight: 700 }}>
-                    ⏱ {timerRemaining}s
-                  </span>
-                </div>
-                {/* Progress bar */}
-                <div style={{ height: 4, background: 'hsl(220 20% 16%)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${(timerRemaining / timerDuration) * 100}%`,
-                    background: timerRemaining <= 10 ? 'hsl(var(--danger))' : 'hsl(var(--brand-primary))',
-                    transition: 'width 0.5s linear'
-                  }} />
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* Leaderboard panel */}
-          <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderRadius: 12 }}>
-            <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', margin: 0 }}>
+          {/* Live Scoreboard */}
+          <div className="card glass" style={{ padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', borderRadius: 12 }}>
+            <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
               Live Scoreboard
             </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {players
-                .sort((a, b) => (playerScores[b.userId] || 0) - (playerScores[a.userId] || 0))
-                .map((p, idx) => {
-                  const isCurDrawer = p.userId === drawerId
-                  const didGuess = guessedPlayers.includes(p.userId)
-                  return (
-                    <div
-                      key={p.userId}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: '0.8rem',
-                        padding: '4px 6px',
-                        borderRadius: 6,
-                        backgroundColor: isCurDrawer ? 'hsl(var(--brand-primary) / 0.1)' : didGuess ? 'hsl(var(--success) / 0.08)' : 'transparent'
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <span>{isCurDrawer ? '🎨' : didGuess ? '✅' : '👤'}</span>
-                        <span style={{ fontWeight: p.userId === currentUserId ? 700 : 400 }}>{p.username}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              {sortedPlayers.map((p, idx) => {
+                const isCurDrawer = p.userId === drawerId
+                const didGuess = guessedPlayers.includes(p.userId)
+                const isLeader = p.userId === leaderId && (playerScores[p.userId] || 0) > 0
+                const isMe = p.userId === currentUserId
+                return (
+                  <div
+                    key={p.userId}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      fontSize: '0.78rem', padding: '5px 6px', borderRadius: 8,
+                      backgroundColor: isCurDrawer
+                        ? 'hsl(var(--brand-primary) / 0.12)'
+                        : didGuess ? 'hsl(var(--success) / 0.1)'
+                        : isMe ? 'hsl(220 20% 16%)' : 'transparent',
+                      border: isMe ? '1px solid hsl(220 15% 22%)' : '1px solid transparent'
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+                      <span style={{ fontSize: '0.8rem' }}>
+                        {isCurDrawer ? '✏️' : isLeader ? '👑' : didGuess ? '✅' : '👤'}
                       </span>
-                      <strong>{playerScores[p.userId] || 0}</strong>
-                    </div>
-                  )
-                })}
+                      <button
+                        onClick={() => p.profileId && setSelectedProfileId(p.profileId)}
+                        style={{
+                          background: 'none', border: 'none', padding: 0, cursor: p.profileId ? 'pointer' : 'default',
+                          color: isMe ? 'hsl(220 100% 75%)' : 'white',
+                          fontWeight: isMe ? 700 : 400, fontSize: '0.78rem',
+                          textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap',
+                          maxWidth: 110, textAlign: 'left'
+                        }}
+                        title={p.username}
+                      >
+                        {p.username}
+                      </button>
+                    </span>
+                    <strong style={{ color: (playerScores[p.userId] || 0) > 0 ? 'hsl(var(--brand-primary))' : 'hsl(220 10% 50%)', flexShrink: 0 }}>
+                      {playerScores[p.userId] || 0}
+                    </strong>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
-          {/* Commentary & Guess feed */}
-          <div className="card glass" style={{
-            padding: '1rem',
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            borderRadius: 12,
-            minHeight: 200
-          }}>
-            <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', margin: 0 }}>
+          {/* Commentary Feed */}
+          <div className="card glass" style={{ padding: '0.875rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', borderRadius: 12, minHeight: 160 }}>
+            <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
               Guesses & Feed
             </h4>
-            
-            <div style={{
-              flex: 1,
-              maxHeight: 240,
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column-reverse',
-              gap: '0.4rem',
-              fontSize: '0.8rem',
-              paddingRight: '4px'
-            }}>
+            <div style={{ flex: 1, maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column-reverse', gap: '0.3rem', fontSize: '0.78rem', paddingRight: '2px' }}>
               {commentary.map((line: string, idx: number) => {
-                const isGuessSuccess = line.startsWith('✅')
+                const isSuccess = line.startsWith('✅') || line.startsWith('⭐')
                 const isMsg = line.startsWith('💬')
                 const isWarning = line.startsWith('⚠️') || line.startsWith('⏰')
-                
-                let col = 'white'
+                let col = 'hsl(220 10% 70%)'
                 let fontWt = 400
-                if (isGuessSuccess) { col = 'hsl(var(--success))'; fontWt = 700; }
-                else if (isMsg) { col = 'hsl(var(--text-secondary))'; }
-                else if (isWarning) { col = 'hsl(var(--warning))'; fontWt = 700; }
-
+                if (isSuccess) { col = 'hsl(var(--success))'; fontWt = 700 }
+                else if (isMsg) { col = 'hsl(220 10% 55%)' }
+                else if (isWarning) { col = 'hsl(var(--warning))'; fontWt = 700 }
                 return (
                   <div key={idx} style={{ color: col, fontWeight: fontWt, lineHeight: '1.35' }}>
                     {line}
@@ -768,25 +729,21 @@ export default function MultiplayerScribbleGame({
               })}
             </div>
 
-            {/* Guess input box (only shown for spectators who haven't guessed) */}
+            {/* Guess input for drawing stage (spectators — also shown in right column on mobile) */}
             {stage === 'DRAWING' && !isDrawer && (
-              <form onSubmit={handleGuessSubmit} style={{ display: 'flex', gap: '0.4rem', marginTop: 'auto' }}>
+              <form onSubmit={handleGuessSubmit} style={{ display: 'flex', gap: '0.35rem', marginTop: 'auto' }}>
                 <input
                   className="input"
                   value={guess}
                   onChange={e => setGuess(e.target.value)}
-                  placeholder={hasGuessed ? "Correct! waiting..." : "Type your guess..."}
+                  placeholder={hasGuessed ? '✅ Correct!' : 'Your guess...'}
                   disabled={hasGuessed || isSubmitting}
-                  style={{ flex: 1, fontSize: '0.8rem', minHeight: '38px', padding: '0.4rem 0.75rem' }}
-                  maxLength={20}
-                  id="scribble-guess-input"
+                  style={{ flex: 1, fontSize: '0.78rem', minHeight: '36px', padding: '0.3rem 0.6rem' }}
+                  maxLength={24}
+                  id="scribble-guess-sidebar"
+                  autoComplete="off"
                 />
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={hasGuessed || !guess.trim() || isSubmitting}
-                  style={{ minHeight: '38px', padding: '0.4rem 0.9rem', fontSize: '0.8rem', borderRadius: 8 }}
-                >
+                <button type="submit" className="btn btn-primary" disabled={hasGuessed || !guess.trim() || isSubmitting} style={{ minHeight: '36px', padding: '0.3rem 0.7rem', fontSize: '0.78rem', borderRadius: 8 }}>
                   Go
                 </button>
               </form>
@@ -795,17 +752,13 @@ export default function MultiplayerScribbleGame({
         </div>
       </div>
 
-      {/* Match reactions triggers & floating reactions layer */}
-      {session.status === 'PLAYING' && (
-        <MatchReactions
-          socket={socket}
-          roomCode={roomCode}
-          currentUserId={currentUserId}
-          players={players}
-        />
-      )}
+      {/* Profile Preview Modal */}
+      <ProfileCardModal
+        profileId={selectedProfileId}
+        isOpen={!!selectedProfileId}
+        onClose={() => setSelectedProfileId(null)}
+      />
 
-      {/* Embedded styles */}
       <style jsx>{`
         @media (max-width: 768px) {
           .scribble-layout-grid {

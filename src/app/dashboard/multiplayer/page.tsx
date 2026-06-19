@@ -332,7 +332,12 @@ export default function MultiplayerPage() {
         if (!active) return
         if (invitesRes.ok) {
           const data = await invitesRes.json()
-          setInvites(data.invites || [])
+          const INVITE_TTL_MS = 10 * 60 * 1000
+          const fresh = (data.invites || []).filter((inv: any) => {
+            if (!inv.createdAt) return true
+            return Date.now() - new Date(inv.createdAt).getTime() < INVITE_TTL_MS
+          })
+          setInvites(fresh)
         }
 
         const notifRes = await fetch('/api/multiplayer/notifications', { cache: 'no-store' })
@@ -365,6 +370,8 @@ export default function MultiplayerPage() {
     // Global invite listener across dashboard
     socket.on('invite-received', (invite: any) => {
       addToast('info', 'Invite Received', `You received a room invite from ${invite.sender?.username || 'a friend'}`)
+      const INVITE_TTL_MS = 10 * 60 * 1000
+      if (invite.createdAt && Date.now() - new Date(invite.createdAt).getTime() >= INVITE_TTL_MS) return
       setInvites(prev => [invite, ...prev])
     })
 
@@ -665,7 +672,14 @@ export default function MultiplayerPage() {
         console.log('[DEBUG DECLINE] searching for roomCode:', invite.room?.roomCode)
         const relativeNotif = notifData.notifications.find(
           (n: any) => {
-            const meta = typeof n.meta === 'string' ? JSON.parse(n.meta) : n.meta
+            let meta = n.meta
+            if (typeof n.meta === 'string') {
+              try {
+                meta = JSON.parse(n.meta)
+              } catch (e) {
+                meta = null
+              }
+            }
             return meta && meta.roomCode === invite.room?.roomCode
           }
         )
@@ -709,7 +723,12 @@ export default function MultiplayerPage() {
       const invitesRes = await fetch('/api/multiplayer/invite', { cache: 'no-store' })
       if (invitesRes.ok) {
         const invitesData = await invitesRes.json()
-        setInvites(invitesData.invites || [])
+        const INVITE_TTL_MS = 10 * 60 * 1000
+        const fresh = (invitesData.invites || []).filter((inv: any) => {
+          if (!inv.createdAt) return true
+          return Date.now() - new Date(inv.createdAt).getTime() < INVITE_TTL_MS
+        })
+        setInvites(fresh)
       }
     } catch (err: any) {
       addToast('error', 'Decline Failed', err.message)

@@ -10,7 +10,7 @@ const globalForPrisma = globalThis as unknown as { prisma: any }
 export const prisma =
   globalForPrisma.prisma ??
   (() => {
-    if (process.env.MOCK_DB === 'true') {
+    if (process.env.MOCK_DB === 'true' || process.env.MOCK_AUTH === 'true') {
       return createPrismaMockProxy(null) as any
     }
     const connectionString = process.env.DATABASE_URL

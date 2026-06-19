@@ -7,12 +7,12 @@ const url = 'postgresql://postgres.uuzhepbedmyvtztnbfiu:Gamehub%404455@aws-0-ap-
 async function run() {
   console.log('Testing Prisma PgPool setup...');
   
-  const pool = new pg.Pool({
-    connectionString: url,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
+  const { parse } = require('pg-connection-string');
+  const config = parse(url);
+  config.ssl = {
+    rejectUnauthorized: false
+  };
+  const pool = new pg.Pool(config);
   
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });

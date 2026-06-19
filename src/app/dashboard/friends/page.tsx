@@ -396,8 +396,34 @@ export default function FriendsPage() {
       {user && (
         <div>
           {loading && searchQuery === '' ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'hsl(220 10% 50%)' }}>
-              Loading social hub...
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <style>{`
+                @keyframes fr-shimmer {
+                  0% { background-position: -500px 0; }
+                  100% { background-position: 500px 0; }
+                }
+                .fr-skel {
+                  background: linear-gradient(90deg, hsl(222 18% 12%) 25%, hsl(222 18% 17%) 50%, hsl(222 18% 12%) 75%);
+                  background-size: 500px 100%;
+                  animation: fr-shimmer 1.4s infinite linear;
+                  border-radius: 6px;
+                }
+              `}</style>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'hsl(222 18% 10%)', border: '1px solid hsl(220 15% 16%)', borderRadius: 16, opacity: 1 - i * 0.12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div className="fr-skel" style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div className="fr-skel" style={{ height: 13, width: `${90 + i * 12}px` }} />
+                      <div className="fr-skel" style={{ height: 11, width: 60 }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div className="fr-skel" style={{ height: 32, width: 72, borderRadius: 8 }} />
+                    <div className="fr-skel" style={{ height: 32, width: 72, borderRadius: 8 }} />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="stagger">

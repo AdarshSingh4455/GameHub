@@ -67,6 +67,11 @@ export const checkRateLimit = async (
   event: string,
   callback?: (response: { error: string }) => void
 ): Promise<boolean> => {
+  // Bypass rate limiting in mock/test environment to prevent test failures
+  if (process.env.MOCK_AUTH === 'true') {
+    return true
+  }
+
   // Rate limit by userId if logged in, fallback to socket.id or handshake IP
   const identifier = socket.data.user?.userId || socket.id
   

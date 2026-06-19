@@ -71,7 +71,7 @@ const pool = new pg.Pool({
 })
 const adapter = new PrismaPg(pool)
 const realPrisma = new PrismaClient({ adapter })
-export const prisma = process.env.MOCK_DB === 'true'
+export const prisma = process.env.MOCK_DB === 'true' || process.env.MOCK_AUTH === 'true'
   ? createPrismaMockProxy(realPrisma)
   : realPrisma
 
@@ -951,6 +951,8 @@ io.on('connection', async (rawSocket) => {
           gameState = await getRpsSession(roomCode, room.id, prisma)
         } else if (room.gameSlug === 'number-guessing') {
           gameState = await getNumberGuessingSession(roomCode, room.id, prisma)
+        } else if (room.gameSlug === 'scribble') {
+          gameState = await getScribbleSession(roomCode, room.id, prisma)
         }
 
         if (!gameState) {
@@ -1009,6 +1011,11 @@ io.on('connection', async (rawSocket) => {
             finalGameState = INITIAL_STATES['number-guessing'](activePlayers, room.hostUserId)
             updatedTurn = finalGameState.currentTurn
             await saveNumberGuessingSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'scribble') {
+            await deleteScribbleSession(roomCode)
+            finalGameState = INITIAL_STATES['scribble'](activePlayers, room.hostUserId)
+            updatedTurn = null
+            await saveScribbleSession(roomCode, finalGameState)
           }
 
           logger.info(`[VOTE-REPLAY] room=${roomCode} RESET → fresh board, nextTurn=${updatedTurn}`)
@@ -1032,6 +1039,8 @@ io.on('connection', async (rawSocket) => {
             await saveRpsSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'number-guessing') {
             await saveNumberGuessingSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'scribble') {
+            await saveScribbleSession(roomCode, finalGameState)
           }
         }
 
@@ -1288,6 +1297,7 @@ io.on('connection', async (rawSocket) => {
               await deleteMemorySession(roomCode)
               await deleteRpsSession(roomCode)
               await deleteNumberGuessingSession(roomCode)
+              await deleteScribbleSession(roomCode)
               logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`)
             }
 

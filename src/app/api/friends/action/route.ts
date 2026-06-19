@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedProfile } from '@/lib/multiplayer'
 import { Prisma } from '@prisma/client'
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const profile = await getAuthenticatedProfile(request)
 
-    if (!user) {
+    if (!profile) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const profile = await prisma.profile.findUnique({
-      where: { userId: user.id },
-    })
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })

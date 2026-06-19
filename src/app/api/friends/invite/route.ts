@@ -1,28 +1,19 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedProfile } from '@/lib/multiplayer'
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const sender = await getAuthenticatedProfile(request)
 
-    if (!user) {
+    if (!sender) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { targetFriendId, gameSlug, roomCode } = await request.json()
+    const { targetFriendId, gameSlug, roomCode } = await request.json().catch(() => ({}))
 
     if (!targetFriendId || !gameSlug || !roomCode) {
       return NextResponse.json({ error: 'Missing targetFriendId, gameSlug, or roomCode' }, { status: 400 })
-    }
-
-    const sender = await prisma.profile.findUnique({
-      where: { userId: user.id }
-    })
-
-    if (!sender) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
     // Create invite notification for the friend

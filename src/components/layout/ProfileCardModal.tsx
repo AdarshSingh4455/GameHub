@@ -293,9 +293,45 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
         </button>
 
         {loading || !data ? (
-          <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }}>
-            <span style={{ fontSize: '2rem', display: 'block', marginBottom: '1rem' }} className="animate-spin">⌛</span>
-            Loading profile...
+          <div style={{ padding: '1.25rem 0.5rem' }}>
+            <style>{`
+              @keyframes pc-shimmer {
+                0% { background-position: -500px 0; }
+                100% { background-position: 500px 0; }
+              }
+              .pc-skel {
+                background: linear-gradient(90deg, hsl(222 20% 15%) 25%, hsl(222 20% 21%) 50%, hsl(222 20% 15%) 75%);
+                background-size: 500px 100%;
+                animation: pc-shimmer 1.3s infinite linear;
+                border-radius: 6px;
+              }
+            `}</style>
+
+            {/* Avatar + name row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', marginBottom: '1rem' }}>
+              <div className="pc-skel" style={{ width: 68, height: 68, borderRadius: '50%', flexShrink: 0 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                <div className="pc-skel" style={{ height: 15, width: '60%' }} />
+                <div className="pc-skel" style={{ height: 12, width: '40%' }} />
+                <div className="pc-skel" style={{ height: 10, width: '30%' }} />
+              </div>
+            </div>
+
+            {/* XP bar */}
+            <div className="pc-skel" style={{ height: 8, width: '100%', marginBottom: '1rem', borderRadius: 99 }} />
+
+            {/* Stats grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+              {[1,2,3].map(k => (
+                <div key={k} style={{ padding: '0.75rem', background: 'hsl(222 20% 13%)', borderRadius: 10 }}>
+                  <div className="pc-skel" style={{ height: 18, width: '60%', marginBottom: 6 }} />
+                  <div className="pc-skel" style={{ height: 10, width: '80%' }} />
+                </div>
+              ))}
+            </div>
+
+            {/* Action button area */}
+            <div className="pc-skel" style={{ height: 36, width: '100%', borderRadius: 10 }} />
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>

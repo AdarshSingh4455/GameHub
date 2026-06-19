@@ -51,7 +51,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    const { notificationId, action } = await request.json().catch(() => ({}))
+    let body: any = {}
+    try {
+      const rawBody = await request.text()
+      if (rawBody && rawBody.trim()) {
+        body = JSON.parse(rawBody)
+      }
+    } catch (e) {
+      console.warn('[POST /api/multiplayer/notifications] body parse warning:', e)
+    }
+    const { notificationId, action } = body
     if (!notificationId) {
       return NextResponse.json({ error: 'notificationId is required' }, { status: 400 })
     }

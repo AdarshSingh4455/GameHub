@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createClient } from '@/lib/supabase/server'
-
+import { getAuthenticatedProfile } from '@/lib/multiplayer'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,16 +12,10 @@ export async function GET(request: NextRequest) {
     let targetProfileIds: string[] = []
 
     if (showFriends) {
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const currentUser = await getAuthenticatedProfile(request)
+      if (!currentUser) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-
-      const currentUser = await prisma.profile.findUnique({
-        where: { userId: user.id },
-        select: { id: true }
-      })
 
       if (!currentUser) {
         return NextResponse.json({ error: 'Profile not found' }, { status: 404 })

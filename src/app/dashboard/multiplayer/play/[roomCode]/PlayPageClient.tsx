@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
@@ -12,6 +12,9 @@ import MultiplayerMemoryMatchGame from '@/components/games/MultiplayerMemoryMatc
 import MultiplayerRockPaperScissorsGame from '@/components/games/MultiplayerRockPaperScissorsGame'
 import MultiplayerNumberGuessingGame from '@/components/games/MultiplayerNumberGuessingGame'
 import { useSocket } from '@/lib/contexts/SocketContext'
+
+const SESSION_KEY = 'mp_screen'
+const SESSION_ROOM_CODE_KEY = 'mp_lobby_room_code'
 
 interface PlayPageClientProps {
   roomCode: string
@@ -31,6 +34,13 @@ function getClientId(user: any) {
   return user?.id || 'mock-user-id'
 }
 
+function clearReconnectState() {
+  try {
+    sessionStorage.removeItem(SESSION_KEY)
+    sessionStorage.removeItem(SESSION_ROOM_CODE_KEY)
+  } catch {}
+}
+
 export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const { user } = useGameSession()
   const { addToast } = useToast()
@@ -42,12 +52,15 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const [room, setRoom] = useState<any>(null)
   const [session, setSession] = useState<any>(null)
   const [players, setPlayers] = useState<any[]>([])
+  const [isConnected, setIsConnected] = useState(true)
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [isLeaving, setIsLeaving] = useState(false)
 
   const playersRef = useRef<any[]>([])
   playersRef.current = players
-  // Guard: prevent emitting join-game twice when socket fires both the
-  // immediate call AND the 'connect' event during an initial connection.
   const joinedRef = useRef(false)
+  const sessionRef = useRef<any>(null)
+  sessionRef.current = session
 
   const currentUserId = getClientId(user)
 
@@ -57,11 +70,10 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     console.log('[PLAY PAGE CLIENT EFFECT RUN]', { socket: !!socket, roomCode })
     if (!socket) return
 
-    // Reset join guard when effect re-runs (new socket instance or roomCode)
     joinedRef.current = false
 
     const joinGameRoom = () => {
-      if (joinedRef.current) return  // Suppress duplicate emits on the same connection
+      if (joinedRef.current) return
       joinedRef.current = true
       console.log('[PLAY PAGE CLIENT JOIN GAME EMIT]', { roomCode })
       socket.emit('join-game', { roomCode }, (response: any) => {
@@ -73,21 +85,25 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
       })
     }
 
-    // Join game room immediately
     joinGameRoom()
 
-    // Re-join on reconnection (reset guard first so the re-join is allowed)
     const handleReconnect = () => {
+      setIsConnected(true)
       joinedRef.current = false
       joinGameRoom()
     }
-    socket.on('connect', handleReconnect)
 
-    // Set up event listeners
+    const handleDisconnect = () => {
+      setIsConnected(false)
+    }
+
+    socket.on('connect', handleReconnect)
+    socket.on('disconnect', handleDisconnect)
+    setIsConnected(socket.connected)
+
     socket.on('game-state', (data: any) => {
       console.log('[PLAY PAGE CLIENT GAME STATE RECEIVED]', { gameSlug: data.gameSession?.gameSlug, status: data.gameSession?.status })
       setSession((prev: any) => {
-        // Never overwrite a FINISHED session with stale PLAYING data
         if (prev?.status === 'FINISHED' && data.gameSession?.status !== 'FINISHED') {
           return prev
         }
@@ -100,16 +116,20 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     })
 
     socket.on('game-update', (data: any) => {
-      // Update session state locally
       setSession((prev: any) => {
         if (!prev) return null
-        return {
+        const updated = {
           ...prev,
           gameState: data.gameState,
           winnerId: data.winnerId,
           status: data.gameFinished ? 'FINISHED' : prev.status,
           lastMove: data.lastMove
         }
+        // Auto-clear reconnect state when match is definitively finished
+        if (data.gameFinished) {
+          clearReconnectState()
+        }
+        return updated
       })
     })
 
@@ -129,6 +149,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
 
     return () => {
       socket.off('connect', handleReconnect)
+      socket.off('disconnect', handleDisconnect)
       socket.off('game-state')
       socket.off('game-update')
       socket.off('player-disconnected')
@@ -136,37 +157,94 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     }
   }, [socket, roomCode, addToast])
 
-  const handleLeaveRoom = () => {
+  const handleLeaveRoom = useCallback(() => {
+    setShowLeaveConfirm(true)
+  }, [])
+
+  const confirmLeave = useCallback(() => {
     if (!socket || !room) {
+      clearReconnectState()
       router.push('/dashboard/multiplayer')
       return
     }
-    setIsLoading(true)
-    socket.emit('leave-room', { roomId: room.id }, (response: any) => {
-      setIsLoading(false)
+    setIsLeaving(true)
+    socket.emit('leave-room', { roomId: room.id }, () => {
+      clearReconnectState()
       addToast('info', 'Left Room', 'You have left the match.')
       router.push('/dashboard/multiplayer')
     })
+  }, [socket, room, router, addToast])
+
+  // Leave confirm modal
+  const LeaveConfirmModal = () => {
+    if (!showLeaveConfirm) return null
+    const isMatchFinished = session?.status === 'FINISHED'
+    return (
+      <div
+        style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(5,8,16,0.85)',
+          backdropFilter: 'blur(8px)', zIndex: 99999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+        }}
+        onClick={() => !isLeaving && setShowLeaveConfirm(false)}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            background: 'linear-gradient(185deg, hsl(222 20% 10%), hsl(222 18% 14%))',
+            border: '1px solid hsl(220 15% 22%)',
+            borderRadius: 20, padding: '2rem', maxWidth: 400, width: '100%',
+            textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.6)'
+          }}
+        >
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🚪</div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>
+            {isMatchFinished ? 'Leave Match?' : 'Forfeit & Leave?'}
+          </h3>
+          <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+            {isMatchFinished
+              ? 'The match is over. Ready to head back to the lobby?'
+              : 'Leaving now will count as a forfeit and your opponent wins the match.'}
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              className="btn btn-secondary"
+              style={{ flex: 1, borderRadius: 12 }}
+              onClick={() => setShowLeaveConfirm(false)}
+              disabled={isLeaving}
+            >
+              Stay In Game
+            </button>
+            <button
+              className="btn"
+              style={{
+                flex: 1, borderRadius: 12,
+                background: 'linear-gradient(135deg, hsl(0 80% 50%), hsl(0 70% 40%))',
+                color: 'white', border: 'none', fontWeight: 700
+              }}
+              onClick={confirmLeave}
+              disabled={isLeaving}
+              id="confirm-leave-match-btn"
+            >
+              {isLeaving ? 'Leaving...' : isMatchFinished ? 'Leave' : '🚪 Forfeit & Leave'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (isLoading) {
     return (
       <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '60vh',
-        color: 'hsl(var(--text-primary))'
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', minHeight: '60vh', color: 'hsl(var(--text-primary))'
       }}>
         <div style={{
-          width: 50,
-          height: 50,
+          width: 50, height: 50,
           border: '4px solid hsl(var(--border-subtle))',
           borderTop: '4px solid hsl(var(--brand-primary))',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: '1.5rem'
+          borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '1.5rem'
         }} />
         <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Loading Match session...</h2>
         <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem', marginTop: '0.5rem' }}>
@@ -221,118 +299,87 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     )
   }
 
-  if (session?.gameSlug === 'cricket') {
-    return (
-      <div className="game-safe-bottom">
-        <MultiplayerHandCricketGame
-          roomCode={roomCode}
-          session={session}
-          players={players}
-          currentUserId={currentUserId}
-          onLeave={handleLeaveRoom}
-        />
-      </div>
-    )
-  }
-
-  if (session?.gameSlug === 'dots-boxes') {
-    return (
-      <div className="game-safe-bottom">
-        <MultiplayerDotsBoxesGame
-          roomCode={roomCode}
-          session={session}
-          players={players}
-          currentUserId={currentUserId}
-          onLeave={handleLeaveRoom}
-        />
-      </div>
-    )
-  }
-
-  if (session?.gameSlug === 'tic-tac-toe') {
-    return (
-      <div className="game-safe-bottom">
-        <MultiplayerTicTacToeGame
-          roomCode={roomCode}
-          session={session}
-          players={players}
-          currentUserId={currentUserId}
-          onLeave={handleLeaveRoom}
-        />
-      </div>
-    )
-  }
-
-  if (session?.gameSlug === 'memory') {
-    return (
-      <div className="game-safe-bottom">
-        <MultiplayerMemoryMatchGame
-          roomCode={roomCode}
-          session={session}
-          players={players}
-          currentUserId={currentUserId}
-          onLeave={handleLeaveRoom}
-        />
-      </div>
-    )
-  }
-
-  if (session?.gameSlug === 'rps') {
-    return (
-      <div className="game-safe-bottom">
-        <MultiplayerRockPaperScissorsGame
-          roomCode={roomCode}
-          session={session}
-          players={players}
-          currentUserId={currentUserId}
-          onLeave={handleLeaveRoom}
-        />
-      </div>
-    )
-  }
-
-  if (session?.gameSlug === 'number-guessing') {
-    return (
-      <div className="game-safe-bottom">
-        <MultiplayerNumberGuessingGame
-          roomCode={roomCode}
-          session={session}
-          players={players}
-          currentUserId={currentUserId}
-          onLeave={handleLeaveRoom}
-        />
-      </div>
-    )
-  }
-
-  if (session?.gameSlug === 'scribble') {
-    return (
-      <div className="game-safe-bottom">
-        <MultiplayerScribbleGame
-          roomCode={roomCode}
-          session={session}
-          players={players}
-          currentUserId={currentUserId}
-          onLeave={handleLeaveRoom}
-        />
-      </div>
-    )
-  }
+  const gameProps = { roomCode, session, players, currentUserId, onLeave: handleLeaveRoom }
 
   return (
-    <div className="card glass text-center" style={{ maxWidth: 500, margin: '4rem auto', padding: '2.5rem' }}>
-      <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '1rem' }}>❓</span>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>Unknown Game Mode</h2>
-      <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-        The game mode &quot;{session?.gameSlug}&quot; is not currently supported in multiplayer.
-      </p>
-      <button
-        className="btn btn-primary"
-        style={{ width: '100%' }}
-        onClick={handleLeaveRoom}
-      >
-        Leave Match
-      </button>
-    </div>
+    <>
+      {/* Disconnect Banner */}
+      {!isConnected && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+          background: 'linear-gradient(90deg, hsl(38 95% 50%), hsl(38 95% 40%))',
+          color: 'hsl(220 20% 10%)', textAlign: 'center', padding: '0.6rem 1rem',
+          fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: '0.5rem'
+        }}>
+          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: '1rem' }}>⚡</span>
+          Connection lost — attempting to reconnect...
+        </div>
+      )}
+
+      <LeaveConfirmModal />
+
+      {session?.gameSlug === 'cricket' && (
+        <div className="game-safe-bottom">
+          <MultiplayerHandCricketGame {...gameProps} />
+        </div>
+      )}
+
+      {session?.gameSlug === 'dots-boxes' && (
+        <div className="game-safe-bottom">
+          <MultiplayerDotsBoxesGame {...gameProps} />
+        </div>
+      )}
+
+      {session?.gameSlug === 'tic-tac-toe' && (
+        <div className="game-safe-bottom">
+          <MultiplayerTicTacToeGame {...gameProps} />
+        </div>
+      )}
+
+      {session?.gameSlug === 'memory' && (
+        <div className="game-safe-bottom">
+          <MultiplayerMemoryMatchGame {...gameProps} />
+        </div>
+      )}
+
+      {session?.gameSlug === 'rps' && (
+        <div className="game-safe-bottom">
+          <MultiplayerRockPaperScissorsGame {...gameProps} />
+        </div>
+      )}
+
+      {session?.gameSlug === 'number-guessing' && (
+        <div className="game-safe-bottom">
+          <MultiplayerNumberGuessingGame {...gameProps} />
+        </div>
+      )}
+
+      {session?.gameSlug === 'scribble' && (
+        <div className="game-safe-bottom">
+          <MultiplayerScribbleGame {...gameProps} />
+        </div>
+      )}
+
+      {session && !['cricket','dots-boxes','tic-tac-toe','memory','rps','number-guessing','scribble'].includes(session.gameSlug) && (
+        <div className="card glass text-center" style={{ maxWidth: 500, margin: '4rem auto', padding: '2.5rem' }}>
+          <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '1rem' }}>❓</span>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>Unknown Game Mode</h2>
+          <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+            The game mode &quot;{session?.gameSlug}&quot; is not currently supported in multiplayer.
+          </p>
+          <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleLeaveRoom}>
+            Leave Match
+          </button>
+        </div>
+      )}
+
+      <style jsx global>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </>
   )
 }

@@ -3,21 +3,34 @@ import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { getAchievementProgress } from '@/lib/achievements'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
     if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+      const cookieHeader = request.headers.get('cookie') || ''
+      const cookies = Object.fromEntries(
+        cookieHeader.split(';').map(c => {
+          const eqIdx = c.indexOf('=')
+          if (eqIdx === -1) return [c.trim(), '']
+          const name = c.substring(0, eqIdx).trim()
+          const value = c.substring(eqIdx + 1).trim()
+          return [name, decodeURIComponent(value)]
+        })
+      )
+      const mockUserId = cookies['mock_user_id'] || 'mock-user-id'
+      const mockUsername = cookies['mock_username'] || 'Adarsh'
+      const level = mockUserId === 'test-user-a' ? 8 : mockUserId === 'test-user-b' ? 6 : 5
+      const xp = mockUserId === 'test-user-a' ? 2450 : mockUserId === 'test-user-b' ? 1800 : 1500
+      const coins = mockUserId === 'test-user-a' ? 320 : mockUserId === 'test-user-b' ? 180 : 350
+
       return NextResponse.json({
         profile: {
-          id: 'mock-profile-id',
-          userId: 'mock-user-id',
-          username: 'Adarsh',
+          id: mockUserId,
+          userId: mockUserId,
+          username: mockUsername,
           role: 'SUPER_ADMIN',
-          xp: 1500,
-          level: 5,
-          coins: 350,
+          xp,
+          level,
+          coins,
           currentStreak: 4,
           longestStreak: 12,
           dailyRewardDay: 3,
@@ -62,6 +75,8 @@ export async function GET() {
       }, { status: 200 })
     }
 
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

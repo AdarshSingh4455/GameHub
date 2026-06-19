@@ -11,7 +11,8 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:proof": "node tests/multiplayer-proof.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

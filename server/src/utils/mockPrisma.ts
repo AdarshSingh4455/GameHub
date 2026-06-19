@@ -10,7 +10,62 @@ export interface MockDbState {
   friendships: Record<string, any>
   invites: Record<string, any>
   notifications: Record<string, any>
+  inventories?: Record<string, any>
+  challengeClaims?: Record<string, any>
+  matches?: Record<string, any>
+  xpEvents?: Record<string, any>
 }
+
+export const MOCK_COSMETIC_ITEMS = [
+  // Avatars
+  { id: 'item-cyber-bot', name: 'Cyber Bot Avatar', type: 'AVATAR', priceCoins: 100, assetUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Cyber', isDefault: false },
+  { id: 'item-viking', name: 'Viking Warrior Avatar', type: 'AVATAR', priceCoins: 150, assetUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Viking', isDefault: false },
+  { id: 'item-ninja', name: 'Ninja Stealth Avatar', type: 'AVATAR', priceCoins: 200, assetUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Ninja', isDefault: false },
+  { id: 'item-astronaut', name: 'Astronaut Space Avatar', type: 'AVATAR', priceCoins: 250, assetUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Astronaut', isDefault: false },
+
+  // Chat Packs
+  { id: 'item-chat-friendly', name: 'Friendly Chat Pack', type: 'CHAT_PACK', priceCoins: 50, assetUrl: 'Friendly', isDefault: false, metadata: { messages: ['Well played! 🤝', 'Good game! 🎮', 'Nice move! 🔥', 'Hello there! 👋'] } },
+  { id: 'item-chat-competitor', name: 'Competitor Chat Pack', type: 'CHAT_PACK', priceCoins: 100, assetUrl: 'Competitive', isDefault: false, metadata: { messages: ['Too easy! ⚡', 'Calculated. 🎯', 'Close one! 😮', 'Unlucky! 💀'] } },
+  { id: 'item-chat-silly', name: 'Silly Chat Pack', type: 'CHAT_PACK', priceCoins: 80, assetUrl: 'Silly', isDefault: false, metadata: { messages: ['Catch me if you can! 🏃', 'Oops, my bad! 🤡', 'Wow! 🌟', 'Let me cook! 👨‍🍳'] } },
+  { id: 'item-chat-sports', name: 'Sports Pack', type: 'CHAT_PACK', priceCoins: 60, assetUrl: 'Sports', isDefault: false, metadata: { messages: ['Goal! ⚽', 'Touchdown! 🏈', 'Home Run! ⚾', 'Nice Shot! 🏀'] } },
+  { id: 'item-chat-funny', name: 'Funny Pack', type: 'CHAT_PACK', priceCoins: 70, assetUrl: 'Funny', isDefault: false, metadata: { messages: ['LOL! 😂', 'No way! 🤯', 'BRB! 🏃‍♂️', 'Aha! 💡'] } },
+  { id: 'item-chat-pro', name: 'Pro Pack', type: 'CHAT_PACK', priceCoins: 90, assetUrl: 'Pro', isDefault: false, metadata: { messages: ['Calculated. 😎', 'GG! 🏆', 'GG WP! 🤝', 'Next game? 🎮'] } },
+  { id: 'item-chat-cricket', name: 'Cricket Pack', type: 'CHAT_PACK', priceCoins: 80, assetUrl: 'Cricket', isDefault: false, metadata: { messages: ['Sixer! 🏏', 'Bowled him! 🎯', 'Howzzat! 📢', 'Good bowling! ⚾'] } },
+  { id: 'item-chat-legend', name: 'Legend Pack', type: 'CHAT_PACK', priceCoins: 120, assetUrl: 'Legend', isDefault: false, metadata: { messages: ['What A Move! 🧠', 'Too Easy! ⚡', 'Close One! 😱', 'Good Luck! 🍀'] } },
+
+  // Scratchers
+  { id: 'item-scratch-bronze', name: 'Bronze Scratcher', type: 'SCRATCHER', priceCoins: 20, assetUrl: 'Bronze', isDefault: false, metadata: { rarity: 'COMMON', description: 'Scratch to win basic Coins or XP.' } },
+  { id: 'item-scratch-silver', name: 'Silver Scratcher', type: 'SCRATCHER', priceCoins: 50, assetUrl: 'Silver', isDefault: false, metadata: { rarity: 'RARE', description: 'Scratch to win decent Coins, XP, or Rare items.' } },
+  { id: 'item-scratch-gold', name: 'Gold Scratcher', type: 'SCRATCHER', priceCoins: 100, assetUrl: 'Gold', isDefault: false, metadata: { rarity: 'EPIC', description: 'Scratch to win huge Coins, XP, or Epic items.' } },
+  { id: 'item-scratch-legendary', name: 'Legendary Scratcher', type: 'SCRATCHER', priceCoins: 250, assetUrl: 'Legendary', isDefault: false, metadata: { rarity: 'LEGENDARY', description: 'Scratch to win Legendary rewards!' } },
+
+  // Titles
+  { id: 'title-rookie', name: 'Rookie', type: 'TITLE', priceCoins: 50, isDefault: false, metadata: { description: 'New kid on the block' } },
+  { id: 'title-champion', name: 'Champion', type: 'TITLE', priceCoins: 120, isDefault: false, metadata: { description: 'A proven winner' } },
+  { id: 'title-legend', name: 'Legend', type: 'TITLE', priceCoins: 200, isDefault: false, metadata: { description: 'Known by everyone' } },
+  { id: 'title-grandmaster', name: 'Grandmaster', type: 'TITLE', priceCoins: 300, isDefault: false, metadata: { description: 'Absolute master of games' } },
+  { id: 'title-night-owl', name: 'Night Owl', type: 'TITLE', priceCoins: 80, isDefault: false, metadata: { description: 'Plays late into the night' } },
+  { id: 'title-puzzle-king', name: 'Puzzle King', type: 'TITLE', priceCoins: 150, isDefault: false, metadata: { description: 'Solves anything' } },
+  { id: 'title-cricket-boss', name: 'Cricket Boss', type: 'TITLE', priceCoins: 150, isDefault: false, metadata: { description: 'Rules the pitch' } },
+  { id: 'title-xp-hunter', name: 'XP Hunter', type: 'TITLE', priceCoins: 100, isDefault: false, metadata: { description: 'Always leveling up' } },
+  { id: 'title-streak-master', name: 'Streak Master', type: 'TITLE', priceCoins: 180, isDefault: false, metadata: { description: 'Never breaks a streak' } },
+
+  // Effects
+  { id: 'effect-confetti', name: 'Confetti Burst', type: 'EFFECT', priceCoins: 150, isDefault: false, metadata: { description: 'Celebratory confetti shower' } },
+  { id: 'effect-lightning', name: 'Lightning Aura', type: 'EFFECT', priceCoins: 220, isDefault: false, metadata: { description: 'Electrifying flashes' } },
+  { id: 'effect-golden', name: 'Golden Glow', type: 'EFFECT', priceCoins: 200, isDefault: false, metadata: { description: 'Radiate pure luxury' } },
+  { id: 'effect-pixel-fire', name: 'Pixel Fire', type: 'EFFECT', priceCoins: 180, isDefault: false, metadata: { description: 'Retro burning pixels' } },
+  { id: 'effect-victory-sparkles', name: 'Victory Sparkles', type: 'EFFECT', priceCoins: 160, isDefault: false, metadata: { description: 'Sparkling trails of success' } },
+  { id: 'effect-diamond', name: 'Diamond Pulse', type: 'EFFECT', priceCoins: 250, isDefault: false, metadata: { description: 'Shiny crystalline waves' } },
+  { id: 'effect-royal', name: 'Royal Aura', type: 'EFFECT', priceCoins: 300, isDefault: false, metadata: { description: 'The aura of kings' } },
+
+  // Profile Frames
+  { id: 'frame-bronze', name: 'Bronze', type: 'AVATAR_FRAME', priceCoins: 60, isDefault: false, metadata: { description: 'Sturdy bronze framing' } },
+  { id: 'frame-silver', name: 'Silver', type: 'AVATAR_FRAME', priceCoins: 100, isDefault: false, metadata: { description: 'Polished silver lining' } },
+  { id: 'frame-gold', name: 'Gold', type: 'AVATAR_FRAME', priceCoins: 180, isDefault: false, metadata: { description: 'Gleaming golden borders' } },
+  { id: 'frame-diamond', name: 'Diamond', type: 'AVATAR_FRAME', priceCoins: 250, isDefault: false, metadata: { description: 'Sparkling diamond shell' } },
+  { id: 'frame-mythic', name: 'Mythic', type: 'AVATAR_FRAME', priceCoins: 400, isDefault: false, metadata: { description: 'Ascendant legendary border' } }
+]
 
 let cachedDb: MockDbState | null = null
 
@@ -21,6 +76,10 @@ export function loadDb(): MockDbState {
       if (content.trim()) {
         const parsed = JSON.parse(content)
         if (parsed.profiles && parsed.rooms && parsed.sessions && parsed.friendships) {
+          if (!parsed.inventories) parsed.inventories = {}
+          if (!parsed.challengeClaims) parsed.challengeClaims = {}
+          if (!parsed.matches) parsed.matches = {}
+          if (!parsed.xpEvents) parsed.xpEvents = {}
           cachedDb = parsed
           return parsed
         }
@@ -48,6 +107,10 @@ export function loadDb(): MockDbState {
       createdAt: new Date('2024-01-01').toISOString(),
       updatedAt: new Date().toISOString(),
       selectedTitle: null,
+      selectedBadge: null,
+      selectedFrame: null,
+      selectedTheme: null,
+      selectedEffect: null,
       currentRank: null,
       previousRank: null,
       _count: { wonMatches: 0, friends: 1 }
@@ -66,6 +129,10 @@ export function loadDb(): MockDbState {
       createdAt: new Date('2024-01-02').toISOString(),
       updatedAt: new Date().toISOString(),
       selectedTitle: null,
+      selectedBadge: null,
+      selectedFrame: null,
+      selectedTheme: null,
+      selectedEffect: null,
       currentRank: null,
       previousRank: null,
       _count: { wonMatches: 0, friends: 1 }
@@ -84,6 +151,10 @@ export function loadDb(): MockDbState {
       createdAt: new Date('2024-01-01').toISOString(),
       updatedAt: new Date().toISOString(),
       selectedTitle: null,
+      selectedBadge: null,
+      selectedFrame: null,
+      selectedTheme: null,
+      selectedEffect: null,
       currentRank: null,
       previousRank: null,
       _count: { wonMatches: 0, friends: 0 }
@@ -154,7 +225,11 @@ export function loadDb(): MockDbState {
     sessions: {},
     friendships: initialFriendships,
     invites: initialInvites,
-    notifications: {}
+    notifications: {},
+    inventories: {},
+    challengeClaims: {},
+    matches: {},
+    xpEvents: {}
   }
 
   cachedDb = defaultDb
@@ -197,6 +272,10 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       selectedTitle: null,
+      selectedBadge: null,
+      selectedFrame: null,
+      selectedTheme: null,
+      selectedEffect: null,
       currentRank: null,
       previousRank: null,
       _count: { wonMatches: 0, friends: 0 }
@@ -206,6 +285,10 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
   }
   // Ensure fields are not missing
   if (profile.selectedTitle === undefined) profile.selectedTitle = null
+  if (profile.selectedBadge === undefined) profile.selectedBadge = null
+  if (profile.selectedFrame === undefined) profile.selectedFrame = null
+  if (profile.selectedTheme === undefined) profile.selectedTheme = null
+  if (profile.selectedEffect === undefined) profile.selectedEffect = null
   if (profile.currentRank === undefined) profile.currentRank = null
   if (profile.previousRank === undefined) profile.previousRank = null
   if (profile._count === undefined) profile._count = { wonMatches: 0, friends: 0 }
@@ -296,6 +379,10 @@ function createModelMock(modelName: string) {
               list = list.map(p => {
                 // Ensure all projection fields are initialized
                 if (p.selectedTitle === undefined) p.selectedTitle = null
+                if (p.selectedBadge === undefined) p.selectedBadge = null
+                if (p.selectedFrame === undefined) p.selectedFrame = null
+                if (p.selectedTheme === undefined) p.selectedTheme = null
+                if (p.selectedEffect === undefined) p.selectedEffect = null
                 if (p.currentRank === undefined) p.currentRank = null
                 if (p.previousRank === undefined) p.previousRank = null
                 if (p._count === undefined) p._count = { wonMatches: 0, friends: 0 }
@@ -684,8 +771,8 @@ function createModelMock(modelName: string) {
               if (room.id === roomId) {
                 for (const p of (room.players || [])) {
                   if (!status || p.status === status) {
-                    Object.assign(p, params.data || {})
-                    count++
+                     Object.assign(p, params.data || {})
+                     count++
                   }
                 }
               }
@@ -796,6 +883,261 @@ function createModelMock(modelName: string) {
           }
         }
 
+        // ── CosmeticItem ─────────────────────────────────────────────────────
+        if (modelName === 'cosmeticItem') {
+          if (action === 'findMany') {
+            const where = params.where || {}
+            let list = [...MOCK_COSMETIC_ITEMS]
+            if (where.type) {
+              if (where.type.in) {
+                list = list.filter(item => where.type.in.includes(item.type))
+              } else {
+                list = list.filter(item => item.type === where.type)
+              }
+            }
+            if (where.isDefault !== undefined) {
+              list = list.filter(item => item.isDefault === where.isDefault)
+            }
+            return list
+          }
+          if (action === 'findUnique' || action === 'findFirst') {
+            const where = params.where || {}
+            const id = where.id
+            const name = where.name
+            if (id) return MOCK_COSMETIC_ITEMS.find(item => item.id === id) || null
+            if (name) return MOCK_COSMETIC_ITEMS.find(item => item.name === name) || null
+            return null
+          }
+        }
+
+        // ── ProfileInventory ──────────────────────────────────────────────────
+        if (modelName === 'profileInventory') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = db.inventories ? Object.values(db.inventories) : []
+            if (where.profileId) {
+              list = list.filter((i: any) => i.profileId === where.profileId)
+            }
+            list = list.map((i: any) => ({
+              ...i,
+              cosmeticItem: MOCK_COSMETIC_ITEMS.find(c => c.id === i.cosmeticItemId) || null
+            }))
+            return list
+          }
+          if (action === 'findUnique' || action === 'findFirst') {
+            const db = loadDb()
+            const where = params.where || {}
+            const id = where.id
+            if (id) {
+              const res = db.inventories?.[id] || null
+              if (res) {
+                res.cosmeticItem = MOCK_COSMETIC_ITEMS.find(c => c.id === res.cosmeticItemId) || null
+              }
+              return res
+            }
+            const compound = where.profileId_cosmeticItemId
+            if (compound) {
+              const invId = `${compound.profileId}_${compound.cosmeticItemId}`
+              const res = db.inventories?.[invId] || null
+              if (res) {
+                res.cosmeticItem = MOCK_COSMETIC_ITEMS.find(c => c.id === res.cosmeticItemId) || null
+              }
+              return res
+            }
+            return null
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.inventories) db.inventories = {}
+            const data = params.data || {}
+            const id = data.id || `${data.profileId}_${data.cosmeticItemId}`
+            const invRecord = {
+              id,
+              profileId: data.profileId,
+              cosmeticItemId: data.cosmeticItemId,
+              purchasedAt: new Date().toISOString(),
+            }
+            db.inventories[id] = invRecord
+            saveDb(db)
+            return {
+              ...invRecord,
+              cosmeticItem: MOCK_COSMETIC_ITEMS.find(c => c.id === data.cosmeticItemId) || null
+            }
+          }
+        }
+
+        // ── ChallengeClaim ────────────────────────────────────────────────────
+        if (modelName === 'challengeClaim') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = db.challengeClaims ? Object.values(db.challengeClaims) : []
+            if (where.profileId) {
+              list = list.filter((c: any) => c.profileId === where.profileId)
+            }
+            return list
+          }
+          if (action === 'findUnique' || action === 'findFirst') {
+            const db = loadDb()
+            const where = params.where || {}
+            const id = where.id
+            if (id) {
+              return db.challengeClaims?.[id] || null
+            }
+            const compound = where.profileId_challengeId
+            if (compound) {
+              const claimId = `${compound.profileId}_${compound.challengeId}`
+              return db.challengeClaims?.[claimId] || null
+            }
+            return null
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.challengeClaims) db.challengeClaims = {}
+            const data = params.data || {}
+            const id = `${data.profileId}_${data.challengeId}`
+            const claimRecord = {
+              id,
+              profileId: data.profileId,
+              challengeId: data.challengeId,
+              claimedAt: new Date().toISOString()
+            }
+            db.challengeClaims[id] = claimRecord
+            saveDb(db)
+            return claimRecord
+          }
+        }
+
+        // ── MatchRecord ──────────────────────────────────────────────────────
+        if (modelName === 'matchRecord') {
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.matches) db.matches = {}
+            const data = params.data || {}
+            const id = data.id || `match-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+            const record = {
+              id,
+              roomCode: data.roomCode || null,
+              gameId: data.gameId || null,
+              player1Id: data.player1Id || null,
+              player2Id: data.player2Id || null,
+              player1Score: data.player1Score || 0,
+              player2Score: data.player2Score || 0,
+              winnerId: data.winnerId || null,
+              xpEarned: data.xpEarned || 0,
+              coinsEarned: data.coinsEarned || 0,
+              durationSecs: data.durationSecs || null,
+              playedAt: data.playedAt || new Date().toISOString()
+            }
+            db.matches[id] = record
+            saveDb(db)
+            return record
+          }
+          if (action === 'findMany') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = db.matches ? Object.values(db.matches) : []
+            if (where.OR) {
+              list = list.filter((m: any) => {
+                return where.OR.some((cond: any) => {
+                  if (cond.player1Id && m.player1Id !== cond.player1Id) return false
+                  if (cond.player2Id && m.player2Id !== cond.player2Id) return false
+                  return true
+                })
+              })
+            }
+            if (where.playedAt?.gte) {
+              const gteDate = new Date(where.playedAt.gte)
+              list = list.filter((m: any) => new Date(m.playedAt) >= gteDate)
+            }
+            if (where.winnerId) {
+              list = list.filter((m: any) => m.winnerId === where.winnerId)
+            }
+            // Sorting / take
+            list.sort((a: any, b: any) => new Date(b.playedAt).getTime() - new Date(a.playedAt).getTime())
+            if (params.take) {
+              list = list.slice(0, params.take)
+            }
+            return list
+          }
+          if (action === 'count') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = db.matches ? Object.values(db.matches) : []
+            if (where.OR) {
+              list = list.filter((m: any) => {
+                return where.OR.some((cond: any) => {
+                  let match = true
+                  if (cond.player1Id && m.player1Id !== cond.player1Id) match = false
+                  if (cond.player2Id && m.player2Id !== cond.player2Id) match = false
+                  return match
+                })
+              })
+            }
+            if (where.winnerId) {
+              list = list.filter((m: any) => m.winnerId === where.winnerId)
+            }
+            if (where.playedAt?.gte) {
+              const gteDate = new Date(where.playedAt.gte)
+              list = list.filter((m: any) => new Date(m.playedAt) >= gteDate)
+            }
+            return list.length
+          }
+        }
+
+        // ── XPEvent ──────────────────────────────────────────────────────────
+        if (modelName === 'xPEvent') {
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.xpEvents) db.xpEvents = {}
+            const data = params.data || {}
+            const id = data.id || `xpevent-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+            const record = {
+              id,
+              profileId: data.profileId || null,
+              type: data.type || 'GAME_PLAY',
+              amount: data.amount || 0,
+              meta: data.meta || null,
+              createdAt: data.createdAt || new Date().toISOString()
+            }
+            db.xpEvents[id] = record
+            saveDb(db)
+            return record
+          }
+          if (action === 'findMany') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = db.xpEvents ? Object.values(db.xpEvents) : []
+            if (where.profileId) {
+              list = list.filter((x: any) => x.profileId === where.profileId)
+            }
+            if (where.createdAt?.gte) {
+              const gteDate = new Date(where.createdAt.gte)
+              list = list.filter((x: any) => new Date(x.createdAt) >= gteDate)
+            }
+            return list
+          }
+          if (action === 'aggregate') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = db.xpEvents ? Object.values(db.xpEvents) : []
+            if (where.profileId) {
+              list = list.filter((x: any) => x.profileId === where.profileId)
+            }
+            if (where.createdAt?.gte) {
+              const gteDate = new Date(where.createdAt.gte)
+              list = list.filter((x: any) => new Date(x.createdAt) >= gteDate)
+            }
+            const sum = list.reduce((acc: number, x: any) => acc + (x.amount || 0), 0)
+            return {
+              _sum: {
+                amount: sum
+              }
+            }
+          }
+        }
+
         // ── Game ─────────────────────────────────────────────────────────────
         if (modelName === 'game') {
           if (action === 'findUnique') {
@@ -836,9 +1178,13 @@ export function createPrismaMockProxy(realPrisma: any) {
       if (prop === '$queryRaw')  return async () => [{ '?column?': 1 }]
       if (prop === '$disconnect') return async () => {}
       if (prop === '$transaction') {
-        return async (ops: any[]) => {
-          if (Array.isArray(ops)) return Promise.all(ops)
-          return ops
+        return async (arg: any) => {
+          if (typeof arg === 'function') {
+            const proxy = new Proxy(target, handler)
+            return arg(proxy)
+          }
+          if (Array.isArray(arg)) return Promise.all(arg)
+          return arg
         }
       }
 

@@ -3,34 +3,42 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
+import { prefetchProfileDetails } from '@/lib/prefetch'
 
 interface StoreItem {
   id: string
   name: string
-  type: 'AVATAR' | 'CHAT_PACK' | 'SCRATCHER' | 'AVATAR_FRAME' | 'BOARD_THEME' | 'TITLE'
+  type: 'AVATAR' | 'CHAT_PACK' | 'SCRATCHER' | 'AVATAR_FRAME' | 'BOARD_THEME' | 'TITLE' | 'EFFECT'
   priceCoins: number
   assetUrl: string | null
   metadata: any
 }
 
 const CATEGORIES = [
-  { id: 'AVATAR', label: 'Avatars', emoji: '👤' },
-  { id: 'CHAT_PACK', label: 'Chat Packs', emoji: '💬' },
   { id: 'SCRATCHER', label: 'Scratchers', emoji: '🃏' },
-  { id: 'TITLE', label: 'Titles', emoji: '⚡', comingSoon: true },
-  { id: 'EFFECT', label: 'Effects', emoji: '✨', comingSoon: true },
+  { id: 'TITLE', label: 'Titles', emoji: '⚡' },
+  { id: 'EFFECT', label: 'Effects', emoji: '✨' },
+  { id: 'AVATAR_FRAME', label: 'Frames', emoji: '🖼️' },
+  { id: 'CHAT_PACK', label: 'Chat Packs', emoji: '💬' }
 ]
 
 export default function StorePage() {
   const { user } = useGameSession()
   const { addToast } = useToast()
 
-  const [activeCategory, setActiveCategory] = useState<string>('AVATAR')
+  const [activeCategory, setActiveCategory] = useState<string>('SCRATCHER')
   const [items, setItems] = useState<StoreItem[]>([])
   const [ownedIds, setOwnedIds] = useState<string[]>([])
   const [coins, setCoins] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [buyingId, setBuyingId] = useState<string | null>(null)
+  const [equippingId, setEquippingId] = useState<string | null>(null)
+
+  // Live Preview States
+  const [profile, setProfile] = useState<any>(null)
+  const [previewedTitle, setPreviewedTitle] = useState<string | null>(null)
+  const [previewedFrame, setPreviewedFrame] = useState<string | null>(null)
+  const [previewedEffect, setPreviewedEffect] = useState<string | null>(null)
 
   // Scratcher Minigame State
   const [scratchingAd, setScratchingAd] = useState<StoreItem | null>(null)
@@ -38,6 +46,20 @@ export default function StorePage() {
   const [scratchPercent, setScratchPercent] = useState(0)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const scratchStateRef = useRef({ isDrawing: false, lastX: 0, lastY: 0, scratchedPixels: new Set<string>() })
+
+  const fetchProfileDetails = () => {
+    fetch('/api/profile/details')
+      .then(res => res.json())
+      .then(data => {
+        if (data.profile) {
+          setProfile(data.profile)
+          setPreviewedTitle(data.profile.selectedTitle)
+          setPreviewedFrame(data.profile.selectedFrame)
+          setPreviewedEffect(data.profile.selectedEffect)
+        }
+      })
+      .catch(console.error)
+  }
 
   const fetchStoreData = () => {
     setLoading(true)
@@ -57,6 +79,7 @@ export default function StorePage() {
           addToast('error', 'Error', 'Failed to load store catalog.')
           setLoading(false)
         })
+      fetchProfileDetails()
     } else {
       // Simulate store for guest
       const guestCoins = parseInt(localStorage.getItem('gamehub_guest_coins') || '0', 10)
@@ -72,11 +95,22 @@ export default function StorePage() {
           setLoading(false)
         })
         .catch(() => setLoading(false))
+      
+      // Simulate a guest profile
+      const guestProfile = {
+        username: 'GuestUser',
+        avatarUrl: null,
+        selectedTitle: null,
+        selectedFrame: null,
+        selectedEffect: null
+      }
+      setProfile(guestProfile)
     }
   }
 
   useEffect(() => {
     fetchStoreData()
+    prefetchProfileDetails()
 
     const handleUpdate = () => {
       fetchStoreData()
@@ -128,7 +162,6 @@ export default function StorePage() {
       setCoins(nextCoins)
 
       if (item.type === 'SCRATCHER') {
-        // Mock a reward for guest
         const mockPrizes = [
           { type: 'coins', value: 30, name: '30 Coins' },
           { type: 'xp', value: 50, name: '50 XP' },
@@ -164,6 +197,82 @@ export default function StorePage() {
     }
   }
 
+  // Equip handler
+  const handleEquip = async (item: StoreItem, action: 'equip' | 'unequip') => {
+    if (!user) {
+      const field = item.type === 'TITLE' ? 'selectedTitle'
+                  : item.type === 'AVATAR_FRAME' ? 'selectedFrame'
+                  : item.type === 'EFFECT' ? 'selectedEffect'
+                  : 'selectedTheme'
+      const val = action === 'equip' ? item.name : null
+      
+      const updatedProfile = { ...profile, [field]: val }
+      setProfile(updatedProfile)
+      if (item.type === 'TITLE') setPreviewedTitle(val)
+      if (item.type === 'AVATAR_FRAME') setPreviewedFrame(val)
+      if (item.type === 'EFFECT') setPreviewedEffect(val)
+      
+      addToast('success', 'Cosmetic Updated', `${item.name} ${action === 'equip' ? 'equipped' : 'unequipped'}!`)
+      return
+    }
+
+    setEquippingId(item.id)
+    try {
+      const res = await fetch('/api/profile/equip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId: item.id, action }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Equip failed')
+
+      addToast('success', 'Cosmetic Updated', `${item.name} ${action === 'equip' ? 'equipped' : 'unequipped'}!`)
+      fetchProfileDetails()
+    } catch (err: any) {
+      addToast('error', 'Action Failed', err.message)
+    } finally {
+      setEquippingId(null)
+    }
+  }
+
+  const handlePreview = (item: StoreItem) => {
+    if (item.type === 'TITLE') {
+      setPreviewedTitle(item.name)
+    } else if (item.type === 'AVATAR_FRAME') {
+      setPreviewedFrame(item.name)
+    } else if (item.type === 'EFFECT') {
+      setPreviewedEffect(item.name)
+    }
+    addToast('success', 'Preview Updated', `Previewing ${item.name} on your card!`)
+  }
+
+  // Visual frame borders
+  const getFrameBorder = (frameName: string) => {
+    if (frameName.includes('Bronze')) return '4px solid #cd7f32'
+    if (frameName.includes('Silver')) return '4px solid #c0c0c0'
+    if (frameName.includes('Gold')) return '4px solid #ffd700'
+    if (frameName.includes('Diamond')) return '4px solid #00ffff'
+    if (frameName.includes('Mythic')) return '4px dashed #ff007f'
+    return '2px solid rgba(255,255,255,0.1)'
+  }
+
+  const getFrameShadow = (frameName: string) => {
+    if (frameName.includes('Diamond')) return '0 0 10px #00ffff'
+    if (frameName.includes('Mythic')) return '0 0 15px #ff007f'
+    return 'none'
+  }
+
+  const getEffectGradient = (effectName: string) => {
+    if (effectName.includes('Confetti')) return 'radial-gradient(circle, #ff007f 10%, #00ffff 60%, transparent 100%)'
+    if (effectName.includes('Lightning')) return 'radial-gradient(circle, #00ffff 20%, #0000ff 70%, transparent 100%)'
+    if (effectName.includes('Golden')) return 'radial-gradient(circle, #ffd700 20%, #ff8c00 70%, transparent 100%)'
+    if (effectName.includes('Fire')) return 'radial-gradient(circle, #ff4500 20%, #ff0000 70%, transparent 100%)'
+    if (effectName.includes('Sparkles')) return 'radial-gradient(circle, #ffd700 10%, #ffffff 50%, transparent 100%)'
+    if (effectName.includes('Diamond')) return 'radial-gradient(circle, #00ffff 20%, #7fffd4 70%, transparent 100%)'
+    if (effectName.includes('Royal')) return 'radial-gradient(circle, #8a2be2 20%, #dda0dd 70%, transparent 100%)'
+    return 'none'
+  }
+
   // --- SCRATCH CARD LOGIC ---
   useEffect(() => {
     if (!scratchingAd || !canvasRef.current) return
@@ -172,11 +281,9 @@ export default function StorePage() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Setup canvas resolution and fill
     canvas.width = 280
     canvas.height = 160
 
-    // Fill with silver scratch layer
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height)
     gradient.addColorStop(0, '#B0B5BC')
     gradient.addColorStop(0.5, '#E1E4E8')
@@ -184,7 +291,6 @@ export default function StorePage() {
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // Draw some glitter
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'
     for (let i = 0; i < 40; i++) {
       ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 3, 3)
@@ -205,7 +311,6 @@ export default function StorePage() {
     const totalPixels = imageData.data.length / 4
     let transparentCount = 0
 
-    // Sample every 8th pixel to speed up calculation
     for (let i = 0; i < imageData.data.length; i += 32) {
       if (imageData.data[i + 3] === 0) {
         transparentCount++
@@ -216,7 +321,6 @@ export default function StorePage() {
     setScratchPercent(percent)
 
     if (percent > 45) {
-      // Auto-clear scratch layer
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       setScratchPercent(100)
     }
@@ -251,7 +355,6 @@ export default function StorePage() {
     const x = clientX - rect.left
     const y = clientY - rect.top
 
-    // Draw scratch path using destination-out to clear the silver fill
     ctx.globalCompositeOperation = 'destination-out'
     ctx.beginPath()
     ctx.lineWidth = 26
@@ -275,6 +378,16 @@ export default function StorePage() {
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }} className="animate-fadeIn safe-bottom-padding">
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.12; }
+          50% { opacity: 0.22; }
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
@@ -287,6 +400,105 @@ export default function StorePage() {
         </div>
       </div>
 
+      {/* Interactive Preview Card Mockup */}
+      <div className="card glass" style={{
+        padding: '1.25rem',
+        borderRadius: 20,
+        background: 'linear-gradient(135deg, hsl(222 25% 10%), hsl(222 20% 7%))',
+        border: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+        gap: '0.75rem',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.4)'
+      }}>
+        {previewedEffect && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: getEffectGradient(previewedEffect),
+            opacity: 0.12,
+            pointerEvents: 'none',
+            zIndex: 0,
+            animation: 'pulse-slow 3s infinite'
+          }} />
+        )}
+
+        <div style={{ zIndex: 1 }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Live Avatar & Profile Preview
+          </span>
+        </div>
+
+        <div style={{
+          position: 'relative',
+          width: 80,
+          height: 80,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1
+        }}>
+          {previewedFrame && (
+            <div style={{
+              position: 'absolute',
+              inset: -6,
+              borderRadius: '50%',
+              border: getFrameBorder(previewedFrame),
+              boxShadow: getFrameShadow(previewedFrame),
+              zIndex: 2,
+              pointerEvents: 'none'
+            }} />
+          )}
+
+          <div style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            background: 'hsl(222 20% 15%)',
+            border: '2px solid rgba(255,255,255,0.1)'
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={profile?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${profile?.username || 'Guest'}`}
+              alt="Avatar Preview"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+        </div>
+
+        <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            {profile?.username || 'GuestUser'}
+          </div>
+          {previewedTitle && (
+            <span style={{
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              color: 'hsl(45 100% 60%)',
+              backgroundColor: 'rgba(251, 191, 36, 0.1)',
+              padding: '0.2rem 0.65rem',
+              borderRadius: 6,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              display: 'inline-block',
+              marginTop: '4px'
+            }}>
+              🏆 {previewedTitle}
+            </span>
+          )}
+          {previewedEffect && (
+            <span style={{ fontSize: '0.68rem', color: 'hsl(210 100% 65%)', fontWeight: 700, marginTop: '2px', display: 'block' }}>
+              ✨ Effect: {previewedEffect}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Tabs Menu */}
       <div className="category-chips-container" style={{ borderBottom: '1px solid hsl(220 15% 18%)', marginBottom: '1rem' }}>
         {CATEGORIES.map((cat) => {
@@ -294,28 +506,33 @@ export default function StorePage() {
           return (
             <button
               key={cat.id}
-              onClick={() => !cat.comingSoon && setActiveCategory(cat.id)}
+              onClick={() => setActiveCategory(cat.id)}
               className={`category-chip ${isActive ? 'active' : ''}`}
-              style={{
-                cursor: cat.comingSoon ? 'not-allowed' : 'pointer',
-                opacity: cat.comingSoon ? 0.4 : 1,
-              }}
               id={`store-category-${cat.id}`}
             >
               <span>{cat.emoji}</span>
               <span>{cat.label}</span>
-              {cat.comingSoon && <span style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', borderRadius: 4, background: 'hsl(220 20% 10%)', color: 'hsl(220 10% 40%)', marginLeft: '4px' }}>CS</span>}
             </button>
           )
         })}
       </div>
 
+      {/* Redesigned Compact Loader */}
       {loading ? (
-        <div style={{ padding: '3rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }}>Loading store catalog...</div>
+        <div className="card glass" style={{
+          height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)'
+        }}>
+          <div style={{
+            width: 24, height: 24, borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'hsl(210 100% 65%)',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+          <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Loading Store Catalog...</span>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          
-          {/* Items Grid (Mobile first: 2 columns max) */}
+          {/* Items Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', justifyContent: 'center' }} className="stagger">
             {activeCategoryItems.map((item) => {
               const owned = ownedIds.includes(item.id)
@@ -326,6 +543,21 @@ export default function StorePage() {
                 EPIC: 'hsl(270 80% 70%)',
                 LEGENDARY: 'hsl(45 100% 60%)',
               }
+
+              // Determine if cosmetic is active/equipped
+              let isEquipped = false
+              if (item.type === 'TITLE') {
+                isEquipped = profile?.selectedTitle === item.name
+              } else if (item.type === 'AVATAR_FRAME') {
+                isEquipped = profile?.selectedFrame === item.name
+              } else if (item.type === 'EFFECT') {
+                isEquipped = profile?.selectedEffect === item.name
+              } else if (item.type === 'BOARD_THEME') {
+                isEquipped = profile?.selectedTheme === item.name
+              }
+
+              // Can preview frames, effects, and titles
+              const canPreview = ['TITLE', 'AVATAR_FRAME', 'EFFECT'].includes(item.type)
 
               return (
                 <div
@@ -341,7 +573,7 @@ export default function StorePage() {
                     borderRadius: 16,
                     background: 'hsl(222 18% 12% / 0.95)',
                     border: '1px solid hsl(220 15% 20%)',
-                    borderColor: owned ? 'hsl(142 70% 50% / 0.35)' : 'hsl(220 15% 20%)',
+                    borderColor: isEquipped ? 'hsl(142 70% 50% / 0.6)' : owned ? 'hsl(210 100% 50% / 0.4)' : 'hsl(220 15% 20%)',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
@@ -360,11 +592,12 @@ export default function StorePage() {
                     fontSize: '2rem',
                     overflow: 'hidden',
                   }}>
-                    {item.type === 'AVATAR' && item.assetUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.assetUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : item.type === 'AVATAR' ? (
-                      '👤'
+                    {item.type === 'TITLE' ? (
+                      '⚡'
+                    ) : item.type === 'EFFECT' ? (
+                      '✨'
+                    ) : item.type === 'AVATAR_FRAME' ? (
+                      '🖼️'
                     ) : item.type === 'CHAT_PACK' ? (
                       '💬'
                     ) : item.type === 'SCRATCHER' ? (
@@ -375,6 +608,23 @@ export default function StorePage() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '100%' }}>
+                    {/* Badge */}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+                      {isEquipped ? (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'hsl(142 70% 45%)', color: 'black', textTransform: 'uppercase' }}>
+                          Equipped
+                        </span>
+                      ) : owned ? (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'hsl(210 100% 55%)', color: 'white', textTransform: 'uppercase' }}>
+                          Owned
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'hsl(220 10% 40%)', color: 'white', textTransform: 'uppercase' }}>
+                          Locked
+                        </span>
+                      )}
+                    </div>
+
                     <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'white', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', width: '100%' }}>
                       {item.name}
                     </div>
@@ -394,20 +644,56 @@ export default function StorePage() {
                     )}
                   </div>
 
-                  <div style={{ marginTop: 'auto', width: '100%' }}>
-                    {owned ? (
-                      <button className="btn btn-secondary btn-sm" disabled style={{ width: '100%', borderRadius: 12, background: 'hsl(142 70% 50% / 0.08)', color: 'hsl(142 70% 55%)', borderColor: 'transparent', cursor: 'not-allowed', fontSize: '0.75rem' }}>
-                        Purchased ✓
-                      </button>
-                    ) : (
+                  <div style={{ marginTop: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    {isEquipped ? (
                       <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => handleBuy(item)}
-                        disabled={buyingId === item.id}
-                        style={{ width: '100%', borderRadius: 12, fontSize: '0.75rem', padding: '0.5rem 1rem' }}
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleEquip(item, 'unequip')}
+                        disabled={equippingId === item.id}
+                        style={{ width: '100%', borderRadius: 12, fontSize: '0.75rem', padding: '0.4rem' }}
                       >
-                        {buyingId === item.id ? 'Buying...' : `💰 ${item.priceCoins}`}
+                        {equippingId === item.id ? 'Saving...' : 'Unequip'}
                       </button>
+                    ) : owned ? (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {canPreview && (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handlePreview(item)}
+                            style={{ flex: 1, borderRadius: 12, fontSize: '0.7rem', padding: '0.4rem' }}
+                          >
+                            👁️ Preview
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleEquip(item, 'equip')}
+                          disabled={equippingId === item.id}
+                          style={{ flex: canPreview ? 1.5 : 1, borderRadius: 12, fontSize: '0.75rem', padding: '0.4rem' }}
+                        >
+                          {equippingId === item.id ? 'Equipping...' : 'Equip'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {canPreview && (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handlePreview(item)}
+                            style={{ flex: 1, borderRadius: 12, fontSize: '0.7rem', padding: '0.4rem' }}
+                          >
+                            👁️ Preview
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleBuy(item)}
+                          disabled={buyingId === item.id}
+                          style={{ flex: canPreview ? 1.5 : 1, borderRadius: 12, fontSize: '0.75rem', padding: '0.4rem' }}
+                        >
+                          {buyingId === item.id ? 'Buying...' : `💰 ${item.priceCoins}`}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

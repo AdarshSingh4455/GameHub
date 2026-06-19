@@ -5,11 +5,26 @@ import { computeLevel } from '@/lib/xpUtils'
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    let userId: string
+    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+      const cookieHeader = request.headers.get('cookie') || ''
+      const cookies = Object.fromEntries(
+        cookieHeader.split(';').map(c => {
+          const eqIdx = c.indexOf('=')
+          if (eqIdx === -1) return [c.trim(), '']
+          const name = c.substring(0, eqIdx).trim()
+          const value = c.substring(eqIdx + 1).trim()
+          return [name, decodeURIComponent(value)]
+        })
+      )
+      userId = cookies['mock_user_id'] || 'mock-user-id'
+    } else {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      userId = user.id
     }
 
     const body = await request.json()
@@ -21,7 +36,7 @@ export async function POST(request: Request) {
 
     // 1. Fetch user profile
     const profile = await prisma.profile.findUnique({
-      where: { userId: user.id },
+      where: { userId },
     })
 
     if (!profile) {

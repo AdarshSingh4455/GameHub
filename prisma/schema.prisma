@@ -26,6 +26,7 @@ model Profile {
   selectedBadge        String?
   selectedFrame        String?
   selectedTheme        String?
+  selectedEffect       String?
   friendCode           String?             @unique
   lastSeenAt           DateTime?
   currentRank          Int?
@@ -52,6 +53,7 @@ model Profile {
   sentInvites          MultiplayerInvite[]     @relation("SentInvites")
   receivedInvites      MultiplayerInvite[]     @relation("ReceivedInvites")
   chatMessages         MultiplayerChatMessage[]
+  challengeClaims      ChallengeClaim[]
 
   @@index([xp(sort: Desc)])
   @@index([level(sort: Desc)])
@@ -296,6 +298,7 @@ enum CosmeticType {
   AVATAR
   CHAT_PACK
   SCRATCHER
+  EFFECT
 }
 
 enum XPEventType {
@@ -439,3 +442,15 @@ model MultiplayerInvite {
 
   @@unique([roomId, receiverId, status])
 }
+
+model ChallengeClaim {
+  id          String   @id @default(uuid())
+  profileId   String
+  challengeId String
+  claimedAt   DateTime @default(now())
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, challengeId])
+  @@index([profileId])
+}
+

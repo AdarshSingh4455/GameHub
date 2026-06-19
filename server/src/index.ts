@@ -1084,6 +1084,16 @@ io.on('connection', async (rawSocket) => {
     socket.to(`game:${roomCode}`).emit('match-reaction', { userId, emoji })
   })
 
+  // Dedicated Chat Pack message sync
+  socket.on('chat-pack-message', ({ roomCode, message, packId }: { roomCode: string; message: string; packId: string }) => {
+    socket.to(`game:${roomCode}`).emit('chat-pack-message', {
+      playerId: userId,
+      message,
+      packId,
+      timestamp: Date.now()
+    })
+  })
+
   // Scribble Canvas Synchronization (real-time broadcast)
   socket.on('scribble-draw', ({ roomCode, drawData }: { roomCode: string; drawData: any }) => {
     socket.to(`game:${roomCode}`).emit('scribble-draw', { drawData })

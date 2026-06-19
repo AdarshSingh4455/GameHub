@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import { useToast } from '@/lib/contexts/ToastContext'
+import MatchReactions from './MatchReactions'
 
 interface Player {
   userId: string
@@ -325,6 +326,13 @@ export default function MultiplayerTicTacToeGame({ roomCode, session, players, c
           </button>
         </div>
       )}
+
+      <MatchReactions
+        socket={socket}
+        roomCode={roomCode}
+        currentUserId={currentUserId}
+        players={players}
+      />
 
       {/* Style overrides */}
       <style jsx global>{`

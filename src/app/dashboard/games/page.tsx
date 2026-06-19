@@ -1,14 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { GAMES_REGISTRY } from '@/lib/games'
+import { prefetchProfileDetails } from '@/lib/prefetch'
 
 const CATEGORIES = ['All', 'Social', 'Dual Player', 'Strategy', 'Puzzle', 'Arcade']
 
 export default function GamesDirectoryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
+
+  useEffect(() => {
+    prefetchProfileDetails()
+  }, [])
 
   // Filter games based on search query and category
   const filteredGames = GAMES_REGISTRY.filter((game) => {

@@ -20,6 +20,8 @@ interface NavLink {
 const NAV_LINKS: NavLink[] = [
   { href: '/dashboard',             label: 'Home',          emoji: '🏠' },
   { href: '/dashboard/games',       label: 'All Games',     emoji: '🎮' },
+  { href: '/dashboard/challenges',  label: 'Challenges',   emoji: '⚡' },
+  { href: '/dashboard/store',       label: 'Store',        emoji: '🪙' },
   { href: '/dashboard/multiplayer', label: 'Multiplayer',   emoji: '🌐', authRequired: true },
   { href: '/dashboard/leaderboard', label: 'Leaderboard',   emoji: '🏆', authRequired: true },
   { href: '/dashboard/rewards',     label: 'Rewards',       emoji: '🎯' },
@@ -31,6 +33,8 @@ const NAV_LINKS: NavLink[] = [
 const BOTTOM_NAV_LINKS: NavLink[] = [
   { href: '/dashboard',             label: 'Home',         emoji: '🏠' },
   { href: '/dashboard/games',       label: 'Games',        emoji: '🎮' },
+  { href: '/dashboard/challenges',  label: 'Challenges',   emoji: '⚡' },
+  { href: '/dashboard/store',       label: 'Store',        emoji: '🪙' },
   { href: '/dashboard/rewards',     label: 'Rewards',      emoji: '🎯' },
   { href: '/dashboard/profile',     label: 'Profile',      emoji: '👤' },
 ]
@@ -495,7 +499,6 @@ export default function DashboardNav({ user }: Props) {
         <nav className="mobile-bottom-nav">
           {(() => {
             const dynamicBottomNavLinks = [...BOTTOM_NAV_LINKS]
-            dynamicBottomNavLinks.splice(3, 0, { href: '/dashboard/store', label: 'Store', emoji: '🪙' })
 
             return dynamicBottomNavLinks.map((link) => {
             const active = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href))

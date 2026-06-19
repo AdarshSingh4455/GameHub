@@ -37,6 +37,8 @@ export default function MultiplayerScribbleGame({
   const [brushSize, setBrushSize] = useState(4)
   const [tool, setTool] = useState<'pencil' | 'eraser'>('pencil')
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
+  const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
   
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const isDrawingRef = useRef(false)
@@ -68,6 +70,21 @@ export default function MultiplayerScribbleGame({
 
   const isDrawer = drawerId === currentUserId
   const hasGuessed = guessedPlayers.includes(currentUserId)
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(roomCode)
+    setCopiedCode(true)
+    addToast('success', 'Copied', 'Room code copied to clipboard!')
+    setTimeout(() => setCopiedCode(false), 2000)
+  }
+
+  const handleCopyLink = () => {
+    const inviteUrl = `${window.location.origin}/dashboard/multiplayer?join=${roomCode}`
+    navigator.clipboard.writeText(inviteUrl)
+    setCopiedLink(true)
+    addToast('success', 'Copied', 'Invite link copied to clipboard!')
+    setTimeout(() => setCopiedLink(false), 2000)
+  }
 
   // Sort players by score descending (live)
   const sortedPlayers = [...players].sort((a, b) => (playerScores[b.userId] || 0) - (playerScores[a.userId] || 0))
@@ -379,7 +396,9 @@ export default function MultiplayerScribbleGame({
             </span>
           </div>
           <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)' }}>
-            <div style={{ fontWeight: 700, color: 'white', fontSize: '0.8rem' }}>Round {round}/{maxRounds}</div>
+            <div style={{ fontWeight: 700, color: 'white', fontSize: '0.8rem' }}>
+              {stage === 'FINISHED' ? 'Match Finished' : `Round ${Math.min(round, maxRounds)}/${maxRounds}`}
+            </div>
             <div>{stage === 'DRAWING' ? 'Drawing' : stage === 'WORD_SELECTION' ? 'Choosing' : stage === 'ROUND_SUMMARY' ? 'Summary' : stage}</div>
           </div>
         </div>
@@ -451,10 +470,12 @@ export default function MultiplayerScribbleGame({
           
           {/* Canvas board */}
           <div style={{
-            position: 'relative', width: '100%', aspectRatio: '4/3',
+            position: 'relative', width: '100%',
+            aspectRatio: stage === 'FINISHED' ? 'auto' : '4/3',
+            height: stage === 'FINISHED' ? 'auto' : undefined,
             background: '#0a0b0d', borderRadius: 16,
             border: '1px solid hsl(var(--border-subtle))',
-            overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            overflow: stage === 'FINISHED' ? 'visible' : 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
             <canvas
               ref={canvasRef}
@@ -565,7 +586,7 @@ export default function MultiplayerScribbleGame({
               <div style={{
                 padding: '2rem', textAlign: 'center', zIndex: 10,
                 background: 'rgba(10,11,13,0.94)', backdropFilter: 'blur(4px)',
-                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
+                width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
               }}>
                 <span style={{ fontSize: '4rem' }}>🏆</span>
                 <h3 style={{ fontSize: '1.75rem', fontWeight: 900, marginTop: '0.5rem' }}>Match Finished!</h3>
@@ -578,6 +599,15 @@ export default function MultiplayerScribbleGame({
                       <strong style={{ color: 'hsl(var(--brand-primary))' }}>{playerScores[p.userId] || 0} pts</strong>
                     </div>
                   ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', maxWidth: 400, margin: '0 auto 0.75rem', width: '100%' }}>
+                  <button className="btn btn-secondary" onClick={handleCopyCode} style={{ flex: 1, borderRadius: 12, fontSize: '0.85rem' }}>
+                    {copiedCode ? '✅ Copied!' : '📋 Copy Code'}
+                  </button>
+                  <button className="btn btn-secondary" onClick={handleCopyLink} style={{ flex: 1, borderRadius: 12, fontSize: '0.85rem' }}>
+                    {copiedLink ? '✅ Copied!' : '🔗 Invite Friend'}
+                  </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', maxWidth: 400, margin: '0 auto', width: '100%' }}>

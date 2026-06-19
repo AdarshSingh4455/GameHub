@@ -883,6 +883,21 @@ body.game-page-active .app-content {
   50% { transform: scale(1.03); }
 }
 
+@media (max-width: 480px) {
+  .bottom-nav-label {
+    font-size: 9px !important;
+  }
+  .bottom-nav-emoji {
+    font-size: 1.15rem !important;
+  }
+  .bottom-nav-icon-container {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
 
-
-
+@media (max-width: 380px) {
+  .bottom-nav-label {
+    display: none !important;
+  }
+}

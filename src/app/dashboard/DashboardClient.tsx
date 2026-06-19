@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { GAMES_REGISTRY, GameInfo } from '@/lib/games'
 import DashboardRetentionPanel from '@/components/layout/DashboardRetentionPanel'
+import { prefetchProfileDetails } from '@/lib/prefetch'
 
 interface Props {
   user: User | null
@@ -15,6 +16,10 @@ const CATEGORIES = ['All', 'Dual Player', 'Social', 'Puzzle', 'Arcade', 'Strateg
 
 export default function DashboardClient({ user, username }: Props) {
   const [selectedCategory, setSelectedCategory] = useState('All')
+
+  useEffect(() => {
+    prefetchProfileDetails()
+  }, [])
 
   // Featured Game selection based on day of the year (daily deterministic "random")
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000)

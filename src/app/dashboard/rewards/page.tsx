@@ -6,6 +6,7 @@ import { useToast } from '@/lib/contexts/ToastContext'
 import { DAILY_REWARD_TABLE, getUtcDaysElapsed } from '@/lib/dailyRewards'
 import { getLevelProgress } from '@/lib/xpUtils'
 import type { AchievementProgressInfo } from '@/lib/achievements'
+import { getCachedProfileDetails, prefetchProfileDetails } from '@/lib/prefetch'
 
 interface ProfileStats {
   level: number
@@ -43,7 +44,49 @@ export default function RewardsPage() {
   const [claiming, setClaiming] = useState(false)
 
   const loadData = () => {
-    setLoading(true)
+    const cached = getCachedProfileDetails()
+    if (cached && cached.profile) {
+      const inventory = cached.profile.inventory || []
+      const chatPacks = inventory
+        .filter((inv: any) => inv.cosmeticItem && inv.cosmeticItem.type === 'CHAT_PACK')
+        .map((inv: any) => ({
+          id: inv.cosmeticItem.id,
+          name: inv.cosmeticItem.name,
+          category: inv.cosmeticItem.metadata?.rarity || 'COMMON',
+          source: inv.cosmeticItem.priceCoins > 0 ? 'Purchased from Store' : 'Level Unlock',
+          messages: inv.cosmeticItem.metadata?.messages || [],
+        }))
+
+      setStats({
+        level: cached.profile.level,
+        xp: cached.profile.xp,
+        coins: cached.profile.coins,
+        streak: cached.profile.currentStreak,
+        rewardDay: cached.profile.dailyRewardDay,
+        lastClaim: cached.profile.lastDailyRewardClaim,
+        achievementProgress: cached.achievementProgress || [],
+        ownedChatPacks: chatPacks,
+      })
+
+      if (cached.profile.lastDailyRewardClaim) {
+        const lastClaimDate = new Date(cached.profile.lastDailyRewardClaim)
+        const now = new Date()
+        const daysDiff = getUtcDaysElapsed(now, lastClaimDate)
+        if (daysDiff === 0) {
+          setCanClaimToday(false)
+          const nextMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
+          setCountdown(Math.max(0, Math.ceil((nextMidnight.getTime() - now.getTime()) / 1000)))
+        } else {
+          setCanClaimToday(true)
+        }
+      } else {
+        setCanClaimToday(true)
+      }
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
     if (user) {
       fetch('/api/profile/details')
         .then((res) => {
@@ -54,7 +97,7 @@ export default function RewardsPage() {
           // Parse owned chat packs
           const inventory = data.profile.inventory || []
           const chatPacks = inventory
-            .filter((inv: any) => inv.cosmeticItem.type === 'CHAT_PACK')
+            .filter((inv: any) => inv.cosmeticItem && inv.cosmeticItem.type === 'CHAT_PACK')
             .map((inv: any) => ({
               id: inv.cosmeticItem.id,
               name: inv.cosmeticItem.name,
@@ -248,7 +291,52 @@ export default function RewardsPage() {
   }
 
   if (loading && !stats) {
-    return <div style={{ color: 'hsl(220 10% 50%)', padding: '2rem', textAlign: 'center' }}>Loading Rewards Hub...</div>
+    return (
+      <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
+        <style>{`
+          @keyframes skeleton-shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          .shimmer-block {
+            background: linear-gradient(90deg, hsl(222 20% 15%) 25%, hsl(222 20% 22%) 50%, hsl(222 20% 15%) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite linear;
+          }
+        `}</style>
+        
+        {/* Header Skeleton */}
+        <div>
+          <div className="shimmer-block" style={{ width: '180px', height: '28px', borderRadius: '6px' }} />
+          <div className="shimmer-block" style={{ width: '380px', height: '16px', borderRadius: '4px', marginTop: '8px' }} />
+        </div>
+
+        {/* Row 1 Grid: 3 Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+          {[1, 2, 3].map(idx => (
+            <div key={idx} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', height: '140px' }}>
+              <div className="shimmer-block" style={{ width: '120px', height: '12px', borderRadius: '4px' }} />
+              <div className="shimmer-block" style={{ width: '80px', height: '24px', borderRadius: '6px' }} />
+              <div className="shimmer-block" style={{ width: '100%', height: '8px', borderRadius: '4px', marginTop: 'auto' }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Row 2 Grid: 2 Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+          {[1, 2].map(idx => (
+            <div key={idx} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', height: '360px' }}>
+              <div className="shimmer-block" style={{ width: '140px', height: '16px', borderRadius: '4px' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', flex: 1, contentVisibility: 'auto' }}>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(item => (
+                  <div key={item} className="shimmer-block" style={{ borderRadius: '12px', height: '70px' }} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (!stats) return null

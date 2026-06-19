@@ -167,12 +167,44 @@ async function main() {
     { name: 'Friendly Chat Pack', type: 'CHAT_PACK' as const, priceCoins: 50, assetUrl: 'Friendly', isDefault: false, metadata: { messages: ['Well played! 🤝', 'Good game! 🎮', 'Nice move! 🔥', 'Hello there! 👋'] } },
     { name: 'Competitor Chat Pack', type: 'CHAT_PACK' as const, priceCoins: 100, assetUrl: 'Competitive', isDefault: false, metadata: { messages: ['Too easy! ⚡', 'Calculated. 🎯', 'Close one! 😮', 'Unlucky! 💀'] } },
     { name: 'Silly Chat Pack', type: 'CHAT_PACK' as const, priceCoins: 80, assetUrl: 'Silly', isDefault: false, metadata: { messages: ['Catch me if you can! 🏃', 'Oops, my bad! 🤡', 'Wow! 🌟', 'Let me cook! 👨‍🍳'] } },
+    { name: 'Sports Pack', type: 'CHAT_PACK' as const, priceCoins: 60, assetUrl: 'Sports', isDefault: false, metadata: { messages: ['Goal! ⚽', 'Touchdown! 🏈', 'Home Run! ⚾', 'Nice Shot! 🏀'] } },
+    { name: 'Funny Pack', type: 'CHAT_PACK' as const, priceCoins: 70, assetUrl: 'Funny', isDefault: false, metadata: { messages: ['LOL! 😂', 'No way! 🤯', 'BRB! 🏃‍♂️', 'Aha! 💡'] } },
+    { name: 'Pro Pack', type: 'CHAT_PACK' as const, priceCoins: 90, assetUrl: 'Pro', isDefault: false, metadata: { messages: ['Calculated. 😎', 'GG! 🏆', 'GG WP! 🤝', 'Next game? 🎮'] } },
+    { name: 'Cricket Pack', type: 'CHAT_PACK' as const, priceCoins: 80, assetUrl: 'Cricket', isDefault: false, metadata: { messages: ['Sixer! 🏏', 'Bowled him! 🎯', 'Howzzat! 📢', 'Good bowling! ⚾'] } },
+    { name: 'Legend Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Legend', isDefault: false, metadata: { messages: ['What A Move! 🧠', 'Too Easy! ⚡', 'Close One! 😱', 'Good Luck! 🍀'] } },
 
     // Scratchers
     { name: 'Bronze Scratcher', type: 'SCRATCHER' as const, priceCoins: 20, assetUrl: 'Bronze', isDefault: false, metadata: { rarity: 'COMMON', description: 'Scratch to win basic Coins or XP.' } },
     { name: 'Silver Scratcher', type: 'SCRATCHER' as const, priceCoins: 50, assetUrl: 'Silver', isDefault: false, metadata: { rarity: 'RARE', description: 'Scratch to win decent Coins, XP, or Rare items.' } },
     { name: 'Gold Scratcher', type: 'SCRATCHER' as const, priceCoins: 100, assetUrl: 'Gold', isDefault: false, metadata: { rarity: 'EPIC', description: 'Scratch to win huge Coins, XP, or Epic items.' } },
     { name: 'Legendary Scratcher', type: 'SCRATCHER' as const, priceCoins: 250, assetUrl: 'Legendary', isDefault: false, metadata: { rarity: 'LEGENDARY', description: 'Scratch to win Legendary rewards!' } },
+
+    // Titles
+    { name: 'Rookie', type: 'TITLE' as const, priceCoins: 50, isDefault: false, metadata: { description: 'New kid on the block' } },
+    { name: 'Champion', type: 'TITLE' as const, priceCoins: 120, isDefault: false, metadata: { description: 'A proven winner' } },
+    { name: 'Legend', type: 'TITLE' as const, priceCoins: 200, isDefault: false, metadata: { description: 'Known by everyone' } },
+    { name: 'Grandmaster', type: 'TITLE' as const, priceCoins: 300, isDefault: false, metadata: { description: 'Absolute master of games' } },
+    { name: 'Night Owl', type: 'TITLE' as const, priceCoins: 80, isDefault: false, metadata: { description: 'Plays late into the night' } },
+    { name: 'Puzzle King', type: 'TITLE' as const, priceCoins: 150, isDefault: false, metadata: { description: 'Solves anything' } },
+    { name: 'Cricket Boss', type: 'TITLE' as const, priceCoins: 150, isDefault: false, metadata: { description: 'Rules the pitch' } },
+    { name: 'XP Hunter', type: 'TITLE' as const, priceCoins: 100, isDefault: false, metadata: { description: 'Always leveling up' } },
+    { name: 'Streak Master', type: 'TITLE' as const, priceCoins: 180, isDefault: false, metadata: { description: 'Never breaks a streak' } },
+
+    // Effects
+    { name: 'Confetti Burst', type: 'EFFECT' as const, priceCoins: 150, isDefault: false, metadata: { description: 'Celebratory confetti shower' } },
+    { name: 'Lightning Aura', type: 'EFFECT' as const, priceCoins: 220, isDefault: false, metadata: { description: 'Electrifying flashes' } },
+    { name: 'Golden Glow', type: 'EFFECT' as const, priceCoins: 200, isDefault: false, metadata: { description: 'Radiate pure luxury' } },
+    { name: 'Pixel Fire', type: 'EFFECT' as const, priceCoins: 180, isDefault: false, metadata: { description: 'Retro burning pixels' } },
+    { name: 'Victory Sparkles', type: 'EFFECT' as const, priceCoins: 160, isDefault: false, metadata: { description: 'Sparkling trails of success' } },
+    { name: 'Diamond Pulse', type: 'EFFECT' as const, priceCoins: 250, isDefault: false, metadata: { description: 'Shiny crystalline waves' } },
+    { name: 'Royal Aura', type: 'EFFECT' as const, priceCoins: 300, isDefault: false, metadata: { description: 'The aura of kings' } },
+
+    // Profile Frames
+    { name: 'Bronze', type: 'AVATAR_FRAME' as const, priceCoins: 60, isDefault: false, metadata: { description: 'Sturdy bronze framing' } },
+    { name: 'Silver', type: 'AVATAR_FRAME' as const, priceCoins: 100, isDefault: false, metadata: { description: 'Polished silver lining' } },
+    { name: 'Gold', type: 'AVATAR_FRAME' as const, priceCoins: 180, isDefault: false, metadata: { description: 'Gleaming golden borders' } },
+    { name: 'Diamond', type: 'AVATAR_FRAME' as const, priceCoins: 250, isDefault: false, metadata: { description: 'Sparkling diamond shell' } },
+    { name: 'Mythic', type: 'AVATAR_FRAME' as const, priceCoins: 400, isDefault: false, metadata: { description: 'Ascendant legendary border' } }
   ]
   for (const c of defaults) {
     await prisma.cosmeticItem.upsert({

@@ -881,62 +881,69 @@ export async function checkAndUnlockAchievements(
  * Calculates current progress for all achievements to display in the UI.
  */
 export async function getAchievementProgress(profileId: string): Promise<AchievementProgressInfo[]> {
-  const allAchievements = await prisma.achievement.findMany()
-  const unlocked = await prisma.userAchievement.findMany({
-    where: { profileId },
-    select: { achievementId: true },
-  })
-  const unlockedIds = new Set(unlocked.map((ua) => ua.achievementId))
+  const [
+    allAchievements,
+    unlocked,
+    profile,
+    totalGames,
+    totalWins,
+    lastMatches,
+    cricketAgg,
+    tttScores
+  ] = await Promise.all([
+    prisma.achievement.findMany(),
+    prisma.userAchievement.findMany({
+      where: { profileId },
+      select: { achievementId: true },
+    }),
+    prisma.profile.findUnique({
+      where: { id: profileId },
+      select: { level: true, currentStreak: true },
+    }),
+    prisma.matchRecord.count({
+      where: {
+        OR: [{ player1Id: profileId }, { player2Id: profileId }],
+      },
+    }),
+    prisma.matchRecord.count({
+      where: { winnerId: profileId },
+    }),
+    prisma.matchRecord.findMany({
+      where: {
+        OR: [{ player1Id: profileId }, { player2Id: profileId }],
+      },
+      include: {
+        game: true,
+      },
+      orderBy: { playedAt: 'desc' },
+    }),
+    prisma.score.aggregate({
+      where: {
+        profileId,
+        game: { slug: 'cricket' },
+      },
+      _sum: { score: true },
+    }),
+    prisma.score.findMany({
+      where: {
+        profileId,
+        game: { slug: 'tic-tac-toe' },
+      },
+    })
+  ])
 
-  const profile = await prisma.profile.findUnique({
-    where: { id: profileId },
-    select: { level: true, currentStreak: true },
-  })
+  const unlockedIds = new Set(unlocked.map((ua) => ua.achievementId))
   const level = profile?.level ?? 1
   const streak = profile?.currentStreak ?? 0
 
-  const totalGames = await prisma.matchRecord.count({
-    where: {
-      OR: [{ player1Id: profileId }, { player2Id: profileId }],
-    },
-  })
-
-  const totalWins = await prisma.matchRecord.count({
-    where: { winnerId: profileId },
-  })
-
-  const lastMatches = await prisma.matchRecord.findMany({
-    where: {
-      OR: [{ player1Id: profileId }, { player2Id: profileId }],
-    },
-    include: {
-      game: true,
-    },
-    orderBy: { playedAt: 'desc' },
-  })
   let currentWinStreak = 0
   for (const m of lastMatches) {
     if (m.winnerId === profileId) currentWinStreak++
     else break
   }
 
-  // Calculate Cricket total runs
-  const cricketAgg = await prisma.score.aggregate({
-    where: {
-      profileId,
-      game: { slug: 'cricket' },
-    },
-    _sum: { score: true },
-  })
   const cricketRuns = cricketAgg._sum.score ?? 0
 
-  // Check if perfect TTT win exists
-  const tttScores = await prisma.score.findMany({
-    where: {
-      profileId,
-      game: { slug: 'tic-tac-toe' },
-    },
-  })
   const hasPerfectTTT = tttScores.some((s) => {
     const meta = s.metadata as Record<string, unknown> | null
     const moves = meta?.moves as number | undefined

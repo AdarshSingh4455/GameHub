@@ -213,7 +213,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
               onClick={() => setShowLeaveConfirm(false)}
               disabled={isLeaving}
             >
-              Stay In Game
+              Cancel
             </button>
             <button
               className="btn"
@@ -226,7 +226,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
               disabled={isLeaving}
               id="confirm-leave-match-btn"
             >
-              {isLeaving ? 'Leaving...' : isMatchFinished ? 'Leave' : '🚪 Forfeit & Leave'}
+              {isLeaving ? 'Leaving...' : 'Leave'}
             </button>
           </div>
         </div>

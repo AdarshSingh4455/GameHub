@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getLevelProgress } from '@/lib/xpUtils'
 import { GAMES_REGISTRY, getGameBySlug } from '@/lib/games'
+import { prefetchProfileDetails } from '@/lib/prefetch'
 
 interface DBProfile {
   id: string
@@ -181,6 +182,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProfileDetails()
+    prefetchProfileDetails()
   }, [user])
 
   // Load paginated matches history

@@ -30,6 +30,16 @@ export default function MultiplayerHandCricketGame({
   const { addToast } = useToast()
   const { socket } = useSocket()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [showBattingModal, setShowBattingModal] = useState(false)
+  const [showBowlingModal, setShowBowlingModal] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(roomCode)
+    setCopied(true)
+    addToast('success', 'Copied', 'Room code copied to clipboard!')
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const gameState = session.gameState || {}
   const {
@@ -206,7 +216,56 @@ export default function MultiplayerHandCricketGame({
   const activeBattingBorder = getTeamBorder(battingTeam)
 
   return (
-    <div style={{ maxWidth: 650, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+    <div style={{ maxWidth: 650, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }} className="cricket-container">
+      <style>{`
+        @media (max-width: 480px) {
+          .cricket-container .card {
+            padding: 0.85rem !important;
+          }
+          .cricket-container button {
+            padding: 0.4rem 0.6rem !important;
+            font-size: 0.75rem !important;
+          }
+          .cricket-container .btn {
+            padding: 0.4rem 0.6rem !important;
+            font-size: 0.75rem !important;
+          }
+        }
+      `}</style>
+
+      {/* Header Bar */}
+      <div className="card glass" style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '0.75rem 1rem', borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.08)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1.25rem' }}>🏏</span>
+          <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>Hand Cricket</span>
+          <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', backgroundColor: 'rgba(255,255,255,0.06)', padding: '0.2rem 0.5rem', borderRadius: 6 }}>
+            Room: {roomCode}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={handleCopy}
+            className="btn btn-secondary"
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', borderRadius: 8, minWidth: 'auto' }}
+          >
+            {copied ? '✅ Copied' : '📋 Copy Code'}
+          </button>
+          <button
+            onClick={onLeave}
+            className="btn btn-secondary"
+            style={{
+              padding: '0.35rem 0.75rem', fontSize: '0.8rem', borderRadius: 8, minWidth: 'auto',
+              border: '1px solid hsl(0 80% 40% / 0.5)', color: 'hsl(0 80% 65%)',
+              background: 'hsl(0 80% 50% / 0.08)'
+            }}
+          >
+            🚪 Leave
+          </button>
+        </div>
+      </div>
       
       {/* ── STAGE: TEAM_SETUP ── */}
       {stage === 'TEAM_SETUP' && (
@@ -472,50 +531,89 @@ export default function MultiplayerHandCricketGame({
           </div>
 
           {/* Lineup & Rotations Trackers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }} className="setup-teams-lineups">
-            {/* Batting Order List */}
-            <div className="card glass" style={{ padding: '0.75rem 1rem', borderRadius: 12 }}>
-              <h4 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
-                🏏 Batting Lineup
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {teams[battingTeam].players.map((id: string, idx: number) => {
-                  const isBatterOut = idx < wickets
-                  const isBatterActive = id === battingUserId
-                  return (
-                    <div key={id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', textDecoration: isBatterOut ? 'line-through' : 'none', opacity: isBatterOut ? 0.45 : 1 }}>
-                      <span style={{ color: isBatterActive ? activeBattingColor : 'white', fontWeight: isBatterActive ? 700 : 400 }}>
-                        {idx + 1}. {getUsername(id)} {id === myCaptainId && '👑'}
-                      </span>
-                      <strong style={{ color: 'hsl(var(--text-secondary))' }}>{playerRuns[id] || 0} runs</strong>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Bowling Rotation List */}
-            <div className="card glass" style={{ padding: '0.75rem 1rem', borderRadius: 12 }}>
-              <h4 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
-                🎯 Bowling Rotation
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {teams[bowlingTeam].players.map((id: string, idx: number) => {
-                  const isBowlerActive = id === bowlingUserId
-                  return (
-                    <div key={id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                      <span style={{ color: isBowlerActive ? getTeamColor(bowlingTeam) : 'white', fontWeight: isBowlerActive ? 700 : 400 }}>
-                        Over {idx + 1}: {getUsername(id)} {id === teams[bowlingTeam].captain && '👑'}
-                      </span>
-                      <span style={{ color: 'hsl(var(--text-muted))', fontSize: '0.75rem' }}>
-                        {isBowlerActive ? 'Bowling' : 'Waiting'}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.25rem' }}>
+            <button
+              onClick={() => setShowBattingModal(true)}
+              className="btn btn-secondary"
+              style={{ flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+            >
+              🏏 Batting Lineup ▼
+            </button>
+            <button
+              onClick={() => setShowBowlingModal(true)}
+              className="btn btn-secondary"
+              style={{ flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+            >
+              🎯 Bowling Rotation ▼
+            </button>
           </div>
+
+          {/* Batting Lineup Modal */}
+          {showBattingModal && teams[battingTeam] && (
+            <div style={{
+              position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.75)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1rem'
+            }} onClick={() => setShowBattingModal(false)}>
+              <div className="card glass" style={{
+                maxWidth: 400, width: '100%', padding: '1.25rem', borderRadius: 16,
+                backgroundColor: 'hsl(222 20% 8%)', border: '1px solid rgba(255, 255, 255, 0.1)'
+              }} onClick={e => e.stopPropagation()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>🏏 Batting Lineup</h3>
+                  <button onClick={() => setShowBattingModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.25rem' }}>×</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {teams[battingTeam].players.map((id: string, idx: number) => {
+                    const isBatterOut = idx < wickets
+                    const isBatterActive = id === battingUserId
+                    return (
+                      <div key={id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', textDecoration: isBatterOut ? 'line-through' : 'none', opacity: isBatterOut ? 0.45 : 1 }}>
+                        <span style={{ color: isBatterActive ? activeBattingColor : 'white', fontWeight: isBatterActive ? 700 : 400 }}>
+                          {idx + 1}. {getUsername(id)} {id === myCaptainId && '👑'}
+                        </span>
+                        <strong style={{ color: 'hsl(var(--text-secondary))' }}>{playerRuns[id] || 0} runs</strong>
+                      </div>
+                    )
+                  })}
+                </div>
+                <button className="btn btn-secondary" onClick={() => setShowBattingModal(false)} style={{ width: '100%', marginTop: '1.5rem', borderRadius: 10 }}>Close</button>
+              </div>
+            </div>
+          )}
+
+          {/* Bowling Rotation Modal */}
+          {showBowlingModal && teams[bowlingTeam] && (
+            <div style={{
+              position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.75)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1rem'
+            }} onClick={() => setShowBowlingModal(false)}>
+              <div className="card glass" style={{
+                maxWidth: 400, width: '100%', padding: '1.25rem', borderRadius: 16,
+                backgroundColor: 'hsl(222 20% 8%)', border: '1px solid rgba(255, 255, 255, 0.1)'
+              }} onClick={e => e.stopPropagation()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>🎯 Bowling Rotation</h3>
+                  <button onClick={() => setShowBowlingModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.25rem' }}>×</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {teams[bowlingTeam].players.map((id: string, idx: number) => {
+                    const isBowlerActive = id === bowlingUserId
+                    return (
+                      <div key={id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                        <span style={{ color: isBowlerActive ? getTeamColor(bowlingTeam) : 'white', fontWeight: isBowlerActive ? 700 : 400 }}>
+                          Over {idx + 1}: {getUsername(id)} {id === teams[bowlingTeam].captain && '👑'}
+                        </span>
+                        <span style={{ color: 'hsl(var(--text-muted))', fontSize: '0.8rem' }}>
+                          {isBowlerActive ? 'Bowling' : 'Waiting'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <button className="btn btn-secondary" onClick={() => setShowBowlingModal(false)} style={{ width: '100%', marginTop: '1.5rem', borderRadius: 10 }}>Close</button>
+              </div>
+            </div>
+          )}
 
           {/* Real-time Matchup Reveal */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 1fr', gap: '1rem', alignItems: 'center' }}>

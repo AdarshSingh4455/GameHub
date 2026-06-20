@@ -22,10 +22,12 @@ const NAV_LINKS: NavLink[] = [
   { href: '/dashboard/games',       label: 'All Games',     emoji: '🎮' },
   { href: '/dashboard/challenges',  label: 'Challenges',   emoji: '⚡' },
   { href: '/dashboard/store',       label: 'Store',        emoji: '🪙' },
+  { href: '/dashboard/tournaments', label: 'Tournaments',   emoji: '🏆', authRequired: true },
   { href: '/dashboard/multiplayer', label: 'Multiplayer',   emoji: '🌐', authRequired: true },
-  { href: '/dashboard/leaderboard', label: 'Leaderboard',   emoji: '🏆', authRequired: true },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard',   emoji: '📊', authRequired: true },
   { href: '/dashboard/rewards',     label: 'Rewards',       emoji: '🎯' },
   { href: '/dashboard/friends',     label: 'Friends',       emoji: '👥', authRequired: true },
+  { href: '/dashboard/notifications', label: 'Notifications', emoji: '🔔', authRequired: true },
   { href: '/dashboard/profile',     label: 'Profile',       emoji: '👤' },
   { href: '/dashboard/settings',    label: 'Settings',      emoji: '⚙️',  authRequired: true },
 ]
@@ -48,6 +50,7 @@ export default function DashboardNav({ user }: Props) {
   const router = useRouter()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   
   const [userStats, setUserStats] = useState({
     level: 1,
@@ -94,6 +97,17 @@ export default function DashboardNav({ user }: Props) {
             achievementProgress: data.achievementProgress || [],
             role: data.profile.role,
           })
+          
+          // Fetch unread notifications count
+          fetch('/api/notifications')
+            .then(res => res.ok ? res.json() : null)
+            .then(nData => {
+              if (nData && nData.notifications) {
+                const unread = nData.notifications.filter((n: any) => !n.isRead).length
+                setUnreadNotificationsCount(unread)
+              }
+            })
+            .catch(() => {})
         })
         .catch(() => {})
     } else {
@@ -427,11 +441,9 @@ export default function DashboardNav({ user }: Props) {
         </div>
 
         {/* Navigation */}
-        <nav style={{ padding: '0.75rem', flex: 1 }}>
+        <nav style={{ padding: '0.75rem', flex: 1, overflowY: 'auto' }}>
           {(() => {
             const dynamicNavLinks = [...NAV_LINKS]
-            // Insert Store
-            dynamicNavLinks.splice(3, 0, { href: '/dashboard/store', label: 'Store', emoji: '🪙' })
             // Insert Admin if SUPER_ADMIN
             if (userStats.role === 'SUPER_ADMIN') {
               dynamicNavLinks.splice(6, 0, { href: '/dashboard/admin', label: 'Admin Panel', emoji: '🛠️', authRequired: true })
@@ -465,6 +477,19 @@ export default function DashboardNav({ user }: Props) {
               >
                 <span style={{ fontSize: '1.1rem' }}>{link.emoji}</span>
                 {link.label}
+                {link.label === 'Notifications' && unreadNotificationsCount > 0 && (
+                  <span style={{
+                    marginLeft: 'auto',
+                    background: 'hsl(340 85% 55%)',
+                    color: 'white',
+                    fontSize: '0.68rem',
+                    padding: '0.1rem 0.4rem',
+                    borderRadius: '99px',
+                    fontWeight: 900
+                  }}>
+                    {unreadNotificationsCount}
+                  </span>
+                )}
                 {locked && <span style={{ marginLeft: 'auto', fontSize: '0.7rem' }}>🔒</span>}
               </Link>
             )

@@ -154,8 +154,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, friendship: result }, { status: 200 })
     }
 
-    // 3. Decline Friend Request
-    if (action === 'decline') {
+    // 3. Decline/Reject Friend Request
+    if (action === 'decline' || action === 'reject') {
       const existing = await prisma.friendship.findUnique({
         where: {
           requesterId_addresseeId: {
@@ -174,6 +174,33 @@ export async function POST(request: Request) {
           requesterId_addresseeId: {
             requesterId: targetId,
             addresseeId: profile.id
+          }
+        }
+      })
+
+      return NextResponse.json({ success: true }, { status: 200 })
+    }
+
+    // 4. Cancel Outgoing Friend Request
+    if (action === 'cancel') {
+      const existing = await prisma.friendship.findUnique({
+        where: {
+          requesterId_addresseeId: {
+            requesterId: profile.id,
+            addresseeId: targetId
+          }
+        }
+      })
+
+      if (!existing || existing.status !== 'PENDING') {
+        return NextResponse.json({ error: 'No pending friend request found to cancel' }, { status: 404 })
+      }
+
+      await prisma.friendship.delete({
+        where: {
+          requesterId_addresseeId: {
+            requesterId: profile.id,
+            addresseeId: targetId
           }
         }
       })

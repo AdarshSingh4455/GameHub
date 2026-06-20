@@ -207,9 +207,23 @@ export default function FriendsPage() {
     if (diffSecs < 60) {
       return { label: 'Online', color: 'hsl(142 70% 55%)', dot: 'hsl(142 70% 50%)' }
     } else if (diffSecs < 300) {
-      return { label: 'Idle', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)' }
+      return { label: 'Away', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)' }
     }
     return { label: 'Offline', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)' }
+  }
+
+  const formatLastSeen = (lastSeenAt?: string | null) => {
+    if (!lastSeenAt) return 'Last seen: long time ago'
+    const diffMs = Date.now() - new Date(lastSeenAt).getTime()
+    const diffSecs = Math.max(0, diffMs / 1000)
+    if (diffSecs < 60) return 'Online'
+    const diffMins = Math.floor(diffSecs / 60)
+    if (diffMins < 60) return `Last seen: ${diffMins}m ago`
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `Last seen: ${diffHours}h ago`
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays === 1) return 'Last seen: yesterday'
+    return `Last seen: ${diffDays}d ago`
   }
 
   // 7. Invite Room dispatch
@@ -493,7 +507,7 @@ export default function FriendsPage() {
                                 </span>
                               </div>
                               <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '0.15rem' }}>
-                                Level {friend.level} · {friend.xp.toLocaleString()} XP
+                                Level {friend.level} · {friend.xp.toLocaleString()} XP{presence.label === 'Offline' && ` · ${formatLastSeen(friend.lastSeenAt)}`}
                               </div>
                             </div>
                           </div>

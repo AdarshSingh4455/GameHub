@@ -6,6 +6,7 @@ import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { isRateLimited } from '@/lib/rateLimit'
 import { useSocket } from '@/lib/contexts/SocketContext'
+import PartyPanel from '@/components/layout/PartyPanel'
 
 interface Player {
   id: string
@@ -949,6 +950,9 @@ export default function MultiplayerPage() {
 
             {/* Right Column: Friends & Room Invites */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Active Party System V2 */}
+              <PartyPanel />
+
               {/* Notification Center */}
               <div className="card glass" style={{ padding: '1.5rem', border: '1px solid hsl(var(--border-subtle))' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

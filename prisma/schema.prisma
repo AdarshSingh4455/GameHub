@@ -27,12 +27,15 @@ model Profile {
   selectedFrame        String?
   selectedTheme        String?
   selectedEffect       String?
-  friendCode           String?             @unique
-  lastSeenAt           DateTime?
-  currentRank          Int?
-  previousRank         Int?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  friendCode             String?             @unique
+  lastSeenAt             DateTime?
+  currentRank            Int?
+  previousRank           Int?
+  pinnedAchievements     String[]            @default([])
+  streakProtectionActive Boolean             @default(false)
+  lastActiveAt           DateTime?           @default(now())
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
   analyticsEvents      AnalyticsEvent[]
   dailyClaims          DailyRewardLog[]
   friendsReceived      Friendship[]        @relation("AddresseeFriends")
@@ -342,6 +345,8 @@ model Tournament {
   rewardBadge    String?
   rewardTitle    String?
   rewardCosmetic String?
+  bracketData    Json?
+  status         String   @default("REGISTERING")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

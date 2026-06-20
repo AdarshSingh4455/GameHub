@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import ProfileCardModal from '@/components/layout/ProfileCardModal'
+import MatchReactions from './MatchReactions'
 
 interface Player {
   userId: string
@@ -508,7 +509,7 @@ export default function MultiplayerScribbleGame({
                     </p>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                       {[30, 45, 60].map(time => (
-                        <button key={time} className="btn btn-primary" onClick={() => handleStartMatchWithSettings(time)} style={{ minWidth: 80, borderRadius: 10 }}>
+                        <button id={`scribble-settings-time-${time}`} key={time} className="btn btn-primary" onClick={() => handleStartMatchWithSettings(time)} style={{ minWidth: 80, borderRadius: 10 }}>
                           ⏱ {time}s
                         </button>
                       ))}
@@ -670,6 +671,7 @@ export default function MultiplayerScribbleGame({
                   autoComplete="off"
                 />
                 <button
+                  id="scribble-guess-btn"
                   type="submit"
                   className="btn btn-primary"
                   disabled={hasGuessed || !guess.trim() || isSubmitting}
@@ -781,6 +783,16 @@ export default function MultiplayerScribbleGame({
           </div>
         </div>
       </div>
+
+      {/* Floating Reactions overlay */}
+      {socket && (
+        <MatchReactions
+          socket={socket}
+          roomCode={roomCode}
+          currentUserId={currentUserId}
+          players={players}
+        />
+      )}
 
       {/* Profile Preview Modal */}
       <ProfileCardModal

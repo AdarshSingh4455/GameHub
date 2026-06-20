@@ -125,6 +125,8 @@ export async function POST() {
     const resultPayload = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       let newStreak = 1
       let newRewardDay = 1
+      let streakProtected = false
+      let comebackApplied = false
 
       if (profile.lastDailyRewardClaim) {
         const daysElapsed = getUtcDaysElapsed(now, profile.lastDailyRewardClaim)
@@ -132,10 +134,19 @@ export async function POST() {
           // Consecutive login
           newStreak = profile.currentStreak + 1
           newRewardDay = (profile.dailyRewardDay % DAILY_REWARD_TABLE.length) + 1
+        } else if (profile.streakProtectionActive) {
+          // Protected from reset!
+          newStreak = profile.currentStreak + 1
+          newRewardDay = (profile.dailyRewardDay % DAILY_REWARD_TABLE.length) + 1
+          streakProtected = true
         } else {
           // Missed login day(s) - reset
           newStreak = 1
           newRewardDay = 1
+        }
+
+        if (daysElapsed >= 7) {
+          comebackApplied = true
         }
       } else {
         // First claim ever
@@ -145,17 +156,20 @@ export async function POST() {
 
       // Fetch active reward config
       const rewardConfig = DAILY_REWARD_TABLE.find(r => r.day === newRewardDay) || DAILY_REWARD_TABLE[0]
+      const extraCoins = comebackApplied ? 300 : 0
 
       // Update user coins and XP, daily reward day, and streaks
       await tx.profile.update({
         where: { id: profile.id },
         data: {
           xp: { increment: rewardConfig.xp },
-          coins: { increment: rewardConfig.coins },
+          coins: { increment: rewardConfig.coins + extraCoins },
           currentStreak: newStreak,
           longestStreak: Math.max(profile.longestStreak, newStreak),
           dailyRewardDay: newRewardDay,
           lastDailyRewardClaim: now,
+          lastActiveAt: now,
+          streakProtectionActive: streakProtected ? false : profile.streakProtectionActive
         },
       })
 
@@ -235,6 +249,8 @@ export async function POST() {
         leveledUp,
         newLevel: finalLevel,
         unlockedAchievements: newlyUnlocked,
+        streakProtected,
+        comebackApplied
       }
     }, { maxWait: 15000, timeout: 30000 })
 

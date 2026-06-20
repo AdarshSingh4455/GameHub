@@ -300,6 +300,7 @@ export default function MatchReactions({ socket, roomCode, currentUserId, player
               <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 {allPacks.map(p => (
                   <button
+                    id={`chat-pack-tab-${p.id}`}
                     key={p.id}
                     onClick={() => setActivePackId(p.id)}
                     style={{
@@ -323,6 +324,7 @@ export default function MatchReactions({ socket, roomCode, currentUserId, player
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px', maxHeight: '160px', overflowY: 'auto' }}>
                 {currentPack.metadata?.messages?.map((msg: string) => (
                   <button
+                    id={`chat-pack-msg-${currentPack.id}-${msg.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`}
                     key={msg}
                     onClick={() => sendChatPackMessage(msg)}
                     style={{
@@ -346,6 +348,7 @@ export default function MatchReactions({ socket, roomCode, currentUserId, player
           )}
 
           <button
+            id="reaction-trigger-chat"
             onClick={() => { setShowChatPicker(!showChatPicker); setShowPicker(false) }}
             style={{
               width: '46px',

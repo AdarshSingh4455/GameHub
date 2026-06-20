@@ -80,6 +80,21 @@ export const userSockets = new Map<string, string>() // maps userId -> socketId
 const disconnectTimers = new Map<string, NodeJS.Timeout>() // maps userId -> Timeout
 export const roomTurnTimeouts = new Map<string, NodeJS.Timeout>() // maps roomCode -> Turn Timeout
 
+// Presence & Party Systems V2
+export interface PartyMember {
+  userId: string
+  username: string
+  socketId: string
+  role: 'LEADER' | 'MEMBER'
+}
+export interface PartyState {
+  partyCode: string
+  members: PartyMember[]
+}
+export const parties = new Map<string, PartyState>() // partyCode -> PartyState
+export const userParty = new Map<string, string>() // userId -> partyCode
+export const presenceStore = new Map<string, { status: string; lastSeenAt: string }>()
+
 export function clearTurnTimer(roomCode: string) {
   const timeout = roomTurnTimeouts.get(roomCode)
   if (timeout) {
@@ -302,6 +317,8 @@ io.on('connection', async (rawSocket) => {
   // Register socket mappings
   userSockets.set(userId, socket.id)
   setUserPresence(userId, 'ONLINE').catch(err => logError(err, { userId }))
+  presenceStore.set(userId, { status: 'ONLINE', lastSeenAt: new Date().toISOString() })
+  io.emit('presence-change', { userId, status: 'ONLINE', lastSeenAt: new Date().toISOString() })
 
   // Check if player is returning from a disconnect grace period
   if (disconnectTimers.has(userId)) {
@@ -383,6 +400,22 @@ io.on('connection', async (rawSocket) => {
   // Heartbeat ping keepalive updates presence state in Redis
   socket.on('heartbeat', async () => {
     await setUserPresence(userId, 'ONLINE')
+    presenceStore.set(userId, { status: 'ONLINE', lastSeenAt: new Date().toISOString() })
+    prisma.profile.update({
+      where: { userId },
+      data: { lastSeenAt: new Date() }
+    }).catch((err: any) => logError(err, { userId }))
+  })
+
+  // Manual status presence updates (ONLINE, AWAY, OFFLINE)
+  socket.on('presence-update', async ({ status }: { status: 'ONLINE' | 'AWAY' | 'OFFLINE' }) => {
+    await setUserPresence(userId, status as any)
+    presenceStore.set(userId, { status, lastSeenAt: new Date().toISOString() })
+    io.emit('presence-change', { userId, status, lastSeenAt: new Date().toISOString() })
+    prisma.profile.update({
+      where: { userId },
+      data: { lastSeenAt: new Date() }
+    }).catch((err: any) => logError(err, { userId }))
   })
 
   // ─── LOBBY EVENTS ──────────────────────────────────────────────────────────
@@ -463,10 +496,11 @@ io.on('connection', async (rawSocket) => {
           }
         })
       } else {
-        // Reset status if they previously left/disconnected
+        // Reset status if they previously left/disconnected, otherwise preserve ready state
+        const nextStatus = existingPlayer.status === 'LEFT' ? 'NOT_READY' : existingPlayer.status
         await prisma.multiplayerRoomPlayer.update({
           where: { id: existingPlayer.id },
-          data: { status: 'NOT_READY', disconnectedAt: null }
+          data: { status: nextStatus, disconnectedAt: null }
         })
       }
 
@@ -484,6 +518,7 @@ io.on('connection', async (rawSocket) => {
 
   // Toggle Ready Status
   socket.on('toggle-ready', async ({ roomId }: { roomId: string }, callback?: any) => {
+    console.log(`[SOCKET DEBUG] toggle-ready received: roomId=${roomId}, userId=${userId}`)
     try {
       const player = await prisma.multiplayerRoomPlayer.findUnique({
         where: { roomId_userId: { roomId, userId } },
@@ -561,6 +596,186 @@ io.on('connection', async (rawSocket) => {
     }
   })
 
+  // ─── PARTY EVENTS ──────────────────────────────────────────────────────────
+
+  // Create Party
+  socket.on('party-create', (callback: (res: { partyCode?: string; error?: string }) => void) => {
+    try {
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase()
+      const newParty: PartyState = {
+        partyCode: code,
+        members: [{
+          userId,
+          username,
+          socketId: socket.id,
+          role: 'LEADER'
+        }]
+      }
+      parties.set(code, newParty)
+      userParty.set(userId, code)
+      socket.join(`party:${code}`)
+      callback({ partyCode: code })
+      logger.info(`[PARTY CREATED] code=${code} leader=${username}`)
+    } catch (err: any) {
+      callback({ error: err.message || 'Failed to create party' })
+    }
+  })
+
+  // Join Party
+  socket.on('party-join', ({ partyCode }: { partyCode: string }, callback: (res: { success?: boolean; error?: string; party?: PartyState }) => void) => {
+    try {
+      const code = partyCode.trim().toUpperCase()
+      const party = parties.get(code)
+      if (!party) {
+        return callback({ error: 'Party not found' })
+      }
+
+      // Check if already in this party
+      if (party.members.some(m => m.userId === userId)) {
+        return callback({ success: true, party })
+      }
+
+      // If in another party, leave it first
+      const currentCode = userParty.get(userId)
+      if (currentCode) {
+        const p = parties.get(currentCode)
+        if (p) {
+          p.members = p.members.filter(m => m.userId !== userId)
+          socket.leave(`party:${currentCode}`)
+          if (p.members.length === 0) {
+            parties.delete(currentCode)
+          } else {
+            const wasLeader = !p.members.some(m => m.role === 'LEADER')
+            if (wasLeader && p.members.length > 0) {
+              p.members[0].role = 'LEADER'
+            }
+            io.to(`party:${currentCode}`).emit('party-updated', p)
+          }
+        }
+        userParty.delete(userId)
+      }
+
+      // Add to new party
+      const newMember: PartyMember = {
+        userId,
+        username,
+        socketId: socket.id,
+        role: 'MEMBER'
+      }
+      party.members.push(newMember)
+      userParty.set(userId, code)
+      socket.join(`party:${code}`)
+
+      callback({ success: true, party })
+      io.to(`party:${code}`).emit('party-updated', party)
+      logger.info(`[PARTY JOINED] code=${code} member=${username}`)
+    } catch (err: any) {
+      callback({ error: err.message || 'Failed to join party' })
+    }
+  })
+
+  // Leave Party
+  socket.on('party-leave', (callback?: (res: { success?: boolean; error?: string }) => void) => {
+    try {
+      const code = userParty.get(userId)
+      if (!code) {
+        if (callback) callback({ success: true })
+        return
+      }
+
+      const party = parties.get(code)
+      if (party) {
+        party.members = party.members.filter(m => m.userId !== userId)
+        socket.leave(`party:${code}`)
+
+        if (party.members.length === 0) {
+          parties.delete(code)
+          logger.info(`[PARTY CLOSED] Empty party cleaned up: ${code}`)
+        } else {
+          const hasLeader = party.members.some(m => m.role === 'LEADER')
+          if (!hasLeader && party.members.length > 0) {
+            party.members[0].role = 'LEADER'
+          }
+          io.to(`party:${code}`).emit('party-updated', party)
+        }
+      }
+
+      userParty.delete(userId)
+      if (callback) callback({ success: true })
+      logger.info(`[PARTY LEFT] code=${code} member=${username}`)
+    } catch (err: any) {
+      if (callback) callback({ error: err.message || 'Failed to leave party' })
+    }
+  })
+
+  // Invite to Party
+  socket.on('party-invite', ({ targetUserId }: { targetUserId: string }, callback: (res: { success?: boolean; error?: string }) => void) => {
+    try {
+      const code = userParty.get(userId)
+      if (!code) {
+        return callback({ error: 'You are not in a party' })
+      }
+
+      const targetSocketId = userSockets.get(targetUserId)
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('party-invite-received', {
+          partyCode: code,
+          inviterUsername: username
+        })
+      }
+
+      callback({ success: true })
+    } catch (err: any) {
+      callback({ error: err.message || 'Failed to invite user' })
+    }
+  })
+
+  // Party Chat
+  socket.on('party-chat', ({ message }: { message: string }) => {
+    try {
+      const code = userParty.get(userId)
+      if (!code) return
+
+      io.to(`party:${code}`).emit('party-chat-msg', {
+        userId,
+        username,
+        message,
+        timestamp: Date.now()
+      })
+    } catch (err: any) {
+      logger.error(`[PARTY CHAT ERROR] userId=${userId} error=${err.message}`)
+    }
+  })
+
+  // Party Matchmaking Sync (synced match entry)
+  socket.on('party-matchmaking', ({ gameSlug, roomCode }: { gameSlug: string; roomCode: string }, callback?: (res: { success?: boolean; error?: string }) => void) => {
+    try {
+      const code = userParty.get(userId)
+      if (!code) {
+        if (callback) callback({ error: 'You are not in a party' })
+        return
+      }
+
+      const party = parties.get(code)
+      if (!party) {
+        if (callback) callback({ error: 'Party not found' })
+        return
+      }
+
+      const member = party.members.find(m => m.userId === userId)
+      if (!member || member.role !== 'LEADER') {
+        if (callback) callback({ error: 'Only the party leader can initiate matchmaking' })
+        return
+      }
+
+      // Sync join room event to all party members
+      io.to(`party:${code}`).emit('party-matchmaking-sync', { gameSlug, roomCode })
+      if (callback) callback({ success: true })
+    } catch (err: any) {
+      if (callback) callback({ error: err.message || 'Matchmaking sync failed' })
+    }
+  })
+
   // Start Game
   socket.on('start-game', async ({ roomId }: { roomId: string }, callback?: any) => {
     try {
@@ -574,7 +789,7 @@ io.on('connection', async (rawSocket) => {
       if (room.players.length < 2) throw new Error('Need at least 2 players to start')
       
       let activePlayers = room.players
-        .sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime())
+        .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
 
       if (room.gameSlug === 'cricket') {
         const pCount = room.players.length
@@ -938,7 +1153,7 @@ io.on('connection', async (rawSocket) => {
 
         if (!session) throw new Error('Session not found')
 
-        let gameState = null
+        let gameState: any = null
         if (room.gameSlug === 'cricket') {
           gameState = await getCricketSession(roomCode, room.id, prisma)
         } else if (room.gameSlug === 'dots-boxes') {
@@ -1108,6 +1323,28 @@ io.on('connection', async (rawSocket) => {
     logger.info(`[-] Disconnected: userId=${userId} socketId=${socket.id}`)
     userSockets.delete(userId)
     await setUserPresence(userId, 'OFFLINE')
+    presenceStore.set(userId, { status: 'OFFLINE', lastSeenAt: new Date().toISOString() })
+    io.emit('presence-change', { userId, status: 'OFFLINE', lastSeenAt: new Date().toISOString() })
+
+    // Cleanly leave party on disconnect
+    const partyCode = userParty.get(userId)
+    if (partyCode) {
+      const party = parties.get(partyCode)
+      if (party) {
+        party.members = party.members.filter(m => m.userId !== userId)
+        if (party.members.length === 0) {
+          parties.delete(partyCode)
+        } else {
+          const hasLeader = party.members.some(m => m.role === 'LEADER')
+          if (!hasLeader && party.members.length > 0) {
+            party.members[0].role = 'LEADER'
+          }
+          io.to(`party:${partyCode}`).emit('party-updated', party)
+        }
+      }
+      userParty.delete(userId)
+    }
+
     recordDisconnect()
 
     // Determine grace period based on active rooms: 60s for WAITING or PLAYING

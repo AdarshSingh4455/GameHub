@@ -254,6 +254,7 @@ export default function MultiplayerHandCricketGame({
             {copied ? '✅ Copied' : '📋 Copy Code'}
           </button>
           <button
+            id="cricket-leave-room-btn"
             onClick={onLeave}
             className="btn btn-secondary"
             style={{
@@ -300,6 +301,7 @@ export default function MultiplayerHandCricketGame({
                 )}
               </div>
               <button
+                id="cricket-join-blue-btn"
                 className="btn"
                 onClick={() => handleJoinTeam('BLUE')}
                 disabled={teams['BLUE'].players.includes(currentUserId) || isSubmitting}
@@ -337,6 +339,7 @@ export default function MultiplayerHandCricketGame({
                 )}
               </div>
               <button
+                id="cricket-join-green-btn"
                 className="btn"
                 onClick={() => handleJoinTeam('GREEN')}
                 disabled={teams['GREEN'].players.includes(currentUserId) || isSubmitting}
@@ -355,6 +358,7 @@ export default function MultiplayerHandCricketGame({
           {currentUserId === gameState.hostUserId ? (
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem' }}>
               <button
+                id="cricket-start-team-match-btn"
                 className="btn btn-primary"
                 onClick={handleStartMatch}
                 disabled={isSubmitting || players.length % 2 !== 0}
@@ -399,6 +403,7 @@ export default function MultiplayerHandCricketGame({
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: 400, margin: '0 auto' }}>
                 <button
+                  id="cricket-toss-bat-btn"
                   className="btn btn-primary"
                   onClick={() => handleTossChoice('BAT')}
                   disabled={isSubmitting}
@@ -407,6 +412,7 @@ export default function MultiplayerHandCricketGame({
                   🏏 Bat First
                 </button>
                 <button
+                  id="cricket-toss-bowl-btn"
                   className="btn btn-primary"
                   onClick={() => handleTossChoice('BOWL')}
                   disabled={isSubmitting}
@@ -530,9 +536,9 @@ export default function MultiplayerHandCricketGame({
             )}
           </div>
 
-          {/* Lineup & Rotations Trackers */}
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.25rem' }}>
             <button
+              id="cricket-batting-lineup-btn"
               onClick={() => setShowBattingModal(true)}
               className="btn btn-secondary"
               style={{ flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
@@ -540,6 +546,7 @@ export default function MultiplayerHandCricketGame({
               🏏 Batting Lineup ▼
             </button>
             <button
+              id="cricket-bowling-rotation-btn"
               onClick={() => setShowBowlingModal(true)}
               className="btn btn-secondary"
               style={{ flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
@@ -576,7 +583,7 @@ export default function MultiplayerHandCricketGame({
                     )
                   })}
                 </div>
-                <button className="btn btn-secondary" onClick={() => setShowBattingModal(false)} style={{ width: '100%', marginTop: '1.5rem', borderRadius: 10 }}>Close</button>
+                <button id="cricket-close-batting-modal-btn" className="btn btn-secondary" onClick={() => setShowBattingModal(false)} style={{ width: '100%', marginTop: '1.5rem', borderRadius: 10 }}>Close</button>
               </div>
             </div>
           )}
@@ -610,7 +617,7 @@ export default function MultiplayerHandCricketGame({
                     )
                   })}
                 </div>
-                <button className="btn btn-secondary" onClick={() => setShowBowlingModal(false)} style={{ width: '100%', marginTop: '1.5rem', borderRadius: 10 }}>Close</button>
+                <button id="cricket-close-bowling-modal-btn" className="btn btn-secondary" onClick={() => setShowBowlingModal(false)} style={{ width: '100%', marginTop: '1.5rem', borderRadius: 10 }}>Close</button>
               </div>
             </div>
           )}
@@ -818,6 +825,7 @@ export default function MultiplayerHandCricketGame({
 
           <div style={{ display: 'flex', gap: '1rem', maxWidth: 400, margin: '0 auto' }}>
             <button
+              id="cricket-leave-room-btn"
               className="btn"
               onClick={onLeave}
               style={{ flex: 1, backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-default))', color: 'hsl(var(--text-primary))' }}

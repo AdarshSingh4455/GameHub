@@ -41,6 +41,63 @@ export async function GET(request: NextRequest) {
 
     // If game-specific filter is selected
     if (game !== 'all') {
+      if (game === 'tournaments') {
+        const tournamentWins = await prisma.xPEvent.groupBy({
+          by: ['profileId'],
+          where: {
+            type: 'TOURNAMENT',
+            profileId: showFriends ? { in: targetProfileIds } : undefined
+          },
+          _count: {
+            id: true
+          },
+          orderBy: {
+            _count: {
+              id: 'desc'
+            }
+          },
+          take: 10
+        })
+
+        const profileIds = tournamentWins.map(x => x.profileId)
+        const profiles = await prisma.profile.findMany({
+          where: { id: { in: profileIds } },
+          select: {
+            id: true,
+            username: true,
+            level: true,
+            selectedTitle: true,
+            currentRank: true,
+            previousRank: true,
+            _count: { select: { wonMatches: true } }
+          }
+        })
+
+        const rows = tournamentWins.map((x, idx) => {
+          const p = profiles.find(prof => prof.id === x.profileId)
+          let movement = 'none'
+          if (p && p.currentRank !== null && p.previousRank !== null) {
+            if (p.currentRank < p.previousRank) movement = 'up'
+            else if (p.currentRank > p.previousRank) movement = 'down'
+            else movement = 'same'
+          }
+          return {
+            rank: idx + 1,
+            profileId: p?.id || x.profileId,
+            username: p?.username || 'Unknown',
+            level: p?.level || 1,
+            score: x._count.id,
+            wins: p?._count.wonMatches || 0,
+            title: p?.selectedTitle || null,
+            movement,
+            currentRank: p?.currentRank || null,
+            previousRank: p?.previousRank || null
+          }
+        })
+
+        return NextResponse.json({ rows }, { status: 200 })
+      }
+
       let gameSlug = game
       let modeFilter: string | null = null
 

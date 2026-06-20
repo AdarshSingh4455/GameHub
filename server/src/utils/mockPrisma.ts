@@ -14,6 +14,7 @@ export interface MockDbState {
   challengeClaims?: Record<string, any>
   matches?: Record<string, any>
   xpEvents?: Record<string, any>
+  tournaments?: Record<string, any>
 }
 
 export const MOCK_COSMETIC_ITEMS = [
@@ -70,23 +71,35 @@ export const MOCK_COSMETIC_ITEMS = [
 let cachedDb: MockDbState | null = null
 
 export function loadDb(): MockDbState {
-  try {
-    if (fs.existsSync(DB_PATH)) {
-      const content = fs.readFileSync(DB_PATH, 'utf8')
-      if (content.trim()) {
-        const parsed = JSON.parse(content)
-        if (parsed.profiles && parsed.rooms && parsed.sessions && parsed.friendships) {
-          if (!parsed.inventories) parsed.inventories = {}
-          if (!parsed.challengeClaims) parsed.challengeClaims = {}
-          if (!parsed.matches) parsed.matches = {}
-          if (!parsed.xpEvents) parsed.xpEvents = {}
-          cachedDb = parsed
-          return parsed
+  let retries = 15
+  while (retries > 0) {
+    try {
+      if (fs.existsSync(DB_PATH)) {
+        const content = fs.readFileSync(DB_PATH, 'utf8')
+        if (content.trim()) {
+          const parsed = JSON.parse(content)
+          if (parsed.profiles && parsed.rooms && parsed.sessions && parsed.friendships) {
+            if (!parsed.inventories) parsed.inventories = {}
+            if (!parsed.challengeClaims) parsed.challengeClaims = {}
+            if (!parsed.matches) parsed.matches = {}
+            if (!parsed.xpEvents) parsed.xpEvents = {}
+            if (!parsed.tournaments) parsed.tournaments = {}
+            cachedDb = parsed
+            return parsed
+          }
         }
       }
+      break
+    } catch (err) {
+      retries--
+      if (retries === 0) {
+        console.error('[mockPrisma] loadDb failed after all retries:', err)
+        if (cachedDb) return cachedDb
+        break
+      }
+      const start = Date.now()
+      while (Date.now() - start < 10) {}
     }
-  } catch (err) {
-    if (cachedDb) return cachedDb
   }
 
   if (cachedDb) return cachedDb
@@ -229,7 +242,8 @@ export function loadDb(): MockDbState {
     inventories: {},
     challengeClaims: {},
     matches: {},
-    xpEvents: {}
+    xpEvents: {},
+    tournaments: {}
   }
 
   cachedDb = defaultDb
@@ -246,13 +260,25 @@ export function loadDb(): MockDbState {
 
 export function saveDb(state: MockDbState) {
   cachedDb = state
-  try {
-    const tmpPath = DB_PATH + '.tmp'
-    const dir = path.dirname(DB_PATH)
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8')
-    fs.renameSync(tmpPath, DB_PATH)
-  } catch (err) {}
+  let retries = 15
+  while (retries > 0) {
+    try {
+      const tmpPath = DB_PATH + '.tmp'
+      const dir = path.dirname(DB_PATH)
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8')
+      fs.renameSync(tmpPath, DB_PATH)
+      return
+    } catch (err) {
+      retries--
+      if (retries === 0) {
+        console.error('[mockPrisma] saveDb failed after all retries:', err)
+        break
+      }
+      const start = Date.now()
+      while (Date.now() - start < 10) {}
+    }
+  }
 }
 
 function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: string): any {
@@ -278,6 +304,9 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
       selectedEffect: null,
       currentRank: null,
       previousRank: null,
+      pinnedAchievements: [],
+      streakProtectionActive: false,
+      lastActiveAt: new Date().toISOString(),
       _count: { wonMatches: 0, friends: 0 }
     }
     db.profiles[userId] = profile
@@ -291,6 +320,9 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
   if (profile.selectedEffect === undefined) profile.selectedEffect = null
   if (profile.currentRank === undefined) profile.currentRank = null
   if (profile.previousRank === undefined) profile.previousRank = null
+  if (profile.pinnedAchievements === undefined) profile.pinnedAchievements = []
+  if (profile.streakProtectionActive === undefined) profile.streakProtectionActive = false
+  if (profile.lastActiveAt === undefined) profile.lastActiveAt = new Date().toISOString()
   if (profile._count === undefined) profile._count = { wonMatches: 0, friends: 0 }
   return profile
 }
@@ -658,7 +690,7 @@ function createModelMock(modelName: string) {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               players: [{
-                id: `player-${d.hostUserId}`,
+                id: `player-room-${d.roomCode}-${d.hostUserId}`,
                 roomId: `room-${d.roomCode}`,
                 userId: d.hostUserId,
                 status: 'NOT_READY',
@@ -736,7 +768,7 @@ function createModelMock(modelName: string) {
             const d = params.data || {}
             const room = Object.values(db.rooms).find(r => r.id === d.roomId)
             const player = {
-              id: `player-${d.userId}`,
+              id: `player-${d.roomId}-${d.userId}`,
               roomId: d.roomId,
               userId: d.userId,
               status: 'NOT_READY',
@@ -752,9 +784,8 @@ function createModelMock(modelName: string) {
           if (action === 'update') {
             const db = loadDb()
             const id = params.where?.id
-            const userId = id?.replace('player-', '')
             for (const room of Object.values(db.rooms)) {
-              const p = room.players?.find((p: any) => p.userId === userId)
+              const p = room.players?.find((p: any) => p.id === id)
               if (p) {
                 Object.assign(p, params.data || {})
                 saveDb(db)
@@ -765,15 +796,33 @@ function createModelMock(modelName: string) {
           }
           if (action === 'updateMany') {
             const db = loadDb()
-            const { roomId, status } = params.where || {}
+            const where = params.where || {}
             let count = 0
             for (const room of Object.values(db.rooms)) {
-              if (room.id === roomId) {
-                for (const p of (room.players || [])) {
-                  if (!status || p.status === status) {
-                     Object.assign(p, params.data || {})
-                     count++
+              for (const p of (room.players || [])) {
+                let matches = true
+                for (const [key, val] of Object.entries(where)) {
+                  if (key === 'NOT') {
+                    let notMatches = true
+                    for (const [nk, nv] of Object.entries(val as any)) {
+                      if (nk === 'status' && p.status !== nv) notMatches = false
+                      if (nk === 'userId' && p.userId !== nv) notMatches = false
+                      if (nk === 'roomId' && p.roomId !== nv && room.id !== nv) notMatches = false
+                    }
+                    if (notMatches) matches = false
+                  } else if (key === 'roomId') {
+                    if (p.roomId !== val && room.id !== val) matches = false
+                  } else if (key === 'userId') {
+                    if (p.userId !== val) matches = false
+                  } else if (key === 'status') {
+                    if (p.status !== val) matches = false
+                  } else {
+                    if (p[key] !== val && room[key] !== val) matches = false
                   }
+                }
+                if (matches) {
+                  Object.assign(p, params.data || {})
+                  count++
                 }
               }
             }
@@ -1009,6 +1058,57 @@ function createModelMock(modelName: string) {
           }
         }
 
+        // ── Tournament ────────────────────────────────────────────────────────
+        if (modelName === 'tournament') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            return Object.values(db.tournaments || {})
+          }
+          if (action === 'findUnique' || action === 'findFirst') {
+            const db = loadDb()
+            const id = params.where?.id
+            if (id && db.tournaments) return db.tournaments[id] || null
+            return null
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.tournaments) db.tournaments = {}
+            const d = params.data || {}
+            const t = {
+              id: d.id || `tournament-${Date.now()}`,
+              name: d.name || 'Tournament',
+              description: d.description || '',
+              startDate: d.startDate || new Date().toISOString(),
+              endDate: d.endDate || new Date().toISOString(),
+              eligibleGames: d.eligibleGames || [],
+              rewardCoins: d.rewardCoins || 0,
+              rewardBadge: d.rewardBadge || null,
+              rewardTitle: d.rewardTitle || null,
+              rewardCosmetic: d.rewardCosmetic || null,
+              bracketData: d.bracketData || null,
+              status: d.status || 'REGISTERING',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+            db.tournaments[t.id] = t
+            saveDb(db)
+            return t
+          }
+          if (action === 'update') {
+            const db = loadDb()
+            if (!db.tournaments) db.tournaments = {}
+            const id = params.where?.id
+            if (id && db.tournaments[id]) {
+              const t = db.tournaments[id]
+              Object.assign(t, params.data || {})
+              t.updatedAt = new Date().toISOString()
+              saveDb(db)
+              return t
+            }
+            return null
+          }
+        }
+
         // ── MatchRecord ──────────────────────────────────────────────────────
         if (modelName === 'matchRecord') {
           if (action === 'create') {
@@ -1194,7 +1294,7 @@ export function createPrismaMockProxy(realPrisma: any) {
         'userAchievement', 'cosmeticItem', 'profileInventory', 'dailyRewardLog',
         'battlePass', 'battlePassTier', 'profileBattlePass', 'analyticsEvent',
         'multiplayerRoom', 'multiplayerGameSession', 'multiplayerRoomPlayer',
-        'multiplayerInvite', 'multiplayerChatMessage',
+        'multiplayerInvite', 'multiplayerChatMessage', 'challengeClaim', 'tournament',
         // Also support potential legacy aliases just in case
         'matchResult', 'gameScore',
       ]

@@ -16,10 +16,12 @@ interface StoreItem {
 
 const CATEGORIES = [
   { id: 'SCRATCHER', label: 'Scratchers', emoji: '🃏' },
+  { id: 'CRATES', label: 'Mystery Crates', emoji: '🎁' },
   { id: 'TITLE', label: 'Titles', emoji: '⚡' },
   { id: 'EFFECT', label: 'Effects', emoji: '✨' },
   { id: 'AVATAR_FRAME', label: 'Frames', emoji: '🖼️' },
-  { id: 'CHAT_PACK', label: 'Chat Packs', emoji: '💬' }
+  { id: 'CHAT_PACK', label: 'Chat Packs', emoji: '💬' },
+  { id: 'PERK', label: 'Lobby Perks', emoji: '🛡️' }
 ]
 
 export default function StorePage() {
@@ -123,6 +125,53 @@ export default function StorePage() {
   const handleBuy = async (item: StoreItem) => {
     if (coins < item.priceCoins) {
       addToast('error', 'Insufficient Coins', `You need ${item.priceCoins} coins to buy this item.`)
+      return
+    }
+
+    if (item.type === ('CRATES' as any)) {
+      setBuyingId(item.id)
+      try {
+        const crateType = item.id.replace('crate-', '').toUpperCase()
+        const res = await fetch('/api/store/crates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ crateType })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Crate opening failed')
+        
+        addToast(
+          'success',
+          'Crate Opened! 🎁',
+          `You opened a ${item.name} and received: ${data.reward.name}!`
+        )
+        fetchStoreData()
+        window.dispatchEvent(new Event('gamehub_xp_update'))
+      } catch (err: any) {
+        addToast('error', 'Crate Failed', err.message)
+      } finally {
+        setBuyingId(null)
+      }
+      return
+    }
+
+    if (item.id === 'perk-streak-protect') {
+      setBuyingId(item.id)
+      try {
+        const res = await fetch('/api/profile/streak-protect', {
+          method: 'POST'
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Purchase failed')
+        
+        addToast('success', 'Streak Protection Active! 🛡️', 'Streak protection is active on your profile.')
+        fetchStoreData()
+        window.dispatchEvent(new Event('gamehub_xp_update'))
+      } catch (err: any) {
+        addToast('error', 'Purchase Failed', err.message)
+      } finally {
+        setBuyingId(null)
+      }
       return
     }
 
@@ -374,7 +423,54 @@ export default function StorePage() {
     scratchStateRef.current.isDrawing = false
   }
 
-  const activeCategoryItems = items.filter((item) => item.type === activeCategory)
+  let activeCategoryItems = items.filter((item) => item.type === activeCategory)
+  if (activeCategory === 'CRATES') {
+    activeCategoryItems = [
+      {
+        id: 'crate-bronze',
+        name: 'Bronze Mystery Crate',
+        type: 'CRATES' as any,
+        priceCoins: 50,
+        assetUrl: null,
+        metadata: { description: 'Contains common rewards, XP (30-80), and low chances of cosmetics.' }
+      },
+      {
+        id: 'crate-silver',
+        name: 'Silver Mystery Crate',
+        type: 'CRATES' as any,
+        priceCoins: 100,
+        assetUrl: null,
+        metadata: { description: 'Unlocks rare rewards, moderate XP (60-150), and decent cosmetics.' }
+      },
+      {
+        id: 'crate-gold',
+        name: 'Gold Mystery Crate',
+        type: 'CRATES' as any,
+        priceCoins: 250,
+        assetUrl: null,
+        metadata: { description: 'Epic loot chest filled with XP (150-400) and high cosmetic odds.' }
+      },
+      {
+        id: 'crate-mythic',
+        name: 'Mythic Mystery Crate',
+        type: 'CRATES' as any,
+        priceCoins: 500,
+        assetUrl: null,
+        metadata: { description: 'The ultimate container! Huge XP (300-1000) and guaranteed epic cosmetics.' }
+      }
+    ]
+  } else if (activeCategory === 'PERK') {
+    activeCategoryItems = [
+      {
+        id: 'perk-streak-protect',
+        name: 'Streak Protection',
+        type: 'PERK' as any,
+        priceCoins: 100,
+        assetUrl: null,
+        metadata: { description: 'Protects your daily login streak from resetting if you miss a day.' }
+      }
+    ]
+  }
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }} className="animate-fadeIn safe-bottom-padding">
@@ -535,7 +631,7 @@ export default function StorePage() {
           {/* Items Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', justifyContent: 'center' }} className="stagger">
             {activeCategoryItems.map((item) => {
-              const owned = ownedIds.includes(item.id)
+              const owned = item.id === 'perk-streak-protect' ? !!profile?.streakProtectionActive : ownedIds.includes(item.id)
               const rarity = item.metadata?.rarity || 'COMMON'
               const rarityColors: any = {
                 COMMON: 'hsl(220 10% 55%)',
@@ -554,6 +650,8 @@ export default function StorePage() {
                 isEquipped = profile?.selectedEffect === item.name
               } else if (item.type === 'BOARD_THEME') {
                 isEquipped = profile?.selectedTheme === item.name
+              } else if (item.id === 'perk-streak-protect') {
+                isEquipped = !!profile?.streakProtectionActive
               }
 
               // Can preview frames, effects, and titles
@@ -610,9 +708,13 @@ export default function StorePage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '100%' }}>
                     {/* Badge */}
                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
-                      {isEquipped ? (
+                      {item.type === ('CRATES' as any) ? (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'hsl(270 80% 50%)', color: 'white', textTransform: 'uppercase' }}>
+                          Consumable
+                        </span>
+                      ) : isEquipped ? (
                         <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'hsl(142 70% 45%)', color: 'black', textTransform: 'uppercase' }}>
-                          Equipped
+                          {item.id === 'perk-streak-protect' ? 'Active' : 'Equipped'}
                         </span>
                       ) : owned ? (
                         <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'hsl(210 100% 55%)', color: 'white', textTransform: 'uppercase' }}>
@@ -647,17 +749,19 @@ export default function StorePage() {
                   <div style={{ marginTop: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     {isEquipped ? (
                       <button
+                        id={`store-item-unequip-${item.id}`}
                         className="btn btn-secondary btn-sm"
                         onClick={() => handleEquip(item, 'unequip')}
-                        disabled={equippingId === item.id}
+                        disabled={equippingId === item.id || item.id === 'perk-streak-protect'}
                         style={{ width: '100%', borderRadius: 12, fontSize: '0.75rem', padding: '0.4rem' }}
                       >
-                        {equippingId === item.id ? 'Saving...' : 'Unequip'}
+                        {item.id === 'perk-streak-protect' ? 'Protected' : equippingId === item.id ? 'Saving...' : 'Unequip'}
                       </button>
                     ) : owned ? (
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {canPreview && (
                           <button
+                            id={`store-item-preview-${item.id}`}
                             className="btn btn-secondary btn-sm"
                             onClick={() => handlePreview(item)}
                             style={{ flex: 1, borderRadius: 12, fontSize: '0.7rem', padding: '0.4rem' }}
@@ -666,6 +770,7 @@ export default function StorePage() {
                           </button>
                         )}
                         <button
+                          id={`store-item-equip-${item.id}`}
                           className="btn btn-primary btn-sm"
                           onClick={() => handleEquip(item, 'equip')}
                           disabled={equippingId === item.id}
@@ -678,6 +783,7 @@ export default function StorePage() {
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {canPreview && (
                           <button
+                            id={`store-item-preview-${item.id}`}
                             className="btn btn-secondary btn-sm"
                             onClick={() => handlePreview(item)}
                             style={{ flex: 1, borderRadius: 12, fontSize: '0.7rem', padding: '0.4rem' }}
@@ -686,6 +792,7 @@ export default function StorePage() {
                           </button>
                         )}
                         <button
+                          id={`store-item-buy-${item.id}`}
                           className="btn btn-primary btn-sm"
                           onClick={() => handleBuy(item)}
                           disabled={buyingId === item.id}

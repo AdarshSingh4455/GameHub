@@ -227,7 +227,19 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json({ challenges: enrichedChallenges }, { status: 200 })
+    const history = claims.map((c: any) => {
+      const challengeDef = CHALLENGES.find(ch => ch.id === c.challengeId)
+      return {
+        id: c.id,
+        challengeId: c.challengeId,
+        claimedAt: c.claimedAt,
+        title: challengeDef ? challengeDef.title : c.challengeId.replace(/_/g, ' ').toUpperCase(),
+        xpReward: challengeDef ? challengeDef.xpReward : 100,
+        coinReward: challengeDef ? challengeDef.coinReward : 20,
+      }
+    })
+
+    return NextResponse.json({ challenges: enrichedChallenges, history }, { status: 200 })
   } catch (err: unknown) {
     console.error('[GET /api/challenges]', err)
     const msg = err instanceof Error ? err.message : 'Internal Server Error'

@@ -222,6 +222,17 @@ export const GAMES_REGISTRY: GameInfo[] = [
     badge: 'New',
     componentName: 'neontetris',
   },
+  {
+    slug: 'ai-infinite-candy-crush',
+    name: 'AI Infinite Candy Crush',
+    category: 'Match-3',
+    emoji: '🍬',
+    description: 'Procedurally generated match-3 puzzle game. Match original GameHub gems, trigger cascading combos, and clear challenging objectives!',
+    multiplayer: false,
+    type: 'internal',
+    badge: 'New',
+    componentName: 'candycrush',
+  },
 ]
 
 export function getGameBySlug(slug: string): GameInfo | undefined {

@@ -701,7 +701,7 @@ async function updateDailyChallengesForMatch(
 
   // 4. Complete 1 Puzzle
   const game = getGameBySlug(gameSlug)
-  if (result === 'win' && game && game.category.toLowerCase() === 'puzzle') {
+  if (result === 'win' && game && (game.category.toLowerCase() === 'puzzle' || game.category.toLowerCase() === 'match-3')) {
     await incrementDailyChallengeProgress('daily_complete_1', 1, user)
   }
 
@@ -777,6 +777,22 @@ async function updateDailyChallengesForMatch(
     const rareWordsCount = gameMeta.rareWordsCount ?? 0
     if (rareWordsCount > 0) {
       await incrementDailyChallengeProgress('daily_ww_rare', rareWordsCount, user)
+    }
+  }
+
+  // Match-3 category specific challenges
+  if (gameSlug === 'ai-infinite-candy-crush') {
+    await incrementDailyChallengeProgress('daily_match3_play', 1, user)
+
+    const score = metadata?.score ?? 0
+    if (score >= 5000) {
+      await incrementDailyChallengeProgress('daily_match3_score', 1, user)
+    }
+
+    const gameMeta = metadata?.gameMetadata ?? {}
+    const maxCombo = gameMeta.maxCombo ?? 0
+    if (maxCombo >= 4) {
+      await incrementDailyChallengeProgress('daily_match3_combo', 1, user)
     }
   }
 }

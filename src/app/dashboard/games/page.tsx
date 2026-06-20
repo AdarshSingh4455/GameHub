@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { GAMES_REGISTRY } from '@/lib/games'
 import { prefetchProfileDetails } from '@/lib/prefetch'
 
-const CATEGORIES = ['All', 'Social', 'Dual Player', 'Strategy', 'Puzzle', 'Arcade']
+const CATEGORIES = ['All', 'Social', 'Dual Player', 'Strategy', 'Puzzle', 'Arcade', 'Match-3']
 
 export default function GamesDirectoryPage() {
   const [searchQuery, setSearchQuery] = useState('')

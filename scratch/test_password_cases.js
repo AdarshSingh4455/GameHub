@@ -1,7 +1,7 @@
 const { Client } = require('pg');
 
 const ref = 'uuzhepbedmyvtztnbfiu';
-const host = 'aws-0-ap-northeast-2.pooler.supabase.com';
+const host = 'aws-1-ap-northeast-2.pooler.supabase.com';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 

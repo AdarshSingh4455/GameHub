@@ -48,6 +48,7 @@ const games = [
   { slug: 'dots-boxes',      name: 'Dots & Boxes',        description: 'Claim territory by connecting dots. Play local, vs AI, or online!', type: 'REWRITTEN', isMultiplay: true,  category: 'dual-player' },
   { slug: 'block-blast',     name: 'Block Blast',        description: 'Place block shapes on the 8x8 grid. Clear rows and columns to score and build combos.', type: 'REWRITTEN', isMultiplay: false, category: 'puzzle' },
   { slug: 'neon-tetris',     name: 'Neon Tetris',        description: 'Glowing retro neon Tetris. Rotate, slide, and drop tetrominoes with SRS wall kicks, daily challenges, and combo chains.', type: 'REWRITTEN', isMultiplay: false, category: 'arcade' },
+  { slug: 'ai-infinite-candy-crush', name: 'AI Infinite Candy Crush', description: 'Procedurally generated match-3 puzzle game. Match original GameHub gems, trigger cascading combos, and clear challenging objectives!', type: 'REWRITTEN', isMultiplay: false, category: 'match-3' },
 ]
 
 const achievements = [
@@ -126,6 +127,14 @@ const achievements = [
   { slug: 'ww-no-hints',            name: 'Pure Wizard',         description: 'Complete a game of Word Wizard without using any hints.',      xpReward: 200, coinReward: 40,  category: 'special',  gameSlug: 'word-wizard' },
   { slug: 'ww-rare-letter-hunter',  name: 'Rare Hunter',         description: 'Find 5 total words containing rare letters in Word Wizard.',   xpReward: 200, coinReward: 40,  category: 'special',  gameSlug: 'word-wizard' },
   { slug: 'ww-vocabulary-king',     name: 'Vocabulary King',     description: 'Find a word of 7+ letters in Word Wizard.',                    xpReward: 250, coinReward: 50,  category: 'special',  gameSlug: 'word-wizard' },
+  // Phase 20 additions: AI Infinite Candy Crush Achievements
+  { slug: 'cc-first-match', name: 'First Match', description: 'Complete your first AI Infinite Candy Crush match.', xpReward: 50, coinReward: 10, category: 'special', gameSlug: 'ai-infinite-candy-crush' },
+  { slug: 'cc-combo-10', name: 'Combo Deca', description: 'Achieve a combo chain of 10x or higher in a match.', xpReward: 200, coinReward: 40, category: 'streaks', gameSlug: 'ai-infinite-candy-crush' },
+  { slug: 'cc-color-bomb-50', name: 'Color Demolitionist', description: 'Use 50 Color Bombs in total.', xpReward: 300, coinReward: 60, category: 'special', gameSlug: 'ai-infinite-candy-crush' },
+  { slug: 'cc-clear-1000-blockers', name: 'Blockbuster', description: 'Clear 1000 total blockers.', xpReward: 400, coinReward: 80, category: 'gameplay', gameSlug: 'ai-infinite-candy-crush' },
+  { slug: 'cc-level-100', name: 'Century Matcher', description: 'Reach Level 100.', xpReward: 500, coinReward: 100, category: 'gameplay', gameSlug: 'ai-infinite-candy-crush' },
+  { slug: 'cc-level-500', name: 'Crush Veteran', description: 'Reach Level 500.', xpReward: 750, coinReward: 200, category: 'gameplay', gameSlug: 'ai-infinite-candy-crush' },
+  { slug: 'cc-level-1000', name: 'Match-3 Legend', description: 'Reach Level 1000.', xpReward: 1000, coinReward: 300, category: 'gameplay', gameSlug: 'ai-infinite-candy-crush' },
 ]
 
 async function main() {

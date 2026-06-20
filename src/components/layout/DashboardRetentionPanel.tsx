@@ -6,7 +6,7 @@ import type { AchievementProgressInfo } from '@/lib/achievements'
 import { DAILY_REWARD_TABLE, getUtcDaysElapsed } from '@/lib/dailyRewards'
 import DailyRewardModal from './DailyRewardModal'
 import { getLevelProgress } from '@/lib/xpUtils'
-import { getStoredDailyChallenges, DailyChallenge } from '@/lib/dailyChallenges'
+
 
 
 interface Props {
@@ -41,10 +41,9 @@ export default function DashboardRetentionPanel({ user }: Props) {
   const [stats, setStats] = useState<ProfileStats | null>(null)
   const [countdown, setCountdown] = useState<number>(0)
   const [canClaimToday, setCanClaimToday] = useState(true)
-  const [challenges, setChallenges] = useState<DailyChallenge[]>([])
+
 
   const loadData = () => {
-    setChallenges(getStoredDailyChallenges())
     if (user) {
       setLoading(true)
       fetch('/api/profile/details')
@@ -388,74 +387,6 @@ export default function DashboardRetentionPanel({ user }: Props) {
           </div>
         </div>
       )}
-
-      {/* Widget 4: Daily Challenges */}
-      <div
-        className="card"
-        style={{
-          padding: '1.5rem',
-          background: 'hsl(220 20% 10% / 0.8)',
-          border: '1px solid hsl(220 20% 16%)',
-          borderRadius: '20px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          gap: '1rem',
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: '0.75rem', textTransform: 'uppercase', color: 'hsl(220 10% 50%)', fontWeight: 700, letterSpacing: '0.05em' }}>
-          🎯 Daily Challenges
-        </h3>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, justifyContent: 'center' }}>
-          {challenges.length > 0 ? (
-            challenges.map((c) => (
-              <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1 }}>
-                    <span style={{ fontSize: '0.9rem' }}>{c.completed ? '✅' : '⭕'}</span>
-                    <span style={{
-                      fontSize: '0.75rem',
-                      color: c.completed ? 'hsl(220 10% 50%)' : 'hsl(220 15% 90%)',
-                      textDecoration: c.completed ? 'line-through' : 'none',
-                      fontWeight: 500,
-                      lineHeight: 1.25,
-                      textAlign: 'left'
-                    }}>
-                      {c.text}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '0.65rem', color: 'hsl(220 10% 50%)', whiteSpace: 'nowrap' }}>
-                    {c.current} / {c.target}
-                  </span>
-                </div>
-                {!c.completed && (
-                  <>
-                    <div style={{ height: '4px', background: 'hsl(220 20% 16%)', borderRadius: '99px', overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          width: `${(c.current / c.target) * 100}%`,
-                          height: '100%',
-                          background: 'linear-gradient(90deg, hsl(220 100% 65%), hsl(270 80% 65%))',
-                          borderRadius: '99px',
-                        }}
-                      />
-                    </div>
-                    <div style={{ fontSize: '0.62rem', color: 'hsl(45 100% 60%)', display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', fontWeight: 600 }}>
-                      <span>+{c.xpReward} XP</span>
-                      <span>+{c.coinReward} Coins</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))
-          ) : (
-            <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', fontStyle: 'italic' }}>
-              No challenges today.
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Daily Reward Modal Popup */}
       <DailyRewardModal

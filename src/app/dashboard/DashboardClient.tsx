@@ -12,7 +12,7 @@ interface Props {
   username: string
 }
 
-const CATEGORIES = ['All', 'Dual Player', 'Social', 'Puzzle', 'Arcade', 'Strategy']
+const CATEGORIES = ['All', 'Dual Player', 'Social', 'Puzzle', 'Arcade', 'Strategy', 'Match-3']
 
 export default function DashboardClient({ user, username }: Props) {
   const [selectedCategory, setSelectedCategory] = useState('All')

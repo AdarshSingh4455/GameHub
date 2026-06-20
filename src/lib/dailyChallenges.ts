@@ -35,6 +35,10 @@ export function getDailyChallenges(dateStr: string): DailyChallenge[] {
     { id: 'daily_ww_score_5000', text: 'Score 5000 in Word Wizard', gameSlug: 'word-wizard', target: 1, current: 0, completed: false, xpReward: 250, coinReward: 50 },
     { id: 'daily_ww_no_hints', text: 'Use No Hints in Word Wizard', gameSlug: 'word-wizard', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 },
     { id: 'daily_ww_rare', text: 'Find 3 Rare Letter Words', gameSlug: 'word-wizard', target: 3, current: 0, completed: false, xpReward: 200, coinReward: 40 },
+    // Match-3 Category Challenges
+    { id: 'daily_match3_play', text: 'Play 1 Match-3 Game', gameSlug: 'ai-infinite-candy-crush', target: 1, current: 0, completed: false, xpReward: 100, coinReward: 20 },
+    { id: 'daily_match3_score', text: 'Score 5000 in Match-3', gameSlug: 'ai-infinite-candy-crush', target: 1, current: 0, completed: false, xpReward: 150, coinReward: 30 },
+    { id: 'daily_match3_combo', text: 'Reach a 4x Combo in Match-3', gameSlug: 'ai-infinite-candy-crush', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 },
   ]
 }
 

@@ -43,6 +43,7 @@
     "server",
     "public",
     "scratch",
-    "prisma"
+    "prisma",
+    "tests"
   ]
 }

@@ -80,9 +80,27 @@ export async function GET(request: NextRequest) {
 
     // 4. Check if database profile already exists
     console.log('[auth-callback] Step 3: Checking if database profile exists for user ID:', userId)
-    const existingProfile = await prisma.profile.findUnique({
-      where: { userId },
-    })
+    let existingProfile: any = null
+    let lookupFailed = false
+    try {
+      existingProfile = await prisma.profile.findUnique({
+        where: { userId },
+      })
+    } catch (dbError: any) {
+      console.error('[auth-callback] Profile lookup failed, database schema might be out of sync. Trying raw SELECT...', dbError)
+      lookupFailed = true
+      try {
+        const rawProfiles: any[] = await prisma.$queryRawUnsafe(
+          'SELECT id, username, role FROM "Profile" WHERE "userId" = $1 LIMIT 1',
+          userId
+        )
+        if (rawProfiles.length > 0) {
+          existingProfile = rawProfiles[0]
+        }
+      } catch (rawError: any) {
+        console.error('[auth-callback] Defensive raw query also failed:', rawError)
+      }
+    }
     console.log('[auth-callback] Step 3: Profile lookup completed. Found:', !!existingProfile)
 
     if (!existingProfile) {
@@ -100,9 +118,26 @@ export async function GET(request: NextRequest) {
       let isUnique = false
 
       while (!isUnique) {
-        const existingUser = await prisma.profile.findUnique({
-          where: { username },
-        })
+        let existingUser: any = null
+        try {
+          existingUser = await prisma.profile.findUnique({
+            where: { username },
+          })
+        } catch (dbErr: any) {
+          console.error('[auth-callback] Username check failed, falling back to raw query:', dbErr)
+          try {
+            const rawUsers: any[] = await prisma.$queryRawUnsafe(
+              'SELECT id FROM "Profile" WHERE username = $1 LIMIT 1',
+              username
+            )
+            if (rawUsers.length > 0) {
+              existingUser = rawUsers[0]
+            }
+          } catch (rawErr: any) {
+            console.error('[auth-callback] Raw username check failed:', rawErr)
+          }
+        }
+
         if (!existingUser) {
           isUnique = true
         } else {
@@ -117,6 +152,9 @@ export async function GET(request: NextRequest) {
       const friendCode = await getUniqueFriendCode()
 
       try {
+        if (lookupFailed) {
+          throw new Error('Schema mismatch: bypass Prisma create')
+        }
         const newProfile = await prisma.profile.create({
           data: {
             userId,
@@ -128,24 +166,59 @@ export async function GET(request: NextRequest) {
         })
         console.log('[auth-callback] Step 4: Profile created successfully:', newProfile.id)
       } catch (createError: any) {
-        console.error('[auth-callback] Step 4: Profile creation failed!')
-        console.error('[auth-callback] Creation Error Stack:', createError.stack || createError)
-        throw createError
+        console.error('[auth-callback] Step 4: Profile creation failed or bypassed! Trying raw defensive INSERT...')
+        try {
+          const profileId = `prof-${Date.now()}`
+          await prisma.$executeRawUnsafe(
+            'INSERT INTO "Profile" (id, "userId", username, role, "friendCode", xp, level, coins) VALUES ($1, $2, $3, $4, $5, 0, 1, 0)',
+            profileId,
+            userId,
+            username,
+            role.toString(),
+            friendCode
+          )
+          console.log('[auth-callback] Raw defensive insert succeeded for profile ID:', profileId)
+
+          // Try to defensively create default preferences
+          try {
+            await prisma.$executeRawUnsafe(
+              'INSERT INTO "Preferences" (id, "profileId", "soundEnabled", "darkMode", "showOnLeaderboard", "emailNotifications") VALUES ($1, $2, true, true, true, true)',
+              `pref-${Date.now()}`,
+              profileId
+            )
+          } catch (prefError) {
+            console.error('[auth-callback] Defensive raw Preferences creation failed:', prefError)
+          }
+        } catch (rawInsertError: any) {
+          console.error('[auth-callback] Raw defensive insert failed as well:', rawInsertError)
+          throw createError
+        }
       }
     } else {
       // Update role securely on the server-side if it differs
       if (existingProfile.role !== role) {
         console.log(`[auth-callback] Step 4: Updating profile role from ${existingProfile.role} to ${role}...`)
         try {
+          if (lookupFailed) {
+            throw new Error('Schema mismatch: bypass Prisma update')
+          }
           await prisma.profile.update({
             where: { id: existingProfile.id },
             data: { role },
           })
           console.log('[auth-callback] Step 4: Profile role updated successfully.')
         } catch (updateError: any) {
-          console.error('[auth-callback] Step 4: Profile role update failed!')
-          console.error('[auth-callback] Update Error Stack:', updateError.stack || updateError)
-          throw updateError
+          console.error('[auth-callback] Step 4: Profile role update failed! Trying raw update...')
+          try {
+            await prisma.$executeRawUnsafe(
+              'UPDATE "Profile" SET role = $1 WHERE id = $2',
+              role.toString(),
+              existingProfile.id
+            )
+            console.log('[auth-callback] Raw role update succeeded.')
+          } catch (rawUpdateError: any) {
+            console.error('[auth-callback] Raw role update failed:', rawUpdateError)
+          }
         }
       }
     }

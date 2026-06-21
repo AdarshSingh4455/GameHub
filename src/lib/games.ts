@@ -224,10 +224,10 @@ export const GAMES_REGISTRY: GameInfo[] = [
   },
   {
     slug: 'ai-infinite-candy-crush',
-    name: 'AI Infinite Candy Crush',
+    name: 'Candy Blast Infinity',
     category: 'Match-3',
     emoji: '🍬',
-    description: 'Procedurally generated match-3 puzzle game. Match original GameHub gems, trigger cascading combos, and clear challenging objectives!',
+    description: 'Procedurally generated match-3 puzzle game. Match delicious candies and juicy fruits, trigger cascading combos, and clear challenging objectives!',
     multiplayer: false,
     type: 'internal',
     badge: 'New',

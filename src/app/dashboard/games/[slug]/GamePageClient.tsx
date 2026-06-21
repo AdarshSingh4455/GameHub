@@ -18,7 +18,7 @@ import DotsAndBoxesGame from '@/components/games/DotsAndBoxesGame'
 import BlockBlastGame from '@/components/games/BlockBlastGame'
 import NeonTetrisGame from '@/components/games/NeonTetrisGame'
 import WordWizardGame from '@/components/games/WordWizardGame'
-import CandyCrushGame from '@/components/games/CandyCrushGame'
+import CandyBlastGame from '@/components/games/CandyBlastGame'
 
 import GameChromeWrapper from '@/components/games/GameChromeWrapper'
 import type { GameInfo } from '@/lib/games'
@@ -58,7 +58,7 @@ export default function GamePageClient({ game, username, slug }: Props) {
             {game.componentName === 'blockblast' && <BlockBlastGame />}
             {game.componentName === 'neontetris' && <NeonTetrisGame />}
             {game.componentName === 'wordwizard' && <WordWizardGame />}
-            {game.componentName === 'candycrush' && <CandyCrushGame />}
+            {game.componentName === 'candycrush' && <CandyBlastGame />}
 
             {/* Legacy Iframe Games */}
             {game.componentName === 'iframe'     && (

@@ -57,6 +57,13 @@ model Profile {
   receivedInvites      MultiplayerInvite[]     @relation("ReceivedInvites")
   chatMessages         MultiplayerChatMessage[]
   challengeClaims      ChallengeClaim[]
+  rankedMmr            Int                 @default(1000)
+  rankedWins           Int                 @default(0)
+  rankedLosses         Int                 @default(0)
+  rankedStreak         Int                 @default(0)
+  rankedPeakRank       String              @default("Bronze")
+  rankedMatches        RankedMatch[]
+  seasonSnapshots      SeasonSnapshot[]
 
   @@index([xp(sort: Desc)])
   @@index([level(sort: Desc)])
@@ -457,5 +464,41 @@ model ChallengeClaim {
 
   @@unique([profileId, challengeId])
   @@index([profileId])
+}
+
+model RankedSeason {
+  id        String           @id @default(uuid())
+  name      String           @unique
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean          @default(true)
+  rewards   Json?
+  snapshots SeasonSnapshot[]
+}
+
+model SeasonSnapshot {
+  id        String       @id @default(uuid())
+  seasonId  String
+  profileId String
+  username  String
+  mmr       Int
+  rank      String
+  wins      Int
+  losses    Int
+  winRate   Float
+  season    RankedSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  profile   Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, profileId])
+}
+
+model RankedMatch {
+  id           String   @id @default(uuid())
+  profileId    String
+  opponentName String
+  result       String   // "win", "loss", "draw"
+  mmrChange    Int
+  playedAt     DateTime @default(now())
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 

@@ -650,13 +650,74 @@ export function executeSpecialCombo(
 }
 
 /**
+ * Selects a color from candyTypes that does not form a match-3 horizontally or vertically at (r, c).
+ */
+export function getNonMatchingColor(
+  grid: BoardCell[][],
+  r: number,
+  c: number,
+  candyTypes: string[],
+  rng?: { choice: <T>(arr: T[]) => T }
+): string {
+  const R = grid.length
+  const C = grid[0].length
+  const forbiddenColors = new Set<string>()
+
+  // Check left: (r, c-1) & (r, c-2)
+  if (c >= 2) {
+    const c1 = grid[r][c - 1]?.color
+    const c2 = grid[r][c - 2]?.color
+    if (c1 && c1 === c2) forbiddenColors.add(c1)
+  }
+  // Check right: (r, c+1) & (r, c+2)
+  if (c < C - 2) {
+    const c1 = grid[r][c + 1]?.color
+    const c2 = grid[r][c + 2]?.color
+    if (c1 && c1 === c2) forbiddenColors.add(c1)
+  }
+  // Check middle horizontal: (r, c-1) & (r, c+1)
+  if (c >= 1 && c < C - 1) {
+    const c1 = grid[r][c - 1]?.color
+    const c2 = grid[r][c + 1]?.color
+    if (c1 && c1 === c2) forbiddenColors.add(c1)
+  }
+
+  // Check above: (r-1, c) & (r-2, c)
+  if (r >= 2) {
+    const c1 = grid[r - 1][c]?.color
+    const c2 = grid[r - 2][c]?.color
+    if (c1 && c1 === c2) forbiddenColors.add(c1)
+  }
+  // Check below: (r+1, c) & (r+2, c)
+  if (r < R - 2) {
+    const c1 = grid[r + 1][c]?.color
+    const c2 = grid[r + 2][c]?.color
+    if (c1 && c1 === c2) forbiddenColors.add(c1)
+  }
+  // Check middle vertical: (r-1, c) & (r+1, c)
+  if (r >= 1 && r < R - 1) {
+    const c1 = grid[r - 1][c]?.color
+    const c2 = grid[r + 1][c]?.color
+    if (c1 && c1 === c2) forbiddenColors.add(c1)
+  }
+
+  const allowedColors = candyTypes.filter((color) => !forbiddenColors.has(color))
+  if (allowedColors.length > 0) {
+    return rng ? rng.choice(allowedColors) : allowedColors[Math.floor(Math.random() * allowedColors.length)]
+  }
+  return rng ? rng.choice(candyTypes) : candyTypes[Math.floor(Math.random() * candyTypes.length)]
+}
+
+/**
  * Collapses the board: clears matched/exploded cells, damages blockers, and shifts cells downward.
  * Generates new cells from the top.
  * Returns { grid, score, blockersCleared, matchesRemaining }
  */
 export function processMatchesAndCascades(
   grid: BoardCell[][],
-  candyTypes: string[]
+  candyTypes: string[],
+  comboCount: number = 0,
+  rng?: { choice: <T>(arr: T[]) => T }
 ): {
   grid: BoardCell[][]
   scoreGained: number
@@ -823,8 +884,10 @@ export function processMatchesAndCascades(
     // Fill remaining empty spots at the top of the column with new candies
     for (let r = writeRow; r >= 0; r--) {
       if (cascadeGrid[r][c].blocker !== 'stone' && cascadeGrid[r][c].blocker !== 'crate') {
-        const randomColor = candyTypes[Math.floor(Math.random() * candyTypes.length)]
-        cascadeGrid[r][c].color = randomColor
+        const chosenColor = comboCount >= 2
+          ? getNonMatchingColor(cascadeGrid, r, c, candyTypes, rng)
+          : (rng ? rng.choice(candyTypes) : candyTypes[Math.floor(Math.random() * candyTypes.length)])
+        cascadeGrid[r][c].color = chosenColor
         cascadeGrid[r][c].special = null
         cascadeGrid[r][c].blocker = null
         cascadeGrid[r][c].id = generateCellId() // Assign fresh ID for slide-down animation keying

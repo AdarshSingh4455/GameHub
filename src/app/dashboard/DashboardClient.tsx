@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js'
 import { GAMES_REGISTRY, GameInfo } from '@/lib/games'
 import DashboardRetentionPanel from '@/components/layout/DashboardRetentionPanel'
 import { prefetchProfileDetails } from '@/lib/prefetch'
+import GameIcon from '@/components/games/GameIcon'
 
 interface Props {
   user: User | null
@@ -120,7 +121,7 @@ export default function DashboardClient({ user, username }: Props) {
               }}
               id={`quick-play-${game.slug}`}
             >
-              <span style={{ fontSize: '2.2rem' }}>{game.emoji}</span>
+              <GameIcon slug={game.slug} size={36} />
               <span style={{ fontWeight: 800, fontSize: '0.8rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{game.name}</span>
               <span style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: 'hsl(220 20% 16%)', color: 'hsl(220 10% 60%)', fontWeight: 600 }}>
                 {game.category}
@@ -185,7 +186,7 @@ export default function DashboardClient({ user, username }: Props) {
               id={`game-card-${game.slug}`}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <span style={{ fontSize: '1.8rem' }}>{game.emoji}</span>
+                <GameIcon slug={game.slug} size={30} />
                 <div style={{ textAlign: 'right' }}>
                   {game.badge && (
                     <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.45rem', borderRadius: '99px', background: 'hsl(220 20% 20%)', color: 'hsl(220 10% 65%)', fontWeight: 800, textTransform: 'uppercase' }}>

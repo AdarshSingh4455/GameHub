@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useFullscreen } from '@/lib/hooks/useFullscreen'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getLevelProgress } from '@/lib/xpUtils'
+import GameIcon from '@/components/games/GameIcon'
 
 interface Props {
   slug: string
@@ -269,7 +270,7 @@ export default function GameChromeWrapper({ slug, name, emoji, description, chil
             ←
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span style={{ fontSize: '1.25rem' }}>{emoji}</span>
+            <GameIcon slug={slug} size={24} />
             <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'white' }}>{name}</span>
             {description && (
               <button

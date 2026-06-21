@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { GAMES_REGISTRY } from '@/lib/games'
 import { prefetchProfileDetails } from '@/lib/prefetch'
+import GameIcon from '@/components/games/GameIcon'
 
 const CATEGORIES = ['All', 'Social', 'Dual Player', 'Strategy', 'Puzzle', 'Arcade', 'Match-3']
 
@@ -116,7 +117,7 @@ export default function GamesDirectoryPage() {
               id={`game-card-${game.slug}`}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
-                <span style={{ fontSize: '2.5rem' }}>{game.emoji}</span>
+                <GameIcon slug={game.slug} size={40} />
                 <div style={{ textAlign: 'right' }}>
                   {game.badge && (
                     <span

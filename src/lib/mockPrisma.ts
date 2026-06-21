@@ -15,6 +15,9 @@ export interface MockDbState {
   matches?: Record<string, any>
   xpEvents?: Record<string, any>
   tournaments?: Record<string, any>
+  rankedMatches?: Record<string, any>
+  rankedSeasons?: Record<string, any>
+  seasonSnapshots?: Record<string, any>
 }
 
 export const MOCK_COSMETIC_ITEMS = [
@@ -84,6 +87,9 @@ export function loadDb(): MockDbState {
             if (!parsed.matches) parsed.matches = {}
             if (!parsed.xpEvents) parsed.xpEvents = {}
             if (!parsed.tournaments) parsed.tournaments = {}
+            if (!parsed.rankedMatches) parsed.rankedMatches = {}
+            if (!parsed.rankedSeasons) parsed.rankedSeasons = {}
+            if (!parsed.seasonSnapshots) parsed.seasonSnapshots = {}
             cachedDb = parsed
             return parsed
           }
@@ -243,7 +249,10 @@ export function loadDb(): MockDbState {
     challengeClaims: {},
     matches: {},
     xpEvents: {},
-    tournaments: {}
+    tournaments: {},
+    rankedMatches: {},
+    rankedSeasons: {},
+    seasonSnapshots: {}
   }
 
   cachedDb = defaultDb
@@ -324,6 +333,11 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
   if (profile.streakProtectionActive === undefined) profile.streakProtectionActive = false
   if (profile.lastActiveAt === undefined) profile.lastActiveAt = new Date().toISOString()
   if (profile._count === undefined) profile._count = { wonMatches: 0, friends: 0 }
+  if (profile.rankedMmr === undefined) profile.rankedMmr = 1000
+  if (profile.rankedWins === undefined) profile.rankedWins = 0
+  if (profile.rankedLosses === undefined) profile.rankedLosses = 0
+  if (profile.rankedStreak === undefined) profile.rankedStreak = 0
+  if (profile.rankedPeakRank === undefined) profile.rankedPeakRank = 'Bronze'
   return profile
 }
 
@@ -1250,6 +1264,131 @@ function createModelMock(modelName: string) {
           }
         }
 
+        // ── RankedSeason ─────────────────────────────────────────────────────
+        if (modelName === 'rankedSeason') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            let list = Object.values(db.rankedSeasons || {})
+            if (list.length === 0) {
+              const defaultSeason = {
+                id: 'season-genesis',
+                name: 'Season 1: Genesis',
+                startDate: new Date('2026-06-01T00:00:00Z').toISOString(),
+                endDate: new Date('2026-08-31T23:59:59Z').toISOString(),
+                isActive: true,
+                rewards: { first: 'Season 1 Champion Title', top10: 'Gold Rank Frame' }
+              }
+              db.rankedSeasons = { 'season-genesis': defaultSeason }
+              saveDb(db)
+              list = [defaultSeason]
+            }
+            return list
+          }
+          if (action === 'findFirst' || action === 'findUnique') {
+            const db = loadDb()
+            const list = Object.values(db.rankedSeasons || {})
+            if (list.length === 0) {
+              const defaultSeason = {
+                id: 'season-genesis',
+                name: 'Season 1: Genesis',
+                startDate: new Date('2026-06-01T00:00:00Z').toISOString(),
+                endDate: new Date('2026-08-31T23:59:59Z').toISOString(),
+                isActive: true,
+                rewards: { first: 'Season 1 Champion Title', top10: 'Gold Rank Frame' }
+              }
+              db.rankedSeasons = { 'season-genesis': defaultSeason }
+              saveDb(db)
+              return defaultSeason
+            }
+            const active = list.find((s: any) => s.isActive)
+            return active || list[0]
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            const data = params.data || {}
+            const id = data.id || `season-${Date.now()}`
+            const record = {
+              id,
+              name: data.name,
+              startDate: data.startDate,
+              endDate: data.endDate,
+              isActive: data.isActive ?? true,
+              rewards: data.rewards || null
+            }
+            if (!db.rankedSeasons) db.rankedSeasons = {}
+            db.rankedSeasons[id] = record
+            saveDb(db)
+            return record
+          }
+        }
+
+        // ── SeasonSnapshot ───────────────────────────────────────────────────
+        if (modelName === 'seasonSnapshot') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = Object.values(db.seasonSnapshots || {})
+            if (where.seasonId) {
+              list = list.filter((s: any) => s.seasonId === where.seasonId)
+            }
+            if (where.profileId) {
+              list = list.filter((s: any) => s.profileId === where.profileId)
+            }
+            return list
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            const data = params.data || {}
+            const id = data.id || `snap-${Date.now()}`
+            const record = {
+              id,
+              seasonId: data.seasonId,
+              profileId: data.profileId,
+              username: data.username,
+              mmr: data.mmr,
+              rank: data.rank,
+              wins: data.wins,
+              losses: data.losses,
+              winRate: data.winRate
+            }
+            if (!db.seasonSnapshots) db.seasonSnapshots = {}
+            db.seasonSnapshots[id] = record
+            saveDb(db)
+            return record
+          }
+        }
+
+        // ── RankedMatch ──────────────────────────────────────────────────────
+        if (modelName === 'rankedMatch') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = Object.values(db.rankedMatches || {})
+            if (where.profileId) {
+              list = list.filter((m: any) => m.profileId === where.profileId)
+            }
+            list.sort((a: any, b: any) => new Date(b.playedAt).getTime() - new Date(a.playedAt).getTime())
+            return list
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            const data = params.data || {}
+            const id = data.id || `rmatch-${Date.now()}`
+            const record = {
+              id,
+              profileId: data.profileId,
+              opponentName: data.opponentName,
+              result: data.result,
+              mmrChange: data.mmrChange,
+              playedAt: new Date().toISOString()
+            }
+            if (!db.rankedMatches) db.rankedMatches = {}
+            db.rankedMatches[id] = record
+            saveDb(db)
+            return record
+          }
+        }
+
         // ── Fallback Actions for unregistered or secondary models ───────────
         if (action === 'findMany')   return []
         if (action === 'findUnique') return null
@@ -1295,6 +1434,7 @@ export function createPrismaMockProxy(realPrisma: any) {
         'battlePass', 'battlePassTier', 'profileBattlePass', 'analyticsEvent',
         'multiplayerRoom', 'multiplayerGameSession', 'multiplayerRoomPlayer',
         'multiplayerInvite', 'multiplayerChatMessage', 'challengeClaim', 'tournament',
+        'rankedSeason', 'seasonSnapshot', 'rankedMatch',
         // Also support potential legacy aliases just in case
         'matchResult', 'gameScore',
       ]

@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
-import { generateLevel, LevelData, ALL_CANDIES } from '@/lib/match3/LevelGenerator'
+import { generateLevel, LevelData, ALL_CANDIES, SeededRandom } from '@/lib/match3/LevelGenerator'
 import { BoardCell, areAdjacent, isMoveable, cloneGrid, findMatches, processMatchesAndCascades, hasPossibleMoves, reshuffleGrid, executeSpecialCombo } from '@/lib/match3/Match3Engine'
 import { useToast } from '@/lib/contexts/ToastContext'
+import { CandyPiece } from './CandyPiece'
 
 // Color map details
 const GEM_COLORS: Record<string, { emoji: string; name: string; gradient: string; glow: string }> = {
@@ -49,103 +50,51 @@ interface CellProps {
 }
 
 const CandyCell: React.FC<CellProps> = React.memo(({ cell, isSelected, onClick }) => {
-  const gem = cell.color ? GEM_COLORS[cell.color] : null
-
-  // Special effects styles
-  const specialBadge = useMemo(() => {
-    if (!cell.special) return null
-    switch (cell.special) {
-      case 'line_horizontal':
-        return <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: '0.6rem', background: 'rgba(0,0,0,0.6)', padding: '1px 3px', borderRadius: 3 }}>↔️</span>
-      case 'line_vertical':
-        return <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: '0.6rem', background: 'rgba(0,0,0,0.6)', padding: '1px 3px', borderRadius: 3 }}>↕️</span>
-      case 'area':
-        return <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: '0.6rem', background: 'rgba(0,0,0,0.6)', padding: '1px 3px', borderRadius: 3 }}>💥</span>
-      case 'color':
-        return <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: '0.6rem', background: 'rgba(0,0,0,0.6)', padding: '1px 3px', borderRadius: 3 }}>🌈</span>
-      default:
-        return null
-    }
-  }, [cell.special])
-
-  const blockerStyle = useMemo(() => {
-    if (!cell.blocker) return {}
-    return BLOCKER_INFO[cell.blocker]?.style || {}
-  }, [cell.blocker])
-
-  const blockerEmoji = useMemo(() => {
-    if (!cell.blocker) return null
-    return (
-      <span style={{
-        position: 'absolute',
-        top: 2,
-        left: 2,
-        fontSize: '0.85rem',
-        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))'
-      }}>
-        {BLOCKER_INFO[cell.blocker]?.emoji}
-      </span>
-    )
-  }, [cell.blocker])
-
-  const cellStyle = useMemo((): React.CSSProperties => {
-    const base: React.CSSProperties = {
-      position: 'relative',
-      aspectRatio: '1',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: '8px',
-      cursor: isMoveable(cell) ? 'pointer' : 'not-allowed',
-      background: 'rgba(255,255,255,0.03)',
-      border: isSelected ? '2px solid hsl(220 100% 60%)' : '1px solid rgba(255,255,255,0.08)',
-      boxShadow: isSelected ? '0 0 10px hsl(220 100% 60% / 0.5)' : 'none',
-      transition: 'all 0.15s ease-in-out',
-      overflow: 'hidden',
-      userSelect: 'none',
-    }
-
-    if (gem && !cell.blocker) {
-      base.background = gem.gradient
-      base.boxShadow = isSelected ? base.boxShadow : gem.glow
-    }
-
-    return { ...base, ...blockerStyle }
-  }, [cell, isSelected, gem, blockerStyle])
-
   return (
     <div
-      style={cellStyle}
+      style={{
+        position: 'relative',
+        aspectRatio: '1',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '8px',
+        cursor: isMoveable(cell) ? 'pointer' : 'not-allowed',
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: isSelected ? '0 0 10px hsl(220 100% 60% / 0.5)' : 'none',
+        transition: 'all 0.15s ease-in-out',
+        overflow: 'hidden',
+        userSelect: 'none',
+      }}
       onClick={() => onClick(cell.row, cell.col)}
       className="candy-cell-hover"
     >
-      {gem && !['stone', 'crate'].includes(cell.blocker || '') && (
-        <span style={{
-          fontSize: '1.4rem',
-          transform: isSelected ? 'scale(1.15)' : 'scale(1)',
-          transition: 'transform 0.15s ease',
-          zIndex: 1,
-        }}>
-          {gem.emoji}
-        </span>
-      )}
-      {cell.blocker === 'stone' && (
-        <span style={{ fontSize: '1.3rem', zIndex: 1 }}>🪨</span>
-      )}
-      {cell.blocker === 'crate' && (
-        <span style={{ fontSize: '1.3rem', zIndex: 1 }}>📦</span>
-      )}
-      {blockerEmoji}
-      {specialBadge}
+      <CandyPiece
+        color={cell.color}
+        special={
+          cell.special === 'line_horizontal'
+            ? 'row'
+            : cell.special === 'line_vertical'
+            ? 'column'
+            : cell.special
+        }
+        blocker={cell.blocker}
+        isSelected={isSelected}
+        size={46}
+      />
     </div>
   )
 })
 
 CandyCell.displayName = 'CandyCell'
 
-export default function CandyCrushGame() {
+export default function CandyBlastGame() {
   const { submitGameResult } = useGameSession()
   const { addToast } = useToast()
+  
+  // Seeded Random ref for board refills
+  const gameplayRngRef = useRef<SeededRandom | null>(null)
 
   // Game Progress state
   const [saveData, setSaveData] = useState<SavedProgress>({
@@ -207,6 +156,10 @@ export default function CandyCrushGame() {
     setMatchResult(null)
     setSelectedCell(null)
 
+    // Setup seeded random values
+    const rng = new SeededRandom(lvlNum)
+    gameplayRngRef.current = new SeededRandom(lvlNum + 10000)
+
     // Build the grid representation
     const R = lvl.boardSize
     const C = lvl.boardSize
@@ -219,9 +172,9 @@ export default function CandyCrushGame() {
       attempts++
       freshGrid = Array(R).fill(null).map((_, r) =>
         Array(C).fill(null).map((_, c) => {
-          const randomColor = lvl.candyTypes[Math.floor(Math.random() * lvl.candyTypes.length)]
+          const randomColor = rng.choice(lvl.candyTypes)
           return {
-            id: `cell_${r}_${c}_${Date.now()}`,
+            id: `cell_${r}_${c}_${lvlNum}_${attempts}`,
             row: r,
             col: c,
             color: randomColor,
@@ -380,7 +333,9 @@ export default function CandyCrushGame() {
     while (cascadeActive) {
       const { grid: nextGrid, scoreGained, blockersCleared, cascadeGrid } = processMatchesAndCascades(
         tempGrid,
-        levelData?.candyTypes || ALL_CANDIES
+        levelData?.candyTypes || ALL_CANDIES,
+        combo,
+        gameplayRngRef.current || undefined
       )
 
       if (scoreGained > 0) {
@@ -692,27 +647,27 @@ export default function CandyCrushGame() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' }}>
               {objectivesProgress.map((obj, idx) => {
                 let text = ''
-                let icon = '🎯'
+                let icon: React.ReactNode = '🎯'
 
                 if (obj.type === 'score') {
                   text = `Reach ${obj.target} Points`
-                  icon = '🏆'
+                  icon = <span style={{ fontSize: '1.2rem' }}>🏆</span>
                 } else if (obj.type === 'clear_color' && obj.color) {
                   const gemName = GEM_COLORS[obj.color]?.name || obj.color
                   text = `Clear ${obj.target} ${gemName}s`
-                  icon = GEM_COLORS[obj.color]?.emoji || '🍬'
+                  icon = <CandyPiece color={obj.color} special={null} blocker={null} size={20} />
                 } else if (obj.type === 'clear_blockers' && obj.blockerType) {
                   text = `Clear ${obj.target} ${BLOCKER_INFO[obj.blockerType]?.label || obj.blockerType}`
-                  icon = BLOCKER_INFO[obj.blockerType]?.emoji || '🧱'
+                  icon = <CandyPiece color={null} special={null} blocker={obj.blockerType} size={20} />
                 } else if (obj.type === 'combo') {
                   text = `Reach a ${obj.target}x Combo Chain`
-                  icon = '⚡'
+                  icon = <span style={{ fontSize: '1.2rem' }}>⚡</span>
                 }
 
                 return (
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0.65rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                      {icon}
                       <span style={{
                         fontSize: '0.78rem',
                         color: obj.completed ? 'hsl(220 10% 50%)' : 'white',

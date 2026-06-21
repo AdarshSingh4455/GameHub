@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.roomTurnTimeouts = exports.userSockets = void 0;
+exports.presenceStore = exports.userParty = exports.parties = exports.roomTurnTimeouts = exports.userSockets = exports.prisma = void 0;
 exports.clearTurnTimer = clearTurnTimer;
 const path_1 = __importDefault(require("path"));
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -35,6 +35,7 @@ const memory_1 = require("./games/memory");
 const rps_1 = require("./games/rps");
 const numberGuessing_1 = require("./games/numberGuessing");
 const scribble_1 = require("./games/scribble");
+const hangman_1 = require("./games/hangman");
 const framework_1 = require("./games/framework");
 // Initialize Sentry SDK
 (0, logger_1.initSentry)();
@@ -51,6 +52,7 @@ const io = new socket_io_1.Server(server, {
     pingTimeout: 5000,
     transports: ['websocket'] // Enforce WebSocket-only transport for horizontal scaling compatibility
 });
+const mockPrisma_1 = require("./utils/mockPrisma");
 // Initialize Prisma Client connection pool using PostgreSQL adapter
 const connectionString = process.env.DATABASE_URL;
 const pool = new pg_1.default.Pool({
@@ -60,11 +62,17 @@ const pool = new pg_1.default.Pool({
         : { rejectUnauthorized: false }
 });
 const adapter = new adapter_pg_1.PrismaPg(pool);
-const prisma = new client_1.PrismaClient({ adapter });
+const realPrisma = new client_1.PrismaClient({ adapter });
+exports.prisma = process.env.MOCK_DB === 'true' || process.env.MOCK_AUTH === 'true'
+    ? (0, mockPrisma_1.createPrismaMockProxy)(realPrisma)
+    : realPrisma;
 // Connection tracking maps
 exports.userSockets = new Map(); // maps userId -> socketId
 const disconnectTimers = new Map(); // maps userId -> Timeout
 exports.roomTurnTimeouts = new Map(); // maps roomCode -> Turn Timeout
+exports.parties = new Map(); // partyCode -> PartyState
+exports.userParty = new Map(); // userId -> partyCode
+exports.presenceStore = new Map();
 function clearTurnTimer(roomCode) {
     const timeout = exports.roomTurnTimeouts.get(roomCode);
     if (timeout) {
@@ -79,7 +87,7 @@ function startTurnTimer(roomCode) {
         const queue = (0, queue_1.getRoomQueue)(roomCode);
         queue.add(async () => {
             try {
-                const room = await prisma.multiplayerRoom.findUnique({
+                const room = await exports.prisma.multiplayerRoom.findUnique({
                     where: { roomCode },
                     include: {
                         players: {
@@ -91,7 +99,7 @@ function startTurnTimer(roomCode) {
                 });
                 if (!room || room.status !== 'PLAYING')
                     return;
-                const session = await prisma.multiplayerGameSession.findUnique({
+                const session = await exports.prisma.multiplayerGameSession.findUnique({
                     where: { roomId: room.id }
                 });
                 if (!session || session.status !== 'PLAYING')
@@ -109,15 +117,15 @@ function startTurnTimer(roomCode) {
                 let result = null;
                 let lastMoveApplied = null;
                 if (room.gameSlug === 'dots-boxes') {
-                    const state = await (0, dotsBoxes_1.getDotsBoxesSession)(roomCode, room.id, prisma);
+                    const state = await (0, dotsBoxes_1.getDotsBoxesSession)(roomCode, room.id, exports.prisma);
                     const randomMove = (0, dotsBoxes_1.getRandomDotsBoxesMove)(state);
                     if (randomMove) {
-                        result = await (0, dotsBoxes_1.processDotsBoxesMove)(roomCode, room.id, currentTurnUserId, randomMove, mappedPlayers, prisma);
+                        result = await (0, dotsBoxes_1.processDotsBoxesMove)(roomCode, room.id, currentTurnUserId, randomMove, mappedPlayers, exports.prisma);
                         lastMoveApplied = randomMove;
                     }
                 }
                 else if (room.gameSlug === 'memory') {
-                    const state = await (0, memory_1.getMemorySession)(roomCode, room.id, prisma);
+                    const state = await (0, memory_1.getMemorySession)(roomCode, room.id, exports.prisma);
                     if (state && state.cards) {
                         if (state.flippedIndices.length === 0) {
                             const unmatchedIdxs = state.cards
@@ -126,7 +134,7 @@ function startTurnTimer(roomCode) {
                                 .map(({ i }) => i);
                             if (unmatchedIdxs.length >= 2) {
                                 const card1 = unmatchedIdxs[Math.floor(Math.random() * unmatchedIdxs.length)];
-                                let res = await (0, memory_1.processMemoryMove)(roomCode, room.id, currentTurnUserId, { cardIndex: card1 }, mappedPlayers, prisma, io);
+                                let res = await (0, memory_1.processMemoryMove)(roomCode, room.id, currentTurnUserId, { cardIndex: card1 }, mappedPlayers, exports.prisma, io);
                                 lastMoveApplied = { cardIndex: card1 };
                                 await new Promise(resolve => setTimeout(resolve, 800));
                                 const unmatchedIdxs2 = res.state.cards
@@ -135,7 +143,7 @@ function startTurnTimer(roomCode) {
                                     .map(({ i }) => i);
                                 if (unmatchedIdxs2.length > 0) {
                                     const card2 = unmatchedIdxs2[Math.floor(Math.random() * unmatchedIdxs2.length)];
-                                    result = await (0, memory_1.processMemoryMove)(roomCode, room.id, currentTurnUserId, { cardIndex: card2 }, mappedPlayers, prisma, io);
+                                    result = await (0, memory_1.processMemoryMove)(roomCode, room.id, currentTurnUserId, { cardIndex: card2 }, mappedPlayers, exports.prisma, io);
                                     lastMoveApplied = { cardIndex: card2 };
                                 }
                             }
@@ -148,14 +156,14 @@ function startTurnTimer(roomCode) {
                                 .map(({ i }) => i);
                             if (unmatchedIdxs.length > 0) {
                                 const card2 = unmatchedIdxs[Math.floor(Math.random() * unmatchedIdxs.length)];
-                                result = await (0, memory_1.processMemoryMove)(roomCode, room.id, currentTurnUserId, { cardIndex: card2 }, mappedPlayers, prisma, io);
+                                result = await (0, memory_1.processMemoryMove)(roomCode, room.id, currentTurnUserId, { cardIndex: card2 }, mappedPlayers, exports.prisma, io);
                                 lastMoveApplied = { cardIndex: card2 };
                             }
                         }
                     }
                 }
                 else if (room.gameSlug === 'rps') {
-                    const state = await (0, rps_1.getRpsSession)(roomCode, room.id, prisma);
+                    const state = await (0, rps_1.getRpsSession)(roomCode, room.id, exports.prisma);
                     if (state && state.stage !== 'FINISHED') {
                         const choices = ['rock', 'paper', 'scissors'];
                         const p1 = mappedPlayers[0];
@@ -165,27 +173,27 @@ function startTurnTimer(roomCode) {
                         if (!p1Choice) {
                             const r1 = choices[Math.floor(Math.random() * 3)];
                             logger_1.logger.info(`[RPS TIMEOUT] player1=${p1.username} auto-move=${r1}`);
-                            let res = await (0, rps_1.processRpsMove)(roomCode, room.id, p1.userId, { choice: r1 }, mappedPlayers, prisma);
+                            let res = await (0, rps_1.processRpsMove)(roomCode, room.id, p1.userId, { choice: r1 }, mappedPlayers, exports.prisma);
                             result = res;
                             p1Choice = r1;
                         }
                         if (!p2Choice) {
                             const r2 = choices[Math.floor(Math.random() * 3)];
                             logger_1.logger.info(`[RPS TIMEOUT] player2=${p2.username} auto-move=${r2}`);
-                            let res = await (0, rps_1.processRpsMove)(roomCode, room.id, p2.userId, { choice: r2 }, mappedPlayers, prisma);
+                            let res = await (0, rps_1.processRpsMove)(roomCode, room.id, p2.userId, { choice: r2 }, mappedPlayers, exports.prisma);
                             result = res;
                         }
                         lastMoveApplied = { isAutoMove: true };
                     }
                 }
                 else if (room.gameSlug === 'number-guessing') {
-                    const state = await (0, numberGuessing_1.getNumberGuessingSession)(roomCode, room.id, prisma);
+                    const state = await (0, numberGuessing_1.getNumberGuessingSession)(roomCode, room.id, exports.prisma);
                     if (state && state.stage !== 'FINISHED') {
                         const minBound = state.minBound || 1;
                         const maxBound = state.maxBound || 100;
                         const randomGuess = Math.floor(Math.random() * (maxBound - minBound + 1)) + minBound;
                         logger_1.logger.info(`[NUMBER GUESS TIMEOUT] activePlayer=${currentTurnUserId} auto-guess=${randomGuess}`);
-                        result = await (0, numberGuessing_1.processNumberGuessingMove)(roomCode, room.id, currentTurnUserId, { guess: randomGuess }, mappedPlayers, prisma);
+                        result = await (0, numberGuessing_1.processNumberGuessingMove)(roomCode, room.id, currentTurnUserId, { guess: randomGuess }, mappedPlayers, exports.prisma);
                         lastMoveApplied = { guess: randomGuess };
                     }
                 }
@@ -205,7 +213,7 @@ function startTurnTimer(roomCode) {
                         lastMove: { userId: currentTurnUserId, move: lastMoveApplied, isAutoMove: true }
                     });
                     if (gameFinished) {
-                        await (0, framework_1.handleMatchCompletion)(room, state, winnerId, prisma);
+                        await (0, framework_1.handleMatchCompletion)(room, state, winnerId, exports.prisma);
                         (0, queue_1.deleteRoomQueue)(roomCode);
                         clearTurnTimer(roomCode);
                     }
@@ -228,7 +236,7 @@ app.get('/health', async (_req, res) => {
     let dbStatus = 'ok';
     let redisStatus = 'ok';
     try {
-        await prisma.$queryRaw `SELECT 1`;
+        await exports.prisma.$queryRaw `SELECT 1`;
     }
     catch (err) {
         dbStatus = 'error';
@@ -273,6 +281,8 @@ io.on('connection', async (rawSocket) => {
     // Register socket mappings
     exports.userSockets.set(userId, socket.id);
     (0, presence_1.setUserPresence)(userId, 'ONLINE').catch(err => (0, logger_1.logError)(err, { userId }));
+    exports.presenceStore.set(userId, { status: 'ONLINE', lastSeenAt: new Date().toISOString() });
+    io.emit('presence-change', { userId, status: 'ONLINE', lastSeenAt: new Date().toISOString() });
     // Check if player is returning from a disconnect grace period
     if (disconnectTimers.has(userId)) {
         logger_1.logger.info(`[RECONNECT RECOVERY] User reconnected within grace period: ${username} (${userId})`);
@@ -280,7 +290,7 @@ io.on('connection', async (rawSocket) => {
         disconnectTimers.delete(userId);
         (0, metrics_1.recordReconnectSuccess)();
         // Restore status in active room player profiles and re-join socket rooms (non-blocking)
-        prisma.multiplayerRoomPlayer.findMany({
+        exports.prisma.multiplayerRoomPlayer.findMany({
             where: { userId, NOT: { status: 'LEFT' } },
             include: { room: { include: { players: true } } }
         }).then(async (profiles) => {
@@ -318,7 +328,7 @@ io.on('connection', async (rawSocket) => {
                 return;
             }
             // Restore status: set disconnectedAt to null
-            await prisma.multiplayerRoomPlayer.updateMany({
+            await exports.prisma.multiplayerRoomPlayer.updateMany({
                 where: { userId, NOT: { status: 'LEFT' } },
                 data: { disconnectedAt: null }
             });
@@ -344,6 +354,21 @@ io.on('connection', async (rawSocket) => {
     // Heartbeat ping keepalive updates presence state in Redis
     socket.on('heartbeat', async () => {
         await (0, presence_1.setUserPresence)(userId, 'ONLINE');
+        exports.presenceStore.set(userId, { status: 'ONLINE', lastSeenAt: new Date().toISOString() });
+        exports.prisma.profile.update({
+            where: { userId },
+            data: { lastSeenAt: new Date() }
+        }).catch((err) => (0, logger_1.logError)(err, { userId }));
+    });
+    // Manual status presence updates (ONLINE, AWAY, OFFLINE)
+    socket.on('presence-update', async ({ status }) => {
+        await (0, presence_1.setUserPresence)(userId, status);
+        exports.presenceStore.set(userId, { status, lastSeenAt: new Date().toISOString() });
+        io.emit('presence-change', { userId, status, lastSeenAt: new Date().toISOString() });
+        exports.prisma.profile.update({
+            where: { userId },
+            data: { lastSeenAt: new Date() }
+        }).catch((err) => (0, logger_1.logError)(err, { userId }));
     });
     // ─── LOBBY EVENTS ──────────────────────────────────────────────────────────
     // Create Room
@@ -357,14 +382,14 @@ io.on('connection', async (rawSocket) => {
             let attempts = 0;
             while (!isUnique && attempts < 50) {
                 roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                const existing = await prisma.multiplayerRoom.findUnique({ where: { roomCode } });
+                const existing = await exports.prisma.multiplayerRoom.findUnique({ where: { roomCode } });
                 if (!existing)
                     isUnique = true;
                 attempts++;
             }
             if (!isUnique)
                 throw new Error('Failed to generate unique room code');
-            const room = await prisma.multiplayerRoom.create({
+            const room = await exports.prisma.multiplayerRoom.create({
                 data: {
                     roomCode,
                     gameSlug,
@@ -394,7 +419,7 @@ io.on('connection', async (rawSocket) => {
             return;
         try {
             const normalizedCode = roomCode.trim().toUpperCase();
-            const room = await prisma.multiplayerRoom.findUnique({
+            const room = await exports.prisma.multiplayerRoom.findUnique({
                 where: { roomCode: normalizedCode },
                 include: { players: true }
             });
@@ -407,7 +432,7 @@ io.on('connection', async (rawSocket) => {
                 return callback({ error: 'Room is full' });
             }
             if (!existingPlayer) {
-                await prisma.multiplayerRoomPlayer.create({
+                await exports.prisma.multiplayerRoomPlayer.create({
                     data: {
                         roomId: room.id,
                         userId,
@@ -416,10 +441,11 @@ io.on('connection', async (rawSocket) => {
                 });
             }
             else {
-                // Reset status if they previously left/disconnected
-                await prisma.multiplayerRoomPlayer.update({
+                // Reset status if they previously left/disconnected, otherwise preserve ready state
+                const nextStatus = existingPlayer.status === 'LEFT' ? 'NOT_READY' : existingPlayer.status;
+                await exports.prisma.multiplayerRoomPlayer.update({
                     where: { id: existingPlayer.id },
-                    data: { status: 'NOT_READY', disconnectedAt: null }
+                    data: { status: nextStatus, disconnectedAt: null }
                 });
             }
             socket.join(`room:${normalizedCode}`);
@@ -435,15 +461,16 @@ io.on('connection', async (rawSocket) => {
     });
     // Toggle Ready Status
     socket.on('toggle-ready', async ({ roomId }, callback) => {
+        console.log(`[SOCKET DEBUG] toggle-ready received: roomId=${roomId}, userId=${userId}`);
         try {
-            const player = await prisma.multiplayerRoomPlayer.findUnique({
+            const player = await exports.prisma.multiplayerRoomPlayer.findUnique({
                 where: { roomId_userId: { roomId, userId } },
                 include: { room: true }
             });
             if (!player)
                 throw new Error('Player profile not found in room');
             const nextStatus = player.status === 'READY' ? 'NOT_READY' : 'READY';
-            await prisma.multiplayerRoomPlayer.update({
+            await exports.prisma.multiplayerRoomPlayer.update({
                 where: { id: player.id },
                 data: { status: nextStatus }
             });
@@ -460,7 +487,7 @@ io.on('connection', async (rawSocket) => {
     // Leave Room
     socket.on('leave-room', async ({ roomId }, callback) => {
         try {
-            const player = await prisma.multiplayerRoomPlayer.findUnique({
+            const player = await exports.prisma.multiplayerRoomPlayer.findUnique({
                 where: { roomId_userId: { roomId, userId } },
                 include: { room: true }
             });
@@ -472,9 +499,9 @@ io.on('connection', async (rawSocket) => {
             const roomCode = player.room.roomCode;
             socket.leave(`room:${roomCode}`);
             // Delete player record
-            await prisma.multiplayerRoomPlayer.delete({ where: { id: player.id } });
+            await exports.prisma.multiplayerRoomPlayer.delete({ where: { id: player.id } });
             // Fetch remaining players
-            const remaining = await prisma.multiplayerRoomPlayer.findMany({
+            const remaining = await exports.prisma.multiplayerRoomPlayer.findMany({
                 where: { roomId },
                 orderBy: { joinedAt: 'asc' }
             });
@@ -482,7 +509,7 @@ io.on('connection', async (rawSocket) => {
                 const playerUserIds = [userId];
                 if (await canDestroyRoom(roomCode, playerUserIds)) {
                     // Clean up empty room and session
-                    await prisma.multiplayerRoom.delete({ where: { id: roomId } });
+                    await exports.prisma.multiplayerRoom.delete({ where: { id: roomId } });
                     (0, queue_1.deleteRoomQueue)(roomCode);
                     clearTurnTimer(roomCode);
                     await (0, cricket_1.deleteCricketSession)(roomCode);
@@ -509,10 +536,187 @@ io.on('connection', async (rawSocket) => {
                 callback({ error: err.message });
         }
     });
+    // ─── PARTY EVENTS ──────────────────────────────────────────────────────────
+    // Create Party
+    socket.on('party-create', (callback) => {
+        try {
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const newParty = {
+                partyCode: code,
+                members: [{
+                        userId,
+                        username,
+                        socketId: socket.id,
+                        role: 'LEADER'
+                    }]
+            };
+            exports.parties.set(code, newParty);
+            exports.userParty.set(userId, code);
+            socket.join(`party:${code}`);
+            callback({ partyCode: code });
+            logger_1.logger.info(`[PARTY CREATED] code=${code} leader=${username}`);
+        }
+        catch (err) {
+            callback({ error: err.message || 'Failed to create party' });
+        }
+    });
+    // Join Party
+    socket.on('party-join', ({ partyCode }, callback) => {
+        try {
+            const code = partyCode.trim().toUpperCase();
+            const party = exports.parties.get(code);
+            if (!party) {
+                return callback({ error: 'Party not found' });
+            }
+            // Check if already in this party
+            if (party.members.some(m => m.userId === userId)) {
+                return callback({ success: true, party });
+            }
+            // If in another party, leave it first
+            const currentCode = exports.userParty.get(userId);
+            if (currentCode) {
+                const p = exports.parties.get(currentCode);
+                if (p) {
+                    p.members = p.members.filter(m => m.userId !== userId);
+                    socket.leave(`party:${currentCode}`);
+                    if (p.members.length === 0) {
+                        exports.parties.delete(currentCode);
+                    }
+                    else {
+                        const wasLeader = !p.members.some(m => m.role === 'LEADER');
+                        if (wasLeader && p.members.length > 0) {
+                            p.members[0].role = 'LEADER';
+                        }
+                        io.to(`party:${currentCode}`).emit('party-updated', p);
+                    }
+                }
+                exports.userParty.delete(userId);
+            }
+            // Add to new party
+            const newMember = {
+                userId,
+                username,
+                socketId: socket.id,
+                role: 'MEMBER'
+            };
+            party.members.push(newMember);
+            exports.userParty.set(userId, code);
+            socket.join(`party:${code}`);
+            callback({ success: true, party });
+            io.to(`party:${code}`).emit('party-updated', party);
+            logger_1.logger.info(`[PARTY JOINED] code=${code} member=${username}`);
+        }
+        catch (err) {
+            callback({ error: err.message || 'Failed to join party' });
+        }
+    });
+    // Leave Party
+    socket.on('party-leave', (callback) => {
+        try {
+            const code = exports.userParty.get(userId);
+            if (!code) {
+                if (callback)
+                    callback({ success: true });
+                return;
+            }
+            const party = exports.parties.get(code);
+            if (party) {
+                party.members = party.members.filter(m => m.userId !== userId);
+                socket.leave(`party:${code}`);
+                if (party.members.length === 0) {
+                    exports.parties.delete(code);
+                    logger_1.logger.info(`[PARTY CLOSED] Empty party cleaned up: ${code}`);
+                }
+                else {
+                    const hasLeader = party.members.some(m => m.role === 'LEADER');
+                    if (!hasLeader && party.members.length > 0) {
+                        party.members[0].role = 'LEADER';
+                    }
+                    io.to(`party:${code}`).emit('party-updated', party);
+                }
+            }
+            exports.userParty.delete(userId);
+            if (callback)
+                callback({ success: true });
+            logger_1.logger.info(`[PARTY LEFT] code=${code} member=${username}`);
+        }
+        catch (err) {
+            if (callback)
+                callback({ error: err.message || 'Failed to leave party' });
+        }
+    });
+    // Invite to Party
+    socket.on('party-invite', ({ targetUserId }, callback) => {
+        try {
+            const code = exports.userParty.get(userId);
+            if (!code) {
+                return callback({ error: 'You are not in a party' });
+            }
+            const targetSocketId = exports.userSockets.get(targetUserId);
+            if (targetSocketId) {
+                io.to(targetSocketId).emit('party-invite-received', {
+                    partyCode: code,
+                    inviterUsername: username
+                });
+            }
+            callback({ success: true });
+        }
+        catch (err) {
+            callback({ error: err.message || 'Failed to invite user' });
+        }
+    });
+    // Party Chat
+    socket.on('party-chat', ({ message }) => {
+        try {
+            const code = exports.userParty.get(userId);
+            if (!code)
+                return;
+            io.to(`party:${code}`).emit('party-chat-msg', {
+                userId,
+                username,
+                message,
+                timestamp: Date.now()
+            });
+        }
+        catch (err) {
+            logger_1.logger.error(`[PARTY CHAT ERROR] userId=${userId} error=${err.message}`);
+        }
+    });
+    // Party Matchmaking Sync (synced match entry)
+    socket.on('party-matchmaking', ({ gameSlug, roomCode }, callback) => {
+        try {
+            const code = exports.userParty.get(userId);
+            if (!code) {
+                if (callback)
+                    callback({ error: 'You are not in a party' });
+                return;
+            }
+            const party = exports.parties.get(code);
+            if (!party) {
+                if (callback)
+                    callback({ error: 'Party not found' });
+                return;
+            }
+            const member = party.members.find(m => m.userId === userId);
+            if (!member || member.role !== 'LEADER') {
+                if (callback)
+                    callback({ error: 'Only the party leader can initiate matchmaking' });
+                return;
+            }
+            // Sync join room event to all party members
+            io.to(`party:${code}`).emit('party-matchmaking-sync', { gameSlug, roomCode });
+            if (callback)
+                callback({ success: true });
+        }
+        catch (err) {
+            if (callback)
+                callback({ error: err.message || 'Matchmaking sync failed' });
+        }
+    });
     // Start Game
     socket.on('start-game', async ({ roomId }, callback) => {
         try {
-            const room = await prisma.multiplayerRoom.findUnique({
+            const room = await exports.prisma.multiplayerRoom.findUnique({
                 where: { id: roomId },
                 include: { players: true }
             });
@@ -523,7 +727,7 @@ io.on('connection', async (rawSocket) => {
             if (room.players.length < 2)
                 throw new Error('Need at least 2 players to start');
             let activePlayers = room.players
-                .sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime());
+                .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
             if (room.gameSlug === 'cricket') {
                 const pCount = room.players.length;
                 if (pCount !== 2 && pCount !== 4 && pCount !== 6) {
@@ -564,16 +768,19 @@ io.on('connection', async (rawSocket) => {
             else if (room.gameSlug === 'number-guessing') {
                 initialGameState = framework_1.INITIAL_STATES['number-guessing'](activePlayers, room.hostUserId);
             }
+            else if (room.gameSlug === 'hangman') {
+                initialGameState = framework_1.INITIAL_STATES['hangman'](activePlayers, room.hostUserId);
+            }
             else {
                 throw new Error('Unsupported game slug');
             }
             // Update room status
-            await prisma.multiplayerRoom.update({
+            await exports.prisma.multiplayerRoom.update({
                 where: { id: roomId },
                 data: { status: 'STARTING' }
             });
             // Create active game session in DB
-            await prisma.multiplayerGameSession.upsert({
+            await exports.prisma.multiplayerGameSession.upsert({
                 where: { roomId },
                 create: {
                     roomId,
@@ -610,6 +817,9 @@ io.on('connection', async (rawSocket) => {
             else if (room.gameSlug === 'number-guessing') {
                 await (0, numberGuessing_1.saveNumberGuessingSession)(room.roomCode, initialGameState);
             }
+            else if (room.gameSlug === 'hangman') {
+                await (0, hangman_1.saveHangmanSession)(room.roomCode, initialGameState);
+            }
             await broadcastRoomUpdate(room.roomCode);
             io.to(`room:${room.roomCode}`).emit('game-started', { roomCode: room.roomCode });
             if (room.gameSlug === 'dots-boxes' || room.gameSlug === 'memory' || room.gameSlug === 'rps' || room.gameSlug === 'number-guessing') {
@@ -630,12 +840,12 @@ io.on('connection', async (rawSocket) => {
         if (!(await (0, rateLimit_1.checkRateLimit)(socket, rateLimit_1.sendChatLimiter, 'send-chat', callback)))
             return;
         try {
-            const room = await prisma.multiplayerRoom.findUnique({
+            const room = await exports.prisma.multiplayerRoom.findUnique({
                 where: { roomCode }
             });
             if (!room)
                 throw new Error('Room not found');
-            const chatMsg = await prisma.multiplayerChatMessage.create({
+            const chatMsg = await exports.prisma.multiplayerChatMessage.create({
                 data: {
                     roomId: room.id,
                     userId,
@@ -671,7 +881,7 @@ io.on('connection', async (rawSocket) => {
         logger_1.logger.info(`[JOIN-GAME] user=${username} (${userId}) roomCode=${roomCode}`);
         try {
             const normalizedCode = roomCode.trim().toUpperCase();
-            const room = await prisma.multiplayerRoom.findUnique({
+            const room = await exports.prisma.multiplayerRoom.findUnique({
                 where: { roomCode: normalizedCode },
                 include: {
                     players: {
@@ -695,30 +905,33 @@ io.on('connection', async (rawSocket) => {
             // Retrieve cached or database game session
             let gameState = null;
             if (room.gameSlug === 'cricket') {
-                gameState = await (0, cricket_1.getCricketSession)(normalizedCode, room.id, prisma).catch(() => null);
+                gameState = await (0, cricket_1.getCricketSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
             else if (room.gameSlug === 'scribble') {
-                gameState = await (0, scribble_1.getScribbleSession)(normalizedCode, room.id, prisma).catch(() => null);
+                gameState = await (0, scribble_1.getScribbleSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
             else if (room.gameSlug === 'dots-boxes') {
-                gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(normalizedCode, room.id, prisma).catch(() => null);
+                gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
             else if (room.gameSlug === 'tic-tac-toe') {
-                gameState = await (0, ticTacToe_1.getTicTacToeSession)(normalizedCode, room.id, prisma).catch(() => null);
+                gameState = await (0, ticTacToe_1.getTicTacToeSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
             else if (room.gameSlug === 'memory') {
-                gameState = await (0, memory_1.getMemorySession)(normalizedCode, room.id, prisma).catch(() => null);
+                gameState = await (0, memory_1.getMemorySession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
             else if (room.gameSlug === 'rps') {
-                gameState = await (0, rps_1.getRpsSession)(normalizedCode, room.id, prisma).catch(() => null);
+                gameState = await (0, rps_1.getRpsSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
             else if (room.gameSlug === 'number-guessing') {
-                gameState = await (0, numberGuessing_1.getNumberGuessingSession)(normalizedCode, room.id, prisma).catch(() => null);
+                gameState = await (0, numberGuessing_1.getNumberGuessingSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
+            }
+            else if (room.gameSlug === 'hangman') {
+                gameState = await (0, hangman_1.getHangmanSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
             if (callback)
                 callback({ success: true });
             // Send current state
-            const dbSession = await prisma.multiplayerGameSession.findUnique({
+            const dbSession = await exports.prisma.multiplayerGameSession.findUnique({
                 where: { roomId: room.id }
             });
             let broadcastState = gameState ?? dbSession?.gameState;
@@ -734,6 +947,9 @@ io.on('connection', async (rawSocket) => {
             }
             else if (room.gameSlug === 'scribble' && broadcastState) {
                 broadcastState = (0, scribble_1.getScribbleMaskedState)(broadcastState, userId);
+            }
+            else if (room.gameSlug === 'hangman' && broadcastState) {
+                broadcastState = (0, hangman_1.getMaskedHangmanState)(broadcastState, userId);
             }
             logger_1.logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${broadcastState?.stage} gameSlug=${room.gameSlug}`);
             socket.emit('game-state', {
@@ -766,7 +982,7 @@ io.on('connection', async (rawSocket) => {
         // Process move inside the FIFO queue sequentially to prevent race conditions
         queue.add(async () => {
             try {
-                const room = await prisma.multiplayerRoom.findUnique({
+                const room = await exports.prisma.multiplayerRoom.findUnique({
                     where: { roomCode },
                     include: {
                         players: {
@@ -794,25 +1010,28 @@ io.on('connection', async (rawSocket) => {
                 let result = null;
                 // Execute engine calculations
                 if (room.gameSlug === 'cricket') {
-                    result = await (0, cricket_1.processCricketMove)(roomCode, room.id, userId, move, mappedPlayers, prisma);
+                    result = await (0, cricket_1.processCricketMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma);
                 }
                 else if (room.gameSlug === 'scribble') {
-                    result = await (0, scribble_1.processScribbleMove)(roomCode, room.id, userId, move, mappedPlayers, prisma, io);
+                    result = await (0, scribble_1.processScribbleMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma, io);
                 }
                 else if (room.gameSlug === 'dots-boxes') {
-                    result = await (0, dotsBoxes_1.processDotsBoxesMove)(roomCode, room.id, userId, move, mappedPlayers, prisma);
+                    result = await (0, dotsBoxes_1.processDotsBoxesMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma);
                 }
                 else if (room.gameSlug === 'tic-tac-toe') {
-                    result = await (0, ticTacToe_1.processTicTacToeMove)(roomCode, room.id, userId, move, mappedPlayers, prisma);
+                    result = await (0, ticTacToe_1.processTicTacToeMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma);
                 }
                 else if (room.gameSlug === 'memory') {
-                    result = await (0, memory_1.processMemoryMove)(roomCode, room.id, userId, move, mappedPlayers, prisma, io);
+                    result = await (0, memory_1.processMemoryMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma, io);
                 }
                 else if (room.gameSlug === 'rps') {
-                    result = await (0, rps_1.processRpsMove)(roomCode, room.id, userId, move, mappedPlayers, prisma, io);
+                    result = await (0, rps_1.processRpsMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma, io);
                 }
                 else if (room.gameSlug === 'number-guessing') {
-                    result = await (0, numberGuessing_1.processNumberGuessingMove)(roomCode, room.id, userId, move, mappedPlayers, prisma);
+                    result = await (0, numberGuessing_1.processNumberGuessingMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma);
+                }
+                else if (room.gameSlug === 'hangman') {
+                    result = await (0, hangman_1.processHangmanMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma);
                 }
                 else {
                     throw new Error('Unsupported game engine');
@@ -826,11 +1045,13 @@ io.on('connection', async (rawSocket) => {
                 else if (room.gameSlug === 'number-guessing') {
                     broadcastState = (0, numberGuessing_1.getMaskedNumberGuessingState)(state);
                 }
-                if (room.gameSlug === 'scribble') {
+                if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman') {
                     for (const player of room.players) {
                         const pSocketId = exports.userSockets.get(player.userId);
                         if (pSocketId) {
-                            const maskedState = (0, scribble_1.getScribbleMaskedState)(state, player.userId);
+                            const maskedState = room.gameSlug === 'scribble'
+                                ? (0, scribble_1.getScribbleMaskedState)(state, player.userId)
+                                : (0, hangman_1.getMaskedHangmanState)(state, player.userId);
                             io.to(pSocketId).emit('game-update', {
                                 gameState: maskedState,
                                 gameFinished,
@@ -850,7 +1071,7 @@ io.on('connection', async (rawSocket) => {
                 }
                 if (gameFinished) {
                     clearTurnTimer(roomCode);
-                    await (0, framework_1.handleMatchCompletion)(room, state, winnerId, prisma);
+                    await (0, framework_1.handleMatchCompletion)(room, state, winnerId, exports.prisma);
                     (0, queue_1.deleteRoomQueue)(roomCode);
                 }
                 else if (room.gameSlug === 'dots-boxes' || room.gameSlug === 'memory' || room.gameSlug === 'rps' || room.gameSlug === 'number-guessing') {
@@ -874,7 +1095,7 @@ io.on('connection', async (rawSocket) => {
         const queue = (0, queue_1.getRoomQueue)(roomCode);
         queue.add(async () => {
             try {
-                const room = await prisma.multiplayerRoom.findUnique({
+                const room = await exports.prisma.multiplayerRoom.findUnique({
                     where: { roomCode },
                     include: { players: { include: { profile: true } } }
                 });
@@ -883,29 +1104,32 @@ io.on('connection', async (rawSocket) => {
                 const isPlayer = room.players.some(p => p.userId === userId);
                 if (!isPlayer)
                     throw new Error('Unauthorized');
-                const session = await prisma.multiplayerGameSession.findUnique({
+                const session = await exports.prisma.multiplayerGameSession.findUnique({
                     where: { roomId: room.id }
                 });
                 if (!session)
                     throw new Error('Session not found');
                 let gameState = null;
                 if (room.gameSlug === 'cricket') {
-                    gameState = await (0, cricket_1.getCricketSession)(roomCode, room.id, prisma);
+                    gameState = await (0, cricket_1.getCricketSession)(roomCode, room.id, exports.prisma);
                 }
                 else if (room.gameSlug === 'dots-boxes') {
-                    gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(roomCode, room.id, prisma);
+                    gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(roomCode, room.id, exports.prisma);
                 }
                 else if (room.gameSlug === 'tic-tac-toe') {
-                    gameState = await (0, ticTacToe_1.getTicTacToeSession)(roomCode, room.id, prisma);
+                    gameState = await (0, ticTacToe_1.getTicTacToeSession)(roomCode, room.id, exports.prisma);
                 }
                 else if (room.gameSlug === 'memory') {
-                    gameState = await (0, memory_1.getMemorySession)(roomCode, room.id, prisma);
+                    gameState = await (0, memory_1.getMemorySession)(roomCode, room.id, exports.prisma);
                 }
                 else if (room.gameSlug === 'rps') {
-                    gameState = await (0, rps_1.getRpsSession)(roomCode, room.id, prisma);
+                    gameState = await (0, rps_1.getRpsSession)(roomCode, room.id, exports.prisma);
                 }
                 else if (room.gameSlug === 'number-guessing') {
-                    gameState = await (0, numberGuessing_1.getNumberGuessingSession)(roomCode, room.id, prisma);
+                    gameState = await (0, numberGuessing_1.getNumberGuessingSession)(roomCode, room.id, exports.prisma);
+                }
+                else if (room.gameSlug === 'scribble') {
+                    gameState = await (0, scribble_1.getScribbleSession)(roomCode, room.id, exports.prisma);
                 }
                 if (!gameState) {
                     gameState = typeof session.gameState === 'string' ? JSON.parse(session.gameState) : session.gameState;
@@ -960,9 +1184,21 @@ io.on('connection', async (rawSocket) => {
                         updatedTurn = finalGameState.currentTurn;
                         await (0, numberGuessing_1.saveNumberGuessingSession)(roomCode, finalGameState);
                     }
+                    else if (room.gameSlug === 'scribble') {
+                        await (0, scribble_1.deleteScribbleSession)(roomCode);
+                        finalGameState = framework_1.INITIAL_STATES['scribble'](activePlayers, room.hostUserId);
+                        updatedTurn = null;
+                        await (0, scribble_1.saveScribbleSession)(roomCode, finalGameState);
+                    }
+                    else if (room.gameSlug === 'hangman') {
+                        await (0, hangman_1.deleteHangmanSession)(roomCode);
+                        finalGameState = framework_1.INITIAL_STATES['hangman'](activePlayers, room.hostUserId);
+                        updatedTurn = finalGameState.currentTurn;
+                        await (0, hangman_1.saveHangmanSession)(roomCode, finalGameState);
+                    }
                     logger_1.logger.info(`[VOTE-REPLAY] room=${roomCode} RESET → fresh board, nextTurn=${updatedTurn}`);
                     // Update Room status to STARTING so it gets resolved properly
-                    await prisma.multiplayerRoom.update({
+                    await exports.prisma.multiplayerRoom.update({
                         where: { id: room.id },
                         data: { status: 'STARTING' }
                     });
@@ -987,9 +1223,15 @@ io.on('connection', async (rawSocket) => {
                     else if (room.gameSlug === 'number-guessing') {
                         await (0, numberGuessing_1.saveNumberGuessingSession)(roomCode, finalGameState);
                     }
+                    else if (room.gameSlug === 'scribble') {
+                        await (0, scribble_1.saveScribbleSession)(roomCode, finalGameState);
+                    }
+                    else if (room.gameSlug === 'hangman') {
+                        await (0, hangman_1.saveHangmanSession)(roomCode, finalGameState);
+                    }
                 }
                 const now = new Date();
-                await prisma.multiplayerGameSession.update({
+                await exports.prisma.multiplayerGameSession.update({
                     where: { id: session.id },
                     data: {
                         status: updatedStatus,
@@ -1027,6 +1269,15 @@ io.on('connection', async (rawSocket) => {
     socket.on('match-reaction', ({ roomCode, emoji }) => {
         socket.to(`game:${roomCode}`).emit('match-reaction', { userId, emoji });
     });
+    // Dedicated Chat Pack message sync
+    socket.on('chat-pack-message', ({ roomCode, message, packId }) => {
+        socket.to(`game:${roomCode}`).emit('chat-pack-message', {
+            playerId: userId,
+            message,
+            packId,
+            timestamp: Date.now()
+        });
+    });
     // Scribble Canvas Synchronization (real-time broadcast)
     socket.on('scribble-draw', ({ roomCode, drawData }) => {
         socket.to(`game:${roomCode}`).emit('scribble-draw', { drawData });
@@ -1039,6 +1290,27 @@ io.on('connection', async (rawSocket) => {
         logger_1.logger.info(`[-] Disconnected: userId=${userId} socketId=${socket.id}`);
         exports.userSockets.delete(userId);
         await (0, presence_1.setUserPresence)(userId, 'OFFLINE');
+        exports.presenceStore.set(userId, { status: 'OFFLINE', lastSeenAt: new Date().toISOString() });
+        io.emit('presence-change', { userId, status: 'OFFLINE', lastSeenAt: new Date().toISOString() });
+        // Cleanly leave party on disconnect
+        const partyCode = exports.userParty.get(userId);
+        if (partyCode) {
+            const party = exports.parties.get(partyCode);
+            if (party) {
+                party.members = party.members.filter(m => m.userId !== userId);
+                if (party.members.length === 0) {
+                    exports.parties.delete(partyCode);
+                }
+                else {
+                    const hasLeader = party.members.some(m => m.role === 'LEADER');
+                    if (!hasLeader && party.members.length > 0) {
+                        party.members[0].role = 'LEADER';
+                    }
+                    io.to(`party:${partyCode}`).emit('party-updated', party);
+                }
+            }
+            exports.userParty.delete(userId);
+        }
         (0, metrics_1.recordDisconnect)();
         // Determine grace period based on active rooms: 60s for WAITING or PLAYING
         const gracePeriod = 60000;
@@ -1048,7 +1320,7 @@ io.on('connection', async (rawSocket) => {
             logger_1.logger.info(`[GRACE PERIOD EXPIRED] Player abandoned connection: ${username} (${userId})`);
             try {
                 // Find if player is in any active rooms
-                const activeRooms = await prisma.multiplayerRoomPlayer.findMany({
+                const activeRooms = await exports.prisma.multiplayerRoomPlayer.findMany({
                     where: { userId, NOT: { status: 'LEFT' } },
                     include: { room: true }
                 });
@@ -1060,14 +1332,14 @@ io.on('connection', async (rawSocket) => {
                     const roomCode = room.roomCode;
                     if (room.status === 'PLAYING') {
                         // Player abandoned active game
-                        const remainingPlayers = await prisma.multiplayerRoomPlayer.findMany({
+                        const remainingPlayers = await exports.prisma.multiplayerRoomPlayer.findMany({
                             where: { roomId, NOT: { userId } },
                             include: { profile: { select: { username: true } } }
                         });
                         const remainingUserIds = remainingPlayers.map(p => p.userId);
                         // Game specific disconnect rules
                         if (room.gameSlug === 'cricket') {
-                            const state = await (0, cricket_1.getCricketSession)(roomCode, roomId, prisma).catch(() => null);
+                            const state = await (0, cricket_1.getCricketSession)(roomCode, roomId, exports.prisma).catch(() => null);
                             if (state && state.teams) {
                                 // Captain transfer
                                 for (const teamKey of ['BLUE', 'GREEN']) {
@@ -1077,7 +1349,7 @@ io.on('connection', async (rawSocket) => {
                                         if (nextTeammate) {
                                             team.captain = nextTeammate;
                                             state.commentary.unshift(`👑 Captain disconnected. ${remainingPlayers.find(p => p.userId === nextTeammate)?.profile?.username || 'Teammate'} is promoted to Captain!`);
-                                            await prisma.multiplayerGameSession.update({
+                                            await exports.prisma.multiplayerGameSession.update({
                                                 where: { roomId },
                                                 data: { gameState: state }
                                             });
@@ -1101,7 +1373,7 @@ io.on('connection', async (rawSocket) => {
                                     clearTurnTimer(roomCode);
                                     state.stage = 'FINISHED';
                                     state.commentary.unshift(`🔴 Forfeit! All members of ${myTeamKey === 'BLUE' ? 'Blue Team' : 'Green Team'} disconnected.`);
-                                    await prisma.multiplayerGameSession.update({
+                                    await exports.prisma.multiplayerGameSession.update({
                                         where: { roomId },
                                         data: {
                                             status: 'FINISHED',
@@ -1109,7 +1381,7 @@ io.on('connection', async (rawSocket) => {
                                             gameState: state
                                         }
                                     });
-                                    await prisma.multiplayerRoom.update({
+                                    await exports.prisma.multiplayerRoom.update({
                                         where: { id: roomId },
                                         data: { status: 'FINISHED' }
                                     });
@@ -1120,7 +1392,7 @@ io.on('connection', async (rawSocket) => {
                                     });
                                     const playerUserIds = remainingPlayers.map(p => p.userId).concat(userId);
                                     if (await canDestroyRoom(roomCode, playerUserIds)) {
-                                        await prisma.multiplayerRoom.delete({ where: { id: roomId } });
+                                        await exports.prisma.multiplayerRoom.delete({ where: { id: roomId } });
                                         (0, queue_1.deleteRoomQueue)(roomCode);
                                         clearTurnTimer(roomCode);
                                         await (0, cricket_1.deleteCricketSession)(roomCode);
@@ -1130,16 +1402,16 @@ io.on('connection', async (rawSocket) => {
                             }
                         }
                         else if (room.gameSlug === 'scribble') {
-                            const state = await (0, scribble_1.getScribbleSession)(roomCode, roomId, prisma).catch(() => null);
+                            const state = await (0, scribble_1.getScribbleSession)(roomCode, roomId, exports.prisma).catch(() => null);
                             if (state) {
                                 if (remainingPlayers.length >= 2) {
                                     if (state.drawerId === userId && state.stage === 'DRAWING') {
                                         state.commentary.unshift(`⚠️ Drawer ${username} disconnected! Skipping turn...`);
-                                        await (0, scribble_1.endScribbleRound)(roomCode, roomId, state, remainingPlayers, prisma, io, true);
+                                        await (0, scribble_1.endScribbleRound)(roomCode, roomId, state, remainingPlayers, exports.prisma, io, true);
                                     }
                                     else if (state.drawerId === userId && state.stage === 'WORD_SELECTION') {
                                         state.commentary.unshift(`⚠️ Drawer ${username} disconnected during word selection! Skipping turn...`);
-                                        await (0, scribble_1.setupNextScribbleTurn)(roomCode, roomId, state, remainingPlayers, prisma, io);
+                                        await (0, scribble_1.setupNextScribbleTurn)(roomCode, roomId, state, remainingPlayers, exports.prisma, io);
                                     }
                                     else {
                                         state.commentary.unshift(`👋 Player ${username} disconnected.`);
@@ -1161,7 +1433,7 @@ io.on('connection', async (rawSocket) => {
                                     const winnerId = remainingPlayers[0]?.userId || 'DRAW';
                                     clearTurnTimer(roomCode);
                                     (0, scribble_1.clearScribbleInactivityCheck)(roomCode);
-                                    await prisma.multiplayerGameSession.update({
+                                    await exports.prisma.multiplayerGameSession.update({
                                         where: { roomId },
                                         data: {
                                             status: 'FINISHED',
@@ -1169,7 +1441,7 @@ io.on('connection', async (rawSocket) => {
                                             gameState: { stage: 'FINISHED', commentary: [`🔴 Forfeit! Fewer than 2 players left.`] }
                                         }
                                     });
-                                    await prisma.multiplayerRoom.update({
+                                    await exports.prisma.multiplayerRoom.update({
                                         where: { id: roomId },
                                         data: { status: 'FINISHED' }
                                     });
@@ -1180,7 +1452,7 @@ io.on('connection', async (rawSocket) => {
                                     });
                                     const playerUserIds = remainingPlayers.map(p => p.userId).concat(userId);
                                     if (await canDestroyRoom(roomCode, playerUserIds)) {
-                                        await prisma.multiplayerRoom.delete({ where: { id: roomId } });
+                                        await exports.prisma.multiplayerRoom.delete({ where: { id: roomId } });
                                         (0, queue_1.deleteRoomQueue)(roomCode);
                                         clearTurnTimer(roomCode);
                                         await (0, scribble_1.deleteScribbleSession)(roomCode);
@@ -1194,7 +1466,7 @@ io.on('connection', async (rawSocket) => {
                         logger_1.logger.info(`[FORFEIT MATCH] room=${roomCode} user=${username} forfeited to winnerId=${opponentId}`);
                         clearTurnTimer(roomCode);
                         // Update Game Session
-                        await prisma.multiplayerGameSession.update({
+                        await exports.prisma.multiplayerGameSession.update({
                             where: { roomId },
                             data: {
                                 status: 'FINISHED',
@@ -1203,7 +1475,7 @@ io.on('connection', async (rawSocket) => {
                             }
                         });
                         // Update Room Status
-                        await prisma.multiplayerRoom.update({
+                        await exports.prisma.multiplayerRoom.update({
                             where: { id: roomId },
                             data: { status: 'FINISHED' }
                         });
@@ -1214,7 +1486,7 @@ io.on('connection', async (rawSocket) => {
                         });
                         const playerUserIds = remainingPlayers.map(p => p.userId).concat(userId);
                         if (await canDestroyRoom(roomCode, playerUserIds)) {
-                            await prisma.multiplayerRoom.delete({ where: { id: roomId } });
+                            await exports.prisma.multiplayerRoom.delete({ where: { id: roomId } });
                             (0, queue_1.deleteRoomQueue)(roomCode);
                             clearTurnTimer(roomCode);
                             await (0, cricket_1.deleteCricketSession)(roomCode);
@@ -1222,22 +1494,23 @@ io.on('connection', async (rawSocket) => {
                             await (0, memory_1.deleteMemorySession)(roomCode);
                             await (0, rps_1.deleteRpsSession)(roomCode);
                             await (0, numberGuessing_1.deleteNumberGuessingSession)(roomCode);
+                            await (0, scribble_1.deleteScribbleSession)(roomCode);
                             logger_1.logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`);
                         }
                     }
                     else if (room.status === 'WAITING') {
                         // Player abandoned waiting lobby -> Clean remove
-                        await prisma.multiplayerRoomPlayer.delete({
+                        await exports.prisma.multiplayerRoomPlayer.delete({
                             where: { id: playerProfile.id }
                         });
-                        const remaining = await prisma.multiplayerRoomPlayer.findMany({
+                        const remaining = await exports.prisma.multiplayerRoomPlayer.findMany({
                             where: { roomId },
                             orderBy: { joinedAt: 'asc' }
                         });
                         if (remaining.length === 0) {
                             const playerUserIds = [userId];
                             if (await canDestroyRoom(roomCode, playerUserIds)) {
-                                await prisma.multiplayerRoom.delete({ where: { id: roomId } });
+                                await exports.prisma.multiplayerRoom.delete({ where: { id: roomId } });
                                 logger_1.logger.info(`[ROOM CLOSED] Empty room cleaned up: ${roomCode}`);
                             }
                         }
@@ -1257,12 +1530,12 @@ io.on('connection', async (rawSocket) => {
         disconnectTimers.set(userId, timer);
         // Mark status as DISCONNECTED in database during grace period (only for active rooms)
         try {
-            await prisma.multiplayerRoomPlayer.updateMany({
+            await exports.prisma.multiplayerRoomPlayer.updateMany({
                 where: { userId, NOT: { status: 'LEFT' } },
                 data: { disconnectedAt: new Date() }
             });
             // Broadcast disconnection alert to rooms
-            const userRooms = await prisma.multiplayerRoomPlayer.findMany({
+            const userRooms = await exports.prisma.multiplayerRoomPlayer.findMany({
                 where: { userId },
                 include: { room: true }
             });
@@ -1284,14 +1557,14 @@ io.on('connection', async (rawSocket) => {
  */
 async function handleHostMigration(roomId, currentHostId, roomCode) {
     try {
-        const remaining = await prisma.multiplayerRoomPlayer.findMany({
+        const remaining = await exports.prisma.multiplayerRoomPlayer.findMany({
             where: { roomId, NOT: { userId: currentHostId } },
             include: { profile: { select: { username: true } } },
             orderBy: { joinedAt: 'asc' }
         });
         if (remaining.length > 0) {
             const newHost = remaining[0];
-            await prisma.multiplayerRoom.update({
+            await exports.prisma.multiplayerRoom.update({
                 where: { id: roomId },
                 data: { hostUserId: newHost.userId }
             });
@@ -1335,7 +1608,7 @@ async function canDestroyRoom(roomCode, playerUserIds) {
  */
 async function broadcastRoomUpdate(roomCode) {
     try {
-        const room = await prisma.multiplayerRoom.findUnique({
+        const room = await exports.prisma.multiplayerRoom.findUnique({
             where: { roomCode },
             include: {
                 players: {
@@ -1381,7 +1654,7 @@ async function broadcastRoomUpdate(roomCode) {
 function startReconciliationLoop() {
     setInterval(async () => {
         try {
-            const activeRooms = await prisma.multiplayerRoom.findMany({
+            const activeRooms = await exports.prisma.multiplayerRoom.findMany({
                 where: { status: 'PLAYING' }
             });
             if (activeRooms.length === 0)
@@ -1391,27 +1664,27 @@ function startReconciliationLoop() {
                 try {
                     let gameState = null;
                     if (room.gameSlug === 'cricket') {
-                        gameState = await (0, cricket_1.getCricketSession)(room.roomCode, room.id, prisma);
+                        gameState = await (0, cricket_1.getCricketSession)(room.roomCode, room.id, exports.prisma);
                     }
                     else if (room.gameSlug === 'dots-boxes') {
-                        gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(room.roomCode, room.id, prisma);
+                        gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(room.roomCode, room.id, exports.prisma);
                     }
                     else if (room.gameSlug === 'tic-tac-toe') {
-                        gameState = await (0, ticTacToe_1.getTicTacToeSession)(room.roomCode, room.id, prisma);
+                        gameState = await (0, ticTacToe_1.getTicTacToeSession)(room.roomCode, room.id, exports.prisma);
                     }
                     else if (room.gameSlug === 'memory') {
-                        gameState = await (0, memory_1.getMemorySession)(room.roomCode, room.id, prisma);
+                        gameState = await (0, memory_1.getMemorySession)(room.roomCode, room.id, exports.prisma);
                     }
                     else if (room.gameSlug === 'rps') {
-                        gameState = await (0, rps_1.getRpsSession)(room.roomCode, room.id, prisma);
+                        gameState = await (0, rps_1.getRpsSession)(room.roomCode, room.id, exports.prisma);
                     }
                     else if (room.gameSlug === 'number-guessing') {
-                        gameState = await (0, numberGuessing_1.getNumberGuessingSession)(room.roomCode, room.id, prisma);
+                        gameState = await (0, numberGuessing_1.getNumberGuessingSession)(room.roomCode, room.id, exports.prisma);
                     }
                     if (gameState) {
                         const winnerId = gameState.winnerId || null;
                         const currentTurn = gameState.currentTurn || null;
-                        await prisma.multiplayerGameSession.update({
+                        await exports.prisma.multiplayerGameSession.update({
                             where: { roomId: room.id },
                             data: {
                                 gameState,

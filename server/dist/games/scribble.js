@@ -112,6 +112,18 @@ function startScribbleInactivityCheck(roomCode, io, prisma) {
                 clearScribbleInactivityCheck(roomCode);
                 return;
             }
+            // Emit periodic state updates to keep clients synced with current hints and timer
+            for (const player of room.players) {
+                const pSocketId = index_1.userSockets.get(player.userId);
+                if (pSocketId) {
+                    const maskedState = getScribbleMaskedState(state, player.userId);
+                    io.to(pSocketId).emit('game-update', {
+                        gameState: maskedState,
+                        gameFinished: false,
+                        winnerId: null
+                    });
+                }
+            }
             const elapsedInactivity = Date.now() - state.lastDrawAt;
             if (elapsedInactivity >= 15000) {
                 clearScribbleInactivityCheck(roomCode);
@@ -138,18 +150,28 @@ function getScribbleMaskedState(state, userId) {
     if (state.stage === 'DRAWING' && state.selectedWord) {
         const word = state.selectedWord.toUpperCase();
         const elapsedMs = Date.now() - state.timerStart;
-        // Scaling interval logic:
-        // 30s -> 8s
-        // 45s -> 12s
-        // 60s -> 15s
-        let revealInterval = 12;
-        if (state.timerDuration === 30)
-            revealInterval = 8;
-        else if (state.timerDuration === 60)
-            revealInterval = 15;
-        const hintsCount = Math.floor(elapsedMs / (revealInterval * 1000));
-        const maxReveal = Math.floor(word.length / 2); // Never reveal more than 50%
-        const cappedHintsCount = Math.min(hintsCount, maxReveal);
+        const elapsedPercent = elapsedMs / (state.timerDuration * 1000);
+        let revealPct = 0;
+        if (elapsedPercent >= 0.75) {
+            revealPct = 0.50;
+        }
+        else if (elapsedPercent >= 0.50) {
+            revealPct = 0.35;
+        }
+        else if (elapsedPercent >= 0.25) {
+            revealPct = 0.20;
+        }
+        else {
+            revealPct = 0.00;
+        }
+        let cappedHintsCount = 0;
+        if (revealPct > 0) {
+            cappedHintsCount = Math.max(1, Math.floor(word.length * revealPct));
+            const maxPossibleReveal = Math.floor(word.length / 2);
+            if (cappedHintsCount > maxPossibleReveal) {
+                cappedHintsCount = maxPossibleReveal;
+            }
+        }
         // Deterministic shuffle of indices to reveal based on word seed
         const indices = Array.from({ length: word.length }, (_, i) => i);
         let seed = word.length;
@@ -197,9 +219,20 @@ async function processScribbleMove(roomCode, roomId, userId, move, players, pris
             throw new Error('Invalid timer duration');
         }
         currentGameState.timerDuration = duration;
-        // Transition to Word Selection for first drawer
-        currentGameState.drawerIndex = 0;
-        currentGameState.drawerId = players[0].userId;
+        // Initialize strict player rotation array
+        currentGameState.drawerRotation = players.map(p => p.userId);
+        // Find the first connected player to start drawing
+        let firstConnectedIndex = 0;
+        while (firstConnectedIndex < currentGameState.drawerRotation.length) {
+            const uid = currentGameState.drawerRotation[firstConnectedIndex];
+            const isConnected = players.some((p) => p.userId === uid && p.status !== 'DISCONNECTED' && p.status !== 'LEFT');
+            if (isConnected) {
+                break;
+            }
+            firstConnectedIndex++;
+        }
+        currentGameState.drawerIndex = firstConnectedIndex >= currentGameState.drawerRotation.length ? 0 : firstConnectedIndex;
+        currentGameState.drawerId = currentGameState.drawerRotation[currentGameState.drawerIndex];
         currentGameState.stage = 'WORD_SELECTION';
         currentGameState.wordsToSelect = generateRandomWords();
         currentGameState.timerStart = Date.now();
@@ -402,14 +435,40 @@ async function endScribbleRound(roomCode, roomId, state, players, prisma, io, is
     index_1.roomTurnTimeouts.set(roomCode, summaryTimeout);
 }
 async function setupNextScribbleTurn(roomCode, roomId, state, players, prisma, io) {
+    if (!state.drawerRotation) {
+        state.drawerRotation = players.map(p => p.userId);
+    }
     state.drawerIndex++;
-    // If everyone completed drawing in this round, advance round
-    if (state.drawerIndex >= players.length) {
+    if (state.drawerIndex >= state.drawerRotation.length) {
         state.drawerIndex = 0;
         state.round++;
     }
+    // Scan for the next connected player in rotation, counting skipped turns
+    let searchAttempts = 0;
+    const rotationLength = state.drawerRotation.length;
+    let foundConnected = false;
+    while (searchAttempts < rotationLength && state.round <= state.maxRounds) {
+        const potentialDrawerId = state.drawerRotation[state.drawerIndex];
+        const isConnected = players.some((p) => p.userId === potentialDrawerId && p.status !== 'DISCONNECTED' && p.status !== 'LEFT');
+        if (isConnected) {
+            state.drawerId = potentialDrawerId;
+            foundConnected = true;
+            break;
+        }
+        else {
+            state.commentary.unshift(`⚠️ Skipped turn for disconnected player.`);
+            state.drawerIndex++;
+            searchAttempts++;
+            if (state.drawerIndex >= state.drawerRotation.length) {
+                state.drawerIndex = 0;
+                state.round++;
+            }
+        }
+    }
     // Check if final round ended
     if (state.round > state.maxRounds) {
+        // Cap round counter at maxRounds on finish
+        state.round = state.maxRounds;
         state.stage = 'FINISHED';
         // Find winner
         let maxScore = -1;
@@ -438,8 +497,6 @@ async function setupNextScribbleTurn(roomCode, roomId, state, players, prisma, i
     }
     else {
         // Word selection for next drawer
-        const nextDrawer = players[state.drawerIndex];
-        state.drawerId = nextDrawer.userId;
         state.stage = 'WORD_SELECTION';
         state.wordsToSelect = generateRandomWords();
         state.selectedWord = '';

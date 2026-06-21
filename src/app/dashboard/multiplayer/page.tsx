@@ -74,7 +74,8 @@ const SUPPORTED_MULTIPLAYER_GAMES = [
   { slug: 'memory', name: 'Memory Match', emoji: '🃏', desc: 'Flip cards, find pairs. A timeless memory challenge.' },
   { slug: 'rps', name: 'Rock Paper Scissors', emoji: '✊', desc: 'Classic simultaneous choice duel.' },
   { slug: 'number-guessing', name: 'Number Guessing', emoji: '🔢', desc: 'Guess the secret number between 1–100. Hot and cold feedback.' },
-  { slug: 'scribble', name: 'Scribble', emoji: '🎨', desc: 'Draw and guess with friends in real time.' }
+  { slug: 'scribble', name: 'Scribble', emoji: '🎨', desc: 'Draw and guess with friends in real time.' },
+  { slug: 'hangman', name: 'Hangman', emoji: '🪓', desc: 'Guess the hidden word letter by letter.' }
 ]
 
 const SESSION_KEY = 'mp_screen'
@@ -1067,7 +1068,7 @@ export default function MultiplayerPage() {
                             <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{invite.sender.username}</span>
                           </div>
                           <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', display: 'block', marginTop: '0.2rem' }}>
-                            Room: {invite.room.roomCode} ({invite.room.gameSlug === 'cricket' ? 'Hand Cricket' : invite.room.gameSlug === 'dots-boxes' ? 'Dots & Boxes' : invite.room.gameSlug})
+                            Room: {invite.room.roomCode} ({SUPPORTED_MULTIPLAYER_GAMES.find(g => g.slug === invite.room.gameSlug)?.name || invite.room.gameSlug})
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: '0.4rem' }}>

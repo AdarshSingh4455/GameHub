@@ -20,7 +20,12 @@ interface ProfileSummary {
 const MULTIPLAYER_GAMES = [
   { slug: 'cricket', name: 'Hand Cricket' },
   { slug: 'dots-boxes', name: 'Dots & Boxes' },
+  { slug: 'tic-tac-toe', name: 'Tic-Tac-Toe' },
+  { slug: 'memory', name: 'Memory Match' },
+  { slug: 'rps', name: 'Rock Paper Scissors' },
+  { slug: 'number-guessing', name: 'Number Guessing' },
   { slug: 'scribble', name: 'Scribble' },
+  { slug: 'hangman', name: 'Hangman' },
   { slug: 'dumb-charades', name: 'Dumb Charades' },
   { slug: 'whos-spy', name: "Who's Spy" }
 ]

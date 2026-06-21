@@ -91,11 +91,7 @@ export default function LeaderboardClient() {
   const [activeSeason, setActiveSeason] = useState<any>(null)
   const [rankedLoading, setRankedLoading] = useState(true)
   
-  // Matchmaking / Simulation State
-  const [isSearching, setIsSearching] = useState(false)
-  const [matchmakingProgress, setMatchmakingProgress] = useState(0)
-  const [showSimulateModal, setShowSimulateModal] = useState(false)
-  const [matchResult, setMatchResult] = useState<any>(null)
+
 
   // Hall of Fame State
   const [hallOfFame, setHallOfFame] = useState<HallOfFameEntry[]>([])
@@ -186,54 +182,7 @@ export default function LeaderboardClient() {
     }
   }, [activeTab])
 
-  // Simulate Ranked Matchmaking and Game Resolution
-  const handleStartSearch = () => {
-    setIsSearching(true)
-    setMatchmakingProgress(0)
-    setMatchResult(null)
 
-    const interval = setInterval(() => {
-      setMatchmakingProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsSearching(false)
-          setShowSimulateModal(true)
-          return 100
-        }
-        return prev + 15
-      })
-    }, 200)
-  }
-
-  const triggerMatchSimulation = async (simulatedOutcome: 'win' | 'loss' | 'draw') => {
-    setShowSimulateModal(false)
-    setIsSearching(false)
-    
-    // Choose a random opponent name
-    const opponents = ['NovaKnight', 'BlitzMaster', 'PixelLord', 'ApexGamer', 'ShadowSlayer', 'GlitchVoid']
-    const opponentName = opponents[Math.floor(Math.random() * opponents.length)]
-
-    try {
-      const res = await fetch('/api/ranked/stats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result: simulatedOutcome, opponentName })
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setMatchResult({
-          opponentName,
-          result: simulatedOutcome,
-          ...data
-        })
-        // Reload statistics
-        loadRankedData()
-      }
-    } catch (err) {
-      console.error(err)
-    }
-  }
 
   // Trigger Season Reset Simulation
   const handleSeasonReset = async () => {
@@ -461,126 +410,17 @@ export default function LeaderboardClient() {
                     Active: <strong>{activeSeason?.name || 'Season 1'}</strong> (Ends: {activeSeason ? new Date(activeSeason.endDate).toLocaleDateString() : 'N/A'})
                   </div>
                   <button
-                    onClick={handleStartSearch}
-                    disabled={isSearching}
-                    className="btn btn-primary"
+                    disabled
+                    className="btn btn-secondary"
                     style={{
                       padding: '0.5rem 1.25rem',
                       fontWeight: 800,
                       borderRadius: '12px',
-                      background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(260 90% 60%))',
-                      boxShadow: '0 4px 15px rgba(59, 130, 246, 0.45)',
-                      cursor: 'pointer'
+                      opacity: 0.6,
+                      cursor: 'not-allowed'
                     }}
                   >
-                    ⚔️ Play Ranked Match
-                  </button>
-                </div>
-              </div>
-
-              {/* Matchmaking Overlay */}
-              {isSearching && (
-                <div style={{
-                  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                  background: 'rgba(10, 15, 30, 0.95)',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  zIndex: 20, gap: '0.75rem', backdropFilter: 'blur(6px)'
-                }}>
-                  <div style={{ fontSize: '1.5rem', animation: 'spin 1.5s infinite linear' }}>🌀</div>
-                  <h3 style={{ margin: 0, fontWeight: 800 }}>Finding Opponent...</h3>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'hsl(220 10% 55%)' }}>Searching MMR brackets (+/- 100)...</p>
-                  <div style={{ width: '200px', height: '4px', background: 'hsl(220 20% 12%)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${matchmakingProgress}%`, background: 'hsl(220 100% 60%)', transition: 'width 0.2s ease' }} />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Ranked Outcome Modal */}
-          {matchResult && (
-            <div style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(5, 8, 16, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 100, backdropFilter: 'blur(8px)', padding: '1rem'
-            }}>
-              <div className="card animate-scaleUp" style={{
-                maxWidth: '440px', width: '100%', padding: '2rem', textAlign: 'center',
-                background: 'hsl(222 25% 10%)', border: '1px solid hsl(220 20% 18%)', borderRadius: '24px',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.6)'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>
-                  {matchResult.result === 'win' ? '🎉' : matchResult.result === 'loss' ? '💀' : '🤝'}
-                </div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 900, margin: 0, color: matchResult.result === 'win' ? 'hsl(142 70% 55%)' : matchResult.result === 'loss' ? 'hsl(0 80% 60%)' : 'white' }}>
-                  {matchResult.result === 'win' ? 'VICTORY!' : matchResult.result === 'loss' ? 'DEFEAT' : 'DRAW'}
-                </h2>
-                <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.825rem', marginTop: '0.25rem' }}>
-                  VS {matchResult.opponentName}
-                </p>
-
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', margin: '1.5rem 0', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                  <div>
-                    <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase' }}>Old Rating</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800 }}>{matchResult.oldMmr}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', fontSize: '1.2rem', color: 'hsl(220 10% 40%)' }}>→</div>
-                  <div>
-                    <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase' }}>New Rating</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: matchResult.mmrChange >= 0 ? 'hsl(142 70% 55%)' : 'hsl(0 80% 60%)' }}>{matchResult.newMmr}</div>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: matchResult.mmrChange >= 0 ? 'hsl(142 70% 50%)' : 'hsl(0 80% 55%)', marginBottom: '1rem' }}>
-                  {matchResult.mmrChange >= 0 ? `+${matchResult.mmrChange} MMR` : `${matchResult.mmrChange} MMR`}
-                </div>
-
-                {matchResult.promoted && (
-                  <div className="animate-pulse" style={{ padding: '0.75rem', background: 'rgba(234, 179, 8, 0.15)', border: '1px solid #eab308', borderRadius: '12px', color: '#fef08a', fontWeight: 800, fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                    📈 PROMOTED TO {matchResult.newRank}!
-                  </div>
-                )}
-                {matchResult.demoted && (
-                  <div style={{ padding: '0.75rem', background: 'rgba(220, 38, 38, 0.15)', border: '1px solid #dc2626', borderRadius: '12px', color: '#fca5a5', fontWeight: 800, fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                    📉 DEMOTED TO {matchResult.newRank}
-                  </div>
-                )}
-
-                <button
-                  onClick={() => setMatchResult(null)}
-                  className="btn btn-primary"
-                  style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '12px', fontWeight: 800 }}
-                >
-                  Confirm Standings
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Matchmaking Simulation selection overlay */}
-          {showSimulateModal && (
-            <div style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(5, 8, 16, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 90, backdropFilter: 'blur(6px)', padding: '1rem'
-            }}>
-              <div className="card" style={{
-                maxWidth: '400px', width: '100%', padding: '1.5rem',
-                background: 'hsl(222 25% 10%)', border: '1px solid hsl(220 20% 18%)', borderRadius: '24px',
-              }}>
-                <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1.2rem' }}>⚔️ Choose Simulated Outcome</h3>
-                <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.8rem', marginTop: '0.25rem', marginBottom: '1.5rem' }}>
-                  Select the outcome to test MMR calculations, streaks, and promotion animations.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <button onClick={() => triggerMatchSimulation('win')} className="btn btn-primary" style={{ background: 'hsl(142 70% 45%)', borderColor: 'transparent' }}>
-                    Victory (+25 MMR)
-                  </button>
-                  <button onClick={() => triggerMatchSimulation('loss')} className="btn btn-primary" style={{ background: 'hsl(0 80% 50%)', borderColor: 'transparent' }}>
-                    Defeat (-18 MMR)
-                  </button>
-                  <button onClick={() => triggerMatchSimulation('draw')} className="btn btn-secondary">
-                    Draw (+0 MMR)
+                    ⚔️ Ranked Queue (Coming Soon)
                   </button>
                 </div>
               </div>

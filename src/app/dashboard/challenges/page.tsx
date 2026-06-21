@@ -294,8 +294,21 @@ export default function ChallengesPage() {
         </div>
       </div>
 
-      {/* Tabs Menu */}
-      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.5rem', gap: '0.5rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
+      {/* Tabs Menu - swipeable on mobile */}
+      <div
+        style={{
+          display: 'flex',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          marginBottom: '1.5rem',
+          gap: '0.5rem',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}
+        className="no-scrollbar"
+      >
         {(['DAILY', 'WEEKLY', 'COMPLETED', 'HISTORY'] as const).map((tab) => {
           const isActive = activeTab === tab
           let label = '📅 Daily'
@@ -318,6 +331,8 @@ export default function ChallengesPage() {
                 cursor: 'pointer',
                 transition: 'color 0.2s',
                 whiteSpace: 'nowrap',
+                scrollSnapAlign: 'start',
+                flexShrink: 0,
               }}
             >
               {label}

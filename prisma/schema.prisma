@@ -64,6 +64,10 @@ model Profile {
   rankedPeakRank       String              @default("Bronze")
   rankedMatches        RankedMatch[]
   seasonSnapshots      SeasonSnapshot[]
+  hangmanMmr           Int                 @default(1000)
+  hangmanWins          Int                 @default(0)
+  hangmanLosses        Int                 @default(0)
+  hangmanStreak        Int                 @default(0)
 
   @@index([xp(sort: Desc)])
   @@index([level(sort: Desc)])

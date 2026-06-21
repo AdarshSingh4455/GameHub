@@ -473,7 +473,7 @@ export default function StorePage() {
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }} className="animate-fadeIn safe-bottom-padding">
+    <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0 0.75rem' }} className="animate-fadeIn safe-bottom-padding">
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -629,7 +629,14 @@ export default function StorePage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Items Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', justifyContent: 'center' }} className="stagger">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: activeCategory === 'CRATES'
+              ? 'repeat(auto-fill, minmax(140px, 1fr))'
+              : 'repeat(2, 1fr)',
+            gap: activeCategory === 'CRATES' ? '0.65rem' : '0.75rem',
+            justifyContent: 'center'
+          }} className="stagger">
             {activeCategoryItems.map((item) => {
               const owned = item.id === 'perk-streak-protect' ? !!profile?.streakProtectionActive : ownedIds.includes(item.id)
               const rarity = item.metadata?.rarity || 'COMMON'
@@ -662,12 +669,12 @@ export default function StorePage() {
                   key={item.id}
                   className="card card-hover"
                   style={{
-                    padding: '1rem',
+                    padding: activeCategory === 'CRATES' ? '0.75rem' : '1rem',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     textAlign: 'center',
-                    gap: '0.75rem',
+                    gap: activeCategory === 'CRATES' ? '0.5rem' : '0.75rem',
                     borderRadius: 16,
                     background: 'hsl(222 18% 12% / 0.95)',
                     border: '1px solid hsl(220 15% 20%)',
@@ -679,8 +686,8 @@ export default function StorePage() {
                 >
                   {/* Item preview icon */}
                   <div style={{
-                    width: 64,
-                    height: 64,
+                    width: activeCategory === 'CRATES' ? 48 : 64,
+                    height: activeCategory === 'CRATES' ? 48 : 64,
                     borderRadius: 12,
                     background: 'hsl(220 20% 7%)',
                     border: '1px solid hsl(220 15% 18%)',

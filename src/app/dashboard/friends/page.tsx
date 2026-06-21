@@ -342,9 +342,22 @@ export default function FriendsPage() {
         </div>
       )}
 
-      {/* Tabs Menu selection */}
+      {/* Tabs Menu selection - swipeable on mobile */}
       {user && (
-        <div style={{ display: 'flex', borderBottom: '1px solid hsl(220 15% 18%)', gap: '1rem', paddingBottom: '0.25rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            borderBottom: '1px solid hsl(220 15% 18%)',
+            gap: '1rem',
+            paddingBottom: '0.25rem',
+            overflowX: 'auto',
+            scrollSnapType: 'x mandatory',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+          className="no-scrollbar"
+        >
           {[
             { id: 'friends', label: 'My Friends', badge: friends.length },
             { id: 'pending', label: 'Pending', badge: pendingIncoming.length + pendingOutgoing.length },
@@ -355,6 +368,8 @@ export default function FriendsPage() {
               key={t.id}
               onClick={() => setActiveTab(t.id as any)}
               style={{
+                scrollSnapAlign: 'start',
+                flexShrink: 0,
                 background: 'transparent',
                 border: 'none',
                 color: activeTab === t.id ? 'hsl(220 100% 70%)' : 'hsl(220 10% 50%)',

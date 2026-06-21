@@ -70,6 +70,8 @@ const GAMES = [
   { value: 'neon-tetris-daily', label: 'Neon Tetris (Daily)' },
   { value: 'word-wizard-classic', label: 'Word Wizard (Classic)' },
   { value: 'word-wizard-daily', label: 'Word Wizard (Daily)' },
+  { value: 'hangman-classic', label: 'Hangman Classic' },
+  { value: 'hangman-multiplayer', label: 'Hangman Multiplayer' },
 ]
 
 export default function LeaderboardClient() {
@@ -221,8 +223,22 @@ export default function LeaderboardClient() {
         )}
       </div>
 
-      {/* Tabs list */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid hsl(220 15% 18%)', paddingBottom: '0.5rem', marginBottom: '1.5rem' }}>
+      {/* Tabs list - swipeable on mobile */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          borderBottom: '1px solid hsl(220 15% 18%)',
+          paddingBottom: '0.5rem',
+          marginBottom: '1.5rem',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}
+        className="no-scrollbar"
+      >
         {[
           { key: 'casual', label: 'Casual XP & High Scores', icon: '🎮' },
           { key: 'ranked', label: 'Ranked Competitive', icon: '⚡' },
@@ -235,10 +251,13 @@ export default function LeaderboardClient() {
               onClick={() => setActiveTab(t.key as any)}
               className={`btn btn-sm ${active ? 'btn-primary' : 'btn-ghost'}`}
               style={{
+                scrollSnapAlign: 'start',
+                flexShrink: 0,
                 background: active ? undefined : 'transparent',
                 borderColor: 'transparent',
                 fontSize: '0.8rem',
                 fontWeight: 700,
+                whiteSpace: 'nowrap'
               }}
             >
               {t.icon} {t.label}
@@ -274,24 +293,51 @@ export default function LeaderboardClient() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', marginRight: '0.25rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filter:</span>
-              {GAMES.map((g) => (
-                <button
-                  key={g.value}
-                  onClick={() => {
-                    setGame(g.value)
-                    if (g.value !== 'all') setTimeframe('all-time')
-                  }}
-                  className={`btn btn-sm ${game === g.value ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{
-                    borderColor: game === g.value ? undefined : 'hsl(220 15% 18%)',
-                    background: game === g.value ? undefined : 'hsl(220 20% 8%)',
-                  }}
-                >
-                  {g.label}
-                </button>
-              ))}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', width: '100%' }}>
+              <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Game:</span>
+              <select
+                value={game}
+                onChange={(e) => {
+                  setGame(e.target.value)
+                  if (e.target.value !== 'all') setTimeframe('all-time')
+                }}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 2rem 0.5rem 0.75rem',
+                  borderRadius: '10px',
+                  backgroundColor: 'hsl(220 20% 10%)',
+                  border: '1px solid hsl(220 15% 18%)',
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  minHeight: 38
+                }}
+              >
+                <option value="all">All Games</option>
+                <option value="cricket">Hand Cricket</option>
+                <option value="tic-tac-toe">Tic-Tac-Toe</option>
+                <option value="memory">Memory Match</option>
+                <option value="2048">2048</option>
+                <option value="fighter">Fighter Jet</option>
+                <optgroup label="Block Blast">
+                  <option value="block-blast-classic">Block Blast (Classic)</option>
+                  <option value="block-blast-daily">Block Blast (Daily)</option>
+                </optgroup>
+                <optgroup label="Neon Tetris">
+                  <option value="neon-tetris-classic">Neon Tetris (Classic)</option>
+                  <option value="neon-tetris-daily">Neon Tetris (Daily)</option>
+                </optgroup>
+                <optgroup label="Word Wizard">
+                  <option value="word-wizard-classic">Word Wizard (Classic)</option>
+                  <option value="word-wizard-daily">Word Wizard (Daily)</option>
+                </optgroup>
+                <optgroup label="Hangman">
+                  <option value="hangman-classic">Hangman Classic</option>
+                  <option value="hangman-multiplayer">Hangman Multiplayer</option>
+                </optgroup>
+              </select>
             </div>
           </div>
 

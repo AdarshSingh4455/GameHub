@@ -132,6 +132,10 @@ export function loadDb(): MockDbState {
       selectedEffect: null,
       currentRank: null,
       previousRank: null,
+      hangmanMmr: 1000,
+      hangmanWins: 0,
+      hangmanLosses: 0,
+      hangmanStreak: 0,
       _count: { wonMatches: 0, friends: 1 }
     },
     'test-user-b': {
@@ -154,6 +158,10 @@ export function loadDb(): MockDbState {
       selectedEffect: null,
       currentRank: null,
       previousRank: null,
+      hangmanMmr: 1000,
+      hangmanWins: 0,
+      hangmanLosses: 0,
+      hangmanStreak: 0,
       _count: { wonMatches: 0, friends: 1 }
     },
     'mock-user-id': {
@@ -176,6 +184,10 @@ export function loadDb(): MockDbState {
       selectedEffect: null,
       currentRank: null,
       previousRank: null,
+      hangmanMmr: 1000,
+      hangmanWins: 0,
+      hangmanLosses: 0,
+      hangmanStreak: 0,
       _count: { wonMatches: 0, friends: 0 }
     }
   }
@@ -338,6 +350,10 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
   if (profile.rankedLosses === undefined) profile.rankedLosses = 0
   if (profile.rankedStreak === undefined) profile.rankedStreak = 0
   if (profile.rankedPeakRank === undefined) profile.rankedPeakRank = 'Bronze'
+  if (profile.hangmanMmr === undefined) profile.hangmanMmr = 1000
+  if (profile.hangmanWins === undefined) profile.hangmanWins = 0
+  if (profile.hangmanLosses === undefined) profile.hangmanLosses = 0
+  if (profile.hangmanStreak === undefined) profile.hangmanStreak = 0
   return profile
 }
 

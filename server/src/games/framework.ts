@@ -172,6 +172,30 @@ export const INITIAL_STATES: Record<string, (players: any[], hostUserId: string)
       replayVotes: {},
       turnExpiration: new Date(Date.now() + 60000).toISOString()
     }
+  },
+  'hangman': (players, hostUserId) => {
+    const p1 = players[0].userId
+    const p2 = players[1].userId
+    const startTurn = players[Math.floor(Math.random() * 2)].userId
+    return {
+      stage: 'WORD_SUBMISSION',
+      hostUserId,
+      p1Id: p1,
+      p2Id: p2,
+      p1Word: '',
+      p2Word: '',
+      p1Guesses: [],
+      p2Guesses: [],
+      p1Lives: 8,
+      p2Lives: 8,
+      p1IncorrectGuesses: [],
+      p2IncorrectGuesses: [],
+      p1FullGuessesLeft: 2,
+      p2FullGuessesLeft: 2,
+      currentTurn: startTurn,
+      winnerId: null,
+      turnExpiration: null
+    }
   }
 }
 

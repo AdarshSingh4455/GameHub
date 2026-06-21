@@ -792,6 +792,106 @@ export const ACHIEVEMENT_RULES: AchievementRule[] = [
       })
     }
   },
+  {
+    slug: 'hangman-first-win',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'hangman' || result !== 'win') return false
+      const count = await tx.matchRecord.count({
+        where: { game: { slug: 'hangman' }, winnerId: profileId },
+      })
+      return count >= 1
+    }
+  },
+  {
+    slug: 'hangman-wins-10',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'hangman' || result !== 'win') return false
+      const count = await tx.matchRecord.count({
+        where: { game: { slug: 'hangman' }, winnerId: profileId },
+      })
+      return count >= 10
+    }
+  },
+  {
+    slug: 'hangman-wins-25',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'hangman' || result !== 'win') return false
+      const count = await tx.matchRecord.count({
+        where: { game: { slug: 'hangman' }, winnerId: profileId },
+      })
+      return count >= 25
+    }
+  },
+  {
+    slug: 'hangman-wins-100',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'hangman' || result !== 'win') return false
+      const count = await tx.matchRecord.count({
+        where: { game: { slug: 'hangman' }, winnerId: profileId },
+      })
+      return count >= 100
+    }
+  },
+  {
+    slug: 'hangman-perfect-solver',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'hangman' || result !== 'win') return false
+      const scores = await tx.score.findMany({
+        where: { profileId, game: { slug: 'hangman' } },
+        select: { metadata: true }
+      })
+      return scores.some(s => {
+        const meta = s.metadata as Record<string, any> | null
+        return meta && typeof meta.incorrectGuesses === 'number' && meta.incorrectGuesses === 0
+      })
+    }
+  },
+  {
+    slug: 'hangman-no-wrong-guess',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'hangman' || result !== 'win') return false
+      const scores = await tx.score.findMany({
+        where: { profileId, game: { slug: 'hangman' } },
+        select: { metadata: true }
+      })
+      return scores.some(s => {
+        const meta = s.metadata as Record<string, any> | null
+        return meta && typeof meta.incorrectGuesses === 'number' && meta.incorrectGuesses === 0
+      })
+    }
+  },
+  {
+    slug: 'hangman-fast-thinker',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'hangman' || result !== 'win') return false
+      const scores = await tx.score.findMany({
+        where: { profileId, game: { slug: 'hangman' } },
+        select: { metadata: true }
+      })
+      return scores.some(s => {
+        const meta = s.metadata as Record<string, any> | null
+        return meta && typeof meta.timeTakenSecs === 'number' && meta.timeTakenSecs < 30
+      })
+    }
+  },
+  {
+    slug: 'hangman-word-master',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'hangman') return false
+      const scores = await tx.score.findMany({
+        where: { profileId, game: { slug: 'hangman' } },
+        select: { metadata: true }
+      })
+      let totalCorrect = 0
+      for (const s of scores) {
+        const meta = s.metadata as Record<string, any> | null
+        if (meta && typeof meta.correctGuesses === 'number') {
+          totalCorrect += meta.correctGuesses
+        }
+      }
+      return totalCorrect >= 50
+    }
+  },
 ]
 
 /**
@@ -1253,6 +1353,52 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         }
         current = totalRareWords
         target = 5
+        break
+      case 'hangman-first-win':
+        const hWins = await prisma.matchRecord.count({
+          where: { game: { slug: 'hangman' }, winnerId: profileId }
+        })
+        current = hWins >= 1 ? 1 : 0
+        target = 1
+        break
+      case 'hangman-wins-10':
+        current = await prisma.matchRecord.count({
+          where: { game: { slug: 'hangman' }, winnerId: profileId }
+        })
+        target = 10
+        break
+      case 'hangman-wins-25':
+        current = await prisma.matchRecord.count({
+          where: { game: { slug: 'hangman' }, winnerId: profileId }
+        })
+        target = 25
+        break
+      case 'hangman-wins-100':
+        current = await prisma.matchRecord.count({
+          where: { game: { slug: 'hangman' }, winnerId: profileId }
+        })
+        target = 100
+        break
+      case 'hangman-perfect-solver':
+      case 'hangman-no-wrong-guess':
+      case 'hangman-fast-thinker':
+        current = isUnlocked ? 1 : 0
+        target = 1
+        break
+      case 'hangman-word-master':
+        const hScores = await prisma.score.findMany({
+          where: { profileId, game: { slug: 'hangman' } },
+          select: { metadata: true }
+        })
+        let totalHCorrect = 0
+        for (const s of hScores) {
+          const meta = s.metadata as Record<string, any> | null
+          if (meta && typeof meta.correctGuesses === 'number') {
+            totalHCorrect += meta.correctGuesses
+          }
+        }
+        current = totalHCorrect
+        target = 50
         break
       default:
         current = isUnlocked ? 1 : 0

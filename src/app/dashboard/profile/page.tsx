@@ -19,6 +19,10 @@ interface DBProfile {
   avatarUrl: string | null
   friendCode: string | null
   selectedTitle: string | null
+  hangmanMmr?: number
+  hangmanWins?: number
+  hangmanLosses?: number
+  hangmanStreak?: number
   achievements: Array<{
     unlockedAt: string
     achievement: {
@@ -34,6 +38,17 @@ interface DBProfile {
     playCount: number
     winCount: number
     highScore: number
+  }>
+  inventory?: Array<{
+    cosmeticItem: {
+      id: string
+      name: string
+      type: string
+      priceCoins: number
+      assetUrl: string | null
+      metadata: any
+      isDefault: boolean
+    }
   }>
 }
 
@@ -66,9 +81,37 @@ function getBlockProgressBar(percent: number, size: number = 10): string {
 
 export default function ProfilePage() {
   const { user } = useGameSession()
-  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'matches' | 'ranked'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'ranked' | 'matches' | 'friends' | 'achievements' | 'cosmetics'>('overview')
   const [profile, setProfile] = useState<DBProfile | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Friends states
+  const [friends, setFriends] = useState<any[]>([])
+  const [friendsLoading, setFriendsLoading] = useState(false)
+
+  // Achievement progress state
+  const [achievementProgress, setAchievementProgress] = useState<any[]>([])
+
+  // Hangman stats state
+  const [hangmanStats, setHangmanStats] = useState<{
+    wordsSolved: number
+    wins: number
+    losses: number
+    correctGuesses: number
+    incorrectGuesses: number
+    fastestSolve: number | null
+    currentStreak: number
+    bestStreak: number
+  }>({
+    wordsSolved: 0,
+    wins: 0,
+    losses: 0,
+    correctGuesses: 0,
+    incorrectGuesses: 0,
+    fastestSolve: null,
+    currentStreak: 0,
+    bestStreak: 0
+  })
 
   // Match History states
   const [matches, setMatches] = useState<DBMatch[]>([])
@@ -105,6 +148,58 @@ export default function ProfilePage() {
   // 7-day activity tracking state
   const [activity, setActivity] = useState<Array<{ playedAt: string }>>([])
 
+  // Load local Hangman stats on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('gamehub_hangman_stats')
+      if (saved) {
+        setHangmanStats(JSON.parse(saved))
+      }
+    } catch (e) {
+      console.error('Failed to load local Hangman stats', e)
+    }
+  }, [])
+
+  // Online status helper
+  const getOnlinePresence = (lastSeenAt?: string | null) => {
+    if (!lastSeenAt) return { label: 'Offline', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)' }
+    const diffMs = Date.now() - new Date(lastSeenAt).getTime()
+    const diffSecs = diffMs / 1000
+    if (diffSecs < 60) {
+      return { label: 'Online', color: 'hsl(142 70% 55%)', dot: 'hsl(142 70% 50%)' }
+    } else if (diffSecs < 300) {
+      return { label: 'Away', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)' }
+    }
+    return { label: 'Offline', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)' }
+  }
+
+  // Fetch friends list on tab click or mount
+  useEffect(() => {
+    if (user && activeTab === 'friends') {
+      setFriendsLoading(true)
+      fetch('/api/friends')
+        .then((res) => {
+          if (res.ok) return res.json()
+          throw new Error('Failed to load friends')
+        })
+        .then((data) => {
+          setFriends(data.friends || [])
+          setFriendsLoading(false)
+        })
+        .catch((err) => {
+          console.error(err)
+          setFriendsLoading(false)
+        })
+    } else if (!user && activeTab === 'friends') {
+      // Guest mock friends
+      setFriends([
+        { id: 'buddy1', username: 'RetroPlayer', lastSeenAt: new Date(Date.now() - 30000).toISOString() },
+        { id: 'buddy2', username: 'PixelMaster', lastSeenAt: new Date(Date.now() - 120000).toISOString() },
+        { id: 'buddy3', username: 'GigaChad', lastSeenAt: new Date(Date.now() - 600000).toISOString() }
+      ])
+    }
+  }, [user, activeTab])
+
   // Load profile details
   const loadProfileDetails = () => {
     if (user) {
@@ -117,6 +212,7 @@ export default function ProfilePage() {
         .then((data) => {
           setProfile(data.profile)
           setActivity(data.activity || [])
+          setAchievementProgress(data.achievementProgress || [])
           setLoading(false)
         })
         .catch((err) => {
@@ -134,6 +230,7 @@ export default function ProfilePage() {
       const mockAchievementsDb = [
         { slug: 'first-game', name: 'First Move', description: 'Play your first game.', xpReward: 50, coinReward: 10 },
         { slug: 'first-win', name: 'Winner Winner', description: 'Win your first match.', xpReward: 100, coinReward: 25 },
+        { slug: 'hangman-perfect', name: 'Perfect Hangman', description: 'Solve a word without any wrong guesses.', xpReward: 150, coinReward: 50 }
       ]
 
       const simulatedAchievements = mockAchievementsDb
@@ -185,7 +282,20 @@ export default function ProfilePage() {
         selectedTitle: 'Beginner',
         achievements: simulatedAchievements,
         gameStats: simulatedGameStats,
+        inventory: [
+          { cosmeticItem: { id: 'frame-1', name: 'Standard Avatar Frame', type: 'AVATAR_FRAME', priceCoins: 0, assetUrl: null, metadata: null, isDefault: true } },
+          { cosmeticItem: { id: 'title-1', name: 'Beginner Title', type: 'TITLE', priceCoins: 0, assetUrl: null, metadata: null, isDefault: true } }
+        ]
       })
+
+      // Set simulated achievements progress
+      const guestTotalGames = simulatedGameStats.reduce((sum, g) => sum + g.playCount, 0)
+      const guestTotalWins = simulatedGameStats.reduce((sum, g) => sum + g.winCount, 0)
+      setAchievementProgress([
+        { slug: 'first-game', name: 'First Move', description: 'Play your first game.', category: 'Gameplay', current: guestTotalGames > 0 ? 1 : 0, target: 1, progressPercentage: guestTotalGames > 0 ? 100 : 0, isUnlocked: guestTotalGames > 0, xpReward: 50, coinReward: 10 },
+        { slug: 'first-win', name: 'Winner Winner', description: 'Win your first match.', category: 'Wins', current: guestTotalWins > 0 ? 1 : 0, target: 1, progressPercentage: guestTotalWins > 0 ? 100 : 0, isUnlocked: guestTotalWins > 0, xpReward: 100, coinReward: 25 },
+        { slug: 'hangman-perfect', name: 'Perfect Hangman', description: 'Solve a word without any wrong guesses.', category: 'Special', current: 0, target: 1, progressPercentage: 0, isUnlocked: false, xpReward: 150, coinReward: 50 }
+      ])
 
       // Load guest matches for activity mapping
       try {
@@ -516,13 +626,27 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Tabs Menu Selection */}
-      <div style={{ display: 'flex', borderBottom: '1px solid hsl(220 15% 16%)', gap: '1rem', paddingBottom: '0.25rem' }}>
+      {/* Tabs Menu Selection – horizontally swipeable on mobile */}
+      <div
+        className="no-scrollbar"
+        style={{
+          display: 'flex',
+          borderBottom: '1px solid hsl(220 15% 16%)',
+          gap: '0.25rem',
+          paddingBottom: '0.25rem',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         {[
           { id: 'overview', label: 'Overview', icon: '👤' },
-          { id: 'stats', label: 'Progression & Stats', icon: '📊' },
-          { id: 'ranked', label: 'Ranked League', icon: '🏆' },
-          { id: 'matches', label: 'Match History', icon: '📜' }
+          { id: 'stats', label: 'Stats', icon: '📊' },
+          { id: 'ranked', label: 'Ranked', icon: '🏆' },
+          { id: 'matches', label: 'Matches', icon: '📜' },
+          { id: 'achievements', label: 'Achievements', icon: '🎖️' },
+          { id: 'friends', label: 'Friends', icon: '👥' },
+          { id: 'cosmetics', label: 'Cosmetics', icon: '🎨' },
         ].map(t => (
           <button
             key={t.id}
@@ -532,14 +656,17 @@ export default function ProfilePage() {
               border: 'none',
               color: activeTab === t.id ? 'hsl(220 100% 70%)' : 'hsl(220 10% 50%)',
               fontWeight: 700,
-              fontSize: '0.95rem',
-              padding: '0.5rem 0.5rem 0.75rem',
+              fontSize: '0.82rem',
+              padding: '0.5rem 0.65rem 0.75rem',
               cursor: 'pointer',
               position: 'relative',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.4rem',
-              transition: 'color 0.2s'
+              gap: '0.35rem',
+              transition: 'color 0.2s',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              scrollSnapAlign: 'start',
             }}
             id={`profile-tab-${t.id}`}
           >
@@ -805,6 +932,31 @@ export default function ProfilePage() {
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)' }}>Games Played</div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginTop: '0.25rem' }}>{bbStats.playCount}</div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hangman Performance Stats Card */}
+          {hangmanStats.wins + hangmanStats.losses > 0 && (
+            <div className="card glass animate-fadeIn" style={{ padding: '1.5rem', borderRadius: 20, background: 'linear-gradient(135deg, hsl(222 20% 10% / 0.95), hsl(222 20% 7% / 0.95))', border: '1px solid hsl(220 15% 18%)' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1.25rem', letterSpacing: '0.05em' }}>
+                🔤 Hangman Performance
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
+                {[
+                  { icon: '✅', label: 'Words Solved', val: hangmanStats.wordsSolved, color: 'hsl(142 70% 55%)' },
+                  { icon: '🏆', label: 'Wins', val: hangmanStats.wins, color: 'hsl(45 100% 60%)' },
+                  { icon: '💀', label: 'Losses', val: hangmanStats.losses, color: 'hsl(0 80% 60%)' },
+                  { icon: '🎯', label: 'Accuracy', val: hangmanStats.correctGuesses + hangmanStats.incorrectGuesses > 0 ? `${Math.round((hangmanStats.correctGuesses / (hangmanStats.correctGuesses + hangmanStats.incorrectGuesses)) * 100)}%` : '—', color: 'hsl(220 100% 70%)' },
+                  { icon: '⚡', label: 'Fastest Solve', val: hangmanStats.fastestSolve !== null ? `${hangmanStats.fastestSolve}s` : '—', color: 'hsl(270 80% 65%)' },
+                  { icon: '🔥', label: 'Best Streak', val: hangmanStats.bestStreak, color: 'hsl(38 95% 60%)' },
+                ].map((s, i) => (
+                  <div key={i} style={{ background: 'hsl(222 20% 8% / 0.8)', border: '1px solid hsl(220 15% 15%)', padding: '1rem 0.75rem', borderRadius: 16, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>{s.icon}</div>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)' }}>{s.label}</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: s.color, marginTop: '0.2rem' }}>{s.val}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1174,6 +1326,235 @@ export default function ProfilePage() {
                 )}
               </div>
 
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB ACHIEVEMENTS */}
+      {activeTab === 'achievements' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Legend */}
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.75rem', color: 'hsl(220 10% 50%)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'hsl(142 70% 50%)', display: 'inline-block' }} />
+              Unlocked
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'hsl(220 20% 25%)', display: 'inline-block' }} />
+              In Progress
+            </span>
+          </div>
+
+          {achievementProgress.length === 0 ? (
+            <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'hsl(220 20% 7%)', borderRadius: 16, border: '1px dashed hsl(220 15% 15%)' }}>
+              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>🎖️</span>
+              <h4 style={{ margin: 0, fontWeight: 700, color: 'white' }}>No Achievements Yet</h4>
+              <p style={{ color: 'hsl(220 10% 45%)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
+                Play games to start earning achievements!
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
+              {achievementProgress.map((ach, idx) => (
+                <div
+                  key={ach.slug || idx}
+                  className="card glass"
+                  style={{
+                    padding: '1rem 1.25rem',
+                    borderRadius: 16,
+                    background: ach.isUnlocked
+                      ? 'linear-gradient(135deg, hsl(142 70% 10% / 0.6), hsl(142 70% 7% / 0.6))'
+                      : 'hsl(222 20% 8% / 0.6)',
+                    border: `1px solid ${ach.isUnlocked ? 'hsl(142 70% 25%)' : 'hsl(220 15% 14%)'}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.6rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 10,
+                      background: ach.isUnlocked ? 'hsl(142 70% 20%)' : 'hsl(220 20% 12%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.3rem', flexShrink: 0
+                    }}>
+                      {ach.isUnlocked ? '🏅' : '🔒'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 750, fontSize: '0.88rem', color: ach.isUnlocked ? 'hsl(142 70% 70%)' : 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {ach.name}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', marginTop: '0.1rem', lineHeight: 1.3 }}>
+                        {ach.description}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: '0.65rem', color: 'hsl(142 70% 55%)', fontWeight: 700 }}>+{ach.xpReward} XP</div>
+                      <div style={{ fontSize: '0.65rem', color: 'hsl(45 100% 55%)', fontWeight: 700 }}>🪙 {ach.coinReward}</div>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  {!ach.isUnlocked && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'hsl(220 10% 45%)', marginBottom: '0.25rem' }}>
+                        <span>{ach.current} / {ach.target}</span>
+                        <span>{ach.progressPercentage}%</span>
+                      </div>
+                      <div style={{ height: 5, background: 'hsl(220 20% 12%)', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ width: `${ach.progressPercentage}%`, height: '100%', background: 'linear-gradient(90deg, hsl(220 100% 60%), hsl(270 80% 60%))', borderRadius: 99 }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Category badge */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'hsl(220 10% 40%)', background: 'hsl(220 20% 10%)', padding: '0.15rem 0.5rem', borderRadius: 99 }}>
+                      {ach.category}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB FRIENDS */}
+      {activeTab === 'friends' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {!user ? (
+            <div className="card glass" style={{ padding: '2rem', borderRadius: 20, textAlign: 'center' }}>
+              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>👥</span>
+              <h3 style={{ fontWeight: 700, color: 'white', margin: '0 0 0.5rem' }}>Friend List</h3>
+              <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.82rem', margin: '0 0 0.75rem' }}>
+                Log in to see and manage your real friends list.
+              </p>
+            </div>
+          ) : null}
+
+          {friendsLoading ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }}>Loading friends...</div>
+          ) : friends.length === 0 ? (
+            <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'hsl(220 20% 7%)', borderRadius: 16, border: '1px dashed hsl(220 15% 15%)' }}>
+              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>👋</span>
+              <h4 style={{ margin: 0, fontWeight: 700, color: 'white' }}>No Friends Added</h4>
+              <p style={{ color: 'hsl(220 10% 45%)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
+                Add friends from the <a href="/dashboard/friends" style={{ color: 'hsl(220 100% 65%)', textDecoration: 'none', fontWeight: 700 }}>Friends page</a>.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {friends.map((friend: any) => {
+                const presence = getOnlinePresence(friend.lastSeenAt)
+                return (
+                  <div
+                    key={friend.id}
+                    className="card glass"
+                    style={{
+                      padding: '0.9rem 1.1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      background: 'linear-gradient(135deg, hsl(222 18% 11%), hsl(222 18% 8%))',
+                      border: '1px solid hsl(220 15% 14%)',
+                      borderRadius: 16,
+                    }}
+                  >
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg, hsl(220 100% 65%), hsl(270 80% 60%))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: 'white' }}>
+                        {friend.username?.[0]?.toUpperCase() ?? '?'}
+                      </div>
+                      <div style={{
+                        position: 'absolute', bottom: 0, right: 0, width: 11, height: 11,
+                        borderRadius: '50%', background: presence.dot, border: '2px solid hsl(222 18% 11%)',
+                        boxShadow: `0 0 5px ${presence.dot}`
+                      }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 750, fontSize: '0.9rem', color: 'white' }}>{friend.username}</div>
+                      <div style={{ fontSize: '0.68rem', color: presence.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{presence.label}</div>
+                    </div>
+                    <a
+                      href="/dashboard/friends"
+                      style={{
+                        fontSize: '0.72rem', fontWeight: 700, color: 'hsl(220 100% 65%)',
+                        background: 'hsl(220 100% 60% / 0.1)', border: '1px solid hsl(220 100% 60% / 0.25)',
+                        padding: '0.3rem 0.65rem', borderRadius: 8, textDecoration: 'none',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      View
+                    </a>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB COSMETICS */}
+      {activeTab === 'cosmetics' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {profile.inventory && profile.inventory.length > 0 ? (
+            <>
+              <div style={{ fontSize: '0.78rem', color: 'hsl(220 10% 50%)' }}>
+                {profile.inventory.length} item{profile.inventory.length !== 1 ? 's' : ''} in your collection
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.75rem' }}>
+                {profile.inventory.map((item: any, idx: number) => {
+                  const cosmetic = item.cosmeticItem
+                  const typeEmoji: Record<string, string> = {
+                    AVATAR_FRAME: '🖼️',
+                    BOARD_THEME: '🎨',
+                    CHAT_COLOR: '💬',
+                    TITLE: '🏷️',
+                    BADGE: '🏅',
+                    AVATAR: '🧑',
+                    CHAT_PACK: '📦',
+                    SCRATCHER: '🎰',
+                    EFFECT: '✨',
+                  }
+                  return (
+                    <div
+                      key={cosmetic.id || idx}
+                      className="card glass"
+                      style={{
+                        padding: '1.1rem',
+                        borderRadius: 16,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        gap: '0.5rem',
+                        background: cosmetic.isDefault
+                          ? 'hsl(222 20% 8% / 0.5)'
+                          : 'linear-gradient(135deg, hsl(270 50% 12% / 0.6), hsl(220 30% 9% / 0.6))',
+                        border: `1px solid ${cosmetic.isDefault ? 'hsl(220 15% 14%)' : 'hsl(270 50% 25%)'}`,
+                      }}
+                    >
+                      <div style={{ fontSize: '2rem' }}>{typeEmoji[cosmetic.type] || '🎁'}</div>
+                      <div style={{ fontWeight: 750, fontSize: '0.8rem', color: 'white', lineHeight: 1.2 }}>{cosmetic.name}</div>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'hsl(270 60% 60%)', background: 'hsl(270 50% 15%)', padding: '0.15rem 0.5rem', borderRadius: 99 }}>
+                        {cosmetic.type.replace(/_/g, ' ')}
+                      </div>
+                      {cosmetic.isDefault && (
+                        <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 40%)', fontWeight: 600 }}>Default</div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'hsl(220 20% 7%)', borderRadius: 16, border: '1px dashed hsl(220 15% 15%)' }}>
+              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>🎨</span>
+              <h4 style={{ margin: 0, fontWeight: 700, color: 'white' }}>No Cosmetics Yet</h4>
+              <p style={{ color: 'hsl(220 10% 45%)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
+                Visit the <a href="/dashboard/store" style={{ color: 'hsl(270 80% 65%)', textDecoration: 'none', fontWeight: 700 }}>Store</a> to get cosmetics.
+              </p>
             </div>
           )}
         </div>

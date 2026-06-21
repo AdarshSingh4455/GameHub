@@ -233,6 +233,17 @@ export const GAMES_REGISTRY: GameInfo[] = [
     badge: 'New',
     componentName: 'candycrush',
   },
+  {
+    slug: 'hangman',
+    name: 'Hangman',
+    category: 'Social',
+    emoji: '🪓',
+    description: 'Guess the hidden word letter by letter. Play solo or challenge opponents online!',
+    multiplayer: true,
+    type: 'internal',
+    badge: 'New',
+    componentName: 'hangman',
+  },
 ]
 
 export function getGameBySlug(slug: string): GameInfo | undefined {

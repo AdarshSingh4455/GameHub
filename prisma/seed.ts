@@ -49,6 +49,7 @@ const games = [
   { slug: 'block-blast',     name: 'Block Blast',        description: 'Place block shapes on the 8x8 grid. Clear rows and columns to score and build combos.', type: 'REWRITTEN', isMultiplay: false, category: 'puzzle' },
   { slug: 'neon-tetris',     name: 'Neon Tetris',        description: 'Glowing retro neon Tetris. Rotate, slide, and drop tetrominoes with SRS wall kicks, daily challenges, and combo chains.', type: 'REWRITTEN', isMultiplay: false, category: 'arcade' },
   { slug: 'ai-infinite-candy-crush', name: 'Candy Blast Infinity', description: 'Procedurally generated match-3 puzzle game. Match delicious candies and juicy fruits, trigger cascading combos, and clear challenging objectives!', type: 'REWRITTEN', isMultiplay: false, category: 'match-3' },
+  { slug: 'hangman',         name: 'Hangman',             description: 'Guess the hidden word letter by letter. Play solo or challenge opponents online!', type: 'REWRITTEN', isMultiplay: true,  category: 'social' },
 ]
 
 const achievements = [
@@ -135,6 +136,15 @@ const achievements = [
   { slug: 'cc-level-100', name: 'Century Matcher', description: 'Reach Level 100.', xpReward: 500, coinReward: 100, category: 'gameplay', gameSlug: 'ai-infinite-candy-crush' },
   { slug: 'cc-level-500', name: 'Crush Veteran', description: 'Reach Level 500.', xpReward: 750, coinReward: 200, category: 'gameplay', gameSlug: 'ai-infinite-candy-crush' },
   { slug: 'cc-level-1000', name: 'Match-3 Legend', description: 'Reach Level 1000.', xpReward: 1000, coinReward: 300, category: 'gameplay', gameSlug: 'ai-infinite-candy-crush' },
+  // Phase 21.5 additions: Hangman Achievements
+  { slug: 'hangman-first-win', name: 'First Hangman Win', description: 'Win your first Hangman match.', xpReward: 100, coinReward: 25, category: 'wins', gameSlug: 'hangman' },
+  { slug: 'hangman-wins-10', name: 'Hangman Challenger', description: 'Win 10 Hangman matches.', xpReward: 200, coinReward: 50, category: 'wins', gameSlug: 'hangman' },
+  { slug: 'hangman-wins-25', name: 'Hangman Expert', description: 'Win 25 Hangman matches.', xpReward: 300, coinReward: 75, category: 'wins', gameSlug: 'hangman' },
+  { slug: 'hangman-wins-100', name: 'Hangman Overlord', description: 'Win 100 Hangman matches.', xpReward: 500, coinReward: 150, category: 'wins', gameSlug: 'hangman' },
+  { slug: 'hangman-perfect-solver', name: 'Perfect Solver', description: 'Solve a word without making any wrong letter guesses.', xpReward: 200, coinReward: 50, category: 'special', gameSlug: 'hangman' },
+  { slug: 'hangman-no-wrong-guess', name: 'No Wrong Guess', description: 'Win a Hangman match with no incorrect letter guesses.', xpReward: 200, coinReward: 50, category: 'special', gameSlug: 'hangman' },
+  { slug: 'hangman-fast-thinker', name: 'Fast Thinker', description: 'Solve a Hangman word in under 30 seconds.', xpReward: 150, coinReward: 30, category: 'special', gameSlug: 'hangman' },
+  { slug: 'hangman-word-master', name: 'Word Master', description: 'Correctly guess 50 letters in Hangman.', xpReward: 200, coinReward: 50, category: 'gameplay', gameSlug: 'hangman' },
 ]
 
 async function main() {

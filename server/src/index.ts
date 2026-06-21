@@ -39,6 +39,7 @@ import { processMemoryMove, deleteMemorySession, getMemorySession, saveMemorySes
 import { processRpsMove, deleteRpsSession, getRpsSession, saveRpsSession, getMaskedRpsState } from './games/rps'
 import { processNumberGuessingMove, deleteNumberGuessingSession, getNumberGuessingSession, saveNumberGuessingSession, getMaskedNumberGuessingState } from './games/numberGuessing'
 import { processScribbleMove, deleteScribbleSession, getScribbleSession, saveScribbleSession, getScribbleMaskedState, endScribbleRound, setupNextScribbleTurn, clearScribbleInactivityCheck } from './games/scribble'
+import { processHangmanMove, deleteHangmanSession, getHangmanSession, saveHangmanSession, getMaskedHangmanState } from './games/hangman'
 import { INITIAL_STATES, handleMatchCompletion } from './games/framework'
 
 // Initialize Sentry SDK
@@ -823,6 +824,8 @@ io.on('connection', async (rawSocket) => {
         initialGameState = INITIAL_STATES['rps'](activePlayers, room.hostUserId)
       } else if (room.gameSlug === 'number-guessing') {
         initialGameState = INITIAL_STATES['number-guessing'](activePlayers, room.hostUserId)
+      } else if (room.gameSlug === 'hangman') {
+        initialGameState = INITIAL_STATES['hangman'](activePlayers, room.hostUserId)
       } else {
         throw new Error('Unsupported game slug')
       }
@@ -865,6 +868,8 @@ io.on('connection', async (rawSocket) => {
         await saveRpsSession(room.roomCode, initialGameState)
       } else if (room.gameSlug === 'number-guessing') {
         await saveNumberGuessingSession(room.roomCode, initialGameState)
+      } else if (room.gameSlug === 'hangman') {
+        await saveHangmanSession(room.roomCode, initialGameState)
       }
 
       await broadcastRoomUpdate(room.roomCode)
@@ -974,6 +979,8 @@ io.on('connection', async (rawSocket) => {
         gameState = await getRpsSession(normalizedCode, room.id, prisma).catch(() => null)
       } else if (room.gameSlug === 'number-guessing') {
         gameState = await getNumberGuessingSession(normalizedCode, room.id, prisma).catch(() => null)
+      } else if (room.gameSlug === 'hangman') {
+        gameState = await getHangmanSession(normalizedCode, room.id, prisma).catch(() => null)
       }
 
       if (callback) callback({ success: true })
@@ -994,6 +1001,8 @@ io.on('connection', async (rawSocket) => {
         broadcastState = getMaskedNumberGuessingState(broadcastState)
       } else if (room.gameSlug === 'scribble' && broadcastState) {
         broadcastState = getScribbleMaskedState(broadcastState, userId)
+      } else if (room.gameSlug === 'hangman' && broadcastState) {
+        broadcastState = getMaskedHangmanState(broadcastState, userId)
       }
 
       logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${broadcastState?.stage} gameSlug=${room.gameSlug}`)
@@ -1075,6 +1084,8 @@ io.on('connection', async (rawSocket) => {
           result = await processRpsMove(roomCode, room.id, userId, move, mappedPlayers, prisma, io)
         } else if (room.gameSlug === 'number-guessing') {
           result = await processNumberGuessingMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
+        } else if (room.gameSlug === 'hangman') {
+          result = await processHangmanMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
         } else {
           throw new Error('Unsupported game engine')
         }
@@ -1089,11 +1100,13 @@ io.on('connection', async (rawSocket) => {
           broadcastState = getMaskedNumberGuessingState(state)
         }
 
-        if (room.gameSlug === 'scribble') {
+        if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman') {
           for (const player of room.players) {
             const pSocketId = userSockets.get(player.userId)
             if (pSocketId) {
-              const maskedState = getScribbleMaskedState(state, player.userId)
+              const maskedState = room.gameSlug === 'scribble'
+                ? getScribbleMaskedState(state, player.userId)
+                : getMaskedHangmanState(state, player.userId)
               io.to(pSocketId).emit('game-update', {
                 gameState: maskedState,
                 gameFinished,
@@ -1231,6 +1244,11 @@ io.on('connection', async (rawSocket) => {
             finalGameState = INITIAL_STATES['scribble'](activePlayers, room.hostUserId)
             updatedTurn = null
             await saveScribbleSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'hangman') {
+            await deleteHangmanSession(roomCode)
+            finalGameState = INITIAL_STATES['hangman'](activePlayers, room.hostUserId)
+            updatedTurn = finalGameState.currentTurn
+            await saveHangmanSession(roomCode, finalGameState)
           }
 
           logger.info(`[VOTE-REPLAY] room=${roomCode} RESET → fresh board, nextTurn=${updatedTurn}`)
@@ -1256,6 +1274,8 @@ io.on('connection', async (rawSocket) => {
             await saveNumberGuessingSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'scribble') {
             await saveScribbleSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'hangman') {
+            await saveHangmanSession(roomCode, finalGameState)
           }
         }
 

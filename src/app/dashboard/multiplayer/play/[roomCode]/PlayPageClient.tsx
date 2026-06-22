@@ -104,12 +104,12 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
 
     socket.on('game-state', (data: any) => {
       console.log('[PLAY PAGE CLIENT GAME STATE RECEIVED]', { gameSlug: data.gameSession?.gameSlug, status: data.gameSession?.status })
-      setSession((prev: any) => {
-        if (prev?.status === 'FINISHED' && data.gameSession?.status !== 'FINISHED') {
-          return prev
-        }
-        return data.gameSession
-      })
+      const sessionData = data.gameSession ? {
+        ...data.gameSession,
+        clockOffset: data.serverTime ? Date.now() - data.serverTime : 0,
+        serverTime: data.serverTime || null
+      } : null
+      setSession(sessionData)
       setRoom(data.room)
       setPlayers(data.players || [])
       setIsLoading(false)
@@ -123,8 +123,10 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
           ...prev,
           gameState: data.gameState,
           winnerId: data.winnerId,
-          status: data.gameFinished ? 'FINISHED' : prev.status,
-          lastMove: data.lastMove
+          status: data.gameFinished ? 'FINISHED' : 'PLAYING',
+          lastMove: data.lastMove,
+          clockOffset: data.serverTime ? Date.now() - data.serverTime : (prev.clockOffset || 0),
+          serverTime: data.serverTime || prev.serverTime || null
         }
         // Auto-clear reconnect state when match is definitively finished
         if (data.gameFinished) {

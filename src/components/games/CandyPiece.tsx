@@ -4,7 +4,7 @@ export interface CandyPieceProps {
   color: string | null
   special: 'row' | 'column' | 'area' | 'color' | null
   blocker: 'ice' | 'stone' | 'lock' | 'double_lock' | 'crate' | null
-  size?: number
+  size?: number | string
   isSelected?: boolean
   isHovered?: boolean
 }

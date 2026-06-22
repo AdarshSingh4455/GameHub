@@ -81,7 +81,7 @@ const CandyCell: React.FC<CellProps> = React.memo(({ cell, isSelected, onClick }
         }
         blocker={cell.blocker}
         isSelected={isSelected}
-        size={46}
+        size="85%"
       />
     </div>
   )
@@ -516,55 +516,48 @@ export default function CandyBlastGame() {
       width: '100%',
     }} className="animate-fadeIn">
       {/* Top HUD Dashboard */}
-      <div className="card" style={{
-        padding: '1.25rem',
+      <div className="card flex flex-nowrap items-center justify-between gap-1 sm:gap-4 p-2.5 sm:p-5" style={{
         background: 'linear-gradient(135deg, hsl(220 20% 11%), hsl(220 20% 8%))',
         border: '1px solid hsl(220 20% 16%)',
         borderRadius: '20px',
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
       }}>
         {/* Level & Highscore */}
-        <div>
-          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ minWidth: 0, flexShrink: 1 }}>
+          <span className="hidden sm:inline" style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             AI Singleplayer Match-3
           </span>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.15rem' }}>
+          <h2 style={{ fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }} className="text-sm sm:text-lg">
             <span>Level {levelNumber}</span>
-            <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: 99, background: 'hsl(220 20% 18%)', color: 'hsl(45 100% 65%)', fontWeight: 800 }}>
+            <span style={{ fontSize: '0.6rem', padding: '0.1rem 0.35rem', borderRadius: 99, background: 'hsl(220 20% 18%)', color: 'hsl(45 100% 65%)', fontWeight: 800 }} className="text-[0.6rem]">
               {levelData.difficultyTier}
             </span>
           </h2>
-          <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', marginTop: '0.2rem' }}>
-            High Score: <strong style={{ color: 'white' }}>{saveData.highScore}</strong>
+          <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', marginTop: '0.1rem' }} className="text-[0.65rem] sm:text-xs">
+            HS: <strong style={{ color: 'white' }}>{saveData.highScore}</strong>
           </div>
         </div>
 
         {/* Moves constraint */}
-        <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'hsl(220 10% 50%)', textTransform: 'uppercase' }}>Moves Left</div>
+        <div className="px-2 py-1 sm:px-4 sm:py-2" style={{ textAlign: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, color: 'hsl(220 10% 50%)', textTransform: 'uppercase' }} className="text-[0.55rem] sm:text-xs">Moves</div>
           <div style={{
-            fontSize: '1.8rem',
             fontWeight: 950,
             color: movesRemaining <= 5 ? 'hsl(0 80% 60%)' : 'hsl(220 100% 70%)',
             lineHeight: 1.1,
             marginTop: '0.1rem',
-          }}>
+          }} className="text-lg sm:text-2xl">
             {movesRemaining}
           </div>
         </div>
 
         {/* Score tracker */}
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'hsl(220 10% 50%)', textTransform: 'uppercase' }}>Current Score</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'hsl(45 100% 60%)', lineHeight: 1.1, marginTop: '0.1rem' }}>
+        <div style={{ textAlign: 'right', minWidth: 0, flexShrink: 1 }}>
+          <div style={{ fontSize: '0.55rem', fontWeight: 700, color: 'hsl(220 10% 50%)', textTransform: 'uppercase' }} className="text-[0.55rem] sm:text-xs">Score</div>
+          <div style={{ fontWeight: 900, color: 'hsl(45 100% 60%)', lineHeight: 1.1, marginTop: '0.1rem' }} className="text-base sm:text-xl">
             {score}
           </div>
-          <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', marginTop: '0.25rem' }}>
-            Target: <strong>{levelData.targetScore}</strong>
+          <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', marginTop: '0.1rem' }} className="text-[0.65rem] sm:text-xs">
+            Tar: <strong>{levelData.targetScore}</strong>
           </div>
         </div>
       </div>
@@ -577,8 +570,7 @@ export default function CandyBlastGame() {
       }} className="md:grid-cols-3">
         {/* Left Side: Board Panel */}
         <div className="md:col-span-2" style={{ position: 'relative' }}>
-          <div className="card" style={{
-            padding: '1rem',
+          <div className="card p-2 sm:p-4" style={{
             background: 'hsl(220 20% 9% / 0.8)',
             border: '1px solid hsl(220 20% 15%)',
             borderRadius: '24px',
@@ -586,7 +578,6 @@ export default function CandyBlastGame() {
             alignItems: 'center',
             justifyContent: 'center',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-            minHeight: '400px',
           }}>
             {isShuffling && (
               <div style={{
@@ -634,8 +625,7 @@ export default function CandyBlastGame() {
         {/* Right Side: Level Objectives Panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Objectives Card */}
-          <div className="card" style={{
-            padding: '1.25rem',
+          <div className="card p-3 sm:p-5" style={{
             background: 'hsl(220 20% 10% / 0.95)',
             border: '1px solid hsl(220 20% 16%)',
             borderRadius: '20px',
@@ -687,39 +677,35 @@ export default function CandyBlastGame() {
           </div>
 
           {/* Level Switch / Reset tools */}
-          <div className="card" style={{
-            padding: '1.25rem',
+          <div className="card p-3 sm:p-5 flex flex-row sm:flex-col gap-2" style={{
             background: 'hsl(220 20% 9%)',
             border: '1px solid hsl(220 20% 15%)',
             borderRadius: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
           }}>
             <button
               onClick={() => initLevel(levelNumber)}
-              className="btn btn-secondary"
-              style={{ padding: '0.45rem', fontSize: '0.8rem', borderRadius: '10px' }}
+              className="btn btn-secondary flex-1 sm:flex-initial"
+              style={{ padding: '0.45rem', fontSize: '0.75rem', borderRadius: '10px' }}
             >
-              🔄 Restart Level
+              🔄 Restart
             </button>
 
             {levelNumber > 1 && (
               <button
                 onClick={() => setLevelNumber((l) => Math.max(1, l - 1))}
-                className="btn btn-secondary"
-                style={{ padding: '0.45rem', fontSize: '0.8rem', borderRadius: '10px' }}
+                className="btn btn-secondary flex-1 sm:flex-initial"
+                style={{ padding: '0.45rem', fontSize: '0.75rem', borderRadius: '10px' }}
               >
-                ◀ Previous Level
+                ◀ Prev
               </button>
             )}
 
             <button
               onClick={() => setLevelNumber((l) => l + 1)}
-              className="btn btn-secondary"
-              style={{ padding: '0.45rem', fontSize: '0.8rem', borderRadius: '10px' }}
+              className="btn btn-secondary flex-1 sm:flex-initial"
+              style={{ padding: '0.45rem', fontSize: '0.75rem', borderRadius: '10px' }}
             >
-              Next Level ▶
+              Next ▶
             </button>
           </div>
         </div>

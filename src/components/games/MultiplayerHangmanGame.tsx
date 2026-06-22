@@ -54,6 +54,11 @@ export default function MultiplayerHangmanGame({
   const opponentWord = isP1 ? gameState.p2Word : gameState.p1Word // masked from server
   const myGuesses = isP1 ? gameState.p1Guesses || [] : gameState.p2Guesses || []
   const opponentGuesses = isP1 ? gameState.p2Guesses || [] : gameState.p1Guesses || []
+  const opponentSolvedCount = myWord
+    ? (gameState.winnerId === opponentId
+        ? myWord.length
+        : myWord.split('').filter((char: string) => opponentGuesses.includes(char)).length)
+    : 0
   const myLives = isP1 ? gameState.p1Lives : gameState.p2Lives
   const opponentLives = isP1 ? gameState.p2Lives : gameState.p1Id ? gameState.p1Lives : 8
   const myIncorrect = isP1 ? gameState.p1IncorrectGuesses || [] : gameState.p2IncorrectGuesses || []
@@ -281,9 +286,9 @@ export default function MultiplayerHangmanGame({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center', margin: '0.5rem 0' }}>
                 <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)' }}>Solved Letters:</span>
                 <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>
-                  {countSolvedCharacters(isP1 ? gameState.p1Word : gameState.p2Word) /* opponent's board is my word */}
+                  {opponentSolvedCount}
                   <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 50%)' }}>
-                    /{isP1 ? gameState.p1Word?.length : gameState.p2Word?.length}
+                    /{myWord?.length || 0}
                   </span>
                 </span>
               </div>

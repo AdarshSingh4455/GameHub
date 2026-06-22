@@ -964,7 +964,8 @@ io.on('connection', async (rawSocket) => {
                     username: p.profile?.username || 'Player',
                     avatarUrl: p.profile?.avatarUrl || null,
                     level: p.profile?.level || 1
-                }))
+                })),
+                serverTime: Date.now()
             });
         }
         catch (err) {
@@ -1048,15 +1049,17 @@ io.on('connection', async (rawSocket) => {
                 if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman') {
                     for (const player of room.players) {
                         const pSocketId = exports.userSockets.get(player.userId);
-                        if (pSocketId) {
+                        const targetSocket = player.userId === userId ? socket : (pSocketId ? io.to(pSocketId) : null);
+                        if (targetSocket) {
                             const maskedState = room.gameSlug === 'scribble'
                                 ? (0, scribble_1.getScribbleMaskedState)(state, player.userId)
                                 : (0, hangman_1.getMaskedHangmanState)(state, player.userId);
-                            io.to(pSocketId).emit('game-update', {
+                            targetSocket.emit('game-update', {
                                 gameState: maskedState,
                                 gameFinished,
                                 winnerId,
-                                lastMove: { userId, move }
+                                lastMove: { userId, move },
+                                serverTime: Date.now()
                             });
                         }
                     }
@@ -1066,7 +1069,8 @@ io.on('connection', async (rawSocket) => {
                         gameState: broadcastState,
                         gameFinished,
                         winnerId,
-                        lastMove: { userId, move }
+                        lastMove: { userId, move },
+                        serverTime: Date.now()
                     });
                 }
                 if (gameFinished) {
@@ -1246,7 +1250,8 @@ io.on('connection', async (rawSocket) => {
                     gameState: finalGameState,
                     gameFinished: updatedStatus === 'FINISHED',
                     winnerId: updatedWinnerId,
-                    lastMove: { userId, type: 'replay_vote' }
+                    lastMove: { userId, type: 'replay_vote' },
+                    serverTime: Date.now()
                 });
                 if (activeVoteCount >= activePlayers.length) {
                     // Trigger client re-sync after replay reset

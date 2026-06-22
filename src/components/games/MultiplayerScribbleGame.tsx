@@ -337,14 +337,15 @@ export default function MultiplayerScribbleGame({
   useEffect(() => {
     if (stage === 'FINISHED' || stage === 'LOBBY_SETTINGS') return
     const limit = stage === 'WORD_SELECTION' ? 15 : stage === 'ROUND_SUMMARY' ? 8 : timerDuration
+    const clockOffset = session?.clockOffset || 0
     const updateTimer = () => {
-      const elapsed = Math.floor((Date.now() - timerStart) / 1000)
+      const elapsed = Math.floor((Date.now() - clockOffset - timerStart) / 1000)
       setTimerRemaining(Math.max(0, limit - elapsed))
     }
     updateTimer()
     const interval = setInterval(updateTimer, 500)
     return () => clearInterval(interval)
-  }, [stage, timerStart, timerDuration])
+  }, [stage, timerStart, timerDuration, session?.clockOffset])
 
   const timerPercent = stage === 'DRAWING' ? (timerRemaining / timerDuration) * 100 : 100
 
@@ -508,7 +509,7 @@ export default function MultiplayerScribbleGame({
                       Choose the round drawing time for the entire match.
                     </p>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                      {[30, 45, 60].map(time => (
+                      {[15, 30, 45, 60].map(time => (
                         <button id={`scribble-settings-time-${time}`} key={time} className="btn btn-primary" onClick={() => handleStartMatchWithSettings(time)} style={{ minWidth: 80, borderRadius: 10 }}>
                           ⏱ {time}s
                         </button>

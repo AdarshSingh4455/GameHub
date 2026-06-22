@@ -239,7 +239,7 @@ export async function processScribbleMove(
     }
 
     const duration = move.timerDuration || 45
-    if (duration !== 30 && duration !== 45 && duration !== 60) {
+    if (duration !== 15 && duration !== 30 && duration !== 45 && duration !== 60) {
       throw new Error('Invalid timer duration')
     }
 

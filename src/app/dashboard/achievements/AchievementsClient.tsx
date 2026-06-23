@@ -44,7 +44,7 @@ export default function AchievementsClient({ user }: Props) {
     if (user) {
       // Authenticated User: Load achievements list & progress from API
       setLoading(true)
-      fetch('/api/profile/details')
+      fetch('/api/profile/details?achievements=true')
         .then(res => {
           if (res.ok) return res.json()
           throw new Error('Failed to load achievements')

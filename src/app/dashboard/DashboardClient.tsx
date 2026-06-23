@@ -35,7 +35,7 @@ export default function DashboardClient({ user, username }: Props) {
     : GAMES_REGISTRY.filter(g => g.category.toLowerCase() === selectedCategory.toLowerCase())
 
   return (
-    <div style={{ maxWidth: 1100, display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }} className="animate-fadeIn safe-bottom-padding">
+    <div style={{ maxWidth: 1100, display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%', marginInline: 'auto' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       {/* Header */}
       <div>
         <h1 style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.8rem)', fontWeight: 900, marginBottom: '0.25rem', color: 'white' }}>

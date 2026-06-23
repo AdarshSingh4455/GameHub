@@ -275,17 +275,22 @@ export default function SinglePlayerXPModal({ data, onClose }: Props) {
         <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
           <h2
             style={{
-              fontSize: '2.2rem',
+              fontSize: '2rem',
               fontWeight: 950,
               color: 'hsl(45 100% 60%)',
               letterSpacing: '-0.03em',
               textTransform: 'uppercase',
               margin: 0,
               textShadow: '0 0 20px rgba(251, 191, 36, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
             }}
             id="sp-modal-title"
           >
-            🏆 SESSION COMPLETE
+            <span>🏆</span>
+            <span>SESSION COMPLETE</span>
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'hsl(220 10% 55%)', marginTop: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {gameSlug.replace('-', ' ')} • LEVEL {currentLvl}
@@ -407,28 +412,30 @@ export default function SinglePlayerXPModal({ data, onClose }: Props) {
         {/* Rewards Row */}
         <div
           style={{
+            background: 'hsl(222 20% 7% / 0.7)',
+            borderRadius: 18,
+            border: '1px solid hsl(220 15% 16%)',
+            padding: '1.25rem',
             display: 'flex',
-            justifyContent: 'center',
-            gap: '1.5rem',
-            padding: '0.5rem 0',
             position: 'relative',
-            zIndex: 1
+            zIndex: 1,
+            gap: '0.5rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span style={{ fontSize: '1.2rem' }}>🔵</span>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>+{xpDisplay}</div>
-              <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 55%)' }}>XP Earned</div>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
+              +{xpDisplay}
             </div>
+            <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span style={{ fontSize: '1.2rem' }}>🪙</span>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>+{coinsDisplay}</div>
-              <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 55%)' }}>Coins Won</div>
+          {coinsGained > 0 && (
+            <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
+                +{coinsDisplay}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Coins Won</div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Level Progress */}
@@ -436,12 +443,8 @@ export default function SinglePlayerXPModal({ data, onClose }: Props) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
             <span style={{ color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Level {levelDisplay}</span>
             <span style={{ fontWeight: 700, color: 'hsl(220 100% 75%)' }}>
-              {Math.max(0, (levelDisplay === oldLevel ? oldXP : newXP) - xpRequiredForLevel(levelDisplay))} / {xpForNextLevel(levelDisplay)} XP
+              {Math.max(0, (levelDisplay === oldLevel ? oldXP : newXP) - xpRequiredForLevel(levelDisplay))} / {xpForNextLevel(levelDisplay)} XP ({barPercent}%)
             </span>
-          </div>
-          {/* Block progress bar text representation */}
-          <div style={{ fontFamily: 'monospace', fontSize: '0.95rem', color: 'hsl(220 100% 70%)', textAlign: 'center', margin: '0.25rem 0', letterSpacing: '0.05em' }}>
-            {getBlockProgressBar(barPercent)}
           </div>
           <div style={{ height: 8, background: 'hsl(220 20% 8%)', borderRadius: 99 }}>
             <div
@@ -456,13 +459,24 @@ export default function SinglePlayerXPModal({ data, onClose }: Props) {
           </div>
           {/* Next Level Unlock Preview */}
           <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', background: 'hsl(220 20% 7% / 0.5)', padding: '0.45rem 0.75rem', borderRadius: 10, border: '1px dashed hsl(220 15% 15%)', textAlign: 'left', marginTop: '0.25rem' }}>
-            <strong style={{ color: 'hsl(270 80% 65%)' }}>🎁 Reward Preview: Next Level Unlocks:</strong>
-            <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.15rem', color: 'hsl(220 10% 65%)' }}>
-              <span>Coins</span>
-              <span>•</span>
-              <span>Badge</span>
-              <span>•</span>
-              <span>Achievement Progress</span>
+            <strong style={{ color: 'hsl(270 80% 65%)', display: 'block', marginBottom: '0.35rem' }}>🎁 Reward Preview: Next Level Unlocks:</strong>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {['Coins', 'Badge', 'Achievement Progress'].map((item, idx) => (
+                <span
+                  key={idx}
+                  style={{
+                    background: 'hsl(220 20% 12%)',
+                    color: 'hsl(220 100% 80%)',
+                    padding: '0.15rem 0.45rem',
+                    borderRadius: 6,
+                    fontSize: '0.65rem',
+                    fontWeight: 600,
+                    border: '1px solid hsl(220 15% 18%)',
+                  }}
+                >
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
         </div>

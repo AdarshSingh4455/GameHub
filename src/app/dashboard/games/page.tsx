@@ -30,7 +30,7 @@ export default function GamesDirectoryPage() {
   })
 
   return (
-    <div style={{ maxWidth: 1100 }} className="animate-fadeIn">
+    <div style={{ maxWidth: 1100, marginInline: 'auto', width: '100%' }} className="animate-fadeIn mobile-centered-wrapper">
       {/* Header section */}
       <div style={{ marginBottom: '2rem' }} className="page-header">
         <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.2rem)', fontWeight: 800, marginBottom: '0.5rem' }}>

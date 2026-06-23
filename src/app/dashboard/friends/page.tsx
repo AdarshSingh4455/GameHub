@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import ProfileCardModal from '@/components/layout/ProfileCardModal'
 import { useToast } from '@/lib/contexts/ToastContext'
+import Avatar from '@/components/shared/Avatar'
 
 interface ProfileSummary {
   id: string
@@ -15,6 +16,8 @@ interface ProfileSummary {
   friendCode?: string | null
   lastSeenAt?: string | null
   friendshipStatus?: string
+  selectedFrame?: string | null
+  selectedTitle?: string | null
 }
 
 const MULTIPLAYER_GAMES = [
@@ -265,7 +268,7 @@ export default function FriendsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn safe-bottom-padding">
+    <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       
       {/* Header and Friend Code info */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
@@ -495,9 +498,12 @@ export default function FriendsPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             {/* Avatar with live status dot */}
                             <div style={{ position: 'relative' }}>
-                              <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg, hsl(220 100% 65%), hsl(270 80% 60%))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: 'white' }}>
-                                {friend.username[0].toUpperCase()}
-                              </div>
+                              <Avatar
+                                avatarUrl={friend.avatarUrl}
+                                username={friend.username}
+                                selectedFrame={friend.selectedFrame}
+                                size={42}
+                              />
                               <div
                                 style={{
                                   position: 'absolute',
@@ -508,13 +514,14 @@ export default function FriendsPage() {
                                   borderRadius: '50%',
                                   background: presence.dot,
                                   border: '2px solid hsl(222 18% 12%)',
-                                  boxShadow: `0 0 6px ${presence.dot}`
+                                  boxShadow: `0 0 6px ${presence.dot}`,
+                                  zIndex: 5
                                 }}
                               />
                             </div>
 
                             <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <button
                                   onClick={() => setSelectedProfileId(friend.id)}
                                   style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.92rem', color: 'white', cursor: 'pointer' }}
@@ -522,6 +529,11 @@ export default function FriendsPage() {
                                 >
                                   {friend.username}
                                 </button>
+                                {friend.selectedTitle && (
+                                  <span style={{ fontSize: '0.65rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                    {friend.selectedTitle}
+                                  </span>
+                                )}
                                 <span style={{ fontSize: '0.65rem', fontWeight: 700, color: presence.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                   {presence.label}
                                 </span>
@@ -579,17 +591,27 @@ export default function FriendsPage() {
                         pendingIncoming.map(req => (
                           <div key={req.id} className="card" style={{ padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)', borderRadius: 14 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, hsl(220 100% 65%), hsl(270 80% 60%))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem', color: 'white' }}>
-                                {req.username[0].toUpperCase()}
-                              </div>
+                              <Avatar
+                                avatarUrl={req.avatarUrl}
+                                username={req.username}
+                                selectedFrame={req.selectedFrame}
+                                size={36}
+                              />
                               <div>
-                                <button
-                                  onClick={() => setSelectedProfileId(req.id)}
-                                  style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer' }}
-                                  className="hover-underline"
-                                >
-                                  {req.username}
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                  <button
+                                    onClick={() => setSelectedProfileId(req.id)}
+                                    style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer' }}
+                                    className="hover-underline"
+                                  >
+                                    {req.username}
+                                  </button>
+                                  {req.selectedTitle && (
+                                    <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                      {req.selectedTitle}
+                                    </span>
+                                  )}
+                                </div>
                                 <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>Level {req.level}</div>
                               </div>
                             </div>
@@ -617,17 +639,27 @@ export default function FriendsPage() {
                         pendingOutgoing.map(req => (
                           <div key={req.id} className="card" style={{ padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)', borderRadius: 14 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'hsl(220 15% 20%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', color: 'hsl(220 10% 60%)' }}>
-                                {req.username[0].toUpperCase()}
-                              </div>
+                              <Avatar
+                                avatarUrl={req.avatarUrl}
+                                username={req.username}
+                                selectedFrame={req.selectedFrame}
+                                size={36}
+                              />
                               <div>
-                                <button
-                                  onClick={() => setSelectedProfileId(req.id)}
-                                  style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'hsl(220 10% 80%)', cursor: 'pointer' }}
-                                  className="hover-underline"
-                                >
-                                  {req.username}
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                  <button
+                                    onClick={() => setSelectedProfileId(req.id)}
+                                    style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'hsl(220 10% 80%)', cursor: 'pointer' }}
+                                    className="hover-underline"
+                                  >
+                                    {req.username}
+                                  </button>
+                                  {req.selectedTitle && (
+                                    <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                      {req.selectedTitle}
+                                    </span>
+                                  )}
+                                </div>
                                 <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>Level {req.level}</div>
                               </div>
                             </div>
@@ -670,17 +702,27 @@ export default function FriendsPage() {
                         searchResults.map(p => (
                           <div key={p.id} className="card" style={{ padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)', borderRadius: 14 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, hsl(220 100% 65%), hsl(270 80% 60%))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem', color: 'white' }}>
-                                {p.username[0].toUpperCase()}
-                              </div>
+                              <Avatar
+                                avatarUrl={p.avatarUrl}
+                                username={p.username}
+                                selectedFrame={p.selectedFrame}
+                                size={36}
+                              />
                               <div>
-                                <button
-                                  onClick={() => setSelectedProfileId(p.id)}
-                                  style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer' }}
-                                  className="hover-underline"
-                                >
-                                  {p.username}
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                  <button
+                                    onClick={() => setSelectedProfileId(p.id)}
+                                    style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer' }}
+                                    className="hover-underline"
+                                  >
+                                    {p.username}
+                                  </button>
+                                  {p.selectedTitle && (
+                                    <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                      {p.selectedTitle}
+                                    </span>
+                                  )}
+                                </div>
                                 <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>
                                   Level {p.level} · {p.xp.toLocaleString()} XP
                                 </div>
@@ -752,17 +794,27 @@ export default function FriendsPage() {
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                          <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, hsl(220 100% 65%), hsl(270 80% 60%))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', color: 'white' }}>
-                            {player.username[0].toUpperCase()}
-                          </div>
+                          <Avatar
+                            avatarUrl={player.avatarUrl}
+                            username={player.username}
+                            selectedFrame={player.selectedFrame}
+                            size={38}
+                          />
                           <div>
-                            <button
-                              onClick={() => setSelectedProfileId(player.id)}
-                              style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.9rem', color: 'white', cursor: 'pointer' }}
-                              className="hover-underline"
-                            >
-                              {player.username}
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() => setSelectedProfileId(player.id)}
+                                style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.9rem', color: 'white', cursor: 'pointer' }}
+                                className="hover-underline"
+                              >
+                                {player.username}
+                              </button>
+                              {player.selectedTitle && (
+                                <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                  {player.selectedTitle}
+                                </span>
+                              )}
+                            </div>
                             <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '0.1rem' }}>
                               Level {player.level} · {player.xp.toLocaleString()} XP
                             </div>

@@ -319,29 +319,22 @@ export default function PostGameXPModal({ data, onClose }: Props) {
 
         {/* Modal Header: Result Emoji & Title */}
         <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-          <div
-            style={{
-              fontSize: '4.8rem',
-              lineHeight: 1,
-              marginBottom: '0.5rem',
-              filter: 'drop-shadow(0 4px 15px rgba(0,0,0,0.5))',
-              display: 'inline-block',
-            }}
-            className={currentOutcome.emojiClass}
-          >
-            {currentOutcome.emoji}
-          </div>
           <h2
             style={{
-              fontSize: '2.2rem',
+              fontSize: '2rem',
               fontWeight: 950,
               color: currentOutcome.text,
               letterSpacing: '-0.03em',
               textTransform: 'uppercase',
               margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
             }}
           >
-            {currentOutcome.title}
+            <span>{currentOutcome.emoji}</span>
+            <span>{currentOutcome.title.toUpperCase()}</span>
           </h2>
           <p style={{ fontSize: '0.82rem', color: 'hsl(220 10% 50%)', marginTop: '0.3rem' }}>
             Finished playing {gameSlug.replace('-', ' ')}
@@ -356,20 +349,19 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             border: '1px solid hsl(220 15% 16%)',
             padding: '1.25rem',
             display: 'flex',
-            justifyContent: 'space-around',
-            textAlign: 'center',
             position: 'relative',
             zIndex: 1,
+            gap: '0.5rem',
           }}
         >
-          <div>
+          <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
               +{xpDisplay}
             </div>
             <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
           </div>
           {coinsGained > 0 && (
-            <div style={{ borderLeft: '1px solid hsl(220 15% 16%)', paddingLeft: '1.5rem' }}>
+            <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
               <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
                 +{coinsDisplay}
               </div>
@@ -377,7 +369,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             </div>
           )}
           {currentStreak > 0 && (
-            <div style={{ borderLeft: '1px solid hsl(220 15% 16%)', paddingLeft: '1.5rem' }}>
+            <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
               <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'hsl(38 95% 60%)' }}>
                 🔥 {currentStreak}
               </div>
@@ -413,13 +405,9 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
             <span style={{ color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Level {levelDisplay}</span>
             <span style={{ fontWeight: 700, color: 'hsl(220 100% 75%)' }}>
-              {Math.max(0, (levelDisplay === oldLevel ? oldXP : newXP) - xpRequiredForLevel(levelDisplay))} / {xpForNextLevel(levelDisplay)} XP
+              {Math.max(0, (levelDisplay === oldLevel ? oldXP : newXP) - xpRequiredForLevel(levelDisplay))} / {xpForNextLevel(levelDisplay)} XP ({barPercent}%)
             </span>
             <span style={{ color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Level {levelDisplay + 1}</span>
-          </div>
-          {/* Block progress bar text representation */}
-          <div style={{ fontFamily: 'monospace', fontSize: '1rem', color: 'hsl(220 100% 70%)', textAlign: 'center', margin: '0.25rem 0', letterSpacing: '0.05em' }}>
-            {getBlockProgressBar(barPercent)}
           </div>
           <div className="xp-bar" style={{ height: 10, background: 'hsl(220 20% 9%)', borderRadius: 99 }}>
             <div
@@ -435,13 +423,24 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           </div>
           {/* Next Level Unlock Preview */}
           <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', background: 'hsl(220 20% 7% / 0.5)', padding: '0.5rem 0.75rem', borderRadius: 10, border: '1px dashed hsl(220 15% 15%)', textAlign: 'left', marginTop: '0.25rem' }}>
-            <strong style={{ color: 'hsl(270 80% 65%)' }}>🎁 Reward Preview: Next Level Unlocks:</strong>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.2rem', color: 'hsl(220 10% 65%)' }}>
-              <span>Coins</span>
-              <span>•</span>
-              <span>Badge</span>
-              <span>•</span>
-              <span>Achievement Progress</span>
+            <strong style={{ color: 'hsl(270 80% 65%)', display: 'block', marginBottom: '0.35rem' }}>🎁 Reward Preview: Next Level Unlocks:</strong>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {['Coins', 'Badge', 'Achievement Progress'].map((item, idx) => (
+                <span
+                  key={idx}
+                  style={{
+                    background: 'hsl(220 20% 12%)',
+                    color: 'hsl(220 100% 80%)',
+                    padding: '0.15rem 0.45rem',
+                    borderRadius: 6,
+                    fontSize: '0.65rem',
+                    fontWeight: 600,
+                    border: '1px solid hsl(220 15% 18%)',
+                  }}
+                >
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
         </div>
@@ -535,7 +534,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               style={{ flex: 1, borderRadius: 12 }}
               id="modal-replay-btn"
             >
-              🔄 Play Again
+              Play Again
             </button>
             <button
               className="btn btn-secondary"
@@ -543,7 +542,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               style={{ flex: 1, borderRadius: 12 }}
               id="modal-dashboard-btn"
             >
-              🏠 Dashboard
+              Dashboard
             </button>
           </div>
 
@@ -559,7 +558,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             }}
             id="modal-nextgame-btn"
           >
-            ⏩ Next Game: {nextGame.emoji} {nextGame.name}
+            Next Game: {nextGame.name}
           </button>
         </div>
       </div>

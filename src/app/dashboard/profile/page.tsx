@@ -82,6 +82,91 @@ function getBlockProgressBar(percent: number, size: number = 10): string {
   return '█'.repeat(filledCount) + '░'.repeat(emptyCount) + ` ${percent}%`
 }
 
+function ProfileHeaderSkeleton() {
+  return (
+    <div
+      className="card glass profile-header-container animate-pulse"
+      style={{
+        padding: '2rem',
+        borderRadius: 24,
+        display: 'flex',
+        gap: '2rem',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        background: 'linear-gradient(135deg, hsl(220 20% 10% / 0.95), hsl(220 20% 7% / 0.95))',
+        border: '1px solid hsl(220 15% 18%)',
+      }}
+    >
+      <div style={{ width: 88, height: 88, borderRadius: '50%', background: 'hsl(220 15% 20%)' }} />
+      <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ height: 28, width: 200, background: 'hsl(220 15% 20%)', borderRadius: 8 }} />
+        <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.65rem' }}>
+          <div style={{ height: 16, width: 120, background: 'hsl(220 15% 20%)', borderRadius: 4 }} />
+          <div style={{ height: 16, width: 80, background: 'hsl(220 15% 20%)', borderRadius: 4 }} />
+          <div style={{ height: 16, width: 80, background: 'hsl(220 15% 20%)', borderRadius: 4 }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OverviewSkeleton() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+      <div className="card glass animate-pulse" style={{ gridColumn: '1 / -1', height: 260, borderRadius: 24, background: 'hsl(220 20% 8% / 0.95)', border: '1px solid hsl(220 15% 18%)' }} />
+      <div className="card glass animate-pulse" style={{ height: 200, borderRadius: 20, background: 'hsl(220 20% 8% / 0.95)', border: '1px solid hsl(220 15% 18%)' }} />
+      <div className="card glass animate-pulse" style={{ height: 200, borderRadius: 20, background: 'hsl(220 20% 8% / 0.95)', border: '1px solid hsl(220 15% 18%)' }} />
+    </div>
+  )
+}
+
+function StatsSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="card glass animate-pulse" style={{ height: 80, borderRadius: 16, background: 'hsl(220 20% 8% / 0.95)', border: '1px solid hsl(220 15% 18%)' }} />
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+        <div className="card glass animate-pulse" style={{ height: 220, borderRadius: 20, background: 'hsl(220 20% 8% / 0.95)', border: '1px solid hsl(220 15% 18%)' }} />
+        <div className="card glass animate-pulse" style={{ height: 220, borderRadius: 20, background: 'hsl(220 20% 8% / 0.95)', border: '1px solid hsl(220 15% 18%)' }} />
+      </div>
+    </div>
+  )
+}
+
+function MatchesSkeleton() {
+  return (
+    <div className="card glass animate-pulse" style={{ padding: '1.5rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'hsl(220 20% 8% / 0.95)', border: '1px solid hsl(220 15% 18%)' }}>
+      <div style={{ height: 40, width: '100%', background: 'hsl(220 15% 18%)', borderRadius: 12 }} />
+      {[1, 2, 3].map((i) => (
+        <div key={i} style={{ height: 70, background: 'hsl(220 15% 18%)', borderRadius: 16 }} />
+      ))}
+    </div>
+  )
+}
+
+function AchievementsSkeleton() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={i} className="card glass animate-pulse" style={{ height: 110, borderRadius: 16, background: 'hsl(220 20% 8% / 0.95)', border: '1px solid hsl(220 15% 18%)' }} />
+      ))}
+    </div>
+  )
+}
+
+function FriendsSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="card glass animate-pulse" style={{ height: 74, borderRadius: 16, background: 'hsl(220 20% 8% / 0.95)', border: '1px solid hsl(220 15% 18%)' }} />
+      ))}
+    </div>
+  )
+}
+
 export default function ProfilePage() {
   const { user } = useGameSession()
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'ranked' | 'matches' | 'friends' | 'achievements' | 'cosmetics'>('overview')
@@ -94,6 +179,7 @@ export default function ProfilePage() {
 
   // Achievement progress state
   const [achievementProgress, setAchievementProgress] = useState<any[]>([])
+  const [achievementsLoading, setAchievementsLoading] = useState(false)
 
   // Hangman stats state
   const [hangmanStats, setHangmanStats] = useState<{
@@ -125,6 +211,7 @@ export default function ProfilePage() {
     bestCombo: number
     avgLines: number
   } | null>(null)
+  const [bbStatsLoading, setBbStatsLoading] = useState(false)
   const [matchPage, setMatchPage] = useState(1)
   const [matchTotalPages, setMatchTotalPages] = useState(1)
   const [matchFilterGame, setMatchFilterGame] = useState('all')
@@ -150,6 +237,7 @@ export default function ProfilePage() {
 
   // 7-day activity tracking state
   const [activity, setActivity] = useState<Array<{ playedAt: string }>>([])
+  const [activityLoading, setActivityLoading] = useState(false)
 
   // Load local Hangman stats on mount
   useEffect(() => {
@@ -203,6 +291,46 @@ export default function ProfilePage() {
     }
   }, [user, activeTab])
 
+  // Fetch achievement progress on tab click
+  useEffect(() => {
+    if (user && activeTab === 'achievements') {
+      setAchievementsLoading(true)
+      fetch('/api/profile/details?achievements=true')
+        .then((res) => {
+          if (res.ok) return res.json()
+          throw new Error('Failed to load achievements')
+        })
+        .then((data) => {
+          setAchievementProgress(data.achievementProgress || [])
+          setAchievementsLoading(false)
+        })
+        .catch((err) => {
+          console.error(err)
+          setAchievementsLoading(false)
+        })
+    }
+  }, [user, activeTab])
+
+  // Fetch activity stats on tab click
+  useEffect(() => {
+    if (user && activeTab === 'stats') {
+      setActivityLoading(true)
+      fetch('/api/profile/details?activity=true')
+        .then((res) => {
+          if (res.ok) return res.json()
+          throw new Error('Failed to load activity')
+        })
+        .then((data) => {
+          setActivity(data.activity || [])
+          setActivityLoading(false)
+        })
+        .catch((err) => {
+          console.error(err)
+          setActivityLoading(false)
+        })
+    }
+  }, [user, activeTab])
+
   // Load profile details
   const loadProfileDetails = () => {
     if (user) {
@@ -214,8 +342,6 @@ export default function ProfilePage() {
         })
         .then((data) => {
           setProfile(data.profile)
-          setActivity(data.activity || [])
-          setAchievementProgress(data.achievementProgress || [])
           setLoading(false)
         })
         .catch((err) => {
@@ -433,11 +559,13 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    loadMatchesHistory()
-  }, [user, matchPage, matchFilterGame, matchFilterResult, matchSearchQuery])
+    if (activeTab === 'matches') {
+      loadMatchesHistory()
+    }
+  }, [user, activeTab, matchPage, matchFilterGame, matchFilterResult, matchSearchQuery])
 
   useEffect(() => {
-    if (!profile) return
+    if (!profile || activeTab !== 'stats') return
 
     let localMatches: DBMatch[] = []
     try {
@@ -445,6 +573,7 @@ export default function ProfilePage() {
     } catch {}
 
     if (user) {
+      setBbStatsLoading(true)
       fetch('/api/games/block-blast/stats')
         .then(res => {
           if (res.ok) return res.json()
@@ -471,8 +600,9 @@ export default function ProfilePage() {
             bestCombo: maxComboVal,
             avgLines
           })
+          setBbStatsLoading(false)
         })
-        .catch(() => {})
+        .catch(() => setBbStatsLoading(false))
     } else {
       const bbMatches = localMatches.filter(m => m.game.slug === 'block-blast')
       const playCount = bbMatches.length
@@ -497,12 +627,13 @@ export default function ProfilePage() {
         avgLines
       })
     }
-  }, [user, profile])
+  }, [user, profile, activeTab])
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <div style={{ fontSize: '1.25rem', color: 'hsl(220 10% 50%)' }}>Loading Profile...</div>
+      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn mobile-centered-wrapper">
+        <ProfileHeaderSkeleton />
+        <OverviewSkeleton />
       </div>
     )
   }
@@ -566,11 +697,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn safe-bottom-padding">
+    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       
       {/* Profile Header Card */}
       <div
-        className="card glass"
+        className="card glass profile-header-container"
         style={{
           padding: '2rem',
           borderRadius: 24,
@@ -914,7 +1045,10 @@ export default function ProfilePage() {
 
       {/* TAB STATS DASHBOARD */}
       {activeTab === 'stats' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        activityLoading || bbStatsLoading ? (
+          <StatsSkeleton />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* Summary stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -1087,12 +1221,16 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
-        </div>
+          </div>
+        )
       )}
 
       {/* TAB MATCH HISTORY */}
       {activeTab === 'matches' && (
-        <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        matchesLoading ? (
+          <MatchesSkeleton />
+        ) : (
+          <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           
           {/* Filters and search block */}
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1274,7 +1412,8 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
-      )}
+      )
+    )}
 
       {/* TAB RANKED LEAGUE */}
       {activeTab === 'ranked' && (
@@ -1455,12 +1594,15 @@ export default function ProfilePage() {
 
             </div>
           )}
-        </div>
+          </div>
       )}
 
       {/* TAB ACHIEVEMENTS */}
       {activeTab === 'achievements' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        achievementsLoading ? (
+          <AchievementsSkeleton />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Legend */}
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.75rem', color: 'hsl(220 10% 50%)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -1545,12 +1687,16 @@ export default function ProfilePage() {
               ))}
             </div>
           )}
-        </div>
+          </div>
+        )
       )}
 
       {/* TAB FRIENDS */}
       {activeTab === 'friends' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        friendsLoading ? (
+          <FriendsSkeleton />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {!user ? (
             <div className="card glass" style={{ padding: '2rem', borderRadius: 20, textAlign: 'center' }}>
               <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>👥</span>
@@ -1619,7 +1765,8 @@ export default function ProfilePage() {
               })}
             </div>
           )}
-        </div>
+          </div>
+        )
       )}
 
       {/* TAB COSMETICS */}

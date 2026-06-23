@@ -130,69 +130,77 @@ export async function POST(request: Request) {
 
     // Roll reward type
     const roll = Math.random() * 100
-    let rewardType: 'coins' | 'xp' | 'cosmetic' | 'badge' = 'coins'
+    let rewardType: 'coins' | 'xp' | 'cosmetic' | 'badge' | 'crate' = 'coins'
     let val = 0
     let rewardName = ''
     let rewardedItem: any = null
 
     // Determine reward category based on rarity
     if (rarity === 'COMMON') {
-      if (roll < 50) {
+      if (roll < 45) {
         rewardType = 'coins'
         val = Math.floor(Math.random() * 26) + 10 // 10-35 Coins
-      } else if (roll < 95) {
+      } else if (roll < 85) {
         rewardType = 'xp'
         val = Math.floor(Math.random() * 41) + 20 // 20-60 XP
+      } else if (roll < 95) {
+        rewardType = 'cosmetic' // Common cosmetic
       } else {
-        rewardType = 'cosmetic' // Common avatar
+        rewardType = 'crate' // 5% chance of crate
       }
     } else if (rarity === 'RARE') {
-      if (roll < 40) {
+      if (roll < 35) {
         rewardType = 'coins'
         val = Math.floor(Math.random() * 51) + 40 // 40-90 Coins
-      } else if (roll < 80) {
+      } else if (roll < 70) {
         rewardType = 'xp'
         val = Math.floor(Math.random() * 101) + 80 // 80-180 XP
-      } else if (roll < 95) {
+      } else if (roll < 85) {
         rewardType = 'cosmetic'
-      } else {
+      } else if (roll < 95) {
         rewardType = 'badge' // Rare badge
+      } else {
+        rewardType = 'crate' // 5% chance of crate
       }
     } else if (rarity === 'EPIC') {
-      if (roll < 30) {
+      if (roll < 25) {
         rewardType = 'coins'
         val = Math.floor(Math.random() * 151) + 100 // 100-250 Coins
-      } else if (roll < 65) {
+      } else if (roll < 55) {
         rewardType = 'xp'
         val = Math.floor(Math.random() * 251) + 150 // 150-400 XP
-      } else if (roll < 90) {
+      } else if (roll < 75) {
         rewardType = 'cosmetic'
-      } else {
+      } else if (roll < 90) {
         rewardType = 'badge'
+      } else {
+        rewardType = 'crate' // 10% chance of crate
       }
     } else {
       // LEGENDARY
-      if (roll < 20) {
+      if (roll < 15) {
         rewardType = 'coins'
         val = Math.floor(Math.random() * 451) + 300 // 300-750 Coins
-      } else if (roll < 50) {
+      } else if (roll < 40) {
         rewardType = 'xp'
         val = Math.floor(Math.random() * 701) + 500 // 500-1200 XP
-      } else if (roll < 80) {
+      } else if (roll < 65) {
         rewardType = 'cosmetic'
-      } else {
+      } else if (roll < 80) {
         rewardType = 'badge'
+      } else {
+        rewardType = 'crate' // 20% chance of crate
       }
     }
 
     let rolledCosmetic: any = null
     let rolledBadge: any = null
 
-    // If cosmetic was rolled, pick a random item
+    // If cosmetic was rolled, pick a random item across all non-default cosmetic types
     if (rewardType === 'cosmetic') {
       const candidates = await prisma.cosmeticItem.findMany({
         where: {
-          type: { in: ['AVATAR', 'CHAT_PACK'] },
+          type: { in: ['AVATAR', 'CHAT_PACK', 'AVATAR_FRAME', 'BOARD_THEME', 'TITLE', 'EFFECT'] },
           isDefault: false,
         },
       })
@@ -290,6 +298,111 @@ export async function POST(request: Request) {
             achievementId: rolledBadge.id,
           },
         })
+      }
+    } else if (rewardType === 'crate') {
+      const crateType = rarity === 'COMMON' ? 'BRONZE' : rarity === 'RARE' ? 'SILVER' : rarity === 'GOLD' ? 'GOLD' : 'MYTHIC'
+      const crateCost = crateType === 'BRONZE' ? 50 : crateType === 'SILVER' ? 100 : crateType === 'GOLD' ? 250 : 500
+      const crateRoll = Math.random() * 100
+      let crateRewardType: 'coins' | 'xp' | 'cosmetic' = 'coins'
+      let crateVal = 0
+
+      if (crateType === 'BRONZE') {
+        if (crateRoll < 60) {
+          crateRewardType = 'coins'
+          crateVal = Math.floor(Math.random() * 41) + 20 // 20-60 Coins
+        } else if (crateRoll < 95) {
+          crateRewardType = 'xp'
+          crateVal = Math.floor(Math.random() * 51) + 30 // 30-80 XP
+        } else {
+          crateRewardType = 'cosmetic'
+        }
+      } else if (crateType === 'SILVER') {
+        if (crateRoll < 45) {
+          crateRewardType = 'coins'
+          crateVal = Math.floor(Math.random() * 81) + 40 // 40-120 Coins
+        } else if (crateRoll < 90) {
+          crateRewardType = 'xp'
+          crateVal = Math.floor(Math.random() * 91) + 60 // 60-150 XP
+        } else {
+          crateRewardType = 'cosmetic'
+        }
+      } else if (crateType === 'GOLD') {
+        if (crateRoll < 30) {
+          crateRewardType = 'coins'
+          crateVal = Math.floor(Math.random() * 201) + 100 // 100-300 Coins
+        } else if (crateRoll < 70) {
+          crateRewardType = 'xp'
+          crateVal = Math.floor(Math.random() * 251) + 150 // 150-400 XP
+        } else {
+          crateRewardType = 'cosmetic'
+        }
+      } else {
+        // MYTHIC
+        if (crateRoll < 15) {
+          crateRewardType = 'coins'
+          crateVal = Math.floor(Math.random() * 451) + 250 // 250-700 Coins
+        } else if (crateRoll < 40) {
+          crateRewardType = 'xp'
+          crateVal = Math.floor(Math.random() * 701) + 300 // 300-1000 XP
+        } else {
+          crateRewardType = 'cosmetic'
+        }
+      }
+
+      if (crateRewardType === 'coins') {
+        currentCoins += crateVal
+        rewardName = `${crateType} Crate: +${crateVal} Coins`
+      } else if (crateRewardType === 'xp') {
+        currentXP += crateVal
+        rewardName = `${crateType} Crate: +${crateVal} XP`
+        const newLevel = computeLevel(currentXP)
+        if (newLevel > currentLevel) {
+          currentLevel = newLevel
+          leveledUp = true
+        }
+        await prisma.xPEvent.create({
+          data: {
+            profileId: profile.id,
+            type: 'STREAK_BONUS',
+            amount: crateVal,
+            meta: { source: 'scratcher_crate', crateType }
+          }
+        })
+      } else if (crateRewardType === 'cosmetic') {
+        const candidates = await prisma.cosmeticItem.findMany({
+          where: {
+            type: { in: ['AVATAR', 'CHAT_PACK', 'AVATAR_FRAME', 'BOARD_THEME', 'TITLE', 'EFFECT'] },
+            isDefault: false,
+          },
+        })
+        if (candidates.length > 0) {
+          rolledCosmetic = candidates[Math.floor(Math.random() * candidates.length)]
+          const owned = await prisma.profileInventory.findUnique({
+            where: {
+              profileId_cosmeticItemId: {
+                profileId: profile.id,
+                cosmeticItemId: rolledCosmetic.id,
+              },
+            },
+          })
+          if (owned) {
+            const refund = Math.floor(crateCost * 0.4)
+            currentCoins += refund
+            rewardName = `${crateType} Crate: ${rolledCosmetic.name} (Duplicate Refund: +${refund} Coins)`
+          } else {
+            await prisma.profileInventory.create({
+              data: {
+                profileId: profile.id,
+                cosmeticItemId: rolledCosmetic.id,
+              },
+            })
+            rewardName = `${crateType} Crate: ${rolledCosmetic.name}`
+            rewardedItem = rolledCosmetic
+          }
+        } else {
+          currentCoins += crateCost
+          rewardName = `${crateType} Crate: +${crateCost} Coins (Refund)`
+        }
       }
     }
 

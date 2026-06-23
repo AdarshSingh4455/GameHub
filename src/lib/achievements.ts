@@ -985,11 +985,9 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
     allAchievements,
     unlocked,
     profile,
-    totalGames,
-    totalWins,
     lastMatches,
-    cricketAgg,
-    tttScores
+    allScores,
+    friendsCount
   ] = await Promise.all([
     prisma.achievement.findMany(),
     prisma.userAchievement.findMany({
@@ -1000,14 +998,6 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
       where: { id: profileId },
       select: { level: true, currentStreak: true },
     }),
-    prisma.matchRecord.count({
-      where: {
-        OR: [{ player1Id: profileId }, { player2Id: profileId }],
-      },
-    }),
-    prisma.matchRecord.count({
-      where: { winnerId: profileId },
-    }),
     prisma.matchRecord.findMany({
       where: {
         OR: [{ player1Id: profileId }, { player2Id: profileId }],
@@ -1017,17 +1007,14 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
       },
       orderBy: { playedAt: 'desc' },
     }),
-    prisma.score.aggregate({
-      where: {
-        profileId,
-        game: { slug: 'cricket' },
-      },
-      _sum: { score: true },
-    }),
     prisma.score.findMany({
+      where: { profileId },
+      include: { game: true }
+    }),
+    prisma.friendship.count({
       where: {
-        profileId,
-        game: { slug: 'tic-tac-toe' },
+        status: 'ACCEPTED',
+        OR: [{ requesterId: profileId }, { addresseeId: profileId }],
       },
     })
   ])
@@ -1036,19 +1023,52 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
   const level = profile?.level ?? 1
   const streak = profile?.currentStreak ?? 0
 
+  const totalGames = lastMatches.length
+  const totalWins = lastMatches.filter((m) => m.winnerId === profileId).length
+
   let currentWinStreak = 0
   for (const m of lastMatches) {
     if (m.winnerId === profileId) currentWinStreak++
     else break
   }
 
-  const cricketRuns = cricketAgg._sum.score ?? 0
+  // Pre-process all scores by game slug for fast O(1) lookup
+  const scoresByGame: Record<string, typeof allScores> = {}
+  for (const s of allScores) {
+    const slug = s.game?.slug || 'unknown'
+    if (!scoresByGame[slug]) {
+      scoresByGame[slug] = []
+    }
+    scoresByGame[slug].push(s)
+  }
 
-  const hasPerfectTTT = tttScores.some((s) => {
+  // Helper function to get max level from metadata in memory
+  const getMemMaxLevel = (gameSlug: string): number => {
+    const gameScores = scoresByGame[gameSlug] || []
+    let maxLvl = 0
+    for (const s of gameScores) {
+      const meta = s.metadata as Record<string, any> | null
+      if (meta && typeof meta.level === 'number') {
+        maxLvl = Math.max(maxLvl, meta.level)
+      }
+    }
+    return maxLvl
+  }
+
+  // Helper function to count plays of a game in memory
+  const getMemPlayCount = (gameSlug: string): number => {
+    return (scoresByGame[gameSlug] || []).length
+  }
+
+  // Calculate perfect Tic-Tac-Toe in memory
+  const hasPerfectTTT = (scoresByGame['tic-tac-toe'] || []).some((s) => {
     const meta = s.metadata as Record<string, unknown> | null
     const moves = meta?.moves as number | undefined
     return moves !== undefined && moves <= 5
   }) ? 1 : 0
+
+  // Calculate total cricket runs in memory
+  const cricketRuns = (scoresByGame['cricket'] || []).reduce((sum, s) => sum + (s.score ?? 0), 0)
 
   const progressList: AchievementProgressInfo[] = []
 
@@ -1155,29 +1175,19 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 25
         break
       case 'social-butterfly':
-        // Count friendships accepted
-        const friendsCount = await prisma.friendship.count({
-          where: {
-            status: 'ACCEPTED',
-            OR: [{ requesterId: profileId }, { addresseeId: profileId }],
-          },
-        })
         current = friendsCount
         target = 5
         break
       case 'color-sort-first-pour':
-        const csPlays = await prisma.score.count({
-          where: { profileId, game: { slug: 'color-sort' } },
-        })
-        current = csPlays >= 1 ? 1 : 0
+        current = getMemPlayCount('color-sort') >= 1 ? 1 : 0
         target = 1
         break
       case 'color-sort-apprentice':
-        current = await getProgMaxLevel(profileId, 'color-sort')
+        current = getMemMaxLevel('color-sort')
         target = 5
         break
       case 'color-sort-master':
-        current = await getProgMaxLevel(profileId, 'color-sort')
+        current = getMemMaxLevel('color-sort')
         target = 25
         break
       case 'color-sort-no-hint':
@@ -1189,18 +1199,15 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 1
         break
       case 'traffic-first-escape':
-        const trPlays = await prisma.score.count({
-          where: { profileId, game: { slug: 'unblock-traffic' } },
-        })
-        current = trPlays >= 1 ? 1 : 0
+        current = getMemPlayCount('unblock-traffic') >= 1 ? 1 : 0
         target = 1
         break
       case 'traffic-officer':
-        current = await getProgMaxLevel(profileId, 'unblock-traffic')
+        current = getMemMaxLevel('unblock-traffic')
         target = 5
         break
       case 'traffic-grid-master':
-        current = await getProgMaxLevel(profileId, 'unblock-traffic')
+        current = getMemMaxLevel('unblock-traffic')
         target = 25
         break
       case 'traffic-no-hint':
@@ -1212,41 +1219,26 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 1
         break
       case 'wc-first-flow':
-        const wcPlays = await prisma.score.count({
-          where: { profileId, game: { slug: 'water-connect' } },
-        })
-        current = wcPlays >= 1 ? 1 : 0
+        current = getMemPlayCount('water-connect') >= 1 ? 1 : 0
         target = 1
         break
       case 'wc-apprentice':
-        const wcCountApp = await prisma.score.count({
-          where: { profileId, game: { slug: 'water-connect' } },
-        })
-        current = wcCountApp
+        current = getMemPlayCount('water-connect')
         target = 5
         break
       case 'wc-master':
       case 'wc-25-completed':
-        const wcCountMast = await prisma.score.count({
-          where: { profileId, game: { slug: 'water-connect' } },
-        })
-        current = wcCountMast
+        current = getMemPlayCount('water-connect')
         target = 25
         break
       case 'db-first-victory':
-        const dbWins = await prisma.matchRecord.count({
-          where: { winnerId: profileId, game: { slug: 'dots-boxes' } },
-        })
+        const dbWins = lastMatches.filter((m) => m.winnerId === profileId && m.game?.slug === 'dots-boxes').length
         current = dbWins >= 1 ? 1 : 0
         target = 1
         break
       case 'db-box-collector':
-        const dbScores = await prisma.score.findMany({
-          where: { profileId, game: { slug: 'dots-boxes' } },
-          select: { metadata: true }
-        })
         let dbBoxes = 0
-        for (const s of dbScores) {
+        for (const s of (scoresByGame['dots-boxes'] || [])) {
           const meta = s.metadata as Record<string, any> | null
           if (meta && typeof meta.p1Boxes === 'number') {
             dbBoxes += meta.p1Boxes
@@ -1256,12 +1248,8 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 50
         break
       case 'db-chain-master':
-        const dbScoresChain = await prisma.score.findMany({
-          where: { profileId, game: { slug: 'dots-boxes' } },
-          select: { metadata: true }
-        })
         let maxChain = 0
-        for (const s of dbScoresChain) {
+        for (const s of (scoresByGame['dots-boxes'] || [])) {
           const meta = s.metadata as Record<string, any> | null
           if (meta && typeof meta.maxChainLength === 'number') {
             maxChain = Math.max(maxChain, meta.maxChainLength)
@@ -1271,13 +1259,9 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 5
         break
       case 'db-online-champion':
-        const dbOnlineWins = await prisma.matchRecord.count({
-          where: {
-            winnerId: profileId,
-            game: { slug: 'dots-boxes' },
-            roomCode: { not: null }
-          },
-        })
+        const dbOnlineWins = lastMatches.filter(
+          (m) => m.winnerId === profileId && m.game?.slug === 'dots-boxes' && m.roomCode !== null
+        ).length
         current = dbOnlineWins >= 1 ? 1 : 0
         target = 1
         break
@@ -1310,12 +1294,8 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 1
         break
       case 'bb-line-destroyer':
-        const bbScores = await prisma.score.findMany({
-          where: { profileId, game: { slug: 'block-blast' } },
-          select: { metadata: true }
-        })
         let totalBBLines = 0
-        for (const s of bbScores) {
+        for (const s of (scoresByGame['block-blast'] || [])) {
           const meta = s.metadata as Record<string, any> | null
           if (meta && typeof meta.linesCleared === 'number') {
             totalBBLines += meta.linesCleared
@@ -1325,12 +1305,8 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 100
         break
       case 'ww-word-master':
-        const wwScoresMaster = await prisma.score.findMany({
-          where: { profileId, game: { slug: 'word-wizard' } },
-          select: { metadata: true }
-        })
         let totalWordsSpelled = 0
-        for (const s of wwScoresMaster) {
+        for (const s of (scoresByGame['word-wizard'] || [])) {
           const meta = s.metadata as Record<string, any> | null
           if (meta && typeof meta.wordsFound === 'number') {
             totalWordsSpelled += meta.wordsFound
@@ -1340,12 +1316,8 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 50
         break
       case 'ww-rare-letter-hunter':
-        const wwScoresRare = await prisma.score.findMany({
-          where: { profileId, game: { slug: 'word-wizard' } },
-          select: { metadata: true }
-        })
         let totalRareWords = 0
-        for (const s of wwScoresRare) {
+        for (const s of (scoresByGame['word-wizard'] || [])) {
           const meta = s.metadata as Record<string, any> | null
           if (meta && typeof meta.rareWordsCount === 'number') {
             totalRareWords += meta.rareWordsCount
@@ -1355,28 +1327,20 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 5
         break
       case 'hangman-first-win':
-        const hWins = await prisma.matchRecord.count({
-          where: { game: { slug: 'hangman' }, winnerId: profileId }
-        })
+        const hWins = lastMatches.filter((m) => m.game?.slug === 'hangman' && m.winnerId === profileId).length
         current = hWins >= 1 ? 1 : 0
         target = 1
         break
       case 'hangman-wins-10':
-        current = await prisma.matchRecord.count({
-          where: { game: { slug: 'hangman' }, winnerId: profileId }
-        })
+        current = lastMatches.filter((m) => m.game?.slug === 'hangman' && m.winnerId === profileId).length
         target = 10
         break
       case 'hangman-wins-25':
-        current = await prisma.matchRecord.count({
-          where: { game: { slug: 'hangman' }, winnerId: profileId }
-        })
+        current = lastMatches.filter((m) => m.game?.slug === 'hangman' && m.winnerId === profileId).length
         target = 25
         break
       case 'hangman-wins-100':
-        current = await prisma.matchRecord.count({
-          where: { game: { slug: 'hangman' }, winnerId: profileId }
-        })
+        current = lastMatches.filter((m) => m.game?.slug === 'hangman' && m.winnerId === profileId).length
         target = 100
         break
       case 'hangman-perfect-solver':
@@ -1386,12 +1350,8 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         target = 1
         break
       case 'hangman-word-master':
-        const hScores = await prisma.score.findMany({
-          where: { profileId, game: { slug: 'hangman' } },
-          select: { metadata: true }
-        })
         let totalHCorrect = 0
-        for (const s of hScores) {
+        for (const s of (scoresByGame['hangman'] || [])) {
           const meta = s.metadata as Record<string, any> | null
           if (meta && typeof meta.correctGuesses === 'number') {
             totalHCorrect += meta.correctGuesses
@@ -1424,22 +1384,4 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
   }
 
   return progressList
-}
-
-async function getProgMaxLevel(profileId: string, gameSlug: string): Promise<number> {
-  const scores = await prisma.score.findMany({
-    where: {
-      profileId,
-      game: { slug: gameSlug },
-    },
-    select: { metadata: true },
-  })
-  let maxLevel = 0
-  for (const s of scores) {
-    const meta = s.metadata as Record<string, any> | null
-    if (meta && typeof meta.level === 'number') {
-      maxLevel = Math.max(maxLevel, meta.level)
-    }
-  }
-  return maxLevel
 }

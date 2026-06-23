@@ -39,7 +39,6 @@ const BOTTOM_NAV_LINKS: NavLink[] = [
   { href: '/dashboard/games',       label: 'Games',        emoji: '🎮' },
   { href: '/dashboard/challenges',  label: 'Challenges',   emoji: '⚡' },
   { href: '/dashboard/store',       label: 'Store',        emoji: '🪙' },
-  { href: '/dashboard/about',       label: 'About',        emoji: 'ℹ️' },
   { href: '/dashboard/profile',     label: 'Profile',      emoji: '👤' },
 ]
 

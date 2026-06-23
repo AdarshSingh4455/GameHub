@@ -36,6 +36,12 @@ export default function StorePage() {
   const [loading, setLoading] = useState(true)
   const [buyingId, setBuyingId] = useState<string | null>(null)
   const [equippingId, setEquippingId] = useState<string | null>(null)
+  
+  // Crate Opening Animation States
+  const [openingCrate, setOpeningCrate] = useState<StoreItem | null>(null)
+  const [crateAnimStep, setCrateAnimStep] = useState<number>(0)
+  const [crateReward, setCrateReward] = useState<any | null>(null)
+  const crateTimersRef = useRef<any[]>([])
 
   // Live Preview States
   const [profile, setProfile] = useState<any>(null)
@@ -141,11 +147,42 @@ export default function StorePage() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Crate opening failed')
         
-        addToast(
-          'success',
-          'Crate Opened! 🎁',
-          `You opened a ${item.name} and received: ${data.reward.name}!`
-        )
+        // Open the visual crate opening sequence modal
+        setOpeningCrate(item)
+        setCrateReward(data.reward)
+        setCrateAnimStep(1) // Step 1: Modal open / Crate visible
+
+        // Reset and clear any old timers
+        crateTimersRef.current.forEach(clearTimeout)
+        crateTimersRef.current = []
+
+        // Sequence timeouts
+        const t1 = setTimeout(() => {
+          setCrateAnimStep(2) // Step 2: Crate shakes
+        }, 500)
+
+        const t2 = setTimeout(() => {
+          setCrateAnimStep(3) // Step 3: Radial glow aura turns on
+        }, 1400)
+
+        const t3 = setTimeout(() => {
+          setCrateAnimStep(4) // Step 4: Crate scales up
+        }, 2200)
+
+        const t4 = setTimeout(() => {
+          setCrateAnimStep(5) // Step 5: Crate bursts open
+        }, 2800)
+
+        const t5 = setTimeout(() => {
+          setCrateAnimStep(6) // Step 6: Reveal reward card
+        }, 3400)
+
+        const t6 = setTimeout(() => {
+          setCrateAnimStep(7) // Step 7: Done (and trigger canvas confetti)
+        }, 3800)
+
+        crateTimersRef.current.push(t1, t2, t3, t4, t5, t6)
+
         fetchStoreData()
         window.dispatchEvent(new Event('gamehub_xp_update'))
       } catch (err: any) {
@@ -245,6 +282,12 @@ export default function StorePage() {
       window.dispatchEvent(new Event('gamehub_xp_update'))
       setBuyingId(null)
     }
+  }
+
+  const handleSkipCrateAnimation = () => {
+    crateTimersRef.current.forEach(clearTimeout)
+    crateTimersRef.current = []
+    setCrateAnimStep(7)
   }
 
   // Equip handler
@@ -475,7 +518,7 @@ export default function StorePage() {
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0 0.75rem' }} className="animate-fadeIn safe-bottom-padding">
+    <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0 0.75rem', width: '100%' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -604,10 +647,8 @@ export default function StorePage() {
           {/* Items Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: activeCategory === 'CRATES'
-              ? 'repeat(auto-fill, minmax(140px, 1fr))'
-              : 'repeat(2, 1fr)',
-            gap: activeCategory === 'CRATES' ? '0.65rem' : '0.75rem',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+            gap: '0.5rem',
             justifyContent: 'center'
           }} className="store-items-grid stagger">
             {activeCategoryItems.map((item) => {
@@ -670,13 +711,13 @@ export default function StorePage() {
                   key={item.id}
                   className="card card-hover"
                   style={{
-                    padding: activeCategory === 'CRATES' ? '0.75rem' : '1rem',
+                    padding: '0.6rem',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     textAlign: 'center',
-                    gap: activeCategory === 'CRATES' ? '0.5rem' : '0.75rem',
-                    borderRadius: 16,
+                    gap: '0.4rem',
+                    borderRadius: 14,
                     background: 'hsl(222 18% 12% / 0.95)',
                     border: '1px solid hsl(220 15% 20%)',
                     borderColor: isEquipped ? 'hsl(142 70% 50% / 0.6)' : owned ? 'hsl(210 100% 50% / 0.4)' : !requirementMet ? 'hsl(0 80% 40% / 0.3)' : 'hsl(220 15% 20%)',
@@ -687,15 +728,15 @@ export default function StorePage() {
                 >
                   {/* Item preview icon */}
                   <div style={{
-                    width: activeCategory === 'CRATES' ? 48 : 64,
-                    height: activeCategory === 'CRATES' ? 48 : 64,
-                    borderRadius: 12,
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
                     background: 'hsl(220 20% 7%)',
                     border: '1px solid hsl(220 15% 18%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '2rem',
+                    fontSize: '1.25rem',
                     overflow: 'hidden',
                   }}>
                     {item.type === 'TITLE' ? (
@@ -739,15 +780,15 @@ export default function StorePage() {
                       )}
                     </div>
 
-                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'white', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', width: '100%' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.75rem', color: 'white', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', width: '100%' }}>
                       {item.name}
                     </div>
                     {item.metadata?.description ? (
-                      <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', minHeight: 14, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', width: '100%' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 55%)', minHeight: 14, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', width: '100%' }}>
                         {item.metadata.description}
                       </div>
                     ) : (
-                      <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', minHeight: 14 }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 55%)', minHeight: 14 }}>
                         Store cosmetic item
                       </div>
                     )}
@@ -907,7 +948,7 @@ export default function StorePage() {
                 zIndex: 0,
               }} className="animate-fadeIn">
                 <span style={{ fontSize: '2.8rem' }}>
-                  {scratcherReward.type === 'coins' ? '🪙' : scratcherReward.type === 'xp' ? '✨' : scratcherReward.type === 'badge' ? '🏅' : '👤'}
+                  {scratcherReward.type === 'coins' ? '🪙' : scratcherReward.type === 'xp' ? '✨' : scratcherReward.type === 'badge' ? '🏅' : scratcherReward.type === 'crate' ? '🎁' : '👤'}
                 </span>
                 <strong style={{ fontSize: '1.1rem', color: 'hsl(45 100% 60%)' }}>
                   {scratcherReward.name}
@@ -971,6 +1012,310 @@ export default function StorePage() {
           </div>
         </div>
       )}
+
+      {/* --- CRATE OPENING ANIMATION SYSTEM MODAL --- */}
+      {openingCrate && crateAnimStep > 0 && crateReward && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(5, 8, 16, 0.95)',
+            zIndex: 100003,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            backdropFilter: 'blur(12px)',
+          }}
+          className="animate-fadeIn"
+        >
+          {/* Confetti canvas on Step 7 */}
+          {crateAnimStep === 7 && (
+            <CrateConfettiCanvas />
+          )}
+
+          <div
+            className="card glass"
+            style={{
+              width: '100%',
+              maxWidth: 400,
+              padding: '2.5rem 1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '2rem',
+              textAlign: 'center',
+              borderRadius: 28,
+              border: '1px solid hsl(45 100% 55% / 0.25)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.85), 0 0 40px hsl(45 100% 55% / 0.1)',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Step 3: Radial glowing background */}
+            {crateAnimStep >= 3 && crateAnimStep < 6 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  width: '280px',
+                  height: '280px',
+                  background: 'radial-gradient(circle, hsl(45 100% 55% / 0.25) 0%, transparent 70%)',
+                  borderRadius: '50%',
+                  zIndex: 0,
+                  pointerEvents: 'none',
+                }}
+                className="crate-glow-anim"
+              />
+            )}
+
+            {/* Crate Visual representation */}
+            {crateAnimStep < 6 ? (
+              <div
+                style={{
+                  position: 'relative',
+                  width: 140,
+                  height: 140,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1,
+                  transition: 'transform 0.4s ease',
+                  transform: crateAnimStep === 4 ? 'scale(1.3)' : crateAnimStep === 5 ? 'scale(0.1)' : 'scale(1)'
+                }}
+                className={crateAnimStep === 2 ? 'crate-shake-anim' : ''}
+              >
+                {/* Visual design for the box based on type */}
+                <div
+                  style={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 16,
+                    background: getCrateBg(openingCrate.id),
+                    border: `3px solid ${getCrateBorderColor(openingCrate.id)}`,
+                    boxShadow: `0 0 20px ${getCrateGlowColor(openingCrate.id)}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '3rem',
+                    position: 'relative',
+                  }}
+                >
+                  🎁
+                  {/* Lock badge or emblem */}
+                  <span style={{ position: 'absolute', bottom: -5, right: -5, background: '#1e293b', border: '1px solid #475569', borderRadius: '50%', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>🔑</span>
+                </div>
+              </div>
+            ) : (
+              /* Step 6 & 7: Reveal Reward Card */
+              <div
+                className="animate-scaleUp"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '1.25rem',
+                  zIndex: 1,
+                }}
+              >
+                <div style={{ fontSize: '0.75rem', fontWeight: 950, color: 'hsl(45 100% 60%)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  🔓 ITEM UNLOCKED!
+                </div>
+                <div
+                  style={{
+                    width: 120,
+                    height: 120,
+                    borderRadius: '50%',
+                    background: 'hsl(222 20% 7%)',
+                    border: '3px solid hsl(45 100% 55%)',
+                    boxShadow: '0 0 25px hsl(45 100% 55% / 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '4.5rem',
+                  }}
+                >
+                  {crateReward.type === 'coins' ? '🪙' : crateReward.type === 'xp' ? '✨' : '👤'}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.4rem', fontWeight: 950, color: 'white', margin: 0 }}>
+                    {crateReward.name}
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'hsl(220 10% 55%)', marginTop: '0.25rem' }}>
+                    Type: <strong style={{ textTransform: 'uppercase', color: 'hsl(220 100% 70%)' }}>{crateReward.type}</strong>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Burst Particles overlay */}
+            {crateAnimStep === 5 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  zIndex: 2,
+                  pointerEvents: 'none',
+                }}
+                className="crate-burst-anim"
+              >
+                {/* 15 floating particles */}
+                {Array.from({ length: 15 }).map((_, i) => {
+                  const angle = (i * 2 * Math.PI) / 15
+                  const x = Math.cos(angle) * 120
+                  const y = Math.sin(angle) * 120
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: getCrateBorderColor(openingCrate.id),
+                        transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
+                        opacity: 0.8,
+                        transition: 'transform 0.5s ease, opacity 0.5s ease',
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Actions / Skip Button */}
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', zIndex: 3 }}>
+              {crateAnimStep < 6 ? (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleSkipCrateAnimation}
+                  style={{ borderRadius: 12 }}
+                >
+                  ⏭️ Skip Animation
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setOpeningCrate(null)
+                    setCrateReward(null)
+                    setCrateAnimStep(0)
+                  }}
+                  style={{ borderRadius: 12, width: '100%' }}
+                >
+                  🎉 Awesomeness!
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+// Crate Animation Helpers & Subcomponents
+function getCrateBg(id: string): string {
+  if (id.includes('bronze')) return 'linear-gradient(135deg, #3f2a1d, #6e473b)'
+  if (id.includes('silver')) return 'linear-gradient(135deg, #4b5563, #9ca3af)'
+  if (id.includes('gold')) return 'linear-gradient(135deg, #78350f, #eab308)'
+  return 'linear-gradient(135deg, #581c87, #c084fc)'
+}
+
+function getCrateBorderColor(id: string): string {
+  if (id.includes('bronze')) return '#cd7f32'
+  if (id.includes('silver')) return '#cbd5e1'
+  if (id.includes('gold')) return '#fbbf24'
+  return '#a855f7'
+}
+
+function getCrateGlowColor(id: string): string {
+  if (id.includes('bronze')) return 'rgba(205, 127, 50, 0.2)'
+  if (id.includes('silver')) return 'rgba(203, 213, 225, 0.25)'
+  if (id.includes('gold')) return 'rgba(251, 191, 36, 0.4)'
+  return 'rgba(168, 85, 247, 0.5)'
+}
+
+function CrateConfettiCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  useEffect(() => {
+    if (!canvasRef.current) return
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    let animationId: number
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    window.addEventListener('resize', handleResize)
+
+    const colors = ['#FFD700', '#FFA500', '#FF5722', '#00E5FF', '#76FF03', '#E040FB', '#FF1744']
+    const particles = Array.from({ length: 80 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      r: Math.random() * 5 + 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      tilt: Math.random() * 10 - 5,
+      tiltAngleIncremental: Math.random() * 0.05 + 0.02,
+      tiltAngle: 0,
+      speed: Math.random() * 3 + 4,
+    }))
+
+    const drawConfetti = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      particles.forEach((p, idx) => {
+        p.tiltAngle += p.tiltAngleIncremental
+        p.y += p.speed
+        p.x += Math.sin(p.tiltAngle) * 0.5
+
+        ctx.beginPath()
+        ctx.lineWidth = p.r
+        ctx.strokeStyle = p.color
+        ctx.moveTo(p.x + p.tilt + p.r / 2, p.y)
+        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2)
+        ctx.stroke()
+
+        if (p.y > canvas.height) {
+          particles[idx] = {
+            ...p,
+            x: Math.random() * canvas.width,
+            y: -10,
+            tilt: Math.random() * 10 - 5,
+            tiltAngle: 0,
+          }
+        }
+      })
+      animationId = requestAnimationFrame(drawConfetti)
+    }
+
+    drawConfetti()
+
+    return () => {
+      cancelAnimationFrame(animationId)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        zIndex: 100004,
+        width: '100vw',
+        height: '100vh',
+      }}
+    />
   )
 }

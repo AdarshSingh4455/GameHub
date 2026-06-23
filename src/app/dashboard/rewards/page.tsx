@@ -292,7 +292,7 @@ export default function RewardsPage() {
 
   if (loading && !stats) {
     return (
-      <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }} className="mobile-centered-wrapper">
         <style>{`
           @keyframes skeleton-shimmer {
             0% { background-position: -200% 0; }
@@ -347,7 +347,7 @@ export default function RewardsPage() {
   } = getLevelProgress(stats.xp)
 
   return (
-    <div className="animate-fadeIn safe-bottom-padding" style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
       {/* Header */}
       <div>
         <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: 900, marginBottom: '0.25rem' }}>🎯 Rewards Hub</h1>

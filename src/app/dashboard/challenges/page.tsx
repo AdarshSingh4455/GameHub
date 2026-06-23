@@ -258,7 +258,7 @@ export default function ChallengesPage() {
   }, [challenges, activeTab])
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%' }} className="animate-fadeIn">
+    <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%' }} className="animate-fadeIn mobile-centered-wrapper">
       {/* Header Panel */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-900/20 via-indigo-900/10 to-slate-900/80 border border-indigo-500/10 p-6 md:p-8 mb-8 backdrop-blur-xl">
         <div style={{ position: 'absolute', top: 0, right: 0, width: '160px', height: '160px', background: 'hsl(270 80% 60% / 0.05)', borderRadius: '999px', filter: 'blur(60px)', pointerEvents: 'none' }} />
@@ -408,8 +408,8 @@ export default function ChallengesPage() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  gap: '1.25rem',
-                  padding: '1.25rem',
+                  gap: 'clamp(0.75rem, 3vw, 1.25rem)',
+                  padding: 'clamp(0.85rem, 3.5vw, 1.25rem)',
                   background: isCompleted ? 'rgba(157, 78, 221, 0.05)' : 'rgba(255,255,255,0.02)',
                   border: '1px solid',
                   borderColor: isCompleted ? 'rgba(157, 78, 221, 0.25)' : 'rgba(255,255,255,0.06)',

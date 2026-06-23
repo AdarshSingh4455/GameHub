@@ -44,7 +44,7 @@ export default function AboutPage() {
   }
 
   return (
-    <div className="animate-fadeIn safe-bottom-padding" style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
       
       {/* ── Premium Hero Banner ── */}
       <div 
@@ -138,10 +138,10 @@ export default function AboutPage() {
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.92rem', color: 'hsl(220 10% 75%)', lineHeight: 1.6 }}>
           <p style={{ margin: 0 }}>
-            GameHub is a modern social gaming platform built to bring casual, competitive, and multiplayer gaming together in one unified experience.
+            GameHub is a modern social gaming platform built to bring casual, competitive and multiplayer gaming together in one unified experience. GameHub started development in 2024 and officially launched in June 2026.
           </p>
           <p style={{ margin: 0 }}>
-            Unlike traditional gaming websites that focus on a single game, GameHub combines multiple skill-based games, progression systems, achievements, rankings, cosmetics, social features, and real-time multiplayer interactions into one ecosystem.
+            Unlike traditional gaming websites that focus on a single game, GameHub combines multiple skill-based games, progression systems, achievements, rankings, cosmetics, social features and real-time multiplayer interactions into one ecosystem.
           </p>
         </div>
       </div>
@@ -187,10 +187,10 @@ export default function AboutPage() {
               Creator, Designer, Product Visionary & Developer
             </span>
             <p style={{ fontSize: '0.88rem', color: 'hsl(220 10% 70%)', lineHeight: 1.5, marginTop: '0.75rem', margin: 0 }}>
-              GameHub was created by Adarsh Singh with the vision of building an engaging gaming ecosystem that combines fun, competition, progression, and social interaction into one platform.
+              GameHub was created by Adarsh Singh with the vision of building an engaging gaming ecosystem that combines fun, competition, progression and social interaction into one platform.
             </p>
             <p style={{ fontSize: '0.88rem', color: 'hsl(220 10% 70%)', lineHeight: 1.5, marginTop: '0.5rem', margin: 0 }}>
-              The goal was not simply to create another gaming website, but to build a platform where players can enjoy multiple games, showcase achievements, unlock rewards, develop rivalries, and create memorable experiences with friends. Every feature, from multiplayer rooms and rankings to cosmetics and achievements, was designed around making gaming more interactive and rewarding.
+              The goal was not simply to create another gaming website, but to build a platform where players can enjoy multiple games, showcase achievements, unlock rewards, develop rivalries and create memorable experiences with friends. Every feature, from multiplayer rooms and rankings to cosmetics and achievements, was designed around making gaming more interactive and rewarding.
             </p>
           </div>
         </div>
@@ -203,7 +203,7 @@ export default function AboutPage() {
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.92rem', color: 'hsl(220 10% 75%)', lineHeight: 1.6 }}>
           <p style={{ margin: 0, fontWeight: 500, color: 'white' }}>
-            To create one of the most engaging and accessible gaming ecosystems where anyone can instantly join, compete, progress, and connect with others through games.
+            To create one of the most engaging and accessible gaming ecosystems where anyone can instantly join, compete, progress and connect with others through games.
           </p>
           <div>
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(220 100% 70%)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.04em' }}>
@@ -236,7 +236,7 @@ export default function AboutPage() {
           <div style={{ position: 'absolute', left: 4, top: 8, bottom: 8, width: 2, background: 'hsl(220 15% 18%)' }} />
           {[
             { date: 'Q1 2026', title: 'Ideation & Core Prototyping', desc: 'Conceived the social progression architecture. Built local versions of Memory Match and Hangman.' },
-            { date: 'Q2 2026', title: 'Multiplayer Engine Launch', desc: 'Integrated Socket.IO rooms, player lobbies, and live chat features.' },
+            { date: 'Q2 2026', title: 'Multiplayer Engine Launch', desc: 'Integrated Socket.IO rooms, player lobbies and live chat features.' },
             { date: 'Q2 2026 (June)', title: 'Cosmetic Store Expansion', desc: 'Introduced milestone unlockable titles and avatar frames. Expanded chat message packs.' },
             { date: 'Q3 2026 (Planning)', title: 'Mobile App Wrap & PWA Support', desc: 'Wrapped GameHub using Capacitor and implemented offline-ready service worker caches.' }
           ].map((item, i) => (

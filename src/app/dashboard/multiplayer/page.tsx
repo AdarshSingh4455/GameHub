@@ -924,7 +924,7 @@ export default function MultiplayerPage() {
 
   if (dashboardLoading && screen === 'MENU') {
     return (
-      <div style={{ maxWidth: 900, margin: '2rem auto', padding: '1.5rem', color: 'hsl(var(--text-primary))' }}>
+      <div style={{ maxWidth: 900, margin: '2rem auto', padding: '1.5rem', color: 'hsl(var(--text-primary))', width: '100%' }} className="mobile-centered-wrapper">
         <div className="text-center" style={{ marginBottom: '2.5rem' }}>
           <div style={{ width: 100, height: 16, backgroundColor: 'hsl(var(--bg-elevated))', borderRadius: 8, margin: '0 auto 1rem', animation: 'pulse 1.5s infinite' }} />
           <div style={{ width: 300, height: 40, backgroundColor: 'hsl(var(--bg-elevated))', borderRadius: 8, margin: '0 auto', animation: 'pulse 1.5s infinite' }} />
@@ -951,8 +951,8 @@ export default function MultiplayerPage() {
   return (
     <div
       data-screen={screen}
-      style={{ maxWidth: 1000, margin: '0 auto', padding: '1rem' }}
-      className="animate-fadeIn safe-bottom-padding"
+      style={{ maxWidth: 1000, margin: '0 auto', padding: '1rem', width: '100%' }}
+      className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper"
     >
       {/* ── Screen: MENU ── */}
       {screen === 'MENU' && (
@@ -1037,32 +1037,32 @@ export default function MultiplayerPage() {
                     key={game.slug}
                     className="card glass"
                     style={{
-                      padding: '1.25rem',
+                      padding: '1rem',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '1rem',
-                      border: '1px solid hsl(var(--border-subtle))'
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      border: '1px solid hsl(var(--border-subtle))',
+                      borderRadius: 16
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <span style={{ fontSize: '2.2rem' }}>{game.emoji}</span>
-                      <div>
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: 700 }}>{game.name}</h4>
-                        <p style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', marginTop: '0.15rem' }}>{game.desc}</p>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span style={{ fontSize: '1.75rem' }}>{game.emoji}</span>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>{game.name}</h4>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))', margin: 0, lineHeight: 1.3 }}>{game.desc}</p>
+                    <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
                       <button
                         className="btn"
                         style={{
+                          flex: 1,
                           padding: '0.4rem 0.8rem',
-                          fontSize: '0.8rem',
-                          backgroundColor: 'hsl(var(--success) / 0.15)',
-                          border: '1px solid hsl(var(--success) / 0.3)',
+                          fontSize: '0.78rem',
+                          backgroundColor: 'hsl(var(--success) / 0.12)',
+                          border: '1px solid hsl(var(--success) / 0.25)',
                           color: 'hsl(var(--success))',
-                          fontWeight: 600,
-                          minHeight: 44
+                          fontWeight: 700,
+                          borderRadius: 10,
+                          minHeight: 38
                         }}
                         onClick={() => handleQuickJoin(game.slug)}
                         disabled={isLoading}
@@ -1072,12 +1072,14 @@ export default function MultiplayerPage() {
                       <button
                         className="btn"
                         style={{
+                          flex: 1,
                           padding: '0.4rem 0.8rem',
-                          fontSize: '0.8rem',
+                          fontSize: '0.78rem',
                           backgroundColor: 'hsl(var(--bg-elevated))',
                           border: '1px solid hsl(var(--border-subtle))',
-                          fontWeight: 600,
-                          minHeight: 44
+                          fontWeight: 700,
+                          borderRadius: 10,
+                          minHeight: 38
                         }}
                         onClick={() => {
                           setSelectedGame(game.slug)
@@ -1697,33 +1699,33 @@ export default function MultiplayerPage() {
               </div>
 
               {/* Lobby Buttons */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    id="multiplayer-leave-btn"
-                    className="btn"
-                    onClick={handleLeaveRoom}
-                    disabled={isLoading}
-                    style={{ backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--danger) / 0.3)', color: 'hsl(var(--danger))', minHeight: 44 }}
-                  >
-                    🚪 Leave
-                  </button>
-                  <button
-                    id="multiplayer-ready-btn"
-                    className="btn"
-                    onClick={handleToggleReady}
-                    disabled={isLoading || !room}
-                    style={{
-                      backgroundColor: myReady ? 'hsl(var(--warning) / 0.15)' : 'hsl(var(--success) / 0.15)',
-                      border: myReady ? '1px solid hsl(var(--warning) / 0.3)' : '1px solid hsl(var(--success) / 0.3)',
-                      color: myReady ? 'hsl(var(--warning))' : 'hsl(var(--success))',
-                      fontWeight: 700,
-                      minHeight: 44
-                    }}
-                  >
-                    {myReady ? '❌ Not Ready' : '✅ Ready up'}
-                  </button>
-                </div>
+              <div style={{ display: 'flex', gap: '0.75rem', width: '100%', marginTop: '1rem', alignItems: 'center' }}>
+                <button
+                  id="multiplayer-leave-btn"
+                  className="btn"
+                  onClick={handleLeaveRoom}
+                  disabled={isLoading}
+                  style={{ flex: 1, backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--danger) / 0.3)', color: 'hsl(var(--danger))', minHeight: 44, fontWeight: 700, borderRadius: 12 }}
+                >
+                  Leave
+                </button>
+                <button
+                  id="multiplayer-ready-btn"
+                  className="btn"
+                  onClick={handleToggleReady}
+                  disabled={isLoading || !room}
+                  style={{
+                    flex: 1,
+                    backgroundColor: myReady ? 'hsl(var(--warning) / 0.15)' : 'hsl(var(--success) / 0.15)',
+                    border: myReady ? '1px solid hsl(var(--warning) / 0.3)' : '1px solid hsl(var(--success) / 0.3)',
+                    color: myReady ? 'hsl(var(--warning))' : 'hsl(var(--success))',
+                    fontWeight: 700,
+                    minHeight: 44,
+                    borderRadius: 12
+                  }}
+                >
+                  {myReady ? 'Not Ready' : 'Ready Up'}
+                </button>
 
                 {isHost && (
                   <button
@@ -1732,14 +1734,16 @@ export default function MultiplayerPage() {
                     onClick={handleStartGame}
                     disabled={isLoading || !allPlayersReady}
                     style={{
+                      flex: 1,
                       background: allPlayersReady ? 'linear-gradient(135deg, hsl(45 100% 55%), hsl(38 95% 55%))' : 'hsl(var(--bg-elevated))',
                       color: allPlayersReady ? '#000' : 'hsl(var(--text-muted))',
                       border: allPlayersReady ? 'none' : '1px solid hsl(var(--border-subtle))',
                       fontWeight: 700,
-                      minHeight: 44
+                      minHeight: 44,
+                      borderRadius: 12
                     }}
                   >
-                    🚀 Start Game
+                    Start Game
                   </button>
                 )}
               </div>

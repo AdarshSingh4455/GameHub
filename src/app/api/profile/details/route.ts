@@ -39,51 +39,60 @@ export async function GET(request: Request) {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
     sevenDaysAgo.setHours(0,0,0,0)
 
+    const url = new URL(request.url)
+    const fetchAchievements = url.searchParams.get('achievements') === 'true'
+    const fetchActivity = url.searchParams.get('activity') === 'true'
+    const fetchMatches = url.searchParams.get('matches') === 'true'
+
     const [matches, achievementProgress, activity, inventory, gameStats, userAchievements] = await Promise.all([
       // 1. Fetch last 10 matches
-      prisma.matchRecord.findMany({
-        where: {
-          OR: [
-            { player1Id: profile.id },
-            { player2Id: profile.id },
-          ],
-        },
-        orderBy: { playedAt: 'desc' },
-        take: 10,
-        include: {
-          game: {
-            select: {
-              name: true,
-              slug: true,
+      fetchMatches
+        ? prisma.matchRecord.findMany({
+            where: {
+              OR: [
+                { player1Id: profile.id },
+                { player2Id: profile.id },
+              ],
             },
-          },
-          player1: {
-            select: {
-              username: true,
+            orderBy: { playedAt: 'desc' },
+            take: 10,
+            include: {
+              game: {
+                select: {
+                  name: true,
+                  slug: true,
+                },
+              },
+              player1: {
+                select: {
+                  username: true,
+                },
+              },
+              player2: {
+                select: {
+                  username: true,
+                },
+              },
             },
-          },
-          player2: {
-            select: {
-              username: true,
-            },
-          },
-        },
-      }),
+          })
+        : Promise.resolve([]),
 
       // 2. Fetch achievement progress
-      getAchievementProgress(profile.id),
+      fetchAchievements ? getAchievementProgress(profile.id) : Promise.resolve([]),
 
       // 3. Fetch last 7 days matches for activity tracking
-      prisma.matchRecord.findMany({
-        where: {
-          OR: [
-            { player1Id: profile.id },
-            { player2Id: profile.id }
-          ],
-          playedAt: { gte: sevenDaysAgo }
-        },
-        select: { playedAt: true }
-      }),
+      fetchActivity
+        ? prisma.matchRecord.findMany({
+            where: {
+              OR: [
+                { player1Id: profile.id },
+                { player2Id: profile.id }
+              ],
+              playedAt: { gte: sevenDaysAgo }
+            },
+            select: { playedAt: true }
+          })
+        : Promise.resolve([]),
 
       // 4. Fetch inventory manually to support mockPrisma
       prisma.profileInventory.findMany({

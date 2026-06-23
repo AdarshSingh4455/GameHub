@@ -869,6 +869,30 @@ export default function MultiplayerPage() {
     addToast('success', 'Invite Link Copied', 'Share link copied to clipboard!')
   }
 
+  const handleCopyDeepLink = () => {
+    const deepLink = `gamehub://join?room=${lobbyRoomCode}`
+    navigator.clipboard.writeText(deepLink)
+    addToast('success', 'Deep Link Copied', `Mobile deep link copied: ${deepLink}`)
+  }
+
+  const handleShareAppInvite = () => {
+    const domain = typeof window !== 'undefined' ? window.location.origin : 'https://gamehub.app'
+    const browserUrl = `${domain}/dashboard/multiplayer/play/${lobbyRoomCode}`
+    const deepLink = `gamehub://join?room=${lobbyRoomCode}`
+    const shareText = `Join my GameHub room! 🎮\n\nRoom Code: ${lobbyRoomCode}\n\nMobile App: ${deepLink}\nWeb Browser: ${browserUrl}`
+
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join my GameHub Room!',
+        text: shareText,
+        url: browserUrl
+      }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(shareText)
+      addToast('success', 'App Invite Copied', 'App invite details copied to clipboard!')
+    }
+  }
+
   // Derived presence and ready states
   const isHost = hostUserId === currentUserId
   const myPlayerInfo = players.find(p => p.userId === currentUserId)
@@ -1522,6 +1546,22 @@ export default function MultiplayerPage() {
                   title="Copy Invite Link"
                 >
                   🔗
+                </button>
+                <button
+                  className="btn"
+                  onClick={handleCopyDeepLink}
+                  style={{ padding: '0.5rem 0.75rem', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-subtle))', fontSize: '1.1rem', minHeight: 44 }}
+                  title="Copy Mobile Deep Link"
+                >
+                  📱
+                </button>
+                <button
+                  className="btn"
+                  onClick={handleShareAppInvite}
+                  style={{ padding: '0.5rem 0.75rem', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-subtle))', fontSize: '1.1rem', minHeight: 44 }}
+                  title="Share App Invite"
+                >
+                  📤
                 </button>
                 <button
                   className="btn"

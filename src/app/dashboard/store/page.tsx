@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { prefetchProfileDetails } from '@/lib/prefetch'
+import Avatar from '@/components/shared/Avatar'
 
 interface StoreItem {
   id: string
@@ -530,42 +531,13 @@ export default function StorePage() {
           </span>
         </div>
 
-        <div style={{
-          position: 'relative',
-          width: 80,
-          height: 80,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1
-        }}>
-          {previewedFrame && (
-            <div style={{
-              position: 'absolute',
-              inset: -6,
-              borderRadius: '50%',
-              border: getFrameBorder(previewedFrame),
-              boxShadow: getFrameShadow(previewedFrame),
-              zIndex: 2,
-              pointerEvents: 'none'
-            }} />
-          )}
-
-          <div style={{
-            width: '100%',
-            height: '100%',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            background: 'hsl(222 20% 15%)',
-            border: '2px solid rgba(255,255,255,0.1)'
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={profile?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${profile?.username || 'Guest'}`}
-              alt="Avatar Preview"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </div>
+        <div style={{ zIndex: 1 }}>
+          <Avatar
+            avatarUrl={profile?.avatarUrl}
+            username={profile?.username || 'Guest'}
+            selectedFrame={previewedFrame}
+            size={80}
+          />
         </div>
 
         <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -637,7 +609,7 @@ export default function StorePage() {
               : 'repeat(2, 1fr)',
             gap: activeCategory === 'CRATES' ? '0.65rem' : '0.75rem',
             justifyContent: 'center'
-          }} className="stagger">
+          }} className="store-items-grid stagger">
             {activeCategoryItems.map((item) => {
               const owned = item.id === 'perk-streak-protect' ? !!profile?.streakProtectionActive : ownedIds.includes(item.id)
               const rarity = item.metadata?.rarity || 'COMMON'
@@ -667,6 +639,32 @@ export default function StorePage() {
               // Can preview frames, effects, and titles
               const canPreview = ['TITLE', 'AVATAR_FRAME', 'EFFECT'].includes(item.type)
 
+              // Calculate milestone requirements
+              let requirementText = ''
+              let requirementMet = true
+              let progressPercentage = 100
+              let progressLabel = ''
+
+              if (item.type === 'AVATAR_FRAME') {
+                const minLevel = item.metadata?.minLevel
+                if (minLevel !== undefined && minLevel !== null) {
+                  const currentLevel = profile?.level || 1
+                  requirementMet = currentLevel >= minLevel
+                  requirementText = `Requires Level ${minLevel}`
+                  progressPercentage = Math.min(100, Math.round((currentLevel / minLevel) * 100))
+                  progressLabel = `Level ${currentLevel}/${minLevel}`
+                }
+              } else if (item.type === 'TITLE') {
+                const minWins = item.metadata?.minWins
+                if (minWins !== undefined && minWins !== null) {
+                  const currentWins = profile?.gameStats?.reduce((sum: number, g: any) => sum + g.winCount, 0) || 0
+                  requirementMet = currentWins >= minWins
+                  requirementText = `Requires ${minWins} Wins`
+                  progressPercentage = Math.min(100, Math.round((currentWins / minWins) * 100))
+                  progressLabel = `Wins ${currentWins}/${minWins}`
+                }
+              }
+
               return (
                 <div
                   key={item.id}
@@ -681,7 +679,7 @@ export default function StorePage() {
                     borderRadius: 16,
                     background: 'hsl(222 18% 12% / 0.95)',
                     border: '1px solid hsl(220 15% 20%)',
-                    borderColor: isEquipped ? 'hsl(142 70% 50% / 0.6)' : owned ? 'hsl(210 100% 50% / 0.4)' : 'hsl(220 15% 20%)',
+                    borderColor: isEquipped ? 'hsl(142 70% 50% / 0.6)' : owned ? 'hsl(210 100% 50% / 0.4)' : !requirementMet ? 'hsl(0 80% 40% / 0.3)' : 'hsl(220 15% 20%)',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
@@ -730,9 +728,13 @@ export default function StorePage() {
                         <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'hsl(210 100% 55%)', color: 'white', textTransform: 'uppercase' }}>
                           Owned
                         </span>
+                      ) : !requirementMet ? (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'hsl(0 80% 40%)', color: 'white', textTransform: 'uppercase' }}>
+                          Locked
+                        </span>
                       ) : (
                         <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'hsl(220 10% 40%)', color: 'white', textTransform: 'uppercase' }}>
-                          Locked
+                          Claimable
                         </span>
                       )}
                     </div>
@@ -753,6 +755,19 @@ export default function StorePage() {
                       <span style={{ fontSize: '0.62rem', fontWeight: 800, color: rarityColors[rarity], textTransform: 'uppercase', marginTop: '0.1rem' }}>
                         {rarity}
                       </span>
+                    )}
+
+                    {/* Requirement Progress Bar */}
+                    {requirementText && !owned && (
+                      <div style={{ marginTop: '6px', width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: 'hsl(220 10% 50%)', marginBottom: '3px' }}>
+                          <span>{requirementText}</span>
+                          <span style={{ fontWeight: 'bold' }}>{progressLabel}</span>
+                        </div>
+                        <div style={{ height: '4px', background: 'hsl(220 20% 7%)', borderRadius: 99, overflow: 'hidden', width: '100%' }}>
+                          <div style={{ width: `${progressPercentage}%`, height: '100%', background: requirementMet ? 'hsl(142 70% 50%)' : 'hsl(220 100% 60%)', transition: 'width 0.3s ease' }} />
+                        </div>
+                      </div>
                     )}
                   </div>
 
@@ -805,10 +820,18 @@ export default function StorePage() {
                           id={`store-item-buy-${item.id}`}
                           className="btn btn-primary btn-sm"
                           onClick={() => handleBuy(item)}
-                          disabled={buyingId === item.id}
-                          style={{ flex: canPreview ? 1.5 : 1, borderRadius: 12, fontSize: '0.75rem', padding: '0.4rem' }}
+                          disabled={buyingId === item.id || !requirementMet}
+                          style={{
+                            flex: canPreview ? 1.5 : 1,
+                            borderRadius: 12,
+                            fontSize: '0.75rem',
+                            padding: '0.4rem',
+                            background: !requirementMet ? 'hsl(220 15% 15%)' : undefined,
+                            borderColor: !requirementMet ? 'hsl(220 15% 20%)' : undefined,
+                            color: !requirementMet ? 'hsl(220 10% 40%)' : undefined
+                          }}
                         >
-                          {buyingId === item.id ? 'Buying...' : `💰 ${item.priceCoins}`}
+                          {buyingId === item.id ? 'Unlocking...' : !requirementMet ? 'Locked' : item.priceCoins === 0 ? '🎁 Unlock' : `💰 ${item.priceCoins}`}
                         </button>
                       </div>
                     )}

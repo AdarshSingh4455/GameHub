@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import SplashScreen from '@/components/layout/SplashScreen'
+import PwaManager from '@/components/layout/PwaManager'
 
 export const metadata: Metadata = {
   title: {
@@ -15,10 +16,16 @@ export const metadata: Metadata = {
     description: 'Social multiplayer gaming with leaderboards and achievements.',
     type: 'website',
   },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'GameHub'
+  }
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0d1117',
+  themeColor: '#0b0f19',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -33,9 +40,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <PwaManager />
         {children}
         <SplashScreen />
       </body>
     </html>
   )
 }
+

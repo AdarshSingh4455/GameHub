@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getLevelProgress } from '@/lib/xpUtils'
 import { GAMES_REGISTRY, getGameBySlug } from '@/lib/games'
@@ -680,6 +681,143 @@ export default function ProfilePage() {
       {activeTab === 'overview' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
           
+          {/* 👑 Premium Profile Prestige Showcase Card */}
+          <div 
+            className="card glass showcase-shimmer" 
+            style={{ 
+              gridColumn: '1 / -1',
+              padding: '2rem', 
+              borderRadius: 24, 
+              background: 'linear-gradient(135deg, hsl(270 40% 10% / 0.75), hsl(220 40% 8% / 0.75))',
+              border: '1px solid hsl(270 30% 20%)',
+              boxShadow: '0 8px 32px 0 rgba(139, 92, 246, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.5rem',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Soft decorative glow background */}
+            <div style={{
+              position: 'absolute',
+              top: '-50%',
+              right: '-10%',
+              width: '300px',
+              height: '300px',
+              background: 'radial-gradient(circle, hsl(270 100% 60% / 0.12) 0%, transparent 70%)',
+              pointerEvents: 'none',
+              filter: 'blur(30px)'
+            }} />
+
+            {/* Header info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+              <Avatar
+                avatarUrl={profile.avatarUrl}
+                username={profile.username}
+                selectedFrame={profile.selectedFrame}
+                size={80}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>
+                    {profile.username}
+                  </h2>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(270 100% 75%)', border: '1px solid hsl(270 100% 40%)', background: 'hsl(270 100% 50% / 0.15)', padding: '0.15rem 0.5rem', borderRadius: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Prestige Player
+                  </span>
+                </div>
+                {profile.selectedTitle ? (
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'hsl(45 100% 60%)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    ⚜️ {profile.selectedTitle}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'hsl(220 10% 50%)', fontStyle: 'italic' }}>
+                    No Title Equipped
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              
+              {/* Level & XP */}
+              <div style={{ padding: '1rem', background: 'hsl(222 20% 7% / 0.4)', border: '1px solid hsl(220 15% 12%)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Rank & Level</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>Level {profile.level}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '2px' }}>
+                  <div style={{ flex: 1, height: 6, background: 'hsl(220 20% 12%)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${levelPercent}%`, height: '100%', background: 'linear-gradient(90deg, hsl(220 100% 60%), hsl(270 80% 60%))' }} />
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: 'hsl(220 100% 70%)', fontWeight: 700 }}>{levelPercent}%</span>
+                </div>
+              </div>
+
+              {/* Highest Rank */}
+              <div style={{ padding: '1rem', background: 'hsl(222 20% 7% / 0.4)', border: '1px solid hsl(220 15% 12%)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Highest Matchmaking Rank</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: getRankDetails(rankedStats?.mmr || 1000).badgeColor, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  ⚡ {rankedStats?.peakRank || 'Bronze'}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>Current MMR: {rankedStats?.mmr || 1000}</span>
+              </div>
+
+              {/* Wins & Win Rate */}
+              <div style={{ padding: '1rem', background: 'hsl(222 20% 7% / 0.4)', border: '1px solid hsl(220 15% 12%)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Victories</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(142 70% 55%)' }}>{totalWins} Wins</span>
+                <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>Win Rate: {winRate}% ({totalGames} Games)</span>
+              </div>
+
+              {/* Favorite Game */}
+              <div style={{ padding: '1rem', background: 'hsl(222 20% 7% / 0.4)', border: '1px solid hsl(220 15% 12%)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Preferred Play Area</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(220 100% 70%)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  🎮 {favoriteGameLabel}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>Most played game mode</span>
+              </div>
+
+              {/* Recent Achievement */}
+              <div style={{ padding: '1rem', background: 'hsl(222 20% 7% / 0.4)', border: '1px solid hsl(220 15% 12%)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Recent Achievement</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(45 100% 60%)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={profile.achievements[0]?.achievement.name}>
+                  🏅 {profile.achievements[0]?.achievement.name || 'No Badges'}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {profile.achievements[0]?.achievement.description || 'Unlock by playing matches'}
+                </span>
+              </div>
+
+              {/* About GameHub Shortcut Link Card */}
+              <Link 
+                href="/dashboard/about"
+                style={{ 
+                  padding: '1rem', 
+                  background: 'linear-gradient(135deg, hsl(270 50% 15% / 0.6), hsl(220 50% 10% / 0.6))', 
+                  border: '1px solid hsl(270 40% 30% / 0.5)', 
+                  borderRadius: 16, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '4px',
+                  justifyContent: 'center',
+                  textDecoration: 'none',
+                  transition: 'transform 0.2s, border-color 0.2s',
+                  cursor: 'pointer'
+                }}
+                className="about-shortcut-card"
+              >
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(270 100% 75%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>GameHub Showcase</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  📖 Platform Details ➔
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 60%)' }}>Founder story, roadmap & stats</span>
+              </Link>
+
+            </div>
+          </div>
+
           {/* XP Progression Card */}
           <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: 0, letterSpacing: '0.05em' }}>

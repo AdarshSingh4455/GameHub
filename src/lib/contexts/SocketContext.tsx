@@ -117,22 +117,66 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         setReconnectCount(0)
       })
 
+      // Listen for browser visibility and Capacitor app state changes
+      const handleAppResume = () => {
+        console.log('🔄 [SocketContext] App visibility/resume state triggered. Checking connection...')
+        if (socketInstance) {
+          if (!socketInstance.connected) {
+            console.log('🔌 [SocketContext] Socket disconnected, forcing reconnection...')
+            socketInstance.connect()
+          } else {
+            console.log('🔌 [SocketContext] Socket is already connected, sending heartbeat check...')
+            socketInstance.emit('heartbeat')
+          }
+        }
+      }
+
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          handleAppResume()
+        }
+      }
+
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+
+      // If Capacitor is available, listen to native app state change
+      const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor
+      let appStateListener: any = null
+      if (isCapacitor) {
+        import('@capacitor/app').then(({ App }) => {
+          App.addListener('appStateChange', (state: any) => {
+            if (state.isActive) {
+              console.log('📱 [SocketContext] Native app became active. Triggering reconnect recovery...')
+              handleAppResume()
+            }
+          }).then(listener => {
+            appStateListener = listener
+          })
+        }).catch(err => {
+          console.error('[SocketContext] Failed to load @capacitor/app plugin:', err)
+        })
+      }
+
       setSocket(socketInstance)
+
+      return () => {
+        if (socketInstance) {
+          socketInstance.disconnect()
+        }
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current)
+        }
+        if (pingInterval) {
+          clearInterval(pingInterval)
+        }
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        if (appStateListener) {
+          appStateListener.remove()
+        }
+      }
     }
 
     initSocket()
-
-    return () => {
-      if (socketInstance) {
-        socketInstance.disconnect()
-      }
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current)
-      }
-      if (pingInterval) {
-        clearInterval(pingInterval)
-      }
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 

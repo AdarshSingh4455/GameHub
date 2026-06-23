@@ -82,6 +82,21 @@ export async function POST(request: Request) {
         }
       }
 
+      // Enforce win requirements for buying titles
+      if (item.type === 'TITLE') {
+        const metadata = (item.metadata as any) || {}
+        const minWins = metadata.minWins
+        if (minWins !== undefined && minWins !== null) {
+          const stats = await prisma.profileGameStats.findMany({
+            where: { profileId: profile.id }
+          })
+          const totalWins = stats.reduce((sum, s) => sum + s.winCount, 0)
+          if (totalWins < minWins) {
+            return NextResponse.json({ error: `Requires ${minWins} wins to purchase (Current: ${totalWins})` }, { status: 400 })
+          }
+        }
+      }
+
       // Deduct coins & Add to inventory
       const updatedProfile = await prisma.profile.update({
         where: { id: profile.id },

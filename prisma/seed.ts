@@ -181,8 +181,6 @@ async function main() {
     { name: 'Viking Warrior Avatar', type: 'AVATAR' as const, priceCoins: 150, assetUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Viking', isDefault: false },
     { name: 'Ninja Stealth Avatar', type: 'AVATAR' as const, priceCoins: 200, assetUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Ninja', isDefault: false },
     { name: 'Astronaut Space Avatar', type: 'AVATAR' as const, priceCoins: 250, assetUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=Astronaut', isDefault: false },
-
-    // Chat Packs
     { name: 'Friendly Chat Pack', type: 'CHAT_PACK' as const, priceCoins: 50, assetUrl: 'Friendly', isDefault: false, metadata: { messages: ['Well played! 🤝', 'Good game! 🎮', 'Nice move! 🔥', 'Hello there! 👋'] } },
     { name: 'Competitor Chat Pack', type: 'CHAT_PACK' as const, priceCoins: 100, assetUrl: 'Competitive', isDefault: false, metadata: { messages: ['Too easy! ⚡', 'Calculated. 🎯', 'Close one! 😮', 'Unlucky! 💀'] } },
     { name: 'Silly Chat Pack', type: 'CHAT_PACK' as const, priceCoins: 80, assetUrl: 'Silly', isDefault: false, metadata: { messages: ['Catch me if you can! 🏃', 'Oops, my bad! 🤡', 'Wow! 🌟', 'Let me cook! 👨‍🍳'] } },
@@ -191,9 +189,12 @@ async function main() {
     { name: 'Pro Pack', type: 'CHAT_PACK' as const, priceCoins: 90, assetUrl: 'Pro', isDefault: false, metadata: { messages: ['Calculated. 😎', 'GG! 🏆', 'GG WP! 🤝', 'Next game? 🎮'] } },
     { name: 'Cricket Pack', type: 'CHAT_PACK' as const, priceCoins: 80, assetUrl: 'Cricket', isDefault: false, metadata: { messages: ['Sixer! 🏏', 'Bowled him! 🎯', 'Howzzat! 📢', 'Good bowling! ⚾'] } },
     { name: 'Legend Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Legend', isDefault: false, metadata: { messages: ['What A Move! 🧠', 'Too Easy! ⚡', 'Close One! 😱', 'Good Luck! 🍀'] } },
-    { name: 'Cricket Sledge Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Cricket Sledge', isDefault: false, metadata: { messages: ['Nice Duck 🦆', 'Lucky Shot 😏', 'Pressure 😈', 'Easy Catch 😂'] } },
-    { name: 'Dating Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Dating', isDefault: false, metadata: { messages: ['Nice Move 🙂', 'Impressed ✨', 'Cute Play 🌸', 'Good Choice 💫'] } },
-    { name: 'Savage Pack', type: 'CHAT_PACK' as const, priceCoins: 150, assetUrl: 'Savage', isDefault: false, metadata: { messages: ['Too Slow', 'Skill Issue', 'Lucky Win', 'Try Again'] } },
+    { name: 'Cricket Sledge Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Cricket Sledge', isDefault: false, metadata: { messages: ['Nice Duck 🦆', 'Lucky Shot 😏', 'Pressure 😈', 'Easy Catch 😂', 'Too Easy 😎', "Where's Your Timing? 🤣"] } },
+    { name: 'Dating Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Dating', isDefault: false, metadata: { messages: ['Nice Move 🙂', 'Impressed ✨', 'Cute Play 🌸', 'Good Choice 💫', "You're Interesting 👀", 'That Was Smooth 😏'] } },
+    { name: 'Savage Pack', type: 'CHAT_PACK' as const, priceCoins: 150, assetUrl: 'Savage', isDefault: false, metadata: { messages: ['Skill Issue 😬', 'Too Slow 🐢', 'Lucky Win 🍀', 'Try Again 😴', 'Predictable 🤡', 'Still Learning? 📚'] } },
+    { name: 'Respect Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Respect', isDefault: false, metadata: { messages: ['GG 🤝', 'Well Played 👏', 'Close Match ⚡', 'Nice Strategy 🧠', 'Great Defense 🛡️', 'Good Luck 🍀'] } },
+    { name: 'Tournament Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Tournament', isDefault: false, metadata: { messages: ['Focus Mode 🎯', 'Clutch Time 🔥', 'One More Round ⚔️', 'Stay Sharp 👑', 'Final Push 🚀'] } },
+    { name: 'Custom Premium Pack', type: 'CHAT_PACK' as const, priceCoins: 200, assetUrl: 'Premium', isDefault: false, metadata: { messages: ['VIP Only ✨', 'Elite Move 💎', 'Golden Touch 🌟', 'Next Level 🚀'] } },
 
     // Scratchers
     { name: 'Bronze Scratcher', type: 'SCRATCHER' as const, priceCoins: 20, assetUrl: 'Bronze', isDefault: false, metadata: { rarity: 'COMMON', description: 'Scratch to win basic Coins or XP.' } },
@@ -202,9 +203,13 @@ async function main() {
     { name: 'Legendary Scratcher', type: 'SCRATCHER' as const, priceCoins: 250, assetUrl: 'Legendary', isDefault: false, metadata: { rarity: 'LEGENDARY', description: 'Scratch to win Legendary rewards!' } },
 
     // Titles
-    { name: 'Rookie', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 25, description: 'Unlocked at 25 Wins' } },
-    { name: 'Challenger', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 100, description: 'Unlocked at 100 Wins' } },
-    { name: 'Immortal', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 500, description: 'Unlocked at 500 Wins' } },
+    { name: 'Rookie', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 25, description: 'Requires 25 Wins' } },
+    { name: 'Challenger', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 50, description: 'Requires 50 Wins' } },
+    { name: 'Rising Star', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 75, description: 'Requires 75 Wins' } },
+    { name: 'Veteran', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 100, description: 'Requires 100 Wins' } },
+    { name: 'Elite', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 200, description: 'Requires 200 Wins' } },
+    { name: 'Mastermind', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 350, description: 'Requires 350 Wins' } },
+    { name: 'Immortal', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 500, description: 'Requires 500 Wins' } },
     { name: 'Champion', type: 'TITLE' as const, priceCoins: 120, isDefault: false, metadata: { description: 'A proven winner' } },
     { name: 'Legend', type: 'TITLE' as const, priceCoins: 200, isDefault: false, metadata: { description: 'Known by everyone' } },
     { name: 'Grandmaster', type: 'TITLE' as const, priceCoins: 300, isDefault: false, metadata: { description: 'Absolute master of games' } },

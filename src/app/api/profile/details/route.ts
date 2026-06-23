@@ -94,8 +94,7 @@ export async function GET(request: Request) {
       // 5. Fetch game stats manually to support mockPrisma
       prisma.profileGameStats.findMany({
         where: { profileId: profile.id },
-        orderBy: { playCount: 'desc' },
-        take: 3
+        orderBy: { playCount: 'desc' }
       }),
 
       // 6. Fetch user achievements manually to support mockPrisma

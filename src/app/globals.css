@@ -957,4 +957,149 @@ body.game-page-active .app-content {
   animation: legendary-glow 1.5s infinite alternate;
 }
 
+/* Premium Animated Frames Enhancements */
+@keyframes platinum-shine {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes diamond-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes master-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes legendary-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.frame-platinum {
+  background: linear-gradient(270deg, #e5e4e2, #a9a9a9, #ffffff, #e5e4e2);
+  background-size: 400% 400%;
+  animation: platinum-shine 4s ease infinite;
+  box-shadow: 0 0 10px rgba(229, 228, 226, 0.7);
+}
+
+.frame-diamond {
+  background: linear-gradient(270deg, #b9f2ff, #00ffff, #ffffff, #00bfff, #b9f2ff);
+  background-size: 400% 400%;
+  animation: diamond-shimmer 3s ease infinite;
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.8), inset 0 0 6px rgba(0, 255, 255, 0.4);
+}
+
+.frame-master {
+  background: linear-gradient(270deg, #ff007f, #8a2be2, #ff00ff, #ff007f);
+  background-size: 400% 400%;
+  animation: master-shimmer 3s ease infinite;
+  box-shadow: 0 0 15px rgba(255, 0, 127, 0.9), inset 0 0 8px rgba(255, 0, 127, 0.5);
+}
+
+.frame-legendary {
+  background: linear-gradient(270deg, #ff4500, #ff8c00, #ffd700, #ff4500);
+  background-size: 400% 400%;
+  animation: legendary-shimmer 2.5s ease infinite;
+  box-shadow: 0 0 20px rgba(255, 69, 0, 0.95), inset 0 0 10px rgba(255, 69, 0, 0.6);
+}
+
+/* Mobile Responsive Overrides (320px to 430px) */
+@media (max-width: 480px) {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  .safe-bottom-padding {
+    padding-bottom: 5rem !important;
+  }
+
+  /* Modals, Overlays, and Cards */
+  .modal-content, .card.glass, .dialog-content {
+    max-width: 290px !important;
+    padding: 1rem !important;
+    border-radius: 16px !important;
+  }
+
+  /* Grid containers */
+  .lobby-players-grid, .store-items-grid, .friends-list-container {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Leaderboard formatting */
+  table th, table td {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  /* Profile page stats tiles */
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Hand Cricket UI sizing */
+  .cricket-buttons-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.35rem !important;
+  }
+  .cricket-btn {
+    padding: 0.5rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Hangman letter key sizing */
+  .hangman-keyboard {
+    gap: 3px !important;
+    padding: 0.25rem !important;
+  }
+  .hangman-key {
+    min-width: 24px !important;
+    height: 32px !important;
+    font-size: 0.75rem !important;
+    padding: 0px !important;
+  }
+  .hangman-drawing {
+    height: 120px !important;
+  }
+
+  /* Memory Match card dimensions */
+  .memory-grid {
+    grid-template-columns: repeat(4, 55px) !important;
+    gap: 0.35rem !important;
+    justify-content: center !important;
+  }
+  .memory-card {
+    width: 55px !important;
+    height: 55px !important;
+    font-size: 1.25rem !important;
+  }
+
+  /* Scribble layout adjustments */
+  .scribble-layout {
+    flex-direction: column !important;
+  }
+  .scribble-canvas-container {
+    width: 100% !important;
+    max-width: 290px !important;
+    height: 200px !important;
+  }
+  .scribble-tools {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+  .scribble-color-btn {
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
 

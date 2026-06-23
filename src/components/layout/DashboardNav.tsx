@@ -9,6 +9,7 @@ import DailyRewardModal from './DailyRewardModal'
 import { getUtcDaysElapsed } from '@/lib/dailyRewards'
 import type { AchievementProgressInfo } from '@/lib/achievements'
 import { getLevelProgress } from '@/lib/xpUtils'
+import Avatar from '@/components/shared/Avatar'
 
 interface NavLink {
   href: string
@@ -29,6 +30,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/dashboard/friends',     label: 'Friends',       emoji: '👥', authRequired: true },
   { href: '/dashboard/notifications', label: 'Notifications', emoji: '🔔', authRequired: true },
   { href: '/dashboard/profile',     label: 'Profile',       emoji: '👤' },
+  { href: '/dashboard/about',       label: 'About GameHub', emoji: 'ℹ️' },
   { href: '/dashboard/settings',    label: 'Settings',      emoji: '⚙️',  authRequired: true },
 ]
 
@@ -37,7 +39,7 @@ const BOTTOM_NAV_LINKS: NavLink[] = [
   { href: '/dashboard/games',       label: 'Games',        emoji: '🎮' },
   { href: '/dashboard/challenges',  label: 'Challenges',   emoji: '⚡' },
   { href: '/dashboard/store',       label: 'Store',        emoji: '🪙' },
-  { href: '/dashboard/rewards',     label: 'Rewards',      emoji: '🎯' },
+  { href: '/dashboard/about',       label: 'About',        emoji: 'ℹ️' },
   { href: '/dashboard/profile',     label: 'Profile',      emoji: '👤' },
 ]
 
@@ -51,6 +53,7 @@ export default function DashboardNav({ user }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
+  const [pwaInstallable, setPwaInstallable] = useState(false)
   
   const [userStats, setUserStats] = useState({
     level: 1,
@@ -61,6 +64,10 @@ export default function DashboardNav({ user }: Props) {
     lastClaim: null as string | null,
     achievementProgress: [] as AchievementProgressInfo[],
     role: null as string | null,
+    selectedTitle: null as string | null,
+    selectedFrame: null as string | null,
+    username: '' as string,
+    avatarUrl: null as string | null,
   })
 
   // Detect game page to hide mobile top header and bottom nav
@@ -77,6 +84,50 @@ export default function DashboardNav({ user }: Props) {
       document.body.classList.remove('game-page-active')
     }
   }, [isGamePage])
+
+  // PWA Install Prompt state listener
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.deferredInstallPrompt) {
+      setPwaInstallable(true)
+    }
+
+    const handleInstallable = (e: Event) => {
+      setPwaInstallable((e as CustomEvent).detail)
+    }
+
+    window.addEventListener('pwa_installable', handleInstallable)
+    return () => {
+      window.removeEventListener('pwa_installable', handleInstallable)
+    }
+  }, [])
+
+  // Capacitor deep link handling
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('@capacitor/app').then(({ App }) => {
+        App.addListener('appUrlOpen', (data: any) => {
+          console.log('🔗 [DashboardNav] Native app deep link opened:', data.url)
+          try {
+            const cleanUrl = data.url.replace(/^([a-zA-Z0-9.-]+):\/\//, 'https://gamehub.app/')
+            const parsed = new URL(cleanUrl)
+            const roomCode = parsed.searchParams.get('room')
+            if (roomCode) {
+              console.log('🔄 Joining room via deep link:', roomCode)
+              router.push(`/dashboard/multiplayer?room=${roomCode}`)
+            } else {
+              const routePath = parsed.pathname + parsed.search
+              console.log('🔄 Navigating to route path:', routePath)
+              router.push(routePath)
+            }
+          } catch (e) {
+            console.error('Deep link navigation failed:', e)
+          }
+        })
+      }).catch(() => {
+        // App plugin not available
+      })
+    }
+  }, [router])
 
   // Load details / stats dynamically
   const loadProfileDetails = () => {
@@ -96,6 +147,10 @@ export default function DashboardNav({ user }: Props) {
             lastClaim: data.profile.lastDailyRewardClaim,
             achievementProgress: data.achievementProgress || [],
             role: data.profile.role,
+            selectedTitle: data.profile.selectedTitle,
+            selectedFrame: data.profile.selectedFrame,
+            username: data.profile.username,
+            avatarUrl: data.profile.avatarUrl,
           })
           
           // Fetch unread notifications count
@@ -127,6 +182,10 @@ export default function DashboardNav({ user }: Props) {
         lastClaim: guestLastClaim,
         achievementProgress: [], 
         role: null,
+        selectedTitle: null,
+        selectedFrame: null,
+        username: 'Guest',
+        avatarUrl: null,
       })
     }
   }
@@ -211,21 +270,34 @@ export default function DashboardNav({ user }: Props) {
           <Link
             href={user ? '/dashboard/profile' : '/register'}
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: user ? 'linear-gradient(135deg,hsl(220 100% 60%),hsl(270 80% 60%))' : 'hsl(220 15% 20%)',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '0.8rem',
               textDecoration: 'none',
-              color: 'white',
-              border: '1px solid hsl(220 15% 30%)',
             }}
           >
-            {getInitials()}
+            {user ? (
+              <Avatar
+                avatarUrl={userStats.avatarUrl}
+                username={userStats.username || user?.email || 'Player'}
+                selectedFrame={userStats.selectedFrame}
+                size={30}
+              />
+            ) : (
+              <div style={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                background: 'hsl(220 15% 20%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                color: 'white',
+                border: '1px solid hsl(220 15% 30%)'
+              }}>{getInitials()}</div>
+            )}
           </Link>
         </header>
       )}
@@ -273,27 +345,22 @@ export default function DashboardNav({ user }: Props) {
           {user ? (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg,hsl(220 100% 60%),hsl(270 80% 60%))',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    flexShrink: 0,
-                  }}
-                >
-                  {getInitials()}
-                </div>
+                <Avatar
+                  avatarUrl={userStats.avatarUrl}
+                  username={userStats.username || user?.email || 'Player'}
+                  selectedFrame={userStats.selectedFrame}
+                  size={38}
+                />
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'hsl(220 15% 92%)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {(user.user_metadata?.username as string) ?? user.email}
+                    {userStats.username || user?.email || 'Player'}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)' }}>
+                  {userStats.selectedTitle && (
+                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(45 100% 60%)', textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: '1px' }}>
+                      🏆 {userStats.selectedTitle}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '2px' }}>
                     Level {L} · {userStats.coins} Coins
                   </div>
                 </div>
@@ -448,10 +515,48 @@ export default function DashboardNav({ user }: Props) {
             if (userStats.role === 'SUPER_ADMIN') {
               dynamicNavLinks.splice(6, 0, { href: '/dashboard/admin', label: 'Admin Panel', emoji: '🛠️', authRequired: true })
             }
+            if (pwaInstallable) {
+              dynamicNavLinks.push({ href: '#install', label: 'Install App', emoji: '📥' })
+            }
 
             return dynamicNavLinks.map((link) => {
             const active = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href))
             const locked = link.authRequired && !user
+
+            if (link.href === '#install') {
+              return (
+                <button
+                  key={link.href}
+                  onClick={async () => {
+                    setDrawerOpen(false)
+                    if (window.showPwaInstallPrompt) {
+                      await window.showPwaInstallPrompt()
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.65rem 0.9rem',
+                    borderRadius: 10,
+                    textDecoration: 'none',
+                    marginBottom: '0.2rem',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    color: 'hsl(142 70% 55%)',
+                    background: 'hsl(142 70% 50% / 0.08)',
+                    border: '1px solid hsl(142 70% 50% / 0.2)',
+                    transition: 'all 0.15s',
+                    width: '100%',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: '1.1rem' }}>{link.emoji}</span>
+                  {link.label}
+                </button>
+              )
+            }
 
             return (
               <Link

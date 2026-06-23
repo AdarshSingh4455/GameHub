@@ -403,7 +403,7 @@ export default function GameChromeWrapper({ slug, name, emoji, description, chil
           flexDirection: 'column',
           flex: isFullscreen ? 1 : 'unset',
           justifyContent: isFullscreen ? 'center' : 'initial',
-          alignItems: isFullscreen ? 'center' : 'initial',
+          alignItems: 'center',
           overflow: isFullscreen ? 'hidden' : 'visible',
           height: isFullscreen ? 'calc(100% - 100px)' : 'auto',
           width: '100%',

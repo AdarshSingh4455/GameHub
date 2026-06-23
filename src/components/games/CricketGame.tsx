@@ -23,6 +23,7 @@ export default function CricketGame() {
   // Match Configuration
   const [overs, setOvers] = useState<number>(2)
   const [wickets, setWickets] = useState<number>(3)
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
 
   // Step state
   const [step, setStep] = useState<GameStep>('setup')
@@ -138,7 +139,7 @@ export default function CricketGame() {
     if (!matchState || isAnimating) return
 
     setIsAnimating(true)
-    const cpuPick = CricketEngine.getCpuPick()
+    const cpuPick = CricketEngine.getCpuPick(matchState, difficulty)
 
     // 600ms animation reveal delay
     setTimeout(() => {
@@ -293,6 +294,23 @@ export default function CricketGame() {
               ))}
             </div>
           </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'hsl(220 10% 70%)', marginBottom: '0.5rem' }}>Select AI Difficulty</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+              {(['easy', 'medium', 'hard'] as const).map(d => (
+                <button
+                  key={d}
+                  className={`btn ${difficulty === d ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setDifficulty(d)}
+                  style={{ fontWeight: 700, textTransform: 'capitalize' }}
+                  id={`cricket-diff-${d}`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <button
@@ -424,6 +442,13 @@ export default function CricketGame() {
     const isPlayerBatting = currentInnings.battingTeam === 'player'
     const isPlayerBowling = currentInnings.bowlingTeam === 'player'
 
+    const currentOverIndex = Math.floor(currentInnings.ballsBowled / 6)
+    const currentOverBalls = currentInnings.history.filter(ball => 
+      Math.floor((ball.ballNumber - 1) / 6) === currentOverIndex
+    )
+    const playerBowledSixesThisOver = currentOverBalls.filter(ball => ball.bowlerPick === 6).length
+    const isSixDisabledForBowling = isPlayerBowling && playerBowledSixesThisOver >= 3
+
     return (
       <div style={{ maxWidth: 600, margin: '1rem auto', display: 'flex', flexDirection: 'column', gap: '1rem' }} className="animate-fadeIn">
         {/* Main Scorecard Banner */}
@@ -534,8 +559,12 @@ export default function CricketGame() {
                 )}
               </div>
             ) : (
-              <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 55%)' }}>
-                {isPlayerBatting ? 'Choose a number to bat' : 'Choose a number to bowl'}
+              <span style={{ fontSize: '0.85rem', color: isSixDisabledForBowling ? 'hsl(0 80% 60%)' : 'hsl(220 10% 55%)', fontWeight: isSixDisabledForBowling ? 600 : 400 }}>
+                {isPlayerBatting ? 'Choose a number to bat' : (
+                  isSixDisabledForBowling 
+                    ? '🔒 6 can only be used 3 times per over while bowling.' 
+                    : 'Choose a number to bowl'
+                )}
               </span>
             )}
           </div>
@@ -543,27 +572,37 @@ export default function CricketGame() {
 
         {/* Input keypad */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem' }}>
-          {[1, 2, 3, 4, 5, 6].map(n => (
-            <button
-              key={n}
-              className="btn btn-secondary"
-              disabled={isAnimating}
-              onClick={() => handlePlayBall(n)}
-              style={{
-                fontSize: '1.4rem',
-                fontWeight: 800,
-                aspectRatio: '1',
-                borderRadius: 12,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0
-              }}
-              id={`cricket-btn-${n}`}
-            >
-              {n}
-            </button>
-          ))}
+          {[1, 2, 3, 4, 5, 6].map(n => {
+            const isRestrictedSix = n === 6 && isSixDisabledForBowling
+            const isBtnDisabled = isAnimating || isRestrictedSix
+            
+            return (
+              <button
+                key={n}
+                className={isRestrictedSix ? 'btn btn-danger' : 'btn btn-secondary'}
+                disabled={isBtnDisabled}
+                onClick={() => handlePlayBall(n)}
+                style={{
+                  fontSize: '1.4rem',
+                  fontWeight: 800,
+                  aspectRatio: '1',
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                  opacity: isBtnDisabled && !isRestrictedSix ? 0.5 : 1,
+                  background: isRestrictedSix ? 'hsl(0 80% 60% / 0.15)' : undefined,
+                  border: isRestrictedSix ? '1px solid hsl(0 80% 60% / 0.4)' : undefined,
+                  color: isRestrictedSix ? 'hsl(0 80% 60%)' : undefined,
+                  cursor: isBtnDisabled ? 'not-allowed' : 'pointer'
+                }}
+                id={`cricket-btn-${n}`}
+              >
+                {isRestrictedSix ? '🔒' : n}
+              </button>
+            )
+          })}
         </div>
 
         {/* Commentary log */}

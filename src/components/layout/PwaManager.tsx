@@ -17,14 +17,34 @@ export default function PwaManager() {
   const [newVersionInfo, setNewVersionInfo] = useState<{ version: string; whatsNew: string[] } | null>(null)
 
   useEffect(() => {
-    // 0. Check app version updates
     const LOCAL_VERSION = 'v1.0.0'
+    const isMajorChange = (v1: string, v2: string) => {
+      const clean1 = v1.replace(/^v/, '')
+      const clean2 = v2.replace(/^v/, '')
+      const maj1 = parseInt(clean1.split('.')[0], 10)
+      const maj2 = parseInt(clean2.split('.')[0], 10)
+      return !isNaN(maj1) && !isNaN(maj2) && maj1 !== maj2
+    }
+
+    // 0. Check app version updates
     fetch('/api/version')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.version !== LOCAL_VERSION) {
           setNewVersionInfo(data)
-          setShowUpdateModal(true)
+          if (isMajorChange(LOCAL_VERSION, data.version)) {
+            setShowUpdateModal(true)
+          } else {
+            console.log(`📡 [PWA] Silent Update Mode: version ${data.version} registered silently.`)
+            // Minor update: post skip waiting if registration is already waiting
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistration().then((reg) => {
+                if (reg && reg.waiting) {
+                  reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+                }
+              })
+            }
+          }
         }
       })
       .catch((err) => console.error('Failed to check app version:', err))
@@ -42,8 +62,19 @@ export default function PwaManager() {
               if (newWorker) {
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New service worker is available for update
                     console.log('📡 [PWA] New service worker installed and waiting!')
+                    // For minor updates, skip waiting silently so it activates on next launch.
+                    fetch('/api/version')
+                      .then((res) => (res.ok ? res.json() : null))
+                      .then((data) => {
+                        if (data && !isMajorChange(LOCAL_VERSION, data.version)) {
+                          console.log('📡 [PWA] Minor update service worker activated silently.')
+                          newWorker.postMessage({ type: 'SKIP_WAITING' })
+                        }
+                      })
+                      .catch(() => {
+                        newWorker.postMessage({ type: 'SKIP_WAITING' })
+                      })
                   }
                 })
               }

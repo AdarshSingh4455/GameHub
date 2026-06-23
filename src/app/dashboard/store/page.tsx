@@ -25,6 +25,32 @@ const CATEGORIES = [
   { id: 'PERK', label: 'Lobby Perks', emoji: '🛡️' }
 ]
 
+const LOCKED_PREVIEWS: Record<string, Array<{
+  name: string
+  priceCoins: number
+  requirement: string
+  emoji: string
+}>> = {
+  TITLE: [
+    { name: 'Cosmic Title', priceCoins: 150, requirement: 'Reach Level 15', emoji: '⚡' },
+    { name: 'Shadow Warrior', priceCoins: 80, requirement: 'Purchase in Store', emoji: '⚡' },
+    { name: 'Game Legend', priceCoins: 500, requirement: 'Win 100 Matches', emoji: '⚡' },
+    { name: 'Speed Demon', priceCoins: 120, requirement: 'Solve Memory Match in 15s', emoji: '⚡' }
+  ],
+  AVATAR_FRAME: [
+    { name: 'Neon Frame', priceCoins: 100, requirement: 'Reach Level 5', emoji: '🖼️' },
+    { name: 'Prestige Border', priceCoins: 250, requirement: 'Reach Level 10', emoji: '🖼️' },
+    { name: 'Ruby Glow', priceCoins: 350, requirement: 'Reach Level 25', emoji: '🖼️' },
+    { name: 'Champion Frame', priceCoins: 450, requirement: 'Win 50 Matches', emoji: '🖼️' }
+  ],
+  EFFECT: [
+    { name: 'Thunder Effect', priceCoins: 300, requirement: 'Open in Rare Mystery Crate', emoji: '✨' },
+    { name: 'Cosmic Trail', priceCoins: 200, requirement: 'Reach Level 15', emoji: '✨' },
+    { name: 'Rainbow Sparkles', priceCoins: 150, requirement: 'Daily Rewards streak 7', emoji: '✨' },
+    { name: 'Golden Aura', priceCoins: 400, requirement: 'Reach Level 50', emoji: '✨' }
+  ]
+}
+
 export default function StorePage() {
   const { user } = useGameSession()
   const { addToast } = useToast()
@@ -881,9 +907,65 @@ export default function StorePage() {
               )
             })}
             {activeCategoryItems.length === 0 && (
-              <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '3rem', color: 'hsl(220 10% 45%)', fontSize: '0.85rem' }}>
-                No items available in this category yet.
-              </div>
+              ['TITLE', 'AVATAR_FRAME', 'EFFECT'].includes(activeCategory) ? (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', alignItems: 'center' }}>
+                  <div className="card glass" style={{ width: '100%', padding: '2rem 1rem', textAlign: 'center', background: 'hsl(220 20% 10% / 0.6)', border: '1px dashed hsl(220 15% 20%)', borderRadius: 16 }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔒</div>
+                    <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: 'white', margin: '0 0 0.25rem 0' }}>No items unlocked yet</h3>
+                    <p style={{ fontSize: '0.8rem', color: 'hsl(220 10% 55%)', margin: 0 }}>Unlock locked items by leveling up or opening mystery crates!</p>
+                  </div>
+                  
+                  <div style={{ width: '100%' }}>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>
+                      Available Unlockables Preview
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem', width: '100%' }}>
+                      {(LOCKED_PREVIEWS[activeCategory] || []).map((preview, i) => (
+                        <div 
+                          key={i} 
+                          className="card glass" 
+                          style={{ 
+                            padding: '1rem', 
+                            borderRadius: 16, 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center', 
+                            textAlign: 'center', 
+                            gap: '0.5rem',
+                            border: '1px solid hsl(220 15% 16%)',
+                            background: 'hsl(220 20% 8% / 0.8)'
+                          }}
+                        >
+                          <div style={{ fontSize: '1.75rem', position: 'relative' }}>
+                            {activeCategory === 'TITLE' && <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(45 100% 55%)', border: '1px solid hsl(45 100% 40%)', background: 'hsl(45 100% 50% / 0.15)', padding: '0.15rem 0.5rem', borderRadius: 6, textTransform: 'uppercase' }}>{preview.name.replace(' Title', '')}</span>}
+                            {activeCategory === 'AVATAR_FRAME' && (
+                              <div style={{ width: 48, height: 48, borderRadius: '50%', border: preview.name.includes('Neon') ? '3px solid hsl(220 100% 60%)' : '3px solid hsl(45 100% 55%)', boxShadow: preview.name.includes('Neon') ? '0 0 10px hsl(220 100% 60%)' : '0 0 10px hsl(45 100% 55%)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'hsl(220 20% 12%)' }}>
+                                👤
+                              </div>
+                            )}
+                            {activeCategory === 'EFFECT' && <span style={{ textShadow: '0 0 10px currentColor' }}>{preview.name.includes('Thunder') ? '⚡' : preview.name.includes('Rainbow') ? '🌈' : '✨'}</span>}
+                            <span style={{ position: 'absolute', bottom: -5, right: -5, fontSize: '0.85rem' }}>🔒</span>
+                          </div>
+                          
+                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', marginTop: '0.25rem' }}>{preview.name}</div>
+                          
+                          <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', minHeight: 28 }}>
+                            {preview.requirement}
+                          </div>
+                          
+                          <div style={{ width: '100%', padding: '0.35rem', background: 'hsl(220 20% 12%)', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, color: 'hsl(45 100% 55%)' }}>
+                            💰 {preview.priceCoins} Coins
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'hsl(220 10% 45%)', fontSize: '0.85rem' }}>
+                  No items available in this category yet.
+                </div>
+              )
             )}
           </div>
         </div>

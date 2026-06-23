@@ -162,7 +162,7 @@ export default function AboutPage() {
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: 0, letterSpacing: '0.05em' }}>
           👨‍💻 Product Founder
         </h2>
-        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'flex-start' }} className="founder-wrapper">
           <div 
             style={{ 
               width: 64, 
@@ -209,7 +209,7 @@ export default function AboutPage() {
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(220 100% 70%)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.04em' }}>
               🚀 Future Roadmap:
             </span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }} className="profile-stats-grid">
+            <div className="about-roadmap-grid">
               {[
                 '🎮 New Puzzle & Arcade Games',
                 '🏆 Competitive Seasonal Tournaments',
@@ -267,7 +267,7 @@ export default function AboutPage() {
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem 0', letterSpacing: '0.05em' }}>
           🛠️ Technology Stack
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '0.75rem' }}>
+        <div className="tech-stack-grid">
           {[
             { name: 'Next.js 15', desc: 'API routes & SSR layout compilation', icon: '⚡' },
             { name: 'React 19', desc: 'Declarative component logic', icon: '⚛️' },

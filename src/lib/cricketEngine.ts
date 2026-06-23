@@ -81,8 +81,188 @@ export class InningsManager {
 }
 
 export class CricketEngine {
-  static getCpuPick(): number {
-    return Math.floor(Math.random() * 6) + 1;
+  static getCpuPick(state: MatchState | null, difficulty: 'easy' | 'medium' | 'hard' = 'medium'): number {
+    const defaultPick = () => Math.floor(Math.random() * 6) + 1;
+    if (!state) return defaultPick();
+
+    const currentInnings = state.phase === 'innings2' && state.innings2
+      ? state.innings2
+      : state.innings1;
+
+    if (!currentInnings) return defaultPick();
+
+    const isCpuBatting = currentInnings.battingTeam === 'cpu';
+    const isCpuBowling = currentInnings.bowlingTeam === 'cpu';
+
+    // Get player's picks in this current active innings
+    const isPlayerBatting = currentInnings.battingTeam === 'player';
+    const playerPicks = currentInnings.history.map(h => isPlayerBatting ? h.batsmanPick : h.bowlerPick);
+    const lastPicks = playerPicks.slice(-5); // last 5 picks
+
+    if (difficulty === 'easy') {
+      return defaultPick();
+    }
+
+    // Anti-Abuse Logic: If player is batting (CPU bowling) and player is spamming 6:
+    if (isCpuBowling && isPlayerBatting && lastPicks.length > 0) {
+      const lastPick = lastPicks[lastPicks.length - 1];
+      if (lastPick === 6) {
+        // Count consecutive sixes
+        let consecutiveSixes = 0;
+        for (let i = lastPicks.length - 1; i >= 0; i--) {
+          if (lastPicks[i] === 6) {
+            consecutiveSixes++;
+          } else {
+            break;
+          }
+        }
+        
+        let outProb = 0.35; // default prediction chance for a single 6
+        if (consecutiveSixes === 2) outProb = 0.70;
+        if (consecutiveSixes >= 3) outProb = 0.95;
+        
+        if (Math.random() < outProb) {
+          return 6; // CPU bowls 6 to catch player spamming 6
+        }
+      }
+    }
+
+    // Medium Difficulty: Pattern recognition of last 3 picks
+    if (difficulty === 'medium') {
+      const mediumLastPicks = playerPicks.slice(-3);
+      if (mediumLastPicks.length >= 2) {
+        const p1 = mediumLastPicks[mediumLastPicks.length - 1];
+        const p2 = mediumLastPicks[mediumLastPicks.length - 2];
+        if (p1 === p2) {
+          // 40% chance CPU acts on this prediction
+          if (Math.random() < 0.40) {
+            if (isCpuBowling) {
+              return p1; // Bowl same to match player
+            } else {
+              // Bat: choose anything other than p1 to avoid being matched
+              let choice = defaultPick();
+              while (choice === p1) {
+                choice = defaultPick();
+              }
+              return choice;
+            }
+          }
+        }
+      }
+      return defaultPick();
+    }
+
+    // Hard Difficulty: Pattern recognition + situational intelligence
+    if (difficulty === 'hard') {
+      // 1. Situational Intelligence (Innings 2 run chase analysis)
+      if (state.phase === 'innings2' && state.target !== undefined) {
+        const target = state.target;
+        const currentScore = currentInnings.score;
+        const runsNeeded = target - currentScore;
+        const ballsRemaining = (state.overs * 6) - currentInnings.ballsBowled;
+        const wicketsRemaining = state.wickets - currentInnings.wicketsLost;
+
+        if (ballsRemaining > 0 && wicketsRemaining > 0) {
+          const runRateRequired = runsNeeded / ballsRemaining;
+
+          if (isCpuBatting) {
+            // Case A: High required run rate, need big boundaries
+            if (runsNeeded > 0 && runRateRequired > 4) {
+              // Pick 5 or 6 aggressively
+              if (Math.random() < 0.70) {
+                return Math.random() < 0.5 ? 5 : 6;
+              }
+            }
+            // Case B: Very easy target, play super safe
+            else if (runsNeeded <= 3 && ballsRemaining >= 5) {
+              const safePicks = [1, 2, 3];
+              return safePicks[Math.floor(Math.random() * safePicks.length)];
+            }
+            // Case C: CPU is close to winning
+            else if (runsNeeded === 1) {
+              return Math.random() < 0.5 ? 2 : 3;
+            }
+          } else {
+            // CPU Bowling (player is batting)
+            // Case A: Player needs a high run rate (e.g. 12 off 2 balls)
+            if (runsNeeded > 0 && runRateRequired > 4) {
+              // Player must choose 5 or 6, bowl 5 or 6 to catch them out
+              if (Math.random() < 0.75) {
+                return Math.random() < 0.5 ? 5 : 6;
+              }
+            }
+            // Case B: Player needs 1 or 2 runs to win, ample balls
+            else if (runsNeeded <= 2 && ballsRemaining >= 3) {
+              // Player will likely bat safe, bowl 1 or 2 to match
+              if (Math.random() < 0.60) {
+                return Math.random() < 0.5 ? 1 : 2;
+              }
+            }
+          }
+        }
+      }
+
+      // 2. Pattern Recognition (last 5 picks)
+      if (lastPicks.length >= 2) {
+        const p1 = lastPicks[lastPicks.length - 1];
+        const p2 = lastPicks[lastPicks.length - 2];
+        
+        // A. Direct repetition (65% action chance)
+        if (p1 === p2 && Math.random() < 0.65) {
+          if (isCpuBowling) return p1;
+          else {
+            let choice = defaultPick();
+            while (choice === p1) choice = defaultPick();
+            return choice;
+          }
+        }
+
+        // B. Alternating pattern (e.g. 6, 4, 6, 4)
+        if (lastPicks.length >= 4) {
+          const p3 = lastPicks[lastPicks.length - 3];
+          const p4 = lastPicks[lastPicks.length - 4];
+          if (p1 === p3 && p2 === p4) {
+            // Next pick is likely p2
+            if (Math.random() < 0.60) {
+              if (isCpuBowling) return p2;
+              else {
+                let choice = defaultPick();
+                while (choice === p2) choice = defaultPick();
+                return choice;
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Favorite Number detection
+      if (playerPicks.length >= 4) {
+        const counts: Record<number, number> = {};
+        let favorite = playerPicks[0];
+        let maxCount = 1;
+        for (const p of playerPicks) {
+          counts[p] = (counts[p] || 0) + 1;
+          if (counts[p] > maxCount) {
+            maxCount = counts[p];
+            favorite = p;
+          }
+        }
+        
+        // If favorite is used more than 35% of the time
+        if (maxCount / playerPicks.length > 0.35 && Math.random() < 0.50) {
+          if (isCpuBowling) return favorite;
+          else {
+            let choice = defaultPick();
+            while (choice === favorite) choice = defaultPick();
+            return choice;
+          }
+        }
+      }
+
+      return defaultPick();
+    }
+
+    return defaultPick();
   }
 
   static playBall(

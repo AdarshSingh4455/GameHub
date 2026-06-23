@@ -1113,8 +1113,8 @@ body.game-page-active .app-content {
     max-width: 560px !important;
     margin-inline: auto !important;
     width: 100% !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
   }
 }
 
@@ -1143,6 +1143,8 @@ body {
   .app-content {
     padding-top: calc(60px + env(safe-area-inset-top, 0px) + 12px) !important;
     padding-bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom, 0px) + 16px) !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
   }
 }
 
@@ -1197,5 +1199,67 @@ body {
   }
   .profile-header-container h2 {
     justify-content: center !important;
+  }
+}
+
+/* Stacking and centering for Multiplayer menu grid */
+.multiplayer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+@media (max-width: 767px) {
+  .multiplayer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+}
+
+/* Founder details card vertical stacking & centering on mobile */
+@media (max-width: 767px) {
+  .founder-wrapper {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 1rem !important;
+  }
+  .founder-wrapper > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+}
+
+/* About page Roadmap grid stacking on mobile */
+.about-roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+@media (max-width: 767px) {
+  .about-roadmap-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Technology Stack grid responsive override */
+.tech-stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 767px) {
+  .tech-stack-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+}
+@media (max-width: 480px) {
+  .tech-stack-grid {
+    grid-template-columns: 1fr !important;
   }
 }

@@ -697,7 +697,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
+    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       
       {/* Profile Header Card */}
       <div
@@ -841,34 +841,7 @@ export default function ProfilePage() {
               filter: 'blur(30px)'
             }} />
 
-            {/* Header info */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <Avatar
-                avatarUrl={profile.avatarUrl}
-                username={profile.username}
-                selectedFrame={profile.selectedFrame}
-                size={80}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>
-                    {profile.username}
-                  </h2>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(270 100% 75%)', border: '1px solid hsl(270 100% 40%)', background: 'hsl(270 100% 50% / 0.15)', padding: '0.15rem 0.5rem', borderRadius: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Prestige Player
-                  </span>
-                </div>
-                {profile.selectedTitle ? (
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'hsl(45 100% 60%)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    ⚜️ {profile.selectedTitle}
-                  </span>
-                ) : (
-                  <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'hsl(220 10% 50%)', fontStyle: 'italic' }}>
-                    No Title Equipped
-                  </span>
-                )}
-              </div>
-            </div>
+            {/* Prestige Showcase Section */}
 
             {/* Stats Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>

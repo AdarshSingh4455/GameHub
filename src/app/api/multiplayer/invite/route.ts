@@ -132,7 +132,8 @@ export async function GET(request: Request) {
         sender: {
           select: {
             username: true,
-            avatarUrl: true
+            avatarUrl: true,
+            selectedFrame: true
           }
         }
       },

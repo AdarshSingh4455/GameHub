@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
         rankedLosses: true,
         rankedStreak: true,
         rankedPeakRank: true,
+        avatarUrl: true,
+        selectedFrame: true,
+        selectedTitle: true,
       },
       take: 50,
     })
@@ -36,6 +39,9 @@ export async function GET(request: NextRequest) {
         rankLabel: details.label,
         peakRank: p.rankedPeakRank,
         streak: p.rankedStreak,
+        avatarUrl: p.avatarUrl || null,
+        selectedFrame: p.selectedFrame || null,
+        selectedTitle: p.selectedTitle || null,
       }
     })
 

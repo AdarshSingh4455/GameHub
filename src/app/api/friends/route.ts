@@ -81,7 +81,9 @@ export async function GET(request: Request) {
             username: true,
             level: true,
             xp: true,
-            avatarUrl: true
+            avatarUrl: true,
+            selectedFrame: true,
+            selectedTitle: true
           }
         })
         matchingProfiles = found ? [found] : []
@@ -101,7 +103,9 @@ export async function GET(request: Request) {
             username: true,
             level: true,
             xp: true,
-            avatarUrl: true
+            avatarUrl: true,
+            selectedFrame: true,
+            selectedTitle: true
           },
           take: 10
         })
@@ -143,10 +147,10 @@ export async function GET(request: Request) {
       },
       include: {
         requester: {
-          select: { id: true, userId: true, username: true, level: true, xp: true, avatarUrl: true, lastSeenAt: true }
+          select: { id: true, userId: true, username: true, level: true, xp: true, avatarUrl: true, lastSeenAt: true, selectedFrame: true, selectedTitle: true }
         },
         addressee: {
-          select: { id: true, userId: true, username: true, level: true, xp: true, avatarUrl: true, lastSeenAt: true }
+          select: { id: true, userId: true, username: true, level: true, xp: true, avatarUrl: true, lastSeenAt: true, selectedFrame: true, selectedTitle: true }
         }
       }
     })
@@ -163,7 +167,7 @@ export async function GET(request: Request) {
       },
       include: {
         requester: {
-          select: { id: true, username: true, level: true, xp: true, avatarUrl: true }
+          select: { id: true, username: true, level: true, xp: true, avatarUrl: true, selectedFrame: true, selectedTitle: true }
         }
       }
     })
@@ -177,7 +181,7 @@ export async function GET(request: Request) {
       },
       include: {
         addressee: {
-          select: { id: true, username: true, level: true, xp: true, avatarUrl: true }
+          select: { id: true, username: true, level: true, xp: true, avatarUrl: true, selectedFrame: true, selectedTitle: true }
         }
       }
     })

@@ -252,6 +252,7 @@ export default function StorePage() {
       const field = item.type === 'TITLE' ? 'selectedTitle'
                   : item.type === 'AVATAR_FRAME' ? 'selectedFrame'
                   : item.type === 'EFFECT' ? 'selectedEffect'
+                  : item.type === 'CHAT_PACK' ? 'selectedChatPack'
                   : 'selectedTheme'
       const val = action === 'equip' ? item.name : null
       
@@ -655,6 +656,8 @@ export default function StorePage() {
                 isEquipped = profile?.selectedFrame === item.name
               } else if (item.type === 'EFFECT') {
                 isEquipped = profile?.selectedEffect === item.name
+              } else if (item.type === 'CHAT_PACK') {
+                isEquipped = profile?.selectedChatPack === item.name
               } else if (item.type === 'BOARD_THEME') {
                 isEquipped = profile?.selectedTheme === item.name
               } else if (item.id === 'perk-streak-protect') {

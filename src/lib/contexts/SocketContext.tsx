@@ -8,14 +8,23 @@ import { createClient } from '@/lib/supabase/client'
 interface SocketContextType {
   socket: Socket | null
   isConnected: boolean
+  reconnectCount: number
+  pingLatency: number
 }
 
-const SocketContext = createContext<SocketContextType>({ socket: null, isConnected: false })
+const SocketContext = createContext<SocketContextType>({
+  socket: null,
+  isConnected: false,
+  reconnectCount: 0,
+  pingLatency: 0
+})
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { user } = useGameSession()
   const [socket, setSocket] = useState<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  const [reconnectCount, setReconnectCount] = useState(0)
+  const [pingLatency, setPingLatency] = useState(0)
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -30,6 +39,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000'
     let socketInstance: Socket
+    let pingInterval: NodeJS.Timeout
 
     const initSocket = async () => {
       let authPayload: Record<string, any> = {}
@@ -68,6 +78,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
       socketInstance.on('connect', () => {
         setIsConnected(true)
+        setReconnectCount(0)
         console.log('🔌 Connected to GameHub real-time socket server')
         
         // Start presence keepalive heartbeat every 10 seconds
@@ -75,6 +86,15 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         heartbeatIntervalRef.current = setInterval(() => {
           socketInstance.emit('heartbeat')
         }, 10000)
+
+        // Latency checker every 3 seconds
+        if (pingInterval) clearInterval(pingInterval)
+        pingInterval = setInterval(() => {
+          const start = Date.now()
+          socketInstance.emit('ping-latency', () => {
+            setPingLatency(Date.now() - start)
+          })
+        }, 3000)
       })
 
       socketInstance.on('disconnect', () => {
@@ -84,6 +104,17 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           clearInterval(heartbeatIntervalRef.current)
           heartbeatIntervalRef.current = null
         }
+        if (pingInterval) {
+          clearInterval(pingInterval)
+        }
+      })
+
+      socketInstance.io.on('reconnect_attempt', (attempt) => {
+        setReconnectCount(attempt)
+      })
+
+      socketInstance.io.on('reconnect', () => {
+        setReconnectCount(0)
       })
 
       setSocket(socketInstance)
@@ -98,12 +129,15 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current)
       }
+      if (pingInterval) {
+        clearInterval(pingInterval)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
+    <SocketContext.Provider value={{ socket, isConnected, reconnectCount, pingLatency }}>
       {children}
     </SocketContext.Provider>
   )

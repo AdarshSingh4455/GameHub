@@ -25,6 +25,7 @@ model Profile {
   selectedTitle        String?
   selectedBadge        String?
   selectedFrame        String?
+  selectedChatPack     String?
   selectedTheme        String?
   selectedEffect       String?
   friendCode             String?             @unique

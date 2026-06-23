@@ -55,8 +55,8 @@ const io = new Server(server, {
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     methods: ['GET', 'POST']
   },
-  pingInterval: 10000,
-  pingTimeout: 5000,
+  pingInterval: 25000,
+  pingTimeout: 20000,
   transports: ['websocket'] // Enforce WebSocket-only transport for horizontal scaling compatibility
 })
 
@@ -223,24 +223,97 @@ function startTurnTimer(roomCode: string) {
             result = await processNumberGuessingMove(roomCode, room.id, currentTurnUserId, { guess: randomGuess }, mappedPlayers, prisma)
             lastMoveApplied = { guess: randomGuess }
           }
+        } else if (room.gameSlug === 'hangman') {
+          const state = await getHangmanSession(roomCode, room.id, prisma)
+          if (state && state.stage === 'PLAYING') {
+            const isP1 = currentTurnUserId === state.p1Id
+            const opponentUserId = isP1 ? state.p2Id : state.p1Id
+
+            // Deduct life
+            if (isP1) {
+              state.p1Lives--
+            } else {
+              state.p2Lives--
+            }
+
+            // Log timeout message to commentary
+            if (!state.commentary) state.commentary = []
+            state.commentary.unshift(`⏰ Time Out! ${isP1 ? state.p1Username || 'Player 1' : state.p2Username || 'Player 2'} lost 1 life due to inactivity.`)
+
+            // Check if lives run out
+            const livesOut = isP1 ? state.p1Lives <= 0 : state.p2Lives <= 0
+            let gameFinished = false
+            let winnerId = null
+
+            if (livesOut) {
+              gameFinished = true
+              winnerId = opponentUserId
+              state.stage = 'FINISHED'
+              state.winnerId = winnerId
+              state.currentTurn = null
+              state.turnExpiration = null
+              await deleteHangmanSession(roomCode)
+            } else {
+              // Switch turn
+              state.currentTurn = opponentUserId
+              state.turnExpiration = new Date(Date.now() + 60000).toISOString()
+            }
+
+            // Persist the updated state
+            await saveHangmanSession(roomCode, state)
+            await prisma.multiplayerGameSession.update({
+              where: { roomId: room.id },
+              data: {
+                gameState: state,
+                status: gameFinished ? 'FINISHED' : 'PLAYING'
+              }
+            })
+
+            result = {
+              state,
+              gameFinished,
+              winnerId
+            }
+            lastMoveApplied = { type: 'TIMEOUT' }
+          }
         }
 
         if (result) {
           const { state, gameFinished, winnerId } = result
 
-          let broadcastState = state
-          if (room.gameSlug === 'rps' && state.moves && Object.keys(state.moves).length > 0) {
-            broadcastState = getMaskedRpsState(state)
-          } else if (room.gameSlug === 'number-guessing') {
-            broadcastState = getMaskedNumberGuessingState(state)
-          }
+          if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman') {
+            // Asymmetric broadcasts for private word states
+            for (const player of room.players) {
+              const socketId = userSockets.get(player.userId)
+              if (socketId) {
+                const playerMaskedState = room.gameSlug === 'scribble'
+                  ? getScribbleMaskedState(state, player.userId)
+                  : getMaskedHangmanState(state, player.userId)
+                io.to(socketId).emit('game-update', {
+                  gameState: playerMaskedState,
+                  gameFinished,
+                  winnerId,
+                  lastMove: { userId: currentTurnUserId, move: lastMoveApplied, isAutoMove: true },
+                  serverTime: Date.now()
+                })
+              }
+            }
+          } else {
+            let broadcastState = state
+            if (room.gameSlug === 'rps' && state.moves && Object.keys(state.moves).length > 0) {
+              broadcastState = getMaskedRpsState(state)
+            } else if (room.gameSlug === 'number-guessing') {
+              broadcastState = getMaskedNumberGuessingState(state)
+            }
 
-          io.to(`game:${roomCode}`).emit('game-update', {
-            gameState: broadcastState,
-            gameFinished,
-            winnerId,
-            lastMove: { userId: currentTurnUserId, move: lastMoveApplied, isAutoMove: true }
-          })
+            io.to(`game:${roomCode}`).emit('game-update', {
+              gameState: broadcastState,
+              gameFinished,
+              winnerId,
+              lastMove: { userId: currentTurnUserId, move: lastMoveApplied, isAutoMove: true },
+              serverTime: Date.now()
+            })
+          }
 
           if (gameFinished) {
             await handleMatchCompletion(room, state, winnerId, prisma)
@@ -256,7 +329,7 @@ function startTurnTimer(roomCode: string) {
     }).catch(err => {
       logger.error(`[TURN TIMEOUT QUEUE ERROR] roomCode=${roomCode} error=${err.message}`)
     })
-  }, 60000) // 60s turn timer
+  }, process.env.TEST_FAST_TIMEOUT === 'true' ? 2000 : 60000) // 60s turn timer
 
   roomTurnTimeouts.set(roomCode, timeout)
 }
@@ -406,6 +479,10 @@ io.on('connection', async (rawSocket) => {
       where: { userId },
       data: { lastSeenAt: new Date() }
     }).catch((err: any) => logError(err, { userId }))
+  })
+
+  socket.on('ping-latency', (callback?: any) => {
+    if (typeof callback === 'function') callback()
   })
 
   // Manual status presence updates (ONLINE, AWAY, OFFLINE)
@@ -946,7 +1023,7 @@ io.on('connection', async (rawSocket) => {
           players: {
             include: {
               profile: {
-                select: { username: true, avatarUrl: true, level: true }
+                select: { username: true, avatarUrl: true, level: true, selectedTitle: true, selectedFrame: true }
               }
             },
             orderBy: { joinedAt: 'asc' }
@@ -1018,7 +1095,9 @@ io.on('connection', async (rawSocket) => {
           status: p.disconnectedAt ? 'DISCONNECTED' : p.status,
           username: p.profile?.username || 'Player',
           avatarUrl: p.profile?.avatarUrl || null,
-          level: p.profile?.level || 1
+          level: p.profile?.level || 1,
+          selectedTitle: p.profile?.selectedTitle || null,
+          selectedFrame: p.profile?.selectedFrame || null
         })),
         serverTime: Date.now()
       })
@@ -1132,7 +1211,13 @@ io.on('connection', async (rawSocket) => {
           clearTurnTimer(roomCode)
           await handleMatchCompletion(room, state, winnerId, prisma)
           deleteRoomQueue(roomCode)
-        } else if (room.gameSlug === 'dots-boxes' || room.gameSlug === 'memory' || room.gameSlug === 'rps' || room.gameSlug === 'number-guessing') {
+        } else if (
+          room.gameSlug === 'dots-boxes' || 
+          room.gameSlug === 'memory' || 
+          room.gameSlug === 'rps' || 
+          room.gameSlug === 'number-guessing' ||
+          (room.gameSlug === 'hangman' && state.stage === 'PLAYING')
+        ) {
           startTurnTimer(roomCode)
         }
 
@@ -1699,7 +1784,7 @@ async function broadcastRoomUpdate(roomCode: string) {
         players: {
           include: {
             profile: {
-              select: { username: true, avatarUrl: true, level: true }
+              select: { username: true, avatarUrl: true, level: true, selectedTitle: true, selectedFrame: true }
             }
           },
           orderBy: { joinedAt: 'asc' }
@@ -1715,7 +1800,9 @@ async function broadcastRoomUpdate(roomCode: string) {
       joinedAt: p.joinedAt,
       username: p.profile.username,
       avatarUrl: p.profile.avatarUrl,
-      level: p.profile.level
+      level: p.profile.level,
+      selectedTitle: p.profile.selectedTitle,
+      selectedFrame: p.profile.selectedFrame
     }))
 
     io.to(`room:${roomCode}`).emit('room-update', {

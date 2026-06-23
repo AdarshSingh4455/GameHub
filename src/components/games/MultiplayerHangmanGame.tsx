@@ -5,6 +5,7 @@ import { useSocket } from '@/lib/contexts/SocketContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { validateAndSuggest } from '@/lib/wordValidation'
 import WordValidationModal from '@/components/shared/WordValidationModal'
+import MatchReactions from './MatchReactions'
 
 interface Player {
   userId: string
@@ -66,6 +67,42 @@ export default function MultiplayerHangmanGame({
   const myGuessesLeft = isP1 ? gameState.p1FullGuessesLeft : gameState.p2FullGuessesLeft
 
   const isMyTurn = gameState.currentTurn === currentUserId
+
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [showTimeoutOverlay, setShowTimeoutOverlay] = useState(false)
+  const [timeoutPlayerName, setTimeoutPlayerName] = useState('')
+
+  // Calculate time left based on turnExpiration from server
+  useEffect(() => {
+    if (stage !== 'PLAYING' || !gameState.turnExpiration) {
+      setTimeLeft(null)
+      return
+    }
+
+    const calculateTime = () => {
+      const exp = new Date(gameState.turnExpiration).getTime()
+      const diff = Math.max(0, Math.round((exp - Date.now()) / 1000))
+      setTimeLeft(diff)
+    }
+
+    calculateTime()
+    const interval = setInterval(calculateTime, 1000)
+    return () => clearInterval(interval)
+  }, [stage, gameState.turnExpiration])
+
+  // Monitor lastMove for TIMEOUT move to trigger overlay
+  useEffect(() => {
+    if (session?.lastMove?.move?.type === 'TIMEOUT') {
+      const timedOutUserId = session.lastMove.userId
+      const player = players.find(p => p.userId === timedOutUserId)
+      setTimeoutPlayerName(player ? player.username : 'A player')
+      setShowTimeoutOverlay(true)
+      const timer = setTimeout(() => {
+        setShowTimeoutOverlay(false)
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [session?.lastMove, players])
 
   // Check if current player has already submitted word
   useEffect(() => {
@@ -187,7 +224,7 @@ export default function MultiplayerHangmanGame({
   }
 
   return (
-    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative' }}>
       
       {/* 1. WORD SUBMISSION STAGE */}
       {stage === 'WORD_SUBMISSION' && (
@@ -243,57 +280,94 @@ export default function MultiplayerHangmanGame({
               color: isMyTurn ? 'hsl(220 100% 70%)' : 'hsl(220 10% 60%)'
             }}
           >
-            {isMyTurn ? '👉 It is Your Turn!' : `⏳ Waiting for ${opponent.username}...`}
+            {isMyTurn 
+              ? `👉 It is Your Turn! ${timeLeft !== null ? `⏳ ${timeLeft}s` : ''}` 
+              : `⏳ Waiting for ${opponent.username}... ${timeLeft !== null ? `(${timeLeft}s)` : ''}`
+            }
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             {/* My Gameboard */}
-            <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderRadius: 14 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(270 80% 75%)', textTransform: 'uppercase' }}>
-                Your Puzzle
-              </div>
-              <div style={{ minHeight: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {renderHangmanSVG(myLives)}
-              </div>
-              {/* Masked opponent's word representation */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', flexWrap: 'wrap', margin: '0.5rem 0' }}>
-                {(opponentWord || '').split('').map((char: string, index: number) => (
-                  <span
-                    key={index}
-                    style={{
-                      width: 14, height: 22, borderBottom: '2px solid', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.95rem', fontWeight: 800, color: char !== '_' ? 'white' : 'transparent',
-                      borderColor: char !== '_' ? 'hsl(220 100% 60%)' : 'hsl(220 15% 25%)'
-                    }}
-                  >
-                    {char !== '_' ? char : ''}
+            <div style={isMyTurn && timeLeft !== null ? {
+              background: `conic-gradient(from 0deg, hsl(220 100% 60%) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg, rgba(255,255,255,0.05) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg)`,
+              padding: '3px',
+              borderRadius: '16px',
+              boxShadow: '0 0 15px hsl(220 100% 60% / 0.3)',
+              transition: 'background 0.5s linear'
+            } : { padding: '3px' }}>
+              <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderRadius: 14, background: 'hsl(222 20% 10%)', position: 'relative', height: '100%' }}>
+                {isMyTurn && timeLeft !== null && (
+                  <span style={{
+                    position: 'absolute', top: '10px', right: '10px',
+                    backgroundColor: 'hsl(220 100% 50%)', color: 'white',
+                    padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800
+                  }}>
+                    ⏳ {timeLeft}s
                   </span>
-                ))}
-              </div>
-              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', textAlign: 'center' }}>
-                ❤️ Lives: <strong style={{ color: 'white' }}>{myLives}</strong>
+                )}
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(270 80% 75%)', textTransform: 'uppercase' }}>
+                  Your Puzzle
+                </div>
+                <div style={{ minHeight: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {renderHangmanSVG(myLives)}
+                </div>
+                {/* Masked opponent's word representation */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', flexWrap: 'wrap', margin: '0.5rem 0' }}>
+                  {(opponentWord || '').split('').map((char: string, index: number) => (
+                    <span
+                      key={index}
+                      style={{
+                        width: 14, height: 22, borderBottom: '2px solid', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.95rem', fontWeight: 800, color: char !== '_' ? 'white' : 'transparent',
+                        borderColor: char !== '_' ? 'hsl(220 100% 60%)' : 'hsl(220 15% 25%)'
+                      }}
+                    >
+                      {char !== '_' ? char : ''}
+                    </span>
+                  ))}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', textAlign: 'center' }}>
+                  ❤️ Lives: <strong style={{ color: 'white' }}>{myLives}</strong>
+                </div>
               </div>
             </div>
 
             {/* Opponent Progress Board */}
-            <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderRadius: 14, opacity: 0.85 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(220 10% 55%)', textTransform: 'uppercase' }}>
-                {opponent.username} Progress
-              </div>
-              <div style={{ minHeight: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {renderHangmanSVG(opponentLives)}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center', margin: '0.5rem 0' }}>
-                <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)' }}>Solved Letters:</span>
-                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>
-                  {opponentSolvedCount}
-                  <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 50%)' }}>
-                    /{myWord?.length || 0}
+            <div style={!isMyTurn && timeLeft !== null ? {
+              background: `conic-gradient(from 0deg, hsl(220 100% 60%) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg, rgba(255,255,255,0.05) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg)`,
+              padding: '3px',
+              borderRadius: '16px',
+              boxShadow: '0 0 15px hsl(220 100% 60% / 0.3)',
+              transition: 'background 0.5s linear'
+            } : { padding: '3px' }}>
+              <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderRadius: 14, opacity: 0.85, background: 'hsl(222 20% 10%)', position: 'relative', height: '100%' }}>
+                {!isMyTurn && timeLeft !== null && (
+                  <span style={{
+                    position: 'absolute', top: '10px', right: '10px',
+                    backgroundColor: 'hsl(220 100% 50%)', color: 'white',
+                    padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800
+                  }}>
+                    ⏳ {timeLeft}s
                   </span>
-                </span>
-              </div>
-              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', textAlign: 'center' }}>
-                ❤️ Lives: <strong style={{ color: 'white' }}>{opponentLives}</strong>
+                )}
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(220 10% 55%)', textTransform: 'uppercase' }}>
+                  {opponent.username} Progress
+                </div>
+                <div style={{ minHeight: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {renderHangmanSVG(opponentLives)}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center', margin: '0.5rem 0' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)' }}>Solved Letters:</span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>
+                    {opponentSolvedCount}
+                    <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 50%)' }}>
+                      /{myWord?.length || 0}
+                    </span>
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', textAlign: 'center' }}>
+                  ❤️ Lives: <strong style={{ color: 'white' }}>{opponentLives}</strong>
+                </div>
               </div>
             </div>
           </div>
@@ -453,6 +527,38 @@ export default function MultiplayerHangmanGame({
           to { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* Floating Reactions overlay */}
+      {stage === 'PLAYING' && (
+        <MatchReactions
+          socket={socket}
+          roomCode={roomCode}
+          currentUserId={currentUserId}
+          players={players}
+        />
+      )}
+
+      {/* Timeout Overlay */}
+      {showTimeoutOverlay && (
+        <div style={{
+          position: 'absolute', inset: 0, backgroundColor: 'rgba(5, 8, 16, 0.8)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, borderRadius: 16,
+          backdropFilter: 'blur(4px)', animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div className="card glass text-center" style={{
+            padding: '2rem', border: '1px solid hsl(0 80% 50% / 0.4)',
+            background: 'hsl(0 80% 50% / 0.1)', borderRadius: 14,
+            boxShadow: '0 0 20px hsl(0 80% 50% / 0.2)'
+          }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'hsl(0 80% 65%)', margin: 0 }}>
+              ⏰ TIME OUT
+            </h3>
+            <p style={{ color: 'white', marginTop: '0.5rem', fontSize: '0.9rem', fontWeight: 700 }}>
+              {timeoutPlayerName} lost a life due to timeout! 💔
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

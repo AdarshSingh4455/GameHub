@@ -5,6 +5,7 @@ import ProfileCardModal from '@/components/layout/ProfileCardModal'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import RankBadge from '@/components/layout/RankBadge'
 import { getRankDetails } from '@/lib/rankedUtils'
+import Avatar from '@/components/shared/Avatar'
 
 interface LeaderboardRow {
   rank: number
@@ -18,6 +19,8 @@ interface LeaderboardRow {
   movement: 'up' | 'down' | 'same' | 'none'
   currentRank: number | null
   previousRank: number | null
+  avatarUrl?: string | null
+  selectedFrame?: string | null
 }
 
 interface RankedRow {
@@ -32,6 +35,9 @@ interface RankedRow {
   rankLabel: string
   peakRank: string
   streak: number
+  avatarUrl?: string | null
+  selectedFrame?: string | null
+  selectedTitle?: string | null
 }
 
 interface SeasonWinner {
@@ -365,13 +371,28 @@ export default function LeaderboardClient() {
                         </div>
                       </td>
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        <button
-                          onClick={() => setSelectedProfileId(row.profileId)}
-                          style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: 'white', cursor: 'pointer', textAlign: 'left' }}
-                          className="hover-underline"
-                        >
-                          {row.username}
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <Avatar
+                            avatarUrl={row.avatarUrl}
+                            username={row.username}
+                            selectedFrame={row.selectedFrame}
+                            size={32}
+                          />
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                            <button
+                              onClick={() => setSelectedProfileId(row.profileId)}
+                              style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: 'white', cursor: 'pointer', textAlign: 'left' }}
+                              className="hover-underline"
+                            >
+                              {row.username}
+                            </button>
+                            {row.title && (
+                              <span style={{ fontSize: '0.7rem', color: 'hsl(45 100% 60%)', fontWeight: 600, letterSpacing: '0.05em' }}>
+                                {row.title}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td style={{ padding: '0.85rem 1rem', color: 'hsl(270 80% 65%)', fontWeight: 700 }}>Lv {row.level}</td>
                       <td style={{ padding: '0.85rem 1rem', color: 'hsl(220 100% 65%)', fontWeight: 600 }}>{game !== 'all' ? (row.score ?? 0).toLocaleString() : `${(row.xp ?? 0).toLocaleString()} XP`}</td>
@@ -498,13 +519,28 @@ export default function LeaderboardClient() {
                         </div>
                       </td>
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        <button
-                          onClick={() => setSelectedProfileId(row.profileId)}
-                          style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: 'white', cursor: 'pointer', textAlign: 'left' }}
-                          className="hover-underline"
-                        >
-                          {row.username}
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <Avatar
+                            avatarUrl={row.avatarUrl}
+                            username={row.username}
+                            selectedFrame={row.selectedFrame}
+                            size={32}
+                          />
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                            <button
+                              onClick={() => setSelectedProfileId(row.profileId)}
+                              style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: 'white', cursor: 'pointer', textAlign: 'left' }}
+                              className="hover-underline"
+                            >
+                              {row.username}
+                            </button>
+                            {row.selectedTitle && (
+                              <span style={{ fontSize: '0.7rem', color: 'hsl(45 100% 60%)', fontWeight: 600, letterSpacing: '0.05em' }}>
+                                {row.selectedTitle}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td style={{ padding: '0.85rem 1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>

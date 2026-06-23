@@ -63,14 +63,34 @@ export async function POST(request: Request) {
 
     // Determine field to update based on item type
     let updateField: string | null = null
+    const metadata = (item.metadata as any) || {}
+
     if (item.type === 'TITLE') {
       updateField = 'selectedTitle'
+      const minWins = metadata.minWins
+      if (minWins !== undefined && minWins !== null) {
+        const stats = await prisma.profileGameStats.findMany({
+          where: { profileId: profile.id }
+        })
+        const totalWins = stats.reduce((sum, s) => sum + s.winCount, 0)
+        if (totalWins < minWins) {
+          return NextResponse.json({ error: `Requires ${minWins} wins (Current: ${totalWins})` }, { status: 400 })
+        }
+      }
     } else if (item.type === 'AVATAR_FRAME') {
       updateField = 'selectedFrame'
+      const minLevel = metadata.minLevel
+      if (minLevel !== undefined && minLevel !== null) {
+        if (profile.level < minLevel) {
+          return NextResponse.json({ error: `Requires level ${minLevel} (Current: ${profile.level})` }, { status: 400 })
+        }
+      }
     } else if (item.type === 'EFFECT') {
       updateField = 'selectedEffect'
     } else if (item.type === 'BOARD_THEME') {
       updateField = 'selectedTheme'
+    } else if (item.type === 'CHAT_PACK') {
+      updateField = 'selectedChatPack'
     } else {
       return NextResponse.json({ error: 'Item type not equippable' }, { status: 400 })
     }
@@ -91,3 +111,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: errMsg }, { status: 500 })
   }
 }
+

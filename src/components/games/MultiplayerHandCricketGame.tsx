@@ -34,6 +34,13 @@ export default function MultiplayerHandCricketGame({
   const [showBattingModal, setShowBattingModal] = useState(false)
   const [showBowlingModal, setShowBowlingModal] = useState(false)
 
+  const [optimisticSelection, setOptimisticSelection] = useState<number | null>(null)
+  const [revealState, setRevealState] = useState<'idle' | 'ball' | 'clash' | 'result'>('idle')
+  const [showFinalBallReplay, setShowFinalBallReplay] = useState(false)
+
+  const lastBallRef = React.useRef<any>(null)
+  const stageRef = React.useRef<string>('')
+
   const handleCopy = () => {
     navigator.clipboard.writeText(roomCode)
     setCopied(true)
@@ -70,10 +77,56 @@ export default function MultiplayerHandCricketGame({
     quickChat = []
   } = gameState
 
-  // Reset submitting state when state updates from the server
+  const lastBall = history[0]
+
+  // Reset submitting state and optimistic selection when state updates from the server
   React.useEffect(() => {
     setIsSubmitting(false)
+    setOptimisticSelection(null)
   }, [stage, innings, runs, wickets, balls, session.status])
+
+  // Reset optimistic selection when my move is formally in the moves mapping
+  React.useEffect(() => {
+    if (moves[currentUserId] !== undefined) {
+      setOptimisticSelection(null)
+    }
+  }, [moves, currentUserId])
+
+  // Clash reveal animation sequence trigger on new ball
+  React.useEffect(() => {
+    if (lastBall) {
+      const isNewBall = !lastBallRef.current || JSON.stringify(lastBall) !== JSON.stringify(lastBallRef.current)
+      if (isNewBall) {
+        setRevealState('ball')
+        const clashTimer = setTimeout(() => setRevealState('clash'), 1000)
+        const resultTimer = setTimeout(() => setRevealState('result'), 1800)
+        lastBallRef.current = lastBall
+        return () => {
+          clearTimeout(clashTimer)
+          clearTimeout(resultTimer)
+        }
+      }
+    } else {
+      setRevealState('idle')
+      lastBallRef.current = null
+    }
+  }, [lastBall])
+
+  // Delay match end transition to show final ball replay
+  React.useEffect(() => {
+    if (stage === 'FINISHED' && stageRef.current !== 'FINISHED') {
+      setShowFinalBallReplay(true)
+      const timer = setTimeout(() => {
+        setShowFinalBallReplay(false)
+      }, 2500)
+      stageRef.current = 'FINISHED'
+      return () => clearTimeout(timer)
+    }
+    if (stage !== 'FINISHED') {
+      stageRef.current = stage
+      setShowFinalBallReplay(false)
+    }
+  }, [stage])
 
   // Helper to map user ID to username
   const getUsername = (uid: string) => {
@@ -124,10 +177,12 @@ export default function MultiplayerHandCricketGame({
   // Handle Play Ball Selection
   const handlePlayBall = (number: number) => {
     if (!socket || moves[currentUserId] !== undefined || isSubmitting) return
+    setOptimisticSelection(number)
     setIsSubmitting(true)
     socket.emit('submit-move', { roomCode, move: { type: 'play', number } }, (res: any) => {
       setIsSubmitting(false)
       if (res?.error) {
+        setOptimisticSelection(null)
         addToast('error', 'Play Error', res.error)
       }
     })
@@ -162,7 +217,8 @@ export default function MultiplayerHandCricketGame({
   const isMeTossWinner = tossWinnerId === currentUserId
   const isMeBatting = battingUserId === currentUserId
   const isMeBowling = bowlingUserId === currentUserId
-  const myMoveSubmitted = moves[currentUserId] !== undefined && moves[currentUserId] !== null
+  const myMoveSubmitted = (moves[currentUserId] !== undefined && moves[currentUserId] !== null) || optimisticSelection !== null
+  const currentSelection = moves[currentUserId] !== undefined && moves[currentUserId] !== null ? moves[currentUserId] : optimisticSelection
 
   // Check if I am active (playing this ball)
   const isMeActive = isMeBatting || isMeBowling
@@ -170,7 +226,6 @@ export default function MultiplayerHandCricketGame({
   const activeBowlingTeamName = bowlingTeam === 'BLUE' ? 'Blue Team' : 'Green Team'
 
   // Extract last ball details
-  const lastBall = history[0]
   let myLastMove = null
   let opponentLastMove = null
   let lastBallResult = ''
@@ -218,6 +273,27 @@ export default function MultiplayerHandCricketGame({
   return (
     <div style={{ maxWidth: 650, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }} className="cricket-container">
       <style>{`
+        @keyframes spin-ball {
+          0% { transform: translate(-40px, 0) rotate(0deg); opacity: 0; }
+          20% { opacity: 1; }
+          80% { opacity: 1; }
+          100% { transform: translate(40px, 0) rotate(720deg); opacity: 0; }
+        }
+
+        @keyframes shake-impact {
+          0% { transform: translate(0, 0) scale(1); }
+          20% { transform: translate(-2px, 2px) scale(1.1); }
+          40% { transform: translate(2px, -2px) scale(1.1); }
+          60% { transform: translate(-2px, -2px) scale(1.05); }
+          80% { transform: translate(2px, 2px) scale(1.05); }
+          100% { transform: translate(0, 0) scale(1); }
+        }
+
+        @keyframes zoom-result {
+          0% { transform: scale(0.6); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+
         @media (max-width: 480px) {
           .cricket-container .card {
             padding: 0.85rem !important;
@@ -646,32 +722,47 @@ export default function MultiplayerHandCricketGame({
                 borderRadius: 10,
                 backgroundColor: 'hsl(var(--bg-elevated))',
                 margin: '0 auto',
-                border: moves[battingUserId] !== undefined ? '2px solid hsl(var(--success))' : '1px solid rgba(255,255,255,0.06)',
-                color: moves[battingUserId] !== undefined ? 'hsl(var(--success))' : 'hsl(var(--text-muted))'
+                border: (moves[battingUserId] !== undefined || (battingUserId === currentUserId && optimisticSelection !== null)) ? '2px solid hsl(var(--success))' : '1px solid rgba(255,255,255,0.06)',
+                color: (moves[battingUserId] !== undefined || (battingUserId === currentUserId && optimisticSelection !== null)) ? 'hsl(var(--success))' : 'hsl(var(--text-muted))'
               }}>
-                {moves[battingUserId] !== undefined ? '✓' : '?'}
+                {(moves[battingUserId] !== undefined || (battingUserId === currentUserId && optimisticSelection !== null)) ? '✓' : '?'}
               </div>
             </div>
 
             {/* Ball resolved indicator */}
-            <div className="text-center">
+            <div className="text-center" style={{ minWidth: '110px' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(var(--text-muted))', display: 'block', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
                 vs
               </span>
               {lastBall && (
-                <div style={{
-                  padding: '0.4rem',
-                  borderRadius: 8,
-                  backgroundColor: lastBall.isOut ? 'hsl(var(--danger) / 0.15)' : 'hsl(var(--success) / 0.15)',
-                  border: lastBall.isOut ? '1px solid hsl(var(--danger) / 0.3)' : '1px solid hsl(var(--success) / 0.3)'
-                }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: lastBall.isOut ? 'hsl(var(--danger))' : 'hsl(var(--success))' }}>
-                    {lastBallResult}
-                  </div>
-                  <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: '0.25rem' }}>
-                    Bat: {lastBall.batMove} | Bowl: {lastBall.bowlMove}
-                  </div>
-                </div>
+                <>
+                  {revealState === 'ball' && (
+                    <div style={{ position: 'relative', height: 44, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ fontSize: '1.75rem', animation: 'spin-ball 1s linear infinite' }}>🏏⚾</div>
+                    </div>
+                  )}
+                  {revealState === 'clash' && (
+                    <div style={{ display: 'inline-block', animation: 'shake-impact 0.8s ease-in-out', color: 'hsl(var(--warning))', fontSize: '0.9rem', fontWeight: 900 }}>
+                      ⚡ CLASH! ⚡
+                    </div>
+                  )}
+                  {(revealState === 'result' || revealState === 'idle') && (
+                    <div style={{
+                      padding: '0.4rem',
+                      borderRadius: 8,
+                      backgroundColor: lastBall.isOut ? 'hsl(var(--danger) / 0.15)' : 'hsl(var(--success) / 0.15)',
+                      border: lastBall.isOut ? '1px solid hsl(var(--danger) / 0.3)' : '1px solid hsl(var(--success) / 0.3)',
+                      animation: 'zoom-result 0.3s ease-out'
+                    }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: lastBall.isOut ? 'hsl(var(--danger))' : 'hsl(var(--success))' }}>
+                        {lastBallResult}
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))', marginTop: '0.25rem' }}>
+                        Bat: {lastBall.batMove} | Bowl: {lastBall.bowlMove}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -697,10 +788,10 @@ export default function MultiplayerHandCricketGame({
                 borderRadius: 10,
                 backgroundColor: 'hsl(var(--bg-elevated))',
                 margin: '0 auto',
-                border: moves[bowlingUserId] !== undefined ? '2px solid hsl(var(--success))' : '1px solid rgba(255,255,255,0.06)',
-                color: moves[bowlingUserId] !== undefined ? 'hsl(var(--success))' : 'hsl(var(--text-muted))'
+                border: (moves[bowlingUserId] !== undefined || (bowlingUserId === currentUserId && optimisticSelection !== null)) ? '2px solid hsl(var(--success))' : '1px solid rgba(255,255,255,0.06)',
+                color: (moves[bowlingUserId] !== undefined || (bowlingUserId === currentUserId && optimisticSelection !== null)) ? 'hsl(var(--success))' : 'hsl(var(--text-muted))'
               }}>
-                {moves[bowlingUserId] !== undefined ? '✓' : '?'}
+                {(moves[bowlingUserId] !== undefined || (bowlingUserId === currentUserId && optimisticSelection !== null)) ? '✓' : '?'}
               </div>
             </div>
           </div>
@@ -709,7 +800,9 @@ export default function MultiplayerHandCricketGame({
           {isMeActive ? (
             <div className="card glass text-center animate-pulse-slow" style={{ padding: '1.25rem', border: `1px solid ${isMeBatting ? activeBattingColor : getTeamColor(bowlingTeam)}` }}>
               <h3 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.75rem' }}>
-                {isMeBatting ? '🏏 SUBMIT YOUR BAT SCORE' : '🎯 SUBMIT YOUR BOWL GUESSTIMATE'}
+                {currentSelection !== null
+                  ? `Selected: ${currentSelection} - Waiting...`
+                  : (isMeBatting ? '🏏 SUBMIT YOUR BAT SCORE' : '🎯 SUBMIT YOUR BOWL GUESSTIMATE')}
               </h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem', maxWidth: 400, margin: '0 auto' }}>
@@ -723,15 +816,15 @@ export default function MultiplayerHandCricketGame({
                       fontSize: '1.25rem',
                       fontWeight: 900,
                       borderRadius: 10,
-                      backgroundColor: myMoveSubmitted && moves[currentUserId] === num
+                      backgroundColor: currentSelection === num
                         ? 'hsl(var(--success))'
                         : 'hsl(var(--bg-elevated))',
-                      border: myMoveSubmitted && moves[currentUserId] === num
+                      border: currentSelection === num
                         ? '1px solid hsl(var(--success))'
                         : '1px solid rgba(255,255,255,0.05)',
                       color: 'white',
                       cursor: myMoveSubmitted || isSubmitting ? 'default' : 'pointer',
-                      opacity: myMoveSubmitted && moves[currentUserId] !== num ? 0.35 : 1,
+                      opacity: currentSelection !== null && currentSelection !== num ? 0.35 : 1,
                       transition: 'all 0.15s ease'
                     }}
                     className={!myMoveSubmitted ? 'card-hover' : ''}
@@ -859,6 +952,41 @@ export default function MultiplayerHandCricketGame({
           currentUserId={currentUserId}
           players={players}
         />
+      )}
+
+      {showFinalBallReplay && lastBall && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(5, 8, 16, 0.9)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem',
+          backdropFilter: 'blur(8px)', animation: 'fadeIn 0.25s ease-out'
+        }}>
+          <div className="card glass text-center animate-fadeIn" style={{
+            maxWidth: 450, width: '100%', padding: '2.5rem 2rem', borderRadius: 20,
+            border: '2px solid hsl(var(--brand-primary) / 0.5)',
+            background: 'linear-gradient(135deg, hsl(222 20% 10%), hsl(222 20% 5%))',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.6)'
+          }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'hsl(var(--brand-secondary))', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+              ⚡ Final Ball Replay ⚡
+            </div>
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', marginBottom: '1.5rem' }}>
+              {lastBall.isOut ? '🔴 BATTER OUT!' : `🏏 +${lastBall.runs} RUNS`}
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: 12 }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))' }}>Batter chose</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: 'hsl(210 100% 65%)' }}>{lastBall.batMove}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))' }}>Bowler chose</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: 'hsl(142 70% 55%)' }}>{lastBall.bowlMove}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: '1rem', color: 'white', fontWeight: 700 }}>
+              {lastBall.isOut ? 'The final wicket fell!' : 'Match completed!'}
+            </div>
+          </div>
+        </div>
       )}
       
     </div>

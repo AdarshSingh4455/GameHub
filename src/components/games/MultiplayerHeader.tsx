@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Avatar from '@/components/shared/Avatar'
 
 interface Player {
   userId: string
@@ -8,6 +9,8 @@ interface Player {
   status?: string
   avatarUrl?: string | null
   level?: number
+  selectedFrame?: string | null
+  selectedTitle?: string | null
 }
 
 interface MultiplayerHeaderProps {
@@ -130,7 +133,7 @@ export default function MultiplayerHeader({
     return (
       <div style={{
         flex: 1,
-        padding: '0.85rem 1.25rem',
+        padding: '0.75rem 1rem',
         borderRadius: 16,
         background: isTheirTurn 
           ? `linear-gradient(135deg, hsl(222 20% 10%), ${isLeft ? 'hsl(210 100% 50% / 0.05)' : 'hsl(355 100% 50% / 0.05)'})` 
@@ -138,11 +141,11 @@ export default function MultiplayerHeader({
         border: `1px solid ${isTheirTurn ? themeColor : 'hsl(220 15% 18%)'}`,
         boxShadow: isTheirTurn ? `0 0 15px ${themeColor}15` : 'none',
         display: 'flex',
-        flexDirection: 'column',
-        gap: '0.35rem',
+        flexDirection: isLeft ? 'row' : 'row-reverse',
+        alignItems: 'center',
+        gap: '0.85rem',
         transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
         position: 'relative',
-        textAlign: isLeft ? 'left' : 'right'
       }}>
         {/* Turn indicator border-glow */}
         {isTheirTurn && (
@@ -153,53 +156,77 @@ export default function MultiplayerHeader({
             border: `1.5px solid ${themeColor}`,
             pointerEvents: 'none',
             boxShadow: `0 0 12px ${themeColor}33`,
-            animation: 'pulse-glow 2s infinite ease-in-out'
+            animation: 'pulse-glow 2s infinite ease-in-out',
+            zIndex: 1
           }} />
         )}
 
-        {/* Username & Presence status */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: isLeft ? 'flex-start' : 'flex-end', gap: '6px' }}>
-          {isLeft && <span style={{ fontSize: '0.75rem', color: presenceColor }}>{presenceDot}</span>}
-          <span style={{ fontWeight: 800, fontSize: '0.95rem', color: isMe ? 'white' : 'hsl(220 10% 85%)' }}>
-            {player.username} {isMe && '(You)'}
-          </span>
-          {!isLeft && <span style={{ fontSize: '0.75rem', color: presenceColor }}>{presenceDot}</span>}
-        </div>
+        {/* Player Avatar */}
+        <Avatar
+          avatarUrl={player.avatarUrl}
+          username={player.username}
+          selectedFrame={player.selectedFrame}
+          size={36}
+        />
 
-        {/* Level / Subtitle details */}
-        <div style={{ fontSize: '0.75rem', color: isDisconnected ? presenceColor : 'hsl(220 10% 55%)', fontWeight: 600 }}>
-          {isDisconnected ? presenceText : `Lvl ${player.level || 1}`}
-        </div>
-
-        {/* Score & Timer section */}
+        {/* Player Info Text Column */}
         <div style={{
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: isLeft ? 'flex-start' : 'flex-end',
-          gap: '12px',
-          marginTop: '0.2rem'
+          flexDirection: 'column',
+          gap: '0.2rem',
+          flex: 1,
+          alignItems: isLeft ? 'flex-start' : 'flex-end',
+          textAlign: isLeft ? 'left' : 'right'
         }}>
-          <div style={{ fontSize: '0.8rem', color: 'hsl(var(--text-secondary))', fontWeight: 700 }}>
-            Score: <span style={{ color: themeColor, fontSize: '1rem', fontWeight: 900 }}>{scoreVal}</span>
+          {/* Username & Presence status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {isLeft && <span style={{ fontSize: '0.75rem', color: presenceColor }}>{presenceDot}</span>}
+            <span style={{ fontWeight: 800, fontSize: '0.92rem', color: isMe ? 'white' : 'hsl(220 10% 85%)' }}>
+              {player.username} {isMe && '(You)'}
+            </span>
+            {!isLeft && <span style={{ fontSize: '0.75rem', color: presenceColor }}>{presenceDot}</span>}
           </div>
-          
-          <div style={{ borderLeft: '1px solid hsl(220 15% 18%)', height: '14px', margin: '0 4px' }} />
 
-          <div>
-            {isTheirTurn ? (
-              <span style={{
-                fontSize: '0.85rem',
-                fontWeight: 900,
-                color: timeLeft !== null && timeLeft < 10 ? 'hsl(355 100% 60%)' : 'hsl(var(--text-primary))',
-                animation: timeLeft !== null && timeLeft < 10 ? 'pulse-fast 1s infinite' : 'none'
-              }}>
-                ⏱ {timeLeft ?? 60}s
-              </span>
-            ) : (
-              <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 45%)', fontWeight: 600 }}>
-                Waiting
+          {/* Level / Title */}
+          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', fontSize: '0.7rem', color: isDisconnected ? presenceColor : 'hsl(220 10% 55%)', fontWeight: 600 }}>
+            {player.selectedTitle && (
+              <span style={{ color: 'hsl(45 100% 55%)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>
+                {player.selectedTitle}
               </span>
             )}
+            <span>{isDisconnected ? presenceText : `Lvl ${player.level || 1}`}</span>
+          </div>
+
+          {/* Score & Timer section */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isLeft ? 'flex-start' : 'flex-end',
+            gap: '8px',
+            marginTop: '0.1rem'
+          }}>
+            <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', fontWeight: 700 }}>
+              Score: <span style={{ color: themeColor, fontSize: '0.85rem', fontWeight: 900 }}>{scoreVal}</span>
+            </div>
+            
+            <div style={{ borderLeft: '1px solid hsl(220 15% 18%)', height: '10px', margin: '0 2px' }} />
+
+            <div>
+              {isTheirTurn ? (
+                <span style={{
+                  fontSize: '0.78rem',
+                  fontWeight: 900,
+                  color: timeLeft !== null && timeLeft < 10 ? 'hsl(355 100% 60%)' : 'white',
+                  animation: timeLeft !== null && timeLeft < 10 ? 'pulse-fast 1s infinite' : 'none'
+                }}>
+                  ⏱ {timeLeft ?? 60}s
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.72rem', color: 'hsl(220 10% 45%)', fontWeight: 600 }}>
+                  Waiting
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

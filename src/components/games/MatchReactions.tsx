@@ -58,6 +58,16 @@ export default function MatchReactions({ socket, roomCode, currentUserId, player
             .filter((inv: any) => inv.cosmeticItem?.type === 'CHAT_PACK')
             .map((inv: any) => inv.cosmeticItem)
           setOwnedPacks(packs)
+
+          const equippedPackName = data.profile.selectedChatPack
+          if (equippedPackName) {
+            const matchedPack = [defaultPack, ...packs].find(
+              p => p.name.toLowerCase() === equippedPackName.toLowerCase()
+            )
+            if (matchedPack) {
+              setActivePackId(matchedPack.id)
+            }
+          }
         }
       })
       .catch(console.error)

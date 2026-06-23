@@ -191,6 +191,9 @@ async function main() {
     { name: 'Pro Pack', type: 'CHAT_PACK' as const, priceCoins: 90, assetUrl: 'Pro', isDefault: false, metadata: { messages: ['Calculated. 😎', 'GG! 🏆', 'GG WP! 🤝', 'Next game? 🎮'] } },
     { name: 'Cricket Pack', type: 'CHAT_PACK' as const, priceCoins: 80, assetUrl: 'Cricket', isDefault: false, metadata: { messages: ['Sixer! 🏏', 'Bowled him! 🎯', 'Howzzat! 📢', 'Good bowling! ⚾'] } },
     { name: 'Legend Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Legend', isDefault: false, metadata: { messages: ['What A Move! 🧠', 'Too Easy! ⚡', 'Close One! 😱', 'Good Luck! 🍀'] } },
+    { name: 'Cricket Sledge Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Cricket Sledge', isDefault: false, metadata: { messages: ['Nice Duck 🦆', 'Lucky Shot 😏', 'Pressure 😈', 'Easy Catch 😂'] } },
+    { name: 'Dating Pack', type: 'CHAT_PACK' as const, priceCoins: 120, assetUrl: 'Dating', isDefault: false, metadata: { messages: ['Nice Move 🙂', 'Impressed ✨', 'Cute Play 🌸', 'Good Choice 💫'] } },
+    { name: 'Savage Pack', type: 'CHAT_PACK' as const, priceCoins: 150, assetUrl: 'Savage', isDefault: false, metadata: { messages: ['Too Slow', 'Skill Issue', 'Lucky Win', 'Try Again'] } },
 
     // Scratchers
     { name: 'Bronze Scratcher', type: 'SCRATCHER' as const, priceCoins: 20, assetUrl: 'Bronze', isDefault: false, metadata: { rarity: 'COMMON', description: 'Scratch to win basic Coins or XP.' } },
@@ -199,7 +202,9 @@ async function main() {
     { name: 'Legendary Scratcher', type: 'SCRATCHER' as const, priceCoins: 250, assetUrl: 'Legendary', isDefault: false, metadata: { rarity: 'LEGENDARY', description: 'Scratch to win Legendary rewards!' } },
 
     // Titles
-    { name: 'Rookie', type: 'TITLE' as const, priceCoins: 50, isDefault: false, metadata: { description: 'New kid on the block' } },
+    { name: 'Rookie', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 25, description: 'Unlocked at 25 Wins' } },
+    { name: 'Challenger', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 100, description: 'Unlocked at 100 Wins' } },
+    { name: 'Immortal', type: 'TITLE' as const, priceCoins: 0, isDefault: false, metadata: { minWins: 500, description: 'Unlocked at 500 Wins' } },
     { name: 'Champion', type: 'TITLE' as const, priceCoins: 120, isDefault: false, metadata: { description: 'A proven winner' } },
     { name: 'Legend', type: 'TITLE' as const, priceCoins: 200, isDefault: false, metadata: { description: 'Known by everyone' } },
     { name: 'Grandmaster', type: 'TITLE' as const, priceCoins: 300, isDefault: false, metadata: { description: 'Absolute master of games' } },
@@ -223,7 +228,14 @@ async function main() {
     { name: 'Silver', type: 'AVATAR_FRAME' as const, priceCoins: 100, isDefault: false, metadata: { description: 'Polished silver lining' } },
     { name: 'Gold', type: 'AVATAR_FRAME' as const, priceCoins: 180, isDefault: false, metadata: { description: 'Gleaming golden borders' } },
     { name: 'Diamond', type: 'AVATAR_FRAME' as const, priceCoins: 250, isDefault: false, metadata: { description: 'Sparkling diamond shell' } },
-    { name: 'Mythic', type: 'AVATAR_FRAME' as const, priceCoins: 400, isDefault: false, metadata: { description: 'Ascendant legendary border' } }
+    { name: 'Mythic', type: 'AVATAR_FRAME' as const, priceCoins: 400, isDefault: false, metadata: { description: 'Ascendant legendary border' } },
+    { name: 'Bronze Frame', type: 'AVATAR_FRAME' as const, priceCoins: 0, isDefault: false, metadata: { minLevel: 15, description: 'Requires Level 15' } },
+    { name: 'Silver Frame', type: 'AVATAR_FRAME' as const, priceCoins: 0, isDefault: false, metadata: { minLevel: 30, description: 'Requires Level 30' } },
+    { name: 'Gold Frame', type: 'AVATAR_FRAME' as const, priceCoins: 0, isDefault: false, metadata: { minLevel: 45, description: 'Requires Level 45' } },
+    { name: 'Platinum Frame', type: 'AVATAR_FRAME' as const, priceCoins: 0, isDefault: false, metadata: { minLevel: 60, description: 'Requires Level 60' } },
+    { name: 'Diamond Frame', type: 'AVATAR_FRAME' as const, priceCoins: 0, isDefault: false, metadata: { minLevel: 75, description: 'Requires Level 75' } },
+    { name: 'Master Frame', type: 'AVATAR_FRAME' as const, priceCoins: 0, isDefault: false, metadata: { minLevel: 90, description: 'Requires Level 90' } },
+    { name: 'Legendary Frame', type: 'AVATAR_FRAME' as const, priceCoins: 0, isDefault: false, metadata: { minLevel: 100, description: 'Requires Level 100' } }
   ]
   for (const c of defaults) {
     await prisma.cosmeticItem.upsert({

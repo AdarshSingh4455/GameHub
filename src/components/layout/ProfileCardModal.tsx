@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { getLevelProgress } from '@/lib/xpUtils'
+import Avatar from '@/components/shared/Avatar'
 
 interface ProfileData {
   profile: {
@@ -11,6 +12,7 @@ interface ProfileData {
     username: string
     avatarUrl: string | null
     selectedTitle: string | null
+    selectedFrame?: string | null
     level: number
     xp: number
     coins: number
@@ -341,27 +343,12 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
               {/* Profile Header Block */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
                 <div style={{ position: 'relative' }}>
-                  <div style={{
-                    width: 68,
-                    height: 68,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: '1.6rem',
-                    color: 'white',
-                    border: '2px solid hsl(220 15% 25%)',
-                    overflow: 'hidden',
-                  }}>
-                    {data.profile.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={data.profile.avatarUrl} alt={data.profile.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      data.profile.username[0].toUpperCase()
-                    )}
-                  </div>
+                  <Avatar
+                    avatarUrl={data.profile.avatarUrl}
+                    username={data.profile.username}
+                    selectedFrame={data.profile.selectedFrame}
+                    size={64}
+                  />
                   <div style={{
                     position: 'absolute',
                     bottom: -3,

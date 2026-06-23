@@ -160,6 +160,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     username: profile.username,
     avatarUrl: profile.avatarUrl,
     selectedTitle: profile.selectedTitle,
+    selectedFrame: profile.selectedFrame,
     level: profile.level,
     xp: profile.xp,
     currentStreak: profile.currentStreak,

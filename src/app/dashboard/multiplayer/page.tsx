@@ -7,6 +7,8 @@ import { useToast } from '@/lib/contexts/ToastContext'
 import { isRateLimited } from '@/lib/rateLimit'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import PartyPanel from '@/components/layout/PartyPanel'
+import Avatar from '@/components/shared/Avatar'
+import SocketDiagnostics from '@/components/layout/SocketDiagnostics'
 
 interface Player {
   id: string
@@ -17,6 +19,8 @@ interface Player {
   avatarUrl: string | null
   level: number
   lastSeenAt?: string | null
+  selectedFrame?: string | null
+  selectedTitle?: string | null
 }
 
 interface Room {
@@ -35,6 +39,8 @@ interface Friend {
   level: number
   xp: number
   avatarUrl: string | null
+  selectedFrame?: string | null
+  selectedTitle?: string | null
   lastSeenAt: string | null
 }
 
@@ -53,6 +59,7 @@ interface Invite {
   sender: {
     username: string
     avatarUrl: string | null
+    selectedFrame?: string | null
   }
 }
 
@@ -123,6 +130,7 @@ export default function MultiplayerPage() {
   const [maxPlayers, setMaxPlayers] = useState(4)
   const [roomCodeInput, setRoomCodeInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingText, setLoadingText] = useState('')
 
   // Room/lobby state
   const [room, setRoom] = useState<Room | null>(null)
@@ -386,21 +394,47 @@ export default function MultiplayerPage() {
     if (!socket || screen !== 'LOBBY' || !lobbyRoomCode) return
 
     const joinLobbyRoom = () => {
-      setIsLoading(true)
-      const timeoutId = setTimeout(() => {
-        setIsLoading(false)
-        addToast('error', 'Timeout', 'Server did not respond to join request.')
+      if (!socket.connected) {
+        addToast('error', 'Diagnostics', 'Server is unreachable. Please check your network connection or try again later.')
         leaveRoomCleanup()
-      }, 5000)
+        return
+      }
 
-      socket.emit('join-room', { roomCode: lobbyRoomCode }, (response: any) => {
-        clearTimeout(timeoutId)
-        setIsLoading(false)
-        if (response?.error) {
-          addToast('error', 'Join Error', response.error)
-          leaveRoomCleanup()
-        }
-      })
+      let attempts = 0
+      const maxAttempts = 3
+
+      const attemptJoin = () => {
+        attempts++
+        setIsLoading(true)
+        setLoadingText(`Joining Room (Attempt ${attempts}/${maxAttempts})...`)
+
+        let gotResponse = false
+        const timeoutId = setTimeout(() => {
+          if (gotResponse) return
+          setIsLoading(false)
+          setLoadingText('')
+          if (attempts < maxAttempts) {
+            addToast('warning', 'Timeout', `Join attempt ${attempts} timed out. Retrying...`)
+            setTimeout(attemptJoin, 1000)
+          } else {
+            addToast('error', 'Unreachable', 'Server did not respond to join request after 3 attempts. Please try again.')
+            leaveRoomCleanup()
+          }
+        }, 4000)
+
+        socket.emit('join-room', { roomCode: lobbyRoomCode }, (response: any) => {
+          gotResponse = true
+          clearTimeout(timeoutId)
+          setIsLoading(false)
+          setLoadingText('')
+          if (response?.error) {
+            addToast('error', 'Join Error', response.error)
+            leaveRoomCleanup()
+          }
+        })
+      }
+
+      attemptJoin()
     }
 
     // Join room immediately
@@ -510,24 +544,52 @@ export default function MultiplayerPage() {
   }
 
   const handleCreateRoom = () => {
-    if (!socket) return
-    setIsLoading(true)
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false)
-      addToast('error', 'Timeout', 'Server did not respond to create request.')
-    }, 5000)
+    if (!socket) {
+      addToast('error', 'Diagnostics', 'Socket not initialized.')
+      return
+    }
+    if (!socket.connected) {
+      addToast('error', 'Diagnostics', 'Server is unreachable. Please check your internet connection or server status.')
+      return
+    }
 
-    socket.emit('create-room', { gameSlug: selectedGame, maxPlayers }, (response: any) => {
-      clearTimeout(timeoutId)
-      setIsLoading(false)
-      if (response?.error) {
-        addToast('error', 'Error', response.error)
-      } else if (response?.roomCode) {
-        addToast('success', 'Room Created', `Room code ${response.roomCode} created!`)
-        setLobbyRoomCode(response.roomCode)
-        setScreen('LOBBY')
-      }
-    })
+    let attempts = 0
+    const maxAttempts = 3
+    
+    const attemptCreate = () => {
+      attempts++
+      setIsLoading(true)
+      setLoadingText(`Creating Room (Attempt ${attempts}/${maxAttempts})...`)
+      
+      let gotResponse = false
+      const timeoutId = setTimeout(() => {
+        if (gotResponse) return
+        setIsLoading(false)
+        setLoadingText('')
+        if (attempts < maxAttempts) {
+          addToast('warning', 'Timeout', `Attempt ${attempts} failed. Retrying...`)
+          setTimeout(attemptCreate, 1000)
+        } else {
+          addToast('error', 'Unreachable', 'Server did not respond after 3 attempts. Please try again.')
+        }
+      }, 4000)
+
+      socket.emit('create-room', { gameSlug: selectedGame, maxPlayers }, (response: any) => {
+        gotResponse = true
+        clearTimeout(timeoutId)
+        setIsLoading(false)
+        setLoadingText('')
+        if (response?.error) {
+          addToast('error', 'Error', response.error)
+        } else if (response?.roomCode) {
+          addToast('success', 'Room Created', `Room code ${response.roomCode} created!`)
+          setLobbyRoomCode(response.roomCode)
+          setScreen('LOBBY')
+        }
+      })
+    }
+
+    attemptCreate()
   }
 
   const handleJoinRoom = () => {
@@ -1060,10 +1122,11 @@ export default function MultiplayerPage() {
                       >
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <img
-                              src={invite.sender.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${invite.sender.username}`}
-                              alt={invite.sender.username}
-                              style={{ width: 24, height: 24, borderRadius: '50%' }}
+                            <Avatar
+                              avatarUrl={invite.sender.avatarUrl}
+                              username={invite.sender.username}
+                              selectedFrame={invite.sender.selectedFrame}
+                              size={24}
                             />
                             <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{invite.sender.username}</span>
                           </div>
@@ -1140,10 +1203,11 @@ export default function MultiplayerPage() {
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <div style={{ position: 'relative' }}>
-                              <img
-                                src={friend.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${friend.username}`}
-                                alt={friend.username}
-                                style={{ width: 36, height: 36, borderRadius: '50%' }}
+                              <Avatar
+                                avatarUrl={friend.avatarUrl}
+                                username={friend.username}
+                                selectedFrame={friend.selectedFrame}
+                                size={36}
                               />
                               <span style={{
                                 position: 'absolute',
@@ -1153,11 +1217,19 @@ export default function MultiplayerPage() {
                                 height: 10,
                                 borderRadius: '50%',
                                 backgroundColor: color,
-                                border: '2px solid hsl(var(--bg-surface))'
+                                border: '2px solid hsl(var(--bg-surface))',
+                                zIndex: 5
                               }} />
                             </div>
                             <div>
-                              <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'block' }}>{friend.username}</span>
+                              <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                {friend.username}
+                                {friend.selectedTitle && (
+                                  <span style={{ fontSize: '0.65rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase' }}>
+                                    {friend.selectedTitle}
+                                  </span>
+                                )}
+                              </span>
                               <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))' }}>Level {friend.level}</span>
                             </div>
                           </div>
@@ -1254,7 +1326,7 @@ export default function MultiplayerPage() {
               onClick={handleCreateRoom}
               disabled={isLoading}
             >
-              {isLoading ? 'Creating...' : 'Create Room'}
+              {isLoading ? (loadingText || 'Creating...') : 'Create Room'}
             </button>
           </div>
         </div>
@@ -1319,6 +1391,24 @@ export default function MultiplayerPage() {
       {/* ── Screen: LOBBY ── */}
       {screen === 'LOBBY' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+          {isLoading && (
+            <div style={{
+              background: 'linear-gradient(90deg, hsl(210 100% 55% / 0.15), hsl(270 80% 55% / 0.15))',
+              border: '1px solid hsl(210 100% 55% / 0.3)',
+              borderRadius: 12,
+              padding: '0.75rem 1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              color: 'hsl(210 100% 70%)'
+            }}>
+              <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'hsl(210 100% 55%)', animation: 'spin 0.8s linear infinite' }} />
+              {loadingText || 'Syncing...'}
+            </div>
+          )}
           {/* Lobby Header */}
           <div
             className="card glass"
@@ -1417,10 +1507,11 @@ export default function MultiplayerPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         {/* Avatar */}
                         <div style={{ position: 'relative' }}>
-                          <img
-                            src={player.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.username}`}
-                            alt={player.username}
-                            style={{ width: 42, height: 42, borderRadius: '50%', border: '2px solid hsl(var(--border-default))' }}
+                          <Avatar
+                            avatarUrl={player.avatarUrl}
+                            username={player.username}
+                            selectedFrame={player.selectedFrame}
+                            size={40}
                           />
                           <span style={{
                             position: 'absolute',
@@ -1430,12 +1521,13 @@ export default function MultiplayerPage() {
                             height: 10,
                             borderRadius: '50%',
                             backgroundColor: seenColor,
-                            border: '2px solid hsl(var(--bg-surface))'
+                            border: '2px solid hsl(var(--bg-surface))',
+                            zIndex: 5
                           }} />
                           {isPlayerHost && (
                             <span
                               id={`host-badge-${player.userId}`}
-                              style={{ position: 'absolute', top: -10, right: -10, fontSize: '1.1rem' }}
+                              style={{ position: 'absolute', top: -10, right: -10, fontSize: '1.1rem', zIndex: 5 }}
                               title="Host"
                             >
                               👑
@@ -1444,8 +1536,13 @@ export default function MultiplayerPage() {
                         </div>
 
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                             <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{player.username}</span>
+                            {player.selectedTitle && (
+                              <span style={{ fontSize: '0.68rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                {player.selectedTitle}
+                              </span>
+                            )}
                             {isMe && (
                               <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: 4, backgroundColor: 'hsl(var(--brand-primary) / 0.2)', color: 'hsl(var(--brand-primary))', fontWeight: 700 }}>
                                 You
@@ -1681,10 +1778,11 @@ export default function MultiplayerPage() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <div style={{ position: 'relative' }}>
-                          <img
-                            src={friend.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${friend.username}`}
-                            alt={friend.username}
-                            style={{ width: 28, height: 28, borderRadius: '50%' }}
+                          <Avatar
+                            avatarUrl={friend.avatarUrl}
+                            username={friend.username}
+                            selectedFrame={friend.selectedFrame}
+                            size={28}
                           />
                           <span style={{
                             position: 'absolute',
@@ -1694,10 +1792,18 @@ export default function MultiplayerPage() {
                             height: 8,
                             borderRadius: '50%',
                             backgroundColor: color,
-                            border: '1.5px solid hsl(var(--bg-surface))'
+                            border: '1.5px solid hsl(var(--bg-surface))',
+                            zIndex: 5
                           }} />
                         </div>
-                        <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{friend.username}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{friend.username}</span>
+                          {friend.selectedTitle && (
+                            <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase' }}>
+                              {friend.selectedTitle}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <button
                         className="btn btn-primary"
@@ -1866,6 +1972,10 @@ export default function MultiplayerPage() {
           }
         }
       `}</style>
+      <SocketDiagnostics
+        roomCode={lobbyRoomCode || undefined}
+        roomOwner={hostUserId ? (hostUserId === currentUserId ? 'You' : 'Opponent') : undefined}
+      />
     </div>
   )
 }

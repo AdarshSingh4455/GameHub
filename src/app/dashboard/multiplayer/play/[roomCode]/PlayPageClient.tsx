@@ -13,6 +13,7 @@ import MultiplayerRockPaperScissorsGame from '@/components/games/MultiplayerRock
 import MultiplayerNumberGuessingGame from '@/components/games/MultiplayerNumberGuessingGame'
 import MultiplayerHangmanGame from '@/components/games/MultiplayerHangmanGame'
 import { useSocket } from '@/lib/contexts/SocketContext'
+import SocketDiagnostics from '@/components/layout/SocketDiagnostics'
 
 const SESSION_KEY = 'mp_screen'
 const SESSION_ROOM_CODE_KEY = 'mp_lobby_room_code'
@@ -35,10 +36,13 @@ function getClientId(user: any) {
   return user?.id || 'mock-user-id'
 }
 
-function clearReconnectState() {
+function clearReconnectState(code?: string) {
   try {
     sessionStorage.removeItem(SESSION_KEY)
     sessionStorage.removeItem(SESSION_ROOM_CODE_KEY)
+    if (code) {
+      localStorage.removeItem(`gamehub_room_recovery_${code}`)
+    }
   } catch {}
 }
 
@@ -59,6 +63,8 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
 
   const playersRef = useRef<any[]>([])
   playersRef.current = players
+  const roomRef = useRef<any>(null)
+  roomRef.current = room
   const joinedRef = useRef(false)
   const sessionRef = useRef<any>(null)
   sessionRef.current = session
@@ -66,6 +72,27 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const currentUserId = getClientId(user)
 
   console.log('[PLAY PAGE CLIENT RENDER]', { socket: !!socket, roomCode, currentUserId })
+
+  // 1. Recover room state from local storage on mount (non-blocking)
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(`gamehub_room_recovery_${roomCode}`)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        // Ensure cache is not older than 10 minutes
+        if (Date.now() - parsed.timestamp < 600000) {
+          console.log('[PLAY PAGE CLIENT LOCAL RECOVERY SUCCESS]', parsed)
+          setRoom(parsed.room)
+          setSession(parsed.session)
+          setPlayers(parsed.players)
+          setIsLoading(false)
+          addToast('success', 'Rejoined Match', 'Rejoined match session successfully!')
+        }
+      }
+    } catch (e) {
+      console.error('[PLAY PAGE CLIENT LOCAL RECOVERY FAILED]', e)
+    }
+  }, [roomCode, addToast])
 
   useEffect(() => {
     console.log('[PLAY PAGE CLIENT EFFECT RUN]', { socket: !!socket, roomCode })
@@ -114,6 +141,16 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
       setPlayers(data.players || [])
       setIsLoading(false)
       setError(null)
+
+      // Sync active playing match to local recovery cache
+      if (data.room && data.room.status === 'PLAYING') {
+        localStorage.setItem(`gamehub_room_recovery_${roomCode}`, JSON.stringify({
+          room: data.room,
+          session: sessionData,
+          players: data.players || [],
+          timestamp: Date.now()
+        }))
+      }
     })
 
     socket.on('game-update', (data: any) => {
@@ -130,7 +167,15 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
         }
         // Auto-clear reconnect state when match is definitively finished
         if (data.gameFinished) {
-          clearReconnectState()
+          clearReconnectState(roomCode)
+        } else {
+          // Sync update to cache
+          localStorage.setItem(`gamehub_room_recovery_${roomCode}`, JSON.stringify({
+            room: roomRef.current,
+            session: updated,
+            players: playersRef.current,
+            timestamp: Date.now()
+          }))
         }
         return updated
       })
@@ -166,17 +211,17 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
 
   const confirmLeave = useCallback(() => {
     if (!socket || !room) {
-      clearReconnectState()
+      clearReconnectState(roomCode)
       router.push('/dashboard/multiplayer')
       return
     }
     setIsLeaving(true)
     socket.emit('leave-room', { roomId: room.id }, () => {
-      clearReconnectState()
+      clearReconnectState(roomCode)
       addToast('info', 'Left Room', 'You have left the match.')
       router.push('/dashboard/multiplayer')
     })
-  }, [socket, room, router, addToast])
+  }, [socket, room, router, addToast, roomCode])
 
   // Leave confirm modal
   const LeaveConfirmModal = () => {
@@ -389,6 +434,10 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+      <SocketDiagnostics
+        roomCode={roomCode}
+        roomOwner={room?.hostUserId ? (room.hostUserId === currentUserId ? 'You' : 'Opponent') : undefined}
+      />
     </>
   )
 }

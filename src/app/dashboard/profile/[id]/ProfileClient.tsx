@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/lib/contexts/ToastContext'
+import Avatar from '@/components/shared/Avatar'
 
 interface ProfileClientProps {
   profile: {
@@ -10,6 +11,7 @@ interface ProfileClientProps {
     username: string
     avatarUrl: string | null
     selectedTitle: string | null
+    selectedFrame: string | null
     level: number
     xp: number
     currentStreak: number
@@ -106,20 +108,12 @@ export default function ProfileClient({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem', flexWrap: 'wrap', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative' }}>
-              <div style={{
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))',
-                padding: 4,
-                boxShadow: '0 8px 20px rgba(0,0,0,0.4)'
-              }}>
-                <img
-                  src={profile.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${profile.username}`}
-                  alt={profile.username}
-                  style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'hsl(220 20% 8%)', objectFit: 'cover' }}
-                />
-              </div>
+              <Avatar
+                avatarUrl={profile.avatarUrl}
+                username={profile.username}
+                selectedFrame={profile.selectedFrame}
+                size={76}
+              />
               <span style={{
                 position: 'absolute',
                 bottom: -2,
@@ -131,7 +125,8 @@ export default function ProfileClient({
                 padding: '0.15rem 0.45rem',
                 borderRadius: 99,
                 border: '2px solid hsl(222 18% 14%)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                zIndex: 5
               }}>
                 Lv {profile.level}
               </span>

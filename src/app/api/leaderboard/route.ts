@@ -69,6 +69,8 @@ export async function GET(request: NextRequest) {
             selectedTitle: true,
             currentRank: true,
             previousRank: true,
+            avatarUrl: true,
+            selectedFrame: true,
             _count: { select: { wonMatches: true } }
           }
         })
@@ -89,6 +91,8 @@ export async function GET(request: NextRequest) {
             score: x._count.id,
             wins: p?._count.wonMatches || 0,
             title: p?.selectedTitle || null,
+            avatarUrl: p?.avatarUrl || null,
+            selectedFrame: p?.selectedFrame || null,
             movement,
             currentRank: p?.currentRank || null,
             previousRank: p?.previousRank || null
@@ -141,6 +145,8 @@ export async function GET(request: NextRequest) {
                 selectedTitle: true,
                 currentRank: true,
                 previousRank: true,
+                avatarUrl: true,
+                selectedFrame: true,
                 _count: {
                   select: { wonMatches: true }
                 }
@@ -173,6 +179,8 @@ export async function GET(request: NextRequest) {
             score: s.score,
             wins: p._count.wonMatches,
             title: p.selectedTitle,
+            avatarUrl: p.avatarUrl || null,
+            selectedFrame: p.selectedFrame || null,
             movement,
             currentRank: p.currentRank,
             previousRank: p.previousRank
@@ -198,6 +206,8 @@ export async function GET(request: NextRequest) {
               selectedTitle: true,
               currentRank: true,
               previousRank: true,
+              avatarUrl: true,
+              selectedFrame: true,
               _count: {
                 select: { wonMatches: true }
               }
@@ -223,6 +233,8 @@ export async function GET(request: NextRequest) {
           score: s.highScore, // show high score instead of total XP
           wins: s.winCount, // show game-specific win count
           title: p.selectedTitle,
+          avatarUrl: p.avatarUrl || null,
+          selectedFrame: p.selectedFrame || null,
           movement,
           currentRank: p.currentRank,
           previousRank: p.previousRank
@@ -270,6 +282,8 @@ export async function GET(request: NextRequest) {
           currentRank: true,
           previousRank: true,
           selectedTitle: true,
+          avatarUrl: true,
+          selectedFrame: true,
           _count: {
             select: { wonMatches: true }
           }
@@ -293,6 +307,8 @@ export async function GET(request: NextRequest) {
           xp: x._sum.amount || 0, // show XP gained in this period
           wins: p?._count.wonMatches || 0,
           title: p?.selectedTitle || null,
+          avatarUrl: p?.avatarUrl || null,
+          selectedFrame: p?.selectedFrame || null,
           movement,
           currentRank: p?.currentRank || null,
           previousRank: p?.previousRank || null
@@ -317,6 +333,8 @@ export async function GET(request: NextRequest) {
         currentRank: true,
         previousRank: true,
         selectedTitle: true,
+        avatarUrl: true,
+        selectedFrame: true,
         _count: {
           select: { wonMatches: true }
         }
@@ -336,8 +354,10 @@ export async function GET(request: NextRequest) {
         username: p.username,
         level: p.level,
         xp: p.xp,
-        wins: p._count.wonMatches,
+        wins: p.wins || p._count.wonMatches,
         title: p.selectedTitle,
+        avatarUrl: p.avatarUrl || null,
+        selectedFrame: p.selectedFrame || null,
         movement,
         currentRank: p.currentRank,
         previousRank: p.previousRank

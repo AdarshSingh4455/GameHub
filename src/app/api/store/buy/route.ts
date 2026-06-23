@@ -73,6 +73,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Insufficient coins balance!' }, { status: 400 })
       }
 
+      // Enforce level requirements for buying frames
+      if (item.type === 'AVATAR_FRAME') {
+        const metadata = (item.metadata as any) || {}
+        const minLevel = metadata.minLevel
+        if (minLevel !== undefined && minLevel !== null && profile.level < minLevel) {
+          return NextResponse.json({ error: `Requires level ${minLevel} to purchase (Current: ${profile.level})` }, { status: 400 })
+        }
+      }
+
       // Deduct coins & Add to inventory
       const updatedProfile = await prisma.profile.update({
         where: { id: profile.id },

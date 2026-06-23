@@ -7,6 +7,7 @@ import { GAMES_REGISTRY, getGameBySlug } from '@/lib/games'
 import { prefetchProfileDetails } from '@/lib/prefetch'
 import { RankBadge } from '@/components/layout/RankBadge'
 import { getRankDetails } from '@/lib/rankedUtils'
+import Avatar from '@/components/shared/Avatar'
 
 interface DBProfile {
   id: string
@@ -19,6 +20,7 @@ interface DBProfile {
   avatarUrl: string | null
   friendCode: string | null
   selectedTitle: string | null
+  selectedFrame?: string | null
   hangmanMmr?: number
   hangmanWins?: number
   hangmanLosses?: number
@@ -580,25 +582,12 @@ export default function ProfilePage() {
         }}
       >
         {/* Avatar block */}
-        <div
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '2.5rem',
-            color: 'white',
-            border: '4px solid hsl(220 15% 22%)',
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)',
-            flexShrink: 0
-          }}
-        >
-          {profile.username[0].toUpperCase()}
-        </div>
+        <Avatar
+          avatarUrl={profile.avatarUrl}
+          username={profile.username}
+          selectedFrame={profile.selectedFrame}
+          size={88}
+        />
 
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>

@@ -519,6 +519,41 @@ export default function MultiplayerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, screen, lobbyRoomCode, router, addToast])
 
+  const handleEmergencyClearData = useCallback(async () => {
+    setIsLoading(true)
+    setLoadingText('Clearing match connection data...')
+    try {
+      if (typeof window !== 'undefined') {
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith('gamehub_room_recovery_')) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key))
+        
+        sessionStorage.removeItem(SESSION_KEY)
+        sessionStorage.removeItem(SESSION_ROOM_CODE_KEY)
+      }
+
+      await fetch('/api/multiplayer/leave-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forceClearAll: true })
+      }).catch(() => null)
+
+      addToast('success', 'Recovery State Reset', 'Stuck match data cleared successfully.')
+      leaveRoomCleanup()
+      window.location.reload()
+    } catch (err: any) {
+      addToast('error', 'Reset Failed', err.message || 'Failed to clear data')
+    } finally {
+      setIsLoading(false)
+      setLoadingText('')
+    }
+  }, [addToast, leaveRoomCleanup])
+
   // Actions
   const handleDiscardStaleRoom = async () => {
     if (!staleRoom) return
@@ -909,6 +944,28 @@ export default function MultiplayerPage() {
             <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '1rem' }}>
               Connect with friends, chat in real-time, and challenge opponents!
             </p>
+            <button
+              className="btn"
+              style={{
+                marginTop: '1rem',
+                fontSize: '0.85rem',
+                padding: '0.4rem 1.2rem',
+                borderRadius: 20,
+                border: '1px solid hsl(var(--danger) / 0.4)',
+                color: 'hsl(var(--danger))',
+                backgroundColor: 'hsl(var(--danger) / 0.05)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                margin: '1rem auto 0 auto'
+              }}
+              onClick={handleEmergencyClearData}
+              id="emergency-clear-match-btn"
+            >
+              ⚠️ Clear Stuck Match Data
+            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>

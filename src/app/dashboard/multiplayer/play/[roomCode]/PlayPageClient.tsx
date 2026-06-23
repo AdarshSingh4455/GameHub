@@ -60,6 +60,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const [isConnected, setIsConnected] = useState(true)
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
+  const [recoveryTimedOut, setRecoveryTimedOut] = useState(false)
 
   const playersRef = useRef<any[]>([])
   playersRef.current = players
@@ -68,10 +69,27 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const joinedRef = useRef(false)
   const sessionRef = useRef<any>(null)
   sessionRef.current = session
+  const recoveryTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const abandonmentTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const currentUserId = getClientId(user)
 
   console.log('[PLAY PAGE CLIENT RENDER]', { socket: !!socket, roomCode, currentUserId })
+
+  // Global handler for stale/missing rooms
+  const handleGlobalError = useCallback((errMsg: string) => {
+    const isStaleError = ['ROOM_NOT_FOUND', 'SESSION_NOT_FOUND', 'PLAYER_NOT_IN_ROOM', 'Room not found', 'Not authorized to access this match'].includes(errMsg)
+    if (isStaleError) {
+      addToast('error', 'Match Unavailable', `Redirecting: ${errMsg}`)
+      clearReconnectState(roomCode)
+      fetch('/api/multiplayer/leave-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomCode })
+      }).catch(() => null)
+      router.push('/dashboard/multiplayer')
+    }
+  }, [roomCode, addToast, router])
 
   // 1. Recover room state from local storage on mount (non-blocking)
   useEffect(() => {
@@ -94,6 +112,76 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     }
   }, [roomCode, addToast])
 
+  // 2. Start 5-second recovery timeout
+  useEffect(() => {
+    if (isLoading) {
+      recoveryTimerRef.current = setTimeout(() => {
+        setRecoveryTimedOut(true)
+      }, 5000)
+    } else {
+      if (recoveryTimerRef.current) {
+        clearTimeout(recoveryTimerRef.current)
+      }
+      setRecoveryTimedOut(false)
+    }
+    return () => {
+      if (recoveryTimerRef.current) {
+        clearTimeout(recoveryTimerRef.current)
+      }
+    }
+  }, [isLoading])
+
+  // 3. Client-side abandonment backup check (60s timer if active players <= 1)
+  useEffect(() => {
+    const isPlaying = session?.status === 'PLAYING'
+    const activePlayersCount = players.filter(p => p.status !== 'LEFT' && p.status !== 'OFFLINE').length
+
+    if (isPlaying && activePlayersCount <= 1) {
+      if (!abandonmentTimerRef.current) {
+        console.log('[PLAY PAGE CLIENT] Opponent missing. Starting 60s abandonment timer...')
+        abandonmentTimerRef.current = setTimeout(() => {
+          console.warn('[PLAY PAGE CLIENT] 60s abandonment timeout reached. Exiting stale match.')
+          addToast('warning', 'Match Abandoned', 'The match has been abandoned due to insufficient players.')
+          clearReconnectState(roomCode)
+          fetch('/api/multiplayer/leave-room', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomCode })
+          }).catch(() => null)
+          router.push('/dashboard/multiplayer')
+        }, 60000)
+      }
+    } else {
+      if (abandonmentTimerRef.current) {
+        console.log('[PLAY PAGE CLIENT] Opponent returned. Clearing abandonment timer.')
+        clearTimeout(abandonmentTimerRef.current)
+        abandonmentTimerRef.current = null
+      }
+    }
+
+    return () => {
+      if (abandonmentTimerRef.current) {
+        clearTimeout(abandonmentTimerRef.current)
+        abandonmentTimerRef.current = null
+      }
+    }
+  }, [players, session?.status, roomCode, router, addToast])
+
+  // 4. Intercept browser back navigation
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href)
+
+    const handlePopState = (e: PopStateEvent) => {
+      window.history.pushState(null, '', window.location.href)
+      setShowLeaveConfirm(true)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
   useEffect(() => {
     console.log('[PLAY PAGE CLIENT EFFECT RUN]', { socket: !!socket, roomCode })
     if (!socket) return
@@ -109,6 +197,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
         if (response?.error) {
           setError(response.error)
           setIsLoading(false)
+          handleGlobalError(response.error)
         }
       })
     }
@@ -209,18 +298,50 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     setShowLeaveConfirm(true)
   }, [])
 
-  const confirmLeave = useCallback(() => {
-    if (!socket || !room) {
-      clearReconnectState(roomCode)
-      router.push('/dashboard/multiplayer')
-      return
+  const handleRetryRecovery = useCallback(() => {
+    setError(null)
+    setRecoveryTimedOut(false)
+    setIsLoading(true)
+    joinedRef.current = false
+
+    if (recoveryTimerRef.current) clearTimeout(recoveryTimerRef.current)
+    recoveryTimerRef.current = setTimeout(() => {
+      setRecoveryTimedOut(true)
+    }, 5000)
+
+    if (socket) {
+      socket.emit('join-game', { roomCode }, (response: any) => {
+        if (response?.error) {
+          setError(response.error)
+          setIsLoading(false)
+          handleGlobalError(response.error)
+        }
+      })
     }
+  }, [socket, roomCode, handleGlobalError])
+
+  const confirmLeave = useCallback(() => {
     setIsLeaving(true)
-    socket.emit('leave-room', { roomId: room.id }, () => {
+    const cleanup = () => {
       clearReconnectState(roomCode)
       addToast('info', 'Left Room', 'You have left the match.')
       router.push('/dashboard/multiplayer')
-    })
+    }
+
+    // Call POST API as fallback first
+    fetch('/api/multiplayer/leave-room', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode })
+    }).catch(() => null)
+
+    if (socket && room?.id) {
+      socket.emit('leave-room', { roomId: room.id }, () => {
+        cleanup()
+      })
+    } else {
+      cleanup()
+    }
   }, [socket, room, router, addToast, roomCode])
 
   // Leave confirm modal
@@ -282,6 +403,35 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     )
   }
 
+  if (isLoading && recoveryTimedOut) {
+    return (
+      <div className="card glass text-center" style={{ maxWidth: 500, margin: '4rem auto', padding: '2.5rem' }}>
+        <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '1rem' }}>⏱️</span>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem', color: 'hsl(var(--warning))' }}>Room could not be restored</h2>
+        <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+          The connection timed out while trying to restore the match.
+        </p>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button
+            className="btn btn-primary"
+            style={{ flex: 1, borderRadius: 12 }}
+            onClick={handleRetryRecovery}
+          >
+            Retry
+          </button>
+          <button
+            className="btn btn-secondary"
+            style={{ flex: 1, borderRadius: 12 }}
+            onClick={confirmLeave}
+            disabled={isLeaving}
+          >
+            {isLeaving ? 'Leaving...' : 'Leave Room'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div style={{
@@ -298,6 +448,14 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
         <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem', marginTop: '0.5rem' }}>
           Connecting to room {roomCode}...
         </p>
+        <button
+          className="btn btn-secondary"
+          style={{ marginTop: '2rem', padding: '0.5rem 2rem', borderRadius: 12 }}
+          onClick={confirmLeave}
+          disabled={isLeaving}
+        >
+          {isLeaving ? 'Leaving...' : 'Leave Room'}
+        </button>
         <style jsx global>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -316,13 +474,23 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
         <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
           {error}
         </p>
-        <button
-          className="btn btn-primary"
-          style={{ width: '100%' }}
-          onClick={() => router.push('/dashboard/multiplayer')}
-        >
-          Back to Multiplayer Lobby
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button
+            className="btn btn-primary"
+            style={{ flex: 1, borderRadius: 12 }}
+            onClick={() => router.push('/dashboard/multiplayer')}
+          >
+            Back to Lobby
+          </button>
+          <button
+            className="btn btn-secondary"
+            style={{ flex: 1, borderRadius: 12 }}
+            onClick={confirmLeave}
+            disabled={isLeaving}
+          >
+            {isLeaving ? 'Leaving...' : 'Leave Room'}
+          </button>
+        </div>
       </div>
     )
   }

@@ -127,7 +127,9 @@ export default function MultiplayerMemoryMatchGame({ roomCode, session, players,
   const winnerId = session.winnerId
   const myScore = playerScores[currentUserId] || 0
   
-  const opponent = activePlayers.find(p => p.userId !== currentUserId)
+  const opponent = players.find(p => p.userId !== currentUserId)
+  const isOpponentMissing = !opponent || opponent.status === 'LEFT'
+  const showOpponentLeftOverlay = isOpponentMissing && !isFinished
   const opponentScore = opponent ? playerScores[opponent.userId] || 0 : 0
 
   const getWinnerMessage = () => {
@@ -166,6 +168,44 @@ export default function MultiplayerMemoryMatchGame({ roomCode, session, players,
           }
         }
       `}</style>
+
+      {/* Opponent Left / Missing Overlay */}
+      {showOpponentLeftOverlay && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(5, 8, 16, 0.9)',
+            backdropFilter: 'blur(8px)',
+            borderRadius: 18,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '2rem',
+            textAlign: 'center',
+            border: '1px solid hsl(220 15% 20%)'
+          }}
+          id="memory-opponent-left-overlay"
+        >
+          <span style={{ fontSize: '3.5rem', marginBottom: '1rem', display: 'block' }}>👋</span>
+          <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>
+            Opponent Left the Match
+          </h3>
+          <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.92rem', marginBottom: '2rem', lineHeight: 1.6, maxWidth: 320 }}>
+            The opponent is no longer in this game. You can leave the room safely without any penalty.
+          </p>
+          <button
+            className="btn btn-secondary"
+            style={{ padding: '0.6rem 2.5rem', borderRadius: 12, fontWeight: 700 }}
+            onClick={onLeave}
+            id="memory-opponent-left-leave-btn"
+          >
+            Leave Room
+          </button>
+        </div>
+      )}
 
       {/* Shared Presence and score header */}
       <MultiplayerHeader

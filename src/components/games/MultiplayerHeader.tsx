@@ -88,20 +88,37 @@ export default function MultiplayerHeader({
   }, [players, gameFinished])
 
   // Split into self and opponent
-  const activePlayers = players.slice(0, 2)
-  if (activePlayers.length < 2) {
-    // Return a loading placeholder if players are not loaded yet
-    return (
-      <div style={{
-        padding: '1rem',
-        borderRadius: 16,
-        background: 'hsl(222 20% 10% / 0.5)',
-        border: '1px solid hsl(var(--border-subtle))',
-        textAlign: 'center',
-        color: 'hsl(var(--text-secondary))'
-      }}>
-        Loading players...
-      </div>
+  const activePlayers = [...players.slice(0, 2)]
+  if (activePlayers.length === 1) {
+    activePlayers.push({
+      userId: 'opponent-placeholder',
+      username: 'Waiting for opponent...',
+      avatarUrl: null,
+      level: 1,
+      status: 'LEFT',
+      selectedFrame: null,
+      selectedTitle: null
+    })
+  } else if (activePlayers.length === 0) {
+    activePlayers.push(
+      {
+        userId: currentUserId,
+        username: 'Player (You)',
+        avatarUrl: null,
+        level: 1,
+        status: 'READY',
+        selectedFrame: null,
+        selectedTitle: null
+      },
+      {
+        userId: 'opponent-placeholder',
+        username: 'Waiting for opponent...',
+        avatarUrl: null,
+        level: 1,
+        status: 'LEFT',
+        selectedFrame: null,
+        selectedTitle: null
+      }
     )
   }
 

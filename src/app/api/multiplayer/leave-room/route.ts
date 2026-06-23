@@ -10,10 +10,31 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const { roomId } = body
+    const { roomId, forceClearAll } = body
 
-    if (!roomId) {
-      return NextResponse.json({ error: 'roomId is required' }, { status: 400 })
+    if (forceClearAll || !roomId) {
+      const activeMappings = await prisma.multiplayerRoomPlayer.findMany({
+        where: {
+          userId: profile.userId
+        }
+      })
+
+      for (const mapping of activeMappings) {
+        await prisma.multiplayerRoomPlayer.delete({
+          where: { id: mapping.id }
+        }).catch(() => null)
+
+        const remaining = await prisma.multiplayerRoomPlayer.count({
+          where: { roomId: mapping.roomId }
+        })
+        if (remaining === 0) {
+          await prisma.multiplayerRoom.delete({
+            where: { id: mapping.roomId }
+          }).catch(() => null)
+        }
+      }
+
+      return NextResponse.json({ success: true, clearedCount: activeMappings.length }, { status: 200 })
     }
 
     // Check if player is in the room

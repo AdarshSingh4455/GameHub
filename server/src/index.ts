@@ -1031,9 +1031,9 @@ io.on('connection', async (rawSocket) => {
         }
       })
 
-      if (!room) throw new Error('Room not found')
+      if (!room) throw new Error('ROOM_NOT_FOUND')
       const isPlayer = room.players.some(p => p.userId === userId)
-      if (!isPlayer) throw new Error('Not authorized to access this match')
+      if (!isPlayer) throw new Error('PLAYER_NOT_IN_ROOM')
 
       // Set presence to IN_GAME
       setUserPresence(userId, 'IN_GAME').catch(err => logError(err, { userId }))
@@ -1060,14 +1060,15 @@ io.on('connection', async (rawSocket) => {
         gameState = await getHangmanSession(normalizedCode, room.id, prisma).catch(() => null)
       }
 
-      if (callback) callback({ success: true })
-      
       // Send current state
       const dbSession = await prisma.multiplayerGameSession.findUnique({
         where: { roomId: room.id }
       })
 
       let broadcastState = gameState ?? dbSession?.gameState
+      if (!broadcastState) throw new Error('SESSION_NOT_FOUND')
+
+      if (callback) callback({ success: true })
       if (room.gameSlug === 'rps' && broadcastState && broadcastState.moves) {
         const maskedMoves: Record<string, string> = {}
         Object.keys(broadcastState.moves).forEach(uid => {

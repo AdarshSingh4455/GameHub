@@ -39,11 +39,44 @@ export async function GET(request: Request) {
       return NextResponse.json({ roomCode: null }, { status: 200 })
     }
 
+    const room = activePlayerRoom.room
+    const fiveMinutesAgo = new Date(Date.now() - 300000)
+    let isAbandoned = room.updatedAt < fiveMinutesAgo
+
+    if (room.status === 'PLAYING') {
+      const roomPlayers = await prisma.multiplayerRoomPlayer.findMany({
+        where: { roomId: room.id }
+      })
+      
+      const oneMinuteAgo = new Date(Date.now() - 60000)
+      const activePlayers = roomPlayers.filter(p => {
+        if (p.status === 'LEFT') return false
+        if (p.disconnectedAt && p.disconnectedAt < oneMinuteAgo) return false
+        return true
+      })
+
+      if (activePlayers.length <= 1 && room.updatedAt < oneMinuteAgo) {
+        isAbandoned = true
+      }
+    }
+
+    if (isAbandoned) {
+      try {
+        await prisma.multiplayerRoomPlayer.update({
+          where: { id: activePlayerRoom.id },
+          data: { status: 'LEFT' }
+        })
+      } catch (err) {
+        console.error('Failed to update stale room player to LEFT:', err)
+      }
+      return NextResponse.json({ roomCode: null }, { status: 200 })
+    }
+
     return NextResponse.json({
-      roomCode: activePlayerRoom.room.roomCode,
-      status: activePlayerRoom.room.status,
-      gameSlug: activePlayerRoom.room.gameSlug,
-      roomId: activePlayerRoom.room.id
+      roomCode: room.roomCode,
+      status: room.status,
+      gameSlug: room.gameSlug,
+      roomId: room.id
     }, { status: 200 })
   } catch (err: unknown) {
     console.error('[GET /api/multiplayer/active-room]', err)

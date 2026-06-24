@@ -47,7 +47,7 @@ function clearReconnectState(code?: string) {
 }
 
 export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
-  const { user } = useGameSession()
+  const { user, triggerAd } = useGameSession()
   const { addToast } = useToast()
   const router = useRouter()
   const { socket } = useSocket()
@@ -61,6 +61,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
   const [recoveryTimedOut, setRecoveryTimedOut] = useState(false)
+  const [adTriggered, setAdTriggered] = useState(false)
 
   const playersRef = useRef<any[]>([])
   playersRef.current = players
@@ -293,6 +294,23 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
       socket.off('player-reconnected')
     }
   }, [socket, roomCode, addToast])
+
+  // Trigger multiplayer ad before showing final result screen
+  useEffect(() => {
+    if (session) {
+      if (session.status === 'FINISHED') {
+        if (!adTriggered) {
+          setAdTriggered(true)
+          console.log('[PLAY PAGE CLIENT] Triggering ad fail-safe before results.')
+          triggerAd(session.gameSlug, () => {
+            console.log('[PLAY PAGE CLIENT] Multiplayer ad complete.')
+          })
+        }
+      } else if (session.status === 'PLAYING') {
+        setAdTriggered(false)
+      }
+    }
+  }, [session?.status, adTriggered, triggerAd, session?.gameSlug])
 
   const handleLeaveRoom = useCallback(() => {
     setShowLeaveConfirm(true)

@@ -9,6 +9,8 @@ interface Ad {
   imageUrl: string
   targetUrl: string
   durationSecs: number
+  duration_seconds?: number
+  skip_after_seconds?: number
   allGames: boolean
   games: string[]
   active: boolean
@@ -60,7 +62,7 @@ export default function AdminPage() {
 
   const [role, setRole] = useState<string | null>(null)
   const [loadingAuth, setLoadingAuth] = useState(true)
-  const [activeTab, setActiveTab] = useState<'ads' | 'analytics' | 'tournaments' | 'updates'>('ads')
+  const [activeTab, setActiveTab] = useState<'ads' | 'analytics' | 'tournaments' | 'updates' | 'tools'>('ads')
 
   // Data States
   const [ads, setAds] = useState<Ad[]>([])
@@ -75,11 +77,15 @@ export default function AdminPage() {
     imageUrl: '',
     targetUrl: '',
     durationSecs: 5,
+    duration_seconds: 5,
+    skip_after_seconds: 5,
     allGames: true,
     games: [] as string[],
     active: true,
   })
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [runningTools, setRunningTools] = useState(false)
+  const [toolsResult, setToolsResult] = useState<any>(null)
 
   const [tournamentForm, setTournamentForm] = useState({
     id: '',
@@ -204,7 +210,7 @@ export default function AdminPage() {
       }
 
       addToast('success', 'Ad Saved', adForm.id ? 'Ad updated successfully!' : 'Ad created successfully!')
-      setAdForm({ id: '', imageUrl: '', targetUrl: '', durationSecs: 5, allGames: true, games: [], active: true })
+      setAdForm({ id: '', imageUrl: '', targetUrl: '', durationSecs: 5, duration_seconds: 5, skip_after_seconds: 5, allGames: true, games: [], active: true })
       fetchData()
     } catch (err: any) {
       addToast('error', 'Error', err.message)
@@ -379,6 +385,7 @@ export default function AdminPage() {
           { id: 'analytics', label: 'Analytics', emoji: '📊' },
           { id: 'tournaments', label: 'Tournaments', emoji: '🏆' },
           { id: 'updates', label: 'Updates / Cosmetics', emoji: '📦' },
+          { id: 'tools', label: 'Admin Tools', emoji: '🔧' },
         ].map((t) => (
           <button
             key={t.id}
@@ -472,19 +479,38 @@ export default function AdminPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.35rem' }}>
-                        Duration (Secs)
+                        Ad Duration
                       </label>
-                      <input
-                        className="input"
-                        type="number"
-                        min={3}
-                        max={30}
-                        value={adForm.durationSecs}
-                        onChange={(e) => setAdForm((prev) => ({ ...prev, durationSecs: parseInt(e.target.value) || 5 }))}
-                        required
-                      />
+                      <select
+                        value={adForm.duration_seconds}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10)
+                          setAdForm((prev) => ({ ...prev, duration_seconds: val, durationSecs: val }))
+                        }}
+                        style={{ height: '36px', background: 'hsl(220 15% 10%)', border: '1px solid hsl(220 15% 18%)', color: 'white', borderRadius: '6px', padding: '0 0.5rem', fontSize: '0.78rem', width: '100%' }}
+                      >
+                        {[5, 10, 15, 20, 30, 60].map((opt) => (
+                          <option key={opt} value={opt}>{opt}s</option>
+                        ))}
+                      </select>
                     </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.75rem', color: 'white', marginTop: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.35rem' }}>
+                        Skip Button Delay
+                      </label>
+                      <select
+                        value={adForm.skip_after_seconds}
+                        onChange={(e) => setAdForm((prev) => ({ ...prev, skip_after_seconds: parseInt(e.target.value, 10) }))}
+                        style={{ height: '36px', background: 'hsl(220 15% 10%)', border: '1px solid hsl(220 15% 18%)', color: 'white', borderRadius: '6px', padding: '0 0.5rem', fontSize: '0.78rem', width: '100%' }}
+                      >
+                        {[0, 3, 5, 10, 15].map((opt) => (
+                          <option key={opt} value={opt}>{opt}s</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.75rem', color: 'white' }}>
                       <input
                         type="checkbox"
                         checked={adForm.active}
@@ -549,7 +575,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    onClick={() => setAdForm({ id: '', imageUrl: '', targetUrl: '', durationSecs: 5, allGames: true, games: [], active: true })}
+                    onClick={() => setAdForm({ id: '', imageUrl: '', targetUrl: '', durationSecs: 5, duration_seconds: 5, skip_after_seconds: 5, allGames: true, games: [], active: true })}
                   >
                     Cancel Edit
                   </button>
@@ -574,7 +600,7 @@ export default function AdminPage() {
                         Target: <a href={ad.targetUrl} target="_blank" rel="noreferrer" style={{ color: 'hsl(220 100% 70%)', textDecoration: 'none' }} className="hover-underline">{ad.targetUrl}</a>
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '0.2rem' }}>
-                        Timer: <strong>{ad.durationSecs}s</strong> · Impressions: <strong>{ad.impressions}</strong> · Clicks: <strong>{ad.clicks}</strong>
+                        Timer: <strong>{ad.duration_seconds ?? ad.durationSecs}s (skip: {ad.skip_after_seconds ?? ad.durationSecs}s)</strong> · Impressions: <strong>{ad.impressions}</strong> · Clicks: <strong>{ad.clicks}</strong>
                       </div>
                       <div style={{ fontSize: '0.68rem', color: 'hsl(38 95% 60%)', marginTop: '0.15rem' }}>
                         Targets: {ad.allGames ? 'All Games' : ad.games.join(', ')}
@@ -592,7 +618,7 @@ export default function AdminPage() {
                     </button>
                     <button
                       className="btn btn-secondary btn-sm"
-                      onClick={() => setAdForm({ id: ad.id, imageUrl: ad.imageUrl, targetUrl: ad.targetUrl, durationSecs: ad.durationSecs, allGames: ad.allGames, games: ad.games, active: ad.active })}
+                      onClick={() => setAdForm({ id: ad.id, imageUrl: ad.imageUrl, targetUrl: ad.targetUrl, durationSecs: ad.durationSecs, duration_seconds: ad.duration_seconds ?? ad.durationSecs ?? 5, skip_after_seconds: ad.skip_after_seconds ?? ad.durationSecs ?? 5, allGames: ad.allGames, games: ad.games, active: ad.active })}
                       style={{ padding: '0.25rem' }}
                     >
                       ✏️
@@ -1116,6 +1142,91 @@ export default function AdminPage() {
               {cosmetics.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '2.5rem', color: 'hsl(220 10% 50%)', border: '1px dashed hsl(220 15% 15%)', borderRadius: 16 }}>
                   No cosmetic items cataloged.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: ADMIN TOOLS */}
+      {activeTab === 'tools' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.5rem', color: 'white' }}>🔧 Administrative Utilities</h2>
+            <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              Run system utilities to audit, repair, and sync player states across the platform.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderTop: '1px solid hsl(220 15% 18%)', paddingTop: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>Rebuild & Sync Cosmetic Unlocks</h3>
+                <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.78rem', marginBottom: '0.75rem' }}>
+                  Iterates through all registered user profiles, recalculates user levels based on their current XP, sums total match wins, and automatically re-awards any missing progression cosmetics (e.g., Neon Frame, Rainbow Sparkles, level-based frames/titles).
+                </p>
+                <button
+                  className="btn"
+                  onClick={async () => {
+                    if (!confirm('Are you sure you want to run the unlock recovery tool? This will inspect all user accounts.')) return
+                    setRunningTools(true)
+                    setToolsResult(null)
+                    try {
+                      const res = await fetch('/admin/tools/rebuild-unlocks', { method: 'POST' })
+                      const data = await res.json()
+                      if (!res.ok) throw new Error(data.error || 'Execution failed')
+                      setToolsResult(data)
+                      addToast('success', 'Recovery Complete', 'User progression awards rebuilt successfully!')
+                    } catch (e: any) {
+                      addToast('error', 'Execution Error', e.message)
+                    } finally {
+                      setRunningTools(false)
+                    }
+                  }}
+                  disabled={runningTools}
+                  style={{
+                    background: runningTools ? 'hsl(220 10% 25%)' : 'hsl(220 100% 50%)',
+                    color: 'white',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: runningTools ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {runningTools ? 'Running audit...' : 'Execute Recovery Tool'}
+                </button>
+              </div>
+
+              {toolsResult && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  background: 'hsl(220 15% 12%)',
+                  border: '1px solid hsl(220 15% 18%)',
+                  borderRadius: '6px',
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
+                  maxHeight: '250px',
+                  overflowY: 'auto',
+                  color: 'hsl(120 100% 75%)'
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: 'white' }}>Result Summary:</div>
+                  <div>Status: Success</div>
+                  <div>Message: {toolsResult.message}</div>
+                  <div>Profiles Rebuilt/Audited: {toolsResult.rebuiltCount}</div>
+                  {toolsResult.details && toolsResult.details.length > 0 ? (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <div style={{ textDecoration: 'underline', marginBottom: '0.25rem', color: 'hsl(220 100% 80%)' }}>Details:</div>
+                      {toolsResult.details.map((d: any, idx: number) => (
+                        <div key={idx} style={{ marginBottom: '0.25rem' }}>
+                          • {d.username} (Lvl {d.oldLevel} → {d.newLevel}, Wins: {d.totalWins}): Unlocked: [{d.unlockedItems.join(', ')}]
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '0.5rem', color: 'hsl(220 10% 55%)' }}>No missing cosmetic awards detected. All users are in sync.</div>
+                  )}
                 </div>
               )}
             </div>

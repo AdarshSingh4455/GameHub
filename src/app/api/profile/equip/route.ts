@@ -46,9 +46,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Cosmetic item not found' }, { status: 404 })
     }
 
-    // Verify ownership (unless it's a default item, which has priceCoins = 0 or isDefault = true)
-    if (!item.isDefault) {
-      const owned = await prisma.profileInventory.findUnique({
+    // Verify ownership (unless it's a guest, or a default item)
+    let isOwned = item.isDefault || profile.isGuest
+    let ownedRecord = null
+
+    if (!isOwned) {
+      ownedRecord = await prisma.profileInventory.findUnique({
         where: {
           profileId_cosmeticItemId: {
             profileId: profile.id,
@@ -56,9 +59,13 @@ export async function POST(request: Request) {
           }
         }
       })
-      if (!owned) {
-        return NextResponse.json({ error: 'You do not own this cosmetic item' }, { status: 403 })
+      if (ownedRecord) {
+        isOwned = true
       }
+    }
+
+    if (!isOwned) {
+      return NextResponse.json({ error: 'You do not own this cosmetic item' }, { status: 403 })
     }
 
     // Determine field to update based on item type
@@ -68,7 +75,7 @@ export async function POST(request: Request) {
     if (item.type === 'TITLE') {
       updateField = 'selectedTitle'
       const minWins = metadata.minWins
-      if (minWins !== undefined && minWins !== null) {
+      if (!ownedRecord && !profile.isGuest && minWins !== undefined && minWins !== null) {
         const stats = await prisma.profileGameStats.findMany({
           where: { profileId: profile.id }
         })
@@ -80,7 +87,7 @@ export async function POST(request: Request) {
     } else if (item.type === 'AVATAR_FRAME') {
       updateField = 'selectedFrame'
       const minLevel = metadata.minLevel
-      if (minLevel !== undefined && minLevel !== null) {
+      if (!ownedRecord && !profile.isGuest && minLevel !== undefined && minLevel !== null) {
         if (profile.level < minLevel) {
           return NextResponse.json({ error: `Requires level ${minLevel} (Current: ${profile.level})` }, { status: 400 })
         }

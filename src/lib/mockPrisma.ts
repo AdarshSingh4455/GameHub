@@ -18,6 +18,7 @@ export interface MockDbState {
   rankedMatches?: Record<string, any>
   rankedSeasons?: Record<string, any>
   seasonSnapshots?: Record<string, any>
+  ads?: Record<string, any>
 }
 
 export const MOCK_COSMETIC_ITEMS = [
@@ -34,10 +35,10 @@ export const MOCK_COSMETIC_ITEMS = [
   { id: 'item-chat-sports', name: 'Sports Pack', type: 'CHAT_PACK', priceCoins: 60, assetUrl: 'Sports', isDefault: false, metadata: { messages: ['Goal! ⚽', 'Touchdown! 🏈', 'Home Run! ⚾', 'Nice Shot! 🏀'] } },
   { id: 'item-chat-funny', name: 'Funny Pack', type: 'CHAT_PACK', priceCoins: 70, assetUrl: 'Funny', isDefault: false, metadata: { messages: ['LOL! 😂', 'No way! 🤯', 'BRB! 🏃‍♂️', 'Aha! 💡'] } },
   { id: 'item-chat-pro', name: 'Pro Pack', type: 'CHAT_PACK', priceCoins: 90, assetUrl: 'Pro', isDefault: false, metadata: { messages: ['Calculated. 😎', 'GG! 🏆', 'GG WP! 🤝', 'Next game? 🎮'] } },
-  { id: 'item-chat-cricket', name: 'Cricket Pack', type: 'CHAT_PACK', priceCoins: 80, assetUrl: 'Cricket', isDefault: false, metadata: { messages: ['Sixer! 🏏', 'Bowled him! 🎯', 'Howzzat! 📢', 'Good bowling! ⚾'] } },
+  { id: 'item-chat-cricket', name: 'Cricket Chat Pack', type: 'CHAT_PACK', priceCoins: 80, assetUrl: 'Cricket', isDefault: false, metadata: { messages: ['🏏 Well Played!', '🏏 What a Shot!', '🏏 Clean Bowled!', '🏏 Catch It!', '🏏 Six!!!', '🏏 Nice Defense!', '🏏 Lucky Escape!', '🏏 Great Match!'] } },
   { id: 'item-chat-legend', name: 'Legend Pack', type: 'CHAT_PACK', priceCoins: 120, assetUrl: 'Legend', isDefault: false, metadata: { messages: ['What A Move! 🧠', 'Too Easy! ⚡', 'Close One! 😱', 'Good Luck! 🍀'] } },
-  { id: 'item-chat-cricket-sledge', name: 'Cricket Sledge Pack', type: 'CHAT_PACK', priceCoins: 120, assetUrl: 'Cricket Sledge', isDefault: false, metadata: { messages: ['Nice Duck 🦆', 'Lucky Shot 😏', 'Pressure 😈', 'Easy Catch 😂'] } },
-  { id: 'item-chat-dating', name: 'Dating Pack', type: 'CHAT_PACK', priceCoins: 120, assetUrl: 'Dating', isDefault: false, metadata: { messages: ['Nice Move 🙂', 'Impressed ✨', 'Cute Play 🌸', 'Good Choice 💫'] } },
+  { id: 'item-chat-cricket-sledge', name: 'Cricket Sledge Pack', type: 'CHAT_PACK', priceCoins: 120, assetUrl: 'Cricket Sledge', isDefault: false, metadata: { messages: ['Nice Duck 🦆', 'Lucky Shot 😏', 'Pressure 😈', 'Easy Catch 😂', 'Too Easy 😎', "Where's Your Timing? 🤣"] } },
+  { id: 'item-chat-dating', name: 'Romantic Dating Chat Pack', type: 'CHAT_PACK', priceCoins: 120, assetUrl: 'Dating', isDefault: false, metadata: { messages: ['❤️ Hi There!', '❤️ Missed You', '❤️ Nice To See You', "❤️ You're Sweet", '❤️ Good Luck!', '❤️ Have Fun!', "❤️ You're Amazing!", '❤️ See You Soon!'] } },
   { id: 'item-chat-savage', name: 'Savage Pack', type: 'CHAT_PACK', priceCoins: 150, assetUrl: 'Savage', isDefault: false, metadata: { messages: ['Too Slow', 'Skill Issue', 'Lucky Win', 'Try Again'] } },
 
   // Scratchers
@@ -80,7 +81,21 @@ export const MOCK_COSMETIC_ITEMS = [
   { id: 'frame-lvl-platinum', name: 'Platinum Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 60, description: 'Requires Level 60' } },
   { id: 'frame-lvl-diamond', name: 'Diamond Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 75, description: 'Requires Level 75' } },
   { id: 'frame-lvl-master', name: 'Master Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 90, description: 'Requires Level 90' } },
-  { id: 'frame-lvl-legendary', name: 'Legendary Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 100, description: 'Requires Level 100' } }
+  { id: 'frame-lvl-legendary', name: 'Legendary Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 100, description: 'Requires Level 100' } },
+
+  // Locked Progression items in mock database
+  { id: 'frame-neon', name: 'Neon Frame', type: 'AVATAR_FRAME', priceCoins: 100, isDefault: false, metadata: { minLevel: 5, description: 'Reach Level 5 reward' } },
+  { id: 'frame-prestige', name: 'Prestige Border', type: 'AVATAR_FRAME', priceCoins: 250, isDefault: false, metadata: { minLevel: 10, description: 'Reach Level 10 reward' } },
+  { id: 'frame-ruby', name: 'Ruby Glow', type: 'AVATAR_FRAME', priceCoins: 350, isDefault: false, metadata: { minLevel: 25, description: 'Reach Level 25 reward' } },
+  { id: 'frame-champion', name: 'Champion Frame', type: 'AVATAR_FRAME', priceCoins: 450, isDefault: false, metadata: { minLevel: 0, description: 'Win 50 Matches reward' } },
+  { id: 'title-cosmic', name: 'Cosmic Title', type: 'TITLE', priceCoins: 150, isDefault: false, metadata: { minWins: 0, description: 'Reach Level 15 reward' } },
+  { id: 'title-game-legend', name: 'Game Legend', type: 'TITLE', priceCoins: 500, isDefault: false, metadata: { minWins: 100, description: 'Win 100 Matches reward' } },
+  { id: 'title-shadow-warrior', name: 'Shadow Warrior', type: 'TITLE', priceCoins: 80, isDefault: false, metadata: { description: 'Purchase in Store' } },
+  { id: 'title-speed-demon', name: 'Speed Demon', type: 'TITLE', priceCoins: 120, isDefault: false, metadata: { description: 'Solve Memory Match in 15s' } },
+  { id: 'effect-cosmic-trail', name: 'Cosmic Trail', type: 'EFFECT', priceCoins: 200, isDefault: false, metadata: { description: 'Reach Level 15 reward' } },
+  { id: 'effect-golden-aura', name: 'Golden Aura', type: 'EFFECT', priceCoins: 400, isDefault: false, metadata: { description: 'Reach Level 50 reward' } },
+  { id: 'effect-rainbow-sparkles', name: 'Rainbow Sparkles', type: 'EFFECT', priceCoins: 150, isDefault: false, metadata: { description: 'Daily Rewards streak 7 reward' } },
+  { id: 'effect-thunder', name: 'Thunder Effect', type: 'EFFECT', priceCoins: 300, isDefault: false, metadata: { description: 'Open in Rare Mystery Crate' } }
 
 ]
 
@@ -103,6 +118,7 @@ export function loadDb(): MockDbState {
             if (!parsed.rankedMatches) parsed.rankedMatches = {}
             if (!parsed.rankedSeasons) parsed.rankedSeasons = {}
             if (!parsed.seasonSnapshots) parsed.seasonSnapshots = {}
+            if (!parsed.ads) parsed.ads = {}
             cachedDb = parsed
             return parsed
           }
@@ -189,6 +205,7 @@ export function loadDb(): MockDbState {
       level: 3,
       coins: 100,
       isGuest: false,
+      role: 'SUPER_ADMIN',
       lastSeenAt: new Date().toISOString(),
       createdAt: new Date('2024-01-01').toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1287,6 +1304,109 @@ function createModelMock(modelName: string) {
           }
         }
 
+        // ── Ad ───────────────────────────────────────────────────────────────
+        if (modelName === 'ad') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            let list = Object.values(db.ads || {})
+            const where = params.where || {}
+            if (where.active !== undefined) {
+              list = list.filter((a: any) => a.active === where.active)
+            }
+            if (where.id) {
+              if (where.id.not) {
+                list = list.filter((a: any) => a.id !== where.id.not)
+              } else {
+                list = list.filter((a: any) => a.id === where.id)
+              }
+            }
+            if (where.OR) {
+              list = list.filter((a: any) => {
+                return where.OR.some((cond: any) => {
+                  if (cond.allGames !== undefined && a.allGames === cond.allGames) return true
+                  if (cond.games?.has && a.games?.includes(cond.games.has)) return true
+                  return false
+                })
+              })
+            }
+            if (params.orderBy?.createdAt === 'desc') {
+              list.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            }
+            if (params.take) {
+              list = list.slice(0, params.take)
+            }
+            return list
+          }
+          if (action === 'findUnique' || action === 'findFirst') {
+            const db = loadDb()
+            const where = params.where || {}
+            if (where.id) {
+              return db.ads?.[where.id] || null
+            }
+            return null
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            const data = params.data || {}
+            const id = data.id || `ad-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+            const record = {
+              id,
+              imageUrl: data.imageUrl,
+              targetUrl: data.targetUrl,
+              durationSecs: data.durationSecs ?? 5,
+              duration_seconds: data.duration_seconds ?? data.durationSecs ?? 5,
+              skip_after_seconds: data.skip_after_seconds ?? 5,
+              allGames: data.allGames ?? false,
+              games: data.games ?? [],
+              active: data.active ?? true,
+              impressions: 0,
+              clicks: 0,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+            if (!db.ads) db.ads = {}
+            db.ads[id] = record
+            saveDb(db)
+            return record
+          }
+          if (action === 'update') {
+            const db = loadDb()
+            const where = params.where || {}
+            const id = where.id
+            const record = db.ads?.[id]
+            if (record) {
+              const data = params.data || {}
+              if (data.impressions?.increment) {
+                record.impressions += data.impressions.increment
+              } else if (data.clicks?.increment) {
+                record.clicks += data.clicks.increment
+              } else {
+                if (data.imageUrl !== undefined) record.imageUrl = data.imageUrl
+                if (data.targetUrl !== undefined) record.targetUrl = data.targetUrl
+                if (data.durationSecs !== undefined) record.durationSecs = data.durationSecs
+                if (data.duration_seconds !== undefined) record.duration_seconds = data.duration_seconds
+                if (data.skip_after_seconds !== undefined) record.skip_after_seconds = data.skip_after_seconds
+                if (data.allGames !== undefined) record.allGames = data.allGames
+                if (data.games !== undefined) record.games = data.games
+                if (data.active !== undefined) record.active = data.active
+              }
+              record.updatedAt = new Date().toISOString()
+              saveDb(db)
+            }
+            return record
+          }
+          if (action === 'delete') {
+            const db = loadDb()
+            const where = params.where || {}
+            const id = where.id
+            if (id && db.ads?.[id]) {
+              delete db.ads[id]
+              saveDb(db)
+            }
+            return { id }
+          }
+        }
+
         // ── Game ─────────────────────────────────────────────────────────────
         if (modelName === 'game') {
           if (action === 'findUnique') {
@@ -1469,7 +1589,7 @@ export function createPrismaMockProxy(realPrisma: any) {
         'battlePass', 'battlePassTier', 'profileBattlePass', 'analyticsEvent',
         'multiplayerRoom', 'multiplayerGameSession', 'multiplayerRoomPlayer',
         'multiplayerInvite', 'multiplayerChatMessage', 'challengeClaim', 'tournament',
-        'rankedSeason', 'seasonSnapshot', 'rankedMatch',
+        'rankedSeason', 'seasonSnapshot', 'rankedMatch', 'ad',
         // Also support potential legacy aliases just in case
         'matchResult', 'gameScore',
       ]

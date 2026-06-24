@@ -131,10 +131,9 @@ export default function AboutPage() {
         )}
       </div>
 
-      {/* ── Main About Info ── */}
       <div className="card" style={{ padding: '1.5rem', borderRadius: 20 }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem 0', letterSpacing: '0.05em' }}>
-          ℹ️ About GameHub
+          ℹ️ About
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.92rem', color: 'hsl(220 10% 75%)', lineHeight: 1.6 }}>
           <p style={{ margin: 0 }}>

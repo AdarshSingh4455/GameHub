@@ -10,6 +10,7 @@ import { getUtcDaysElapsed } from '@/lib/dailyRewards'
 import type { AchievementProgressInfo } from '@/lib/achievements'
 import { getLevelProgress } from '@/lib/xpUtils'
 import Avatar from '@/components/shared/Avatar'
+import { useGameSession } from '@/lib/contexts/GameSessionContext'
 
 interface NavLink {
   href: string
@@ -30,7 +31,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/dashboard/friends',     label: 'Friends',       emoji: '👥', authRequired: true },
   { href: '/dashboard/notifications', label: 'Notifications', emoji: '🔔', authRequired: true },
   { href: '/dashboard/profile',     label: 'Profile',       emoji: '👤' },
-  { href: '/dashboard/about',       label: 'About GameHub', emoji: 'ℹ️' },
+  { href: '/dashboard/about',       label: 'About', emoji: 'ℹ️' },
   { href: '/dashboard/settings',    label: 'Settings',      emoji: '⚙️',  authRequired: true },
 ]
 
@@ -46,9 +47,10 @@ interface Props {
   user: User | null
 }
 
-export default function DashboardNav({ user }: Props) {
-  const pathname = usePathname()
+export default function DashboardNav({ user }: { user: User | null }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const { isOnline } = useGameSession()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
@@ -181,8 +183,8 @@ export default function DashboardNav({ user }: Props) {
         lastClaim: guestLastClaim,
         achievementProgress: [], 
         role: null,
-        selectedTitle: null,
-        selectedFrame: null,
+        selectedTitle: typeof window !== 'undefined' ? localStorage.getItem('gamehub_guest_selected_title') || null : null,
+        selectedFrame: typeof window !== 'undefined' ? localStorage.getItem('gamehub_guest_selected_frame') || null : null,
         username: 'Guest',
         avatarUrl: null,
       })
@@ -265,6 +267,7 @@ export default function DashboardNav({ user }: Props) {
           </button>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <span style={{ fontWeight: 800, fontSize: '1.2rem' }} className="gradient-text">🎮 GameHub</span>
+            {!isOnline && <span style={{ fontSize: '0.65rem', background: 'hsl(0 80% 55%)', color: 'white', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', verticalAlign: 'middle', fontWeight: 700 }}>OFFLINE</span>}
           </Link>
           <Link
             href={user ? '/dashboard/profile' : '/register'}
@@ -338,6 +341,26 @@ export default function DashboardNav({ user }: Props) {
             ✕
           </button>
         </div>
+
+        {/* Offline Banner */}
+        {!isOnline && (
+          <div style={{
+            background: 'hsl(0 80% 55% / 0.12)',
+            border: '1px solid hsl(0 80% 55% / 0.25)',
+            borderRadius: '10px',
+            padding: '0.5rem 0.8rem',
+            margin: '0.75rem 0.75rem 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            fontSize: '0.75rem',
+            color: 'hsl(0 80% 85%)',
+            fontWeight: 600,
+          }}>
+            <span>🔌</span>
+            <span>Offline Mode Active</span>
+          </div>
+        )}
 
         {/* User / Guest card */}
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid hsl(220 15% 18%)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

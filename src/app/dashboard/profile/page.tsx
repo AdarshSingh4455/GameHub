@@ -894,7 +894,7 @@ export default function ProfilePage() {
                 </span>
               </div>
 
-              {/* About GameHub Shortcut Link Card */}
+              {/* About Shortcut Link Card */}
               <Link 
                 href="/dashboard/about"
                 style={{ 

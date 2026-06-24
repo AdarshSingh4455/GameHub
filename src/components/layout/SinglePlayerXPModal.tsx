@@ -483,12 +483,39 @@ export default function SinglePlayerXPModal({ data, onClose }: Props) {
 
 
 
-        {/* Guest Warning */}
-        {isGuest && (
+        {/* Offline Mode Banner or Guest Warning */}
+        {metadata?.offline ? (
+          <div
+            style={{
+              background: 'linear-gradient(135deg, hsl(0 80% 55% / 0.08), hsl(38 95% 55% / 0.08))',
+              border: '1px solid hsl(38 95% 50% / 0.25)',
+              borderRadius: 16,
+              padding: '0.85rem 1rem',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              position: 'relative',
+              zIndex: 1,
+            }}
+          >
+            <div style={{ fontSize: '0.88rem', fontWeight: 900, color: 'hsl(38 95% 65%)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+              Offline Session
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'white', fontWeight: 700, margin: '0.2rem 0' }}>
+              You earned:<br />
+              <span style={{ color: 'hsl(220 100% 70%)', fontSize: '0.95rem' }}>+{xpGained} XP</span><br />
+              <span style={{ color: 'hsl(45 100% 55%)', fontSize: '0.95rem' }}>+{coinsGained} Coins</span>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 65%)', lineHeight: 1.4, margin: 0 }}>
+              Connect to the internet to save your progress.
+            </p>
+          </div>
+        ) : isGuest ? (
           <div
             style={{
               background: 'hsl(0 80% 55% / 0.05)',
-              border: '1px solid hsl(38 95% 50% / 0.2)',
+              border: '1px solid hsl(38 95% 50% / 0.25)',
               borderRadius: 14,
               padding: '0.75rem',
               display: 'flex',
@@ -524,7 +551,7 @@ export default function SinglePlayerXPModal({ data, onClose }: Props) {
               </button>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', position: 'relative', zIndex: 1 }}>

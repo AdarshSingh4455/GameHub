@@ -5,6 +5,7 @@ import { getGameXP, computeLevel } from '@/lib/xp'
 import { checkAndUnlockAchievements } from '@/lib/achievements'
 import { recalculateLeaderboardRanks } from '@/lib/ranks'
 import { Prisma } from '@prisma/client'
+import { checkAndUnlockProgressionItems } from '@/lib/cosmeticUnlocks'
 
 export async function POST(request: NextRequest) {
   try {
@@ -307,6 +308,21 @@ export async function POST(request: NextRequest) {
       // Recalculate ranks based on new XP
       await recalculateLeaderboardRanks(tx)
 
+      // Fetch all user wins to evaluate win-based cosmetics
+      const allStats = await tx.profileGameStats.findMany({
+        where: { profileId: profile.id }
+      })
+      const totalWins = allStats.reduce((sum, s) => sum + (s.winCount || 0), 0)
+
+      // Call progression unlock check to award newly unlocked items (frames, titles, effects)
+      const newlyUnlockedCosmetics = await checkAndUnlockProgressionItems(
+        profile.id,
+        finalLevel,
+        updatedProfile.currentStreak,
+        totalWins,
+        tx
+      )
+
       return {
         gameSlug,
         result,
@@ -319,6 +335,7 @@ export async function POST(request: NextRequest) {
         leveledUp,
         currentStreak: updatedProfile.currentStreak,
         unlockedAchievements: newlyUnlocked,
+        newlyUnlockedCosmetics,
         nextAchievement,
         highScore: newHighScore,
         metadata,

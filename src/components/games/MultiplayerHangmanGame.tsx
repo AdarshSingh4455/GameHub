@@ -224,11 +224,11 @@ export default function MultiplayerHangmanGame({
   }
 
   return (
-    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative' }}>
+    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative', width: '100%', alignItems: 'center' }}>
       
       {/* 1. WORD SUBMISSION STAGE */}
       {stage === 'WORD_SUBMISSION' && (
-        <div className="card glass text-center animate-fadeIn" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', borderRadius: 16 }}>
+        <div className="card glass text-center animate-fadeIn" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', borderRadius: 16, width: '100%', maxWidth: 360, margin: '0 auto' }}>
           <div>
             <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem' }}>✍️</span>
             <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Enter Your Secret Word</h3>
@@ -270,7 +270,7 @@ export default function MultiplayerHangmanGame({
 
       {/* 2. PLAYING STAGE */}
       {stage === 'PLAYING' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} className="animate-fadeIn">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: 500 }} className="animate-fadeIn">
           {/* HUD Turn Indicator */}
           <div
             style={{
@@ -430,43 +430,55 @@ export default function MultiplayerHangmanGame({
 
       {/* 3. FINISHED STAGE */}
       {stage === 'FINISHED' && (
-        <div className="card glass text-center animate-fadeIn" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: 16 }}>
-          {gameState.winnerId === currentUserId ? (
-            <div>
-              <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '0.5rem' }}>🏆</span>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'hsl(142 70% 50%)' }}>Victory!</h2>
-              <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                Superb! You solved the word first and won the match.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '0.5rem' }}>💀</span>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'hsl(350 90% 55%)' }}>Defeated</h2>
-              <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                Your opponent solved their puzzle first!
-              </p>
-            </div>
-          )}
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(5, 8, 16, 0.92)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          zIndex: 999
+        }}>
+          <div className="card glass text-center animate-fadeIn" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: 16, width: '100%', maxWidth: 360, margin: '0 auto' }}>
+            {gameState.winnerId === currentUserId ? (
+              <div>
+                <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '0.5rem' }}>🏆</span>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'hsl(142 70% 50%)' }}>Victory!</h2>
+                <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                  Superb! You solved the word first and won the match.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '0.5rem' }}>💀</span>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'hsl(350 90% 55%)' }}>Defeated</h2>
+                <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                  Your opponent solved their puzzle first!
+                </p>
+              </div>
+            )}
 
-          <div style={{ background: 'hsl(220 20% 7%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 12, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <span style={{ color: 'hsl(220 10% 55%)' }}>Word you guessed:</span>
-              <strong style={{ color: 'white', letterSpacing: '0.05em' }}>{opponentWord}</strong>
+            <div style={{ background: 'hsl(220 20% 7%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 12, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: 'hsl(220 10% 55%)' }}>Word you guessed:</span>
+                <strong style={{ color: 'white', letterSpacing: '0.05em' }}>{opponentWord}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: 'hsl(220 10% 55%)' }}>Word opponent guessed:</span>
+                <strong style={{ color: 'white', letterSpacing: '0.05em' }}>{isP1 ? gameState.p1Word : gameState.p2Word}</strong>
+              </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <span style={{ color: 'hsl(220 10% 55%)' }}>Word opponent guessed:</span>
-              <strong style={{ color: 'white', letterSpacing: '0.05em' }}>{isP1 ? gameState.p1Word : gameState.p2Word}</strong>
-            </div>
-          </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={handleReplayVote} className="btn btn-primary" style={{ flex: 2, padding: '0.75rem', borderRadius: 12, fontWeight: 700 }}>
-              Vote Replay 🔄
-            </button>
-            <button onClick={onLeave} className="btn btn-secondary" style={{ flex: 1, padding: '0.75rem', borderRadius: 12, fontWeight: 700 }}>
-              Leave Room
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={handleReplayVote} className="btn btn-primary" style={{ flex: 2, padding: '0.75rem', borderRadius: 12, fontWeight: 700 }}>
+                Vote Replay 🔄
+              </button>
+              <button onClick={onLeave} className="btn btn-secondary" style={{ flex: 1, padding: '0.75rem', borderRadius: 12, fontWeight: 700 }}>
+                Leave Room
+              </button>
+            </div>
           </div>
         </div>
       )}

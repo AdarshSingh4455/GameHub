@@ -1022,10 +1022,18 @@ body.game-page-active .app-content {
   }
 
   /* Modals, Overlays, and Cards */
-  .modal-content, .card.glass, .dialog-content {
+  .modal-content, .dialog-content {
     max-width: 290px !important;
     padding: 1rem !important;
     border-radius: 16px !important;
+  }
+
+  .card.glass {
+    max-width: 100% !important;
+    padding: 1rem !important;
+    border-radius: 16px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 
   /* Grid containers */

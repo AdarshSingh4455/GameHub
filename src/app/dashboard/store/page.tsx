@@ -135,11 +135,16 @@ export default function StorePage() {
       const guestProfile = {
         username: 'GuestUser',
         avatarUrl: null,
-        selectedTitle: null,
-        selectedFrame: null,
-        selectedEffect: null
+        selectedTitle: localStorage.getItem('gamehub_guest_selected_title') || null,
+        selectedFrame: localStorage.getItem('gamehub_guest_selected_frame') || null,
+        selectedEffect: localStorage.getItem('gamehub_guest_selected_effect') || null,
+        selectedTheme: localStorage.getItem('gamehub_guest_selected_theme') || null,
+        selectedChatPack: localStorage.getItem('gamehub_guest_selected_chat_pack') || null
       }
       setProfile(guestProfile)
+      setPreviewedTitle(guestProfile.selectedTitle)
+      setPreviewedFrame(guestProfile.selectedFrame)
+      setPreviewedEffect(guestProfile.selectedEffect)
     }
   }
 
@@ -326,11 +331,25 @@ export default function StorePage() {
                   : 'selectedTheme'
       const val = action === 'equip' ? item.name : null
       
+      const storageKey = item.type === 'TITLE' ? 'gamehub_guest_selected_title'
+                       : item.type === 'AVATAR_FRAME' ? 'gamehub_guest_selected_frame'
+                       : item.type === 'EFFECT' ? 'gamehub_guest_selected_effect'
+                       : item.type === 'CHAT_PACK' ? 'gamehub_guest_selected_chat_pack'
+                       : 'gamehub_guest_selected_theme'
+      if (val) {
+        localStorage.setItem(storageKey, val)
+      } else {
+        localStorage.removeItem(storageKey)
+      }
+
       const updatedProfile = { ...profile, [field]: val }
       setProfile(updatedProfile)
       if (item.type === 'TITLE') setPreviewedTitle(val)
       if (item.type === 'AVATAR_FRAME') setPreviewedFrame(val)
       if (item.type === 'EFFECT') setPreviewedEffect(val)
+
+      // Dispatch event to sync sidebar layout
+      window.dispatchEvent(new Event('gamehub_xp_update'))
       
       addToast('success', 'Cosmetic Updated', `${item.name} ${action === 'equip' ? 'equipped' : 'unequipped'}!`)
       return
@@ -849,7 +868,7 @@ export default function StorePage() {
                       >
                         {item.id === 'perk-streak-protect' ? 'Protected' : equippingId === item.id ? 'Saving...' : 'Unequip'}
                       </button>
-                    ) : owned ? (
+                    ) : (owned || (!user && (item.type as string) !== 'SCRATCHER' && (item.type as string) !== 'CRATES')) ? (
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {canPreview && (
                           <button

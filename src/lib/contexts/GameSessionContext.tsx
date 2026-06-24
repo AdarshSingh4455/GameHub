@@ -58,6 +58,9 @@ interface GameSessionContextType {
     metadata?: Record<string, unknown>
   }) => Promise<void>
   closeModal: (action?: 'replay' | 'next') => void
+  isOnline: boolean
+  preloadAdsForGame: (gameSlug: string) => Promise<void>
+  triggerAd: (gameSlug: string, onComplete: () => void) => void
 }
 
 const GameSessionContext = createContext<GameSessionContextType | undefined>(undefined)
@@ -74,6 +77,8 @@ export interface Ad {
   imageUrl: string
   targetUrl: string
   durationSecs: number
+  duration_seconds?: number
+  skip_after_seconds?: number
   allGames: boolean
   games: string[]
   active: boolean
@@ -112,6 +117,43 @@ export function GameSessionProvider({
     setModalData(null)
   }, [pathname])
   const [isLoading, setIsLoading] = useState(false)
+
+  // Online/Offline tracking
+  const [isOnline, setIsOnline] = useState<boolean>(true)
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsOnline(navigator.onLine)
+      const handleOnline = () => setIsOnline(true)
+      const handleOffline = () => setIsOnline(false)
+      window.addEventListener('online', handleOnline)
+      window.addEventListener('offline', handleOffline)
+      return () => {
+        window.removeEventListener('online', handleOnline)
+        window.removeEventListener('offline', handleOffline)
+      }
+    }
+  }, [])
+
+  // Ads preloading buffer
+  const [adsBuffer, setAdsBuffer] = useState<Ad[]>([])
+  const [adOrientation, setAdOrientation] = useState<'portrait' | 'landscape'>('landscape')
+  const [adCompleteCallback, setAdCompleteCallback] = useState<(() => void) | null>(null)
+
+  const preloadAdsForGame = async (gameSlug: string) => {
+    if (!navigator.onLine) return
+    try {
+      const adRes = await fetch(`/api/ads?gameSlug=${gameSlug}`)
+      if (adRes.ok) {
+        const adData = await adRes.json()
+        if (adData.ads && adData.ads.length > 0) {
+          setAdsBuffer(adData.ads)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to preload ads:', err)
+    }
+  }
 
   // Ads display state
   const [adToShow, setAdToShow] = useState<Ad | null>(null)
@@ -177,7 +219,7 @@ export function GameSessionProvider({
       .catch((err) => console.error('[MIGRATION ERROR]', err))
   }, [user])
 
-  // Countdown timer for Ads (does not depend on adTimeLeft to prevent interval recreation)
+  // Countdown timer for Ads
   React.useEffect(() => {
     if (postGameStage !== 'AD_SHOWING' || !adToShow) return
 
@@ -186,7 +228,11 @@ export function GameSessionProvider({
         if (prev <= 1) {
           clearInterval(timer)
           setAdToShow(null)
-          setPostGameStage('XP_MODAL_SHOWING')
+          setPostGameStage(adCompleteCallback ? 'IDLE' : 'XP_MODAL_SHOWING')
+          if (adCompleteCallback) {
+            adCompleteCallback()
+            setAdCompleteCallback(null)
+          }
           return 0
         }
         return prev - 1
@@ -194,7 +240,7 @@ export function GameSessionProvider({
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [postGameStage, adToShow])
+  }, [postGameStage, adToShow, adCompleteCallback])
 
   // Handles recording click & navigating
   const handleAdClick = async () => {
@@ -230,18 +276,28 @@ export function GameSessionProvider({
       })
     }
     
+    // Do not show ads in offline mode
+    if (payload.metadata?.offline) {
+      setPostGameStage('XP_MODAL_SHOWING')
+      return
+    }
+
     let activeAd: any = null
-    try {
-      const adRes = await fetch(`/api/ads?gameSlug=${payload.gameSlug}`)
-      if (adRes.ok) {
-        const adData = await adRes.json()
-        if (adData.ads && adData.ads.length > 0) {
-          // Select a random active ad for the game
-          activeAd = adData.ads[Math.floor(Math.random() * adData.ads.length)]
+    if (adsBuffer.length > 0) {
+      activeAd = adsBuffer[0]
+      setAdsBuffer((prev) => [...prev.slice(1), prev[0]]) // cycle buffer
+    } else {
+      try {
+        const adRes = await fetch(`/api/ads?gameSlug=${payload.gameSlug}`)
+        if (adRes.ok) {
+          const adData = await adRes.json()
+          if (adData.ads && adData.ads.length > 0) {
+            activeAd = adData.ads[Math.floor(Math.random() * adData.ads.length)]
+          }
         }
+      } catch (err) {
+        console.error('Failed to fetch active ads:', err)
       }
-    } catch (err) {
-      console.error('Failed to fetch active ads:', err)
     }
 
     if (activeAd) {
@@ -252,11 +308,110 @@ export function GameSessionProvider({
         body: JSON.stringify({ action: 'impression', adId: activeAd.id })
       }).catch(err => console.error('Failed to record ad impression:', err))
 
-      setAdToShow(activeAd)
-      setAdTimeLeft(activeAd.durationSecs || 5)
-      setPostGameStage('AD_SHOWING')
+      let resolved = false
+      const timeoutId = setTimeout(() => {
+        if (!resolved) {
+          resolved = true
+          console.warn('[AD FAIL-SAFE] Single-player ad load timeout, skipping.')
+          setPostGameStage('XP_MODAL_SHOWING')
+        }
+      }, 1000)
+
+      // Detect orientation
+      const img = new Image()
+      img.onload = () => {
+        if (resolved) return
+        clearTimeout(timeoutId)
+        resolved = true
+        const orientation = img.width >= img.height ? 'landscape' : 'portrait'
+        setAdOrientation(orientation)
+        setAdToShow(activeAd)
+        setAdTimeLeft(activeAd.duration_seconds ?? activeAd.durationSecs ?? 5)
+        setPostGameStage('AD_SHOWING')
+      }
+      img.onerror = () => {
+        if (resolved) return
+        clearTimeout(timeoutId)
+        resolved = true
+        setPostGameStage('XP_MODAL_SHOWING')
+      }
+      img.src = activeAd.imageUrl
     } else {
       setPostGameStage('XP_MODAL_SHOWING')
+    }
+  }
+
+  // Multiplayer ad trigger with 1s safety timeout
+  const triggerAd = (gameSlug: string, onComplete: () => void) => {
+    if (!navigator.onLine) {
+      onComplete()
+      return
+    }
+
+    let resolved = false
+    const complete = () => {
+      if (!resolved) {
+        resolved = true
+        onComplete()
+      }
+    }
+
+    // Set 1-second fail-safe timeout
+    const timeoutId = setTimeout(() => {
+      console.warn('[AD FAIL-SAFE] Timeout reached, skipping ad.')
+      complete()
+    }, 1000)
+
+    const showAd = (ad: Ad) => {
+      if (resolved) return
+
+      fetch('/api/ads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'impression', adId: ad.id })
+      }).catch(err => console.error('Failed to record ad impression:', err))
+
+      const img = new Image()
+      img.onload = () => {
+        if (resolved) return
+        clearTimeout(timeoutId)
+        const orientation = img.width >= img.height ? 'landscape' : 'portrait'
+        setAdOrientation(orientation)
+        setAdToShow(ad)
+        setAdTimeLeft(ad.duration_seconds ?? ad.durationSecs ?? 5)
+        setAdCompleteCallback(() => complete)
+        setPostGameStage('AD_SHOWING')
+      }
+      img.onerror = () => {
+        console.error('[AD FAIL-SAFE] Image load failed.')
+        clearTimeout(timeoutId)
+        complete()
+      }
+      img.src = ad.imageUrl
+    }
+
+    if (adsBuffer.length > 0) {
+      const ad = adsBuffer[0]
+      setAdsBuffer((prev) => [...prev.slice(1), prev[0]])
+      showAd(ad)
+    } else {
+      fetch(`/api/ads?gameSlug=${gameSlug}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (resolved) return
+          if (data.ads && data.ads.length > 0) {
+            const ad = data.ads[Math.floor(Math.random() * data.ads.length)]
+            showAd(ad)
+          } else {
+            clearTimeout(timeoutId)
+            complete()
+          }
+        })
+        .catch((e) => {
+          console.error('[AD FAIL-SAFE] Fetch error:', e)
+          clearTimeout(timeoutId)
+          complete()
+        })
     }
   }
 
@@ -271,6 +426,100 @@ export function GameSessionProvider({
     metadata?: Record<string, unknown>
   }) {
     setIsLoading(true)
+
+    // Bypasses saves completely when offline
+    if (!navigator.onLine) {
+      setTimeout(async () => {
+        let baseXP = gameSlug === '2048' || gameSlug === 'fighter' || gameSlug === 'memory'
+          ? (result === 'win' ? 50 : result === 'loss' ? 10 : 25)
+          : (result === 'win' ? 100 : result === 'loss' ? 25 : 50)
+        let baseCoins = result === 'win' ? 20 : 5
+
+        if (gameSlug === 'block-blast') {
+          const score = (metadata?.score as number) ?? 0
+          const gameMeta = (metadata?.gameMetadata as Record<string, any>) ?? {}
+          const difficulty = (gameMeta.difficulty ?? 'normal').toLowerCase()
+          const maxCombo = gameMeta.maxCombo ?? 0
+
+          if (result === 'win') {
+            if (score < 1000) baseXP = 50
+            else if (score < 3000) baseXP = 100
+            else baseXP = 150
+          } else {
+            baseXP = 10
+          }
+
+          const baseCoinsValue = Math.floor(score / 100)
+          const diffMultiplier = difficulty === 'hard' ? 2.0 : difficulty === 'normal' ? 1.5 : 1.0
+          const comboBonus = maxCombo * 5
+          baseCoins = Math.max(5, Math.floor((baseCoinsValue + comboBonus) * diffMultiplier))
+        } else if (gameSlug === 'neon-tetris') {
+          const score = (metadata?.score as number) ?? 0
+          const gameMeta = (metadata?.gameMetadata as Record<string, any>) ?? {}
+          const maxCombo = gameMeta.maxCombo ?? 0
+
+          if (score < 1000) {
+            baseXP = 50
+          } else if (score < 5000) {
+            baseXP = 100
+          } else {
+            baseXP = 200
+          }
+
+          baseCoins = Math.max(
+            5,
+            Math.floor(score / 100) + maxCombo * 2
+          )
+        }
+
+        const oldXP = user
+          ? 0
+          : parseInt(localStorage.getItem(GUEST_XP_KEY) || '0', 10)
+        const oldLevel = user
+          ? 1
+          : parseInt(localStorage.getItem(GUEST_LEVEL_KEY) || '1', 10)
+
+        if (typeof document !== 'undefined') {
+          const doc = document as VendorDocument
+          if (doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement) {
+            doc.exitFullscreen().catch(() => {});
+          }
+          const fullFallbacks = document.querySelectorAll('.fullscreen-mobile-fallback');
+          fullFallbacks.forEach(el => el.classList.remove('fullscreen-mobile-fallback'));
+        }
+
+        const payload: GameResultPayload = {
+          gameSlug,
+          result,
+          xpGained: baseXP,
+          coinsGained: baseCoins,
+          oldXP,
+          newXP: oldXP,
+          oldLevel,
+          newLevel: oldLevel,
+          leveledUp: false,
+          currentStreak: 0,
+          unlockedAchievements: [],
+          nextAchievement: {
+            name: 'Offline mode active',
+            current: 0,
+            target: 1,
+            progress: 0,
+          },
+          isGuest: !user,
+          highScore: (metadata?.score as number) ?? 0,
+          metadata: {
+            ...metadata,
+            offline: true
+          }
+        }
+
+        setModalData(payload)
+        setPostGameStage('XP_MODAL_SHOWING')
+        setIsLoading(false)
+      }, 50)
+      return
+    }
 
     // A. Guest Mode (Never write to DB)
     if (!user) {
@@ -504,6 +753,9 @@ export function GameSessionProvider({
         modalData,
         submitGameResult,
         closeModal,
+        isOnline,
+        preloadAdsForGame,
+        triggerAd,
       }}
     >
       {children}
@@ -527,19 +779,20 @@ export function GameSessionProvider({
           <div
             className="card glass"
             style={{
-              width: '100%',
-              maxWidth: 390,
-              height: 540,
+              width: '95vw',
+              maxWidth: adOrientation === 'landscape' ? 600 : 360,
+              height: adOrientation === 'landscape' ? 'auto' : 'min(90vh, 560px)',
               background: 'linear-gradient(135deg, hsl(222 20% 9% / 0.95), hsl(222 18% 13% / 0.95))',
               border: '1px solid hsl(220 15% 22%)',
-              padding: '1.5rem',
+              padding: '1.25rem',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               boxShadow: '0 20px 50px rgba(0, 0, 0, 0.65)',
-              borderRadius: 24,
+              borderRadius: 20,
               textAlign: 'center',
               position: 'relative',
+              gap: '1rem',
             }}
             id="ad-overlay-card"
           >
@@ -574,16 +827,17 @@ export function GameSessionProvider({
               onClick={handleAdClick}
               style={{
                 cursor: 'pointer',
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '1.25rem 0',
-                borderRadius: 16,
+                width: '100%',
+                aspectRatio: adOrientation === 'landscape' ? '16/9' : '9/16',
+                maxHeight: adOrientation === 'landscape' ? 'none' : '320px',
+                borderRadius: 12,
                 overflow: 'hidden',
                 border: '1px solid hsl(220 15% 18%)',
                 background: 'hsl(222 20% 6%)',
                 position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
               id="ad-banner-link"
             >
@@ -594,7 +848,7 @@ export function GameSessionProvider({
                   style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'contain',
+                    objectFit: 'cover',
                   }}
                 />
               ) : (
@@ -648,22 +902,28 @@ export function GameSessionProvider({
                 </button>
                 
                 <button
-                  disabled={adTimeLeft > 0}
+                  disabled={(adToShow.duration_seconds ?? adToShow.durationSecs ?? 5) - adTimeLeft < (adToShow.skip_after_seconds ?? 5)}
                   onClick={() => {
                     setAdToShow(null)
-                    setPostGameStage('XP_MODAL_SHOWING')
+                    setPostGameStage(adCompleteCallback ? 'IDLE' : 'XP_MODAL_SHOWING')
+                    if (adCompleteCallback) {
+                      adCompleteCallback()
+                      setAdCompleteCallback(null)
+                    }
                   }}
                   className="btn btn-secondary"
                   style={{
                     flex: 1,
                     borderRadius: 12,
                     fontSize: '0.85rem',
-                    opacity: adTimeLeft > 0 ? 0.5 : 1,
-                    cursor: adTimeLeft > 0 ? 'not-allowed' : 'pointer',
+                    opacity: ((adToShow.duration_seconds ?? adToShow.durationSecs ?? 5) - adTimeLeft < (adToShow.skip_after_seconds ?? 5)) ? 0.5 : 1,
+                    cursor: ((adToShow.duration_seconds ?? adToShow.durationSecs ?? 5) - adTimeLeft < (adToShow.skip_after_seconds ?? 5)) ? 'not-allowed' : 'pointer',
                   }}
                   id="ad-skip-btn"
                 >
-                  {adTimeLeft > 0 ? 'Skip Ad' : 'Continue'}
+                  {((adToShow.duration_seconds ?? adToShow.durationSecs ?? 5) - adTimeLeft < (adToShow.skip_after_seconds ?? 5)) 
+                    ? `Skip in ${(adToShow.skip_after_seconds ?? 5) - ((adToShow.duration_seconds ?? adToShow.durationSecs ?? 5) - adTimeLeft)}s` 
+                    : 'Continue'}
                 </button>
               </div>
             </div>

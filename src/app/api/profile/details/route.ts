@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { getAchievementProgress } from '@/lib/achievements'
 
+import { checkAndUnlockProgressionItems } from '@/lib/cosmeticUnlocks'
+
 export async function GET(request: Request) {
   try {
     let userId: string
@@ -34,6 +36,15 @@ export async function GET(request: Request) {
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
+
+    // Fetch game stats to calculate total wins for progression check
+    const gameStatsForCheck = await prisma.profileGameStats.findMany({
+      where: { profileId: profile.id }
+    })
+    const totalWins = gameStatsForCheck.reduce((sum, s) => sum + (s.wins || 0), 0)
+
+    // Check and unlock progression rewards automatically
+    await checkAndUnlockProgressionItems(profile.id, profile.level, profile.currentStreak, totalWins)
 
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)

@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { imageUrl, targetUrl, durationSecs, allGames, games, active } = body
+    const { imageUrl, targetUrl, durationSecs, duration_seconds, skip_after_seconds, allGames, games, active } = body
 
     if (!imageUrl || !targetUrl) {
       return NextResponse.json({ error: 'Image URL and Target URL are required' }, { status: 400 })
@@ -109,6 +109,8 @@ export async function POST(request: Request) {
         imageUrl,
         targetUrl,
         durationSecs: parseInt(durationSecs, 10) || 5,
+        duration_seconds: parseInt(duration_seconds, 10) || parseInt(durationSecs, 10) || 5,
+        skip_after_seconds: parseInt(skip_after_seconds, 10) || 5,
         allGames: !!allGames,
         games: games || [],
         active: active !== undefined ? !!active : true,
@@ -141,7 +143,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { id, imageUrl, targetUrl, durationSecs, allGames, games, active } = body
+    const { id, imageUrl, targetUrl, durationSecs, duration_seconds, skip_after_seconds, allGames, games, active } = body
 
     if (!id) {
       return NextResponse.json({ error: 'Ad ID is required' }, { status: 400 })
@@ -159,6 +161,8 @@ export async function PUT(request: Request) {
         imageUrl,
         targetUrl,
         durationSecs: parseInt(durationSecs, 10) || 5,
+        duration_seconds: parseInt(duration_seconds, 10) || parseInt(durationSecs, 10) || 5,
+        skip_after_seconds: parseInt(skip_after_seconds, 10) || 5,
         allGames: !!allGames,
         games: games || [],
         active: active !== undefined ? !!active : true,

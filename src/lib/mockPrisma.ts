@@ -1543,6 +1543,42 @@ function createModelMock(modelName: string) {
             return record
           }
         }
+      
+        // ── Achievement ──────────────────────────────────────────────────────
+        if (modelName === 'achievement') {
+          if (action === 'findMany') {
+            return [
+              { id: 'first-game', slug: 'first-game', name: 'First Move', description: 'Play your first game.', xpReward: 50, coinReward: 10, category: 'Gameplay' },
+              { id: 'first-win', slug: 'first-win', name: 'Winner Winner', description: 'Win your first match.', xpReward: 100, coinReward: 25, category: 'Wins' },
+              { id: 'level-5', slug: 'level-5', name: 'Rising Star', description: 'Reach level 5.', xpReward: 150, coinReward: 50, category: 'Streaks' },
+              { id: 'streak-3', slug: 'streak-3', name: 'On Fire', description: 'Maintain a 3-day active streak.', xpReward: 150, coinReward: 50, category: 'Streaks' }
+            ]
+          }
+        }
+
+        // ── UserAchievement ──────────────────────────────────────────────────
+        if (modelName === 'userAchievement') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            const where = params.where || {}
+            return [
+              {
+                id: 'ua-1',
+                profileId: where.profileId || 'test-user-a',
+                achievementId: 'first-game',
+                unlockedAt: new Date().toISOString(),
+                achievement: { id: 'first-game', slug: 'first-game', name: 'First Move', description: 'Play your first game.', xpReward: 50, coinReward: 10, category: 'Gameplay' }
+              },
+              {
+                id: 'ua-2',
+                profileId: where.profileId || 'test-user-a',
+                achievementId: 'first-win',
+                unlockedAt: new Date().toISOString(),
+                achievement: { id: 'first-win', slug: 'first-win', name: 'Winner Winner', description: 'Win your first match.', xpReward: 100, coinReward: 25, category: 'Wins' }
+              }
+            ]
+          }
+        }
 
         // ── Fallback Actions for unregistered or secondary models ───────────
         if (action === 'findMany')   return []

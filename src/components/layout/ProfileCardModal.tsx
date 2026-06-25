@@ -373,7 +373,7 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
 
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'white', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {data.profile.displayName || data.profile.username}
+                    {data.profile.displayName || (data.profile.username.includes('@') ? data.profile.username.split('@')[0] : data.profile.username)}
                   </h3>
                   <div style={{ fontSize: '0.78rem', color: 'hsl(220 10% 55%)', margin: 0 }}>
                     @{data.profile.username}

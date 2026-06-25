@@ -26,7 +26,10 @@ export async function GET(
                 username: true,
                 avatarUrl: true,
                 level: true,
-                lastSeenAt: true
+                lastSeenAt: true,
+                displayName: true,
+                selectedFrame: true,
+                selectedTitle: true
               }
             }
           },
@@ -48,7 +51,10 @@ export async function GET(
         username: true,
         avatarUrl: true,
         level: true,
-        lastSeenAt: true
+        lastSeenAt: true,
+        displayName: true,
+        selectedFrame: true,
+        selectedTitle: true
       }
     })
 
@@ -61,7 +67,10 @@ export async function GET(
       username: p.profile.username,
       avatarUrl: p.profile.avatarUrl,
       level: p.profile.level,
-      lastSeenAt: p.profile.lastSeenAt
+      lastSeenAt: p.profile.lastSeenAt,
+      displayName: p.profile.displayName,
+      selectedFrame: p.profile.selectedFrame,
+      selectedTitle: p.profile.selectedTitle
     }))
 
     console.log(`[ROOM POLL] roomCode=${normalizedCode}`)

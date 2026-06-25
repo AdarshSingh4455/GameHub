@@ -433,7 +433,7 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs list (Optimized for 390x844 responsive flow - wrapping and horizontal swipeable) */}
-      <div style={{ display: 'flex', borderBottom: '1px solid hsl(220 15% 18%)', gap: '0.5rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '0.1rem' }}>
+      <div className="horizontal-tab-bar">
         {[
           { id: 'ads', label: 'Ads Management', emoji: '📢' },
           { id: 'analytics', label: 'Analytics', emoji: '📊' },
@@ -445,35 +445,13 @@ export default function AdminPage() {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id as any)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: activeTab === t.id ? 'hsl(220 100% 70%)' : 'hsl(220 10% 50%)',
-              fontWeight: 700,
-              fontSize: '0.82rem',
-              padding: '0.5rem 0.65rem 0.65rem',
-              cursor: 'pointer',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
+            className={`horizontal-tab-item ${activeTab === t.id ? 'active' : ''}`}
             id={`admin-tab-${t.id}`}
           >
             <span>{t.emoji}</span>
             <span>{t.label}</span>
             {activeTab === t.id && (
-              <div style={{
-                position: 'absolute',
-                bottom: -1,
-                left: 0,
-                right: 0,
-                height: 2,
-                background: 'hsl(220 100% 60%)',
-                boxShadow: '0 0 8px hsl(220 100% 60%)'
-              }} />
+              <div className="active-indicator" />
             )}
           </button>
         ))}
@@ -1317,7 +1295,8 @@ export default function AdminPage() {
               <div style={{ textAlign: 'center', padding: '2rem', color: 'hsl(220 10% 50%)' }}>Loading users database...</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ overflowX: 'auto', border: '1px solid hsl(220 15% 18%)', borderRadius: '12px' }}>
+                {/* Desktop View Table */}
+                <div className="desktop-only" style={{ overflowX: 'auto', border: '1px solid hsl(220 15% 18%)', borderRadius: '12px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
                     <thead>
                       <tr style={{ background: 'hsl(220 20% 8%)', borderBottom: '1px solid hsl(220 15% 18%)', fontSize: '0.72rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>
@@ -1365,7 +1344,7 @@ export default function AdminPage() {
                           <td style={{ padding: '0.75rem 1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <span style={{ color: 'white' }}>{u.email}</span>
-                              {u.phone !== 'N/A' && <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>📱 {u.phone}</span>}
+                              {u.phone && u.phone !== 'N/A' && u.phone.trim() !== '' && <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>📱 {u.phone}</span>}
                             </div>
                           </td>
                           <td style={{ padding: '0.75rem 1rem' }}>
@@ -1389,6 +1368,86 @@ export default function AdminPage() {
                       )}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile View Cards */}
+                <div className="mobile-only">
+                  <div className="user-cards-grid">
+                    {paginatedUsers.map((u) => (
+                      <div
+                        key={u.id}
+                        className="card glass"
+                        style={{
+                          padding: '1.25rem',
+                          borderRadius: 16,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '1rem',
+                          background: u.role === 'ADMIN' ? 'rgba(251, 191, 36, 0.04)' : 'hsl(222 20% 8% / 0.6)',
+                          border: `1px solid ${u.role === 'ADMIN' ? 'hsl(45 100% 55% / 0.4)' : 'hsl(220 15% 14%)'}`,
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <img
+                            src={u.avatarUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=Explorer'}
+                            alt="avatar"
+                            style={{ width: 40, height: 40, borderRadius: '50%', background: 'hsl(220 20% 8%)', border: u.role === 'ADMIN' ? '2px solid hsl(45 100% 55%)' : 'none' }}
+                          />
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 750, fontSize: '0.95rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {u.displayName || u.username}
+                              </span>
+                              {u.role === 'ADMIN' && (
+                                <span style={{ fontSize: '0.6rem', background: 'hsl(45 100% 50% / 0.15)', color: 'hsl(45 100% 55%)', padding: '0.1rem 0.35rem', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase' }}>Admin</span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>@{u.username}</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8rem', borderTop: '1px solid hsl(220 15% 16%)', paddingTop: '0.75rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'hsl(220 10% 55%)' }}>Credentials</span>
+                            <span style={{ color: 'white', textAlign: 'right', wordBreak: 'break-all' }}>
+                              {u.email}
+                              {u.phone && u.phone !== 'N/A' && u.phone.trim() !== '' && <span style={{ display: 'block', fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>📱 {u.phone}</span>}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'hsl(220 10% 55%)' }}>Auth Provider</span>
+                            <span style={{ background: 'hsl(220 15% 15%)', color: 'hsl(220 100% 80%)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.72rem', textTransform: 'capitalize', fontWeight: 600 }}>
+                              {u.provider}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'hsl(220 10% 55%)' }}>Stats</span>
+                            <span style={{ fontWeight: 700 }}>
+                              <span style={{ color: 'hsl(270 80% 65%)' }}>Lv {u.level}</span>
+                              <span style={{ color: 'hsl(220 10% 40%)' }}> · </span>
+                              <span style={{ color: 'hsl(220 100% 65%)' }}>{u.xp.toLocaleString()} XP</span>
+                              <span style={{ color: 'hsl(220 10% 40%)' }}> · </span>
+                              <span style={{ color: 'hsl(45 100% 55%)' }}>🪙 {u.coins.toLocaleString()}</span>
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'hsl(220 10% 55%)' }}>Registered</span>
+                            <span style={{ color: 'hsl(220 10% 60%)' }}>{new Date(u.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'hsl(220 10% 55%)' }}>Last Active</span>
+                            <span style={{ color: u.lastSignIn ? 'hsl(142 70% 55%)' : 'hsl(220 10% 50%)' }}>
+                              {u.lastSignIn ? new Date(u.lastSignIn).toLocaleString() : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {paginatedUsers.length === 0 && (
+                      <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }}>No player accounts match your search.</div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Pagination controls */}

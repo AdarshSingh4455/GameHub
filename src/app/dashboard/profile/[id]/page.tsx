@@ -8,10 +8,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const profile = await prisma.profile.findUnique({
     where: { id },
-    select: { username: true }
+    select: { username: true, displayName: true }
   })
+  const displayName = profile ? (profile.displayName || (profile.username.includes('@') ? profile.username.split('@')[0] : profile.username)) : 'User'
   return {
-    title: profile ? `${profile.username}'s Profile` : 'User Profile'
+    title: `${displayName}'s Profile`
   }
 }
 

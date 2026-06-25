@@ -300,7 +300,7 @@ export default function PartyPanel() {
                           }}
                           className="hover-highlight"
                         >
-                          🟢 {f.username}
+                          🟢 {f.displayName || (f.username.includes('@') ? f.username.split('@')[0] : f.username)}
                         </button>
                       ))
                     )}
@@ -323,7 +323,7 @@ export default function PartyPanel() {
                     fontWeight: 700
                   }}
                 >
-                  {m.role === 'LEADER' ? '👑 ' : ''}{m.username}
+                  {m.role === 'LEADER' ? '👑 ' : ''}{m.username.includes('@') ? m.username.split('@')[0] : m.username}
                 </div>
               ))}
             </div>
@@ -340,7 +340,7 @@ export default function PartyPanel() {
                 messages.map((msg, i) => (
                   <div key={i} style={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
                     <span style={{ fontWeight: 800, color: msg.userId === user?.id ? 'hsl(220 100% 70%)' : 'hsl(38 95% 65%)' }}>
-                      {msg.username}:
+                      {msg.username.includes('@') ? msg.username.split('@')[0] : msg.username}:
                     </span>{' '}
                     <span style={{ color: 'hsl(220 10% 85%)' }}>{msg.message}</span>
                   </div>

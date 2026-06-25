@@ -31,7 +31,10 @@ export async function GET(
               select: {
                 username: true,
                 avatarUrl: true,
-                level: true
+                level: true,
+                displayName: true,
+                selectedFrame: true,
+                selectedTitle: true
               }
             }
           },

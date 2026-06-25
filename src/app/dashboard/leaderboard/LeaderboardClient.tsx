@@ -44,6 +44,7 @@ interface RankedRow {
 
 interface SeasonWinner {
   username: string
+  displayName?: string | null
   mmr: number
   rank: string
   wins: number
@@ -386,7 +387,7 @@ export default function LeaderboardClient() {
                               style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: 'white', cursor: 'pointer', textAlign: 'left' }}
                               className="hover-underline"
                             >
-                              {row.displayName || row.username}
+                              {row.displayName || (row.username.includes('@') ? row.username.split('@')[0] : row.username)}
                             </button>
                             <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)' }}>
                               @{row.username}
@@ -537,7 +538,7 @@ export default function LeaderboardClient() {
                               style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: 'white', cursor: 'pointer', textAlign: 'left' }}
                               className="hover-underline"
                             >
-                              {row.displayName || row.username}
+                              {row.displayName || (row.username.includes('@') ? row.username.split('@')[0] : row.username)}
                             </button>
                             <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)' }}>
                               @{row.username}
@@ -600,7 +601,9 @@ export default function LeaderboardClient() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(251, 191, 36, 0.05)', padding: '0.4rem 1rem', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
                         <span style={{ fontSize: '0.78rem', color: 'hsl(220 10% 50%)', fontWeight: 600 }}>CHAMPION:</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fef08a' }}>{entry.winner.username}</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fef08a' }}>
+                            {entry.winner.displayName || (entry.winner.username.includes('@') ? entry.winner.username.split('@')[0] : entry.winner.username)}
+                          </span>
                           <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)' }}>({entry.winner.mmr} MMR)</span>
                         </div>
                       </div>
@@ -627,7 +630,9 @@ export default function LeaderboardClient() {
                           <td style={{ padding: '0.5rem 0.5rem', fontWeight: 700, color: pIdx === 0 ? 'hsl(45 100% 55%)' : 'hsl(220 10% 50%)' }}>
                             {pIdx === 0 ? '🥇 1st' : pIdx === 1 ? '🥈 2nd' : pIdx === 2 ? '🥉 3rd' : `#${pIdx + 1}`}
                           </td>
-                          <td style={{ padding: '0.5rem 0.5rem', fontWeight: 600, color: 'white' }}>{player.username}</td>
+                          <td style={{ padding: '0.5rem 0.5rem', fontWeight: 600, color: 'white' }}>
+                            {player.displayName || (player.username.includes('@') ? player.username.split('@')[0] : player.username)}
+                          </td>
                           <td style={{ padding: '0.5rem 0.5rem', color: 'hsl(220 10% 60%)' }}>{player.rank}</td>
                           <td style={{ padding: '0.5rem 0.5rem', color: 'hsl(220 100% 65%)', fontWeight: 600 }}>{player.mmr} MMR</td>
                           <td style={{ padding: '0.5rem 0.5rem', textAlign: 'right', color: 'hsl(142 70% 50%)', fontWeight: 600 }}>{player.winRate}%</td>

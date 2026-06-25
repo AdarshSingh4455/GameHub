@@ -52,7 +52,8 @@ export async function GET(
         profile: {
           select: {
             username: true,
-            avatarUrl: true
+            avatarUrl: true,
+            displayName: true
           }
         }
       }
@@ -64,7 +65,8 @@ export async function GET(
       message: m.message,
       createdAt: m.createdAt,
       username: m.profile.username,
-      avatarUrl: m.profile.avatarUrl
+      avatarUrl: m.profile.avatarUrl,
+      displayName: m.profile.displayName
     }))
 
     return NextResponse.json({ messages: formattedMessages }, { status: 200 })

@@ -16,6 +16,7 @@ interface Player {
   status: 'READY' | 'NOT_READY' | 'DISCONNECTED' | 'LEFT'
   joinedAt: string
   username: string
+  displayName?: string | null
   avatarUrl: string | null
   level: number
   lastSeenAt?: string | null
@@ -36,6 +37,7 @@ interface Friend {
   id: string
   userId?: string
   username: string
+  displayName?: string | null
   level: number
   xp: number
   avatarUrl: string | null
@@ -58,8 +60,10 @@ interface Invite {
   }
   sender: {
     username: string
+    displayName?: string | null
     avatarUrl: string | null
     selectedFrame?: string | null
+    selectedTitle?: string | null
   }
 }
 
@@ -379,7 +383,8 @@ export default function MultiplayerPage() {
 
     // Global invite listener across dashboard
     socket.on('invite-received', (invite: any) => {
-      addToast('info', 'Invite Received', `You received a room invite from ${invite.sender?.username || 'a friend'}`)
+      const senderName = invite.sender?.displayName || (invite.sender?.username?.includes('@') ? invite.sender.username.split('@')[0] : invite.sender?.username) || 'a friend'
+      addToast('info', 'Invite Received', `You received a room invite from ${senderName}`)
       const INVITE_TTL_MS = 10 * 60 * 1000
       if (invite.createdAt && Date.now() - new Date(invite.createdAt).getTime() >= INVITE_TTL_MS) return
       setInvites(prev => [invite, ...prev])
@@ -463,14 +468,16 @@ export default function MultiplayerPage() {
     const handlePlayerDisconnected = ({ userId }: { userId: string }) => {
       const p = playersRef.current.find(player => player.userId === userId)
       if (p) {
-        addToast('warning', 'Player Disconnected', `${p.username} lost connection. Grace timeout started.`)
+        const name = p.displayName || (p.username.includes('@') ? p.username.split('@')[0] : p.username)
+        addToast('warning', 'Player Disconnected', `${name} lost connection. Grace timeout started.`)
       }
     }
 
     const handlePlayerReconnected = ({ userId }: { userId: string }) => {
       const p = playersRef.current.find(player => player.userId === userId)
       if (p) {
-        addToast('success', 'Player Restored', `${p.username} reconnected.`)
+        const name = p.displayName || (p.username.includes('@') ? p.username.split('@')[0] : p.username)
+        addToast('success', 'Player Restored', `${name} reconnected.`)
       }
     }
 
@@ -479,7 +486,9 @@ export default function MultiplayerPage() {
       if (roomRef.current) {
         setRoom(prev => prev ? { ...prev, hostUserId: newHostId } : null)
       }
-      addToast('info', 'Host Transferred', `${newHostUsername} is now the host.`)
+      const hostPlayer = playersRef.current.find(player => player.userId === newHostId)
+      const name = hostPlayer?.displayName || (newHostUsername.includes('@') ? newHostUsername.split('@')[0] : newHostUsername)
+      addToast('info', 'Host Transferred', `${name} is now the host.`)
     }
 
     const handleRoomClosed = () => {
@@ -951,7 +960,7 @@ export default function MultiplayerPage() {
   return (
     <div
       data-screen={screen}
-      style={{ maxWidth: 1000, margin: '0 auto', padding: '1rem', width: '100%' }}
+      style={{ width: '100%', maxWidth: 1100, margin: '0 auto', padding: '1rem', boxSizing: 'border-box' }}
       className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper"
     >
       {/* ── Screen: MENU ── */}
@@ -1189,71 +1198,103 @@ export default function MultiplayerPage() {
                   </p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {invites.map(invite => (
-                      <div
-                        key={invite.id}
-                        style={{
-                          padding: '0.75rem 1rem',
-                          borderRadius: 'var(--radius-md)',
-                          backgroundColor: 'hsl(var(--bg-surface))',
-                          border: '1px solid hsl(var(--border-subtle))',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '1rem'
-                        }}
-                      >
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Avatar
-                              avatarUrl={invite.sender.avatarUrl}
-                              username={invite.sender.username}
-                              selectedFrame={invite.sender.selectedFrame}
-                              size={24}
-                            />
-                            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{invite.sender.username}</span>
+                    {invites.map(invite => {
+                      const senderName = invite.sender.displayName || (invite.sender.username.includes('@') ? invite.sender.username.split('@')[0] : invite.sender.username)
+                      const gameName = SUPPORTED_MULTIPLAYER_GAMES.find(g => g.slug === invite.room.gameSlug)?.name || invite.room.gameSlug
+                      const inviteMessage = `${senderName} wants to play ${gameName} with you!`
+                      const timestamp = new Date(invite.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' + new Date(invite.createdAt).toLocaleDateString()
+
+                      return (
+                        <div
+                          key={invite.id}
+                          className="card"
+                          style={{
+                            padding: '1.25rem',
+                            borderRadius: 16,
+                            backgroundColor: 'hsl(var(--bg-surface) / 0.5)',
+                            border: '1px solid hsl(var(--border-subtle) / 0.8)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '1rem',
+                            boxSizing: 'border-box',
+                            width: '100%'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div style={{ position: 'relative', flexShrink: 0 }}>
+                              <Avatar
+                                avatarUrl={invite.sender.avatarUrl}
+                                username={invite.sender.username}
+                                selectedFrame={invite.sender.selectedFrame}
+                                size={44}
+                              />
+                            </div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 750, fontSize: '0.95rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {senderName}
+                                </span>
+                                {invite.sender.selectedTitle && (
+                                  <span style={{ fontSize: '0.62rem', background: 'hsl(45 100% 50% / 0.15)', color: 'hsl(45 100% 55%)', padding: '0.1rem 0.35rem', borderRadius: 4, fontWeight: 700 }}>
+                                    {invite.sender.selectedTitle}
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', display: 'block' }}>
+                                @{invite.sender.username}
+                              </span>
+                            </div>
                           </div>
-                          <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', display: 'block', marginTop: '0.2rem' }}>
-                            Room: {invite.room.roomCode} ({SUPPORTED_MULTIPLAYER_GAMES.find(g => g.slug === invite.room.gameSlug)?.name || invite.room.gameSlug})
-                          </span>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.82rem', borderTop: '1px solid hsl(var(--border-subtle) / 0.6)', paddingTop: '0.75rem' }}>
+                            <div style={{ color: 'white', fontWeight: 600 }}>
+                              🎮 Game: <span style={{ color: 'hsl(220 100% 70%)' }}>{gameName}</span> (Code: <span style={{ fontFamily: 'monospace' }}>{invite.room.roomCode}</span>)
+                            </div>
+                            <div style={{ color: 'hsl(var(--text-secondary))', fontStyle: 'italic' }}>
+                              "{inviteMessage}"
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', marginTop: '0.15rem' }}>
+                              🕒 {timestamp}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                            <button
+                              className="btn btn-primary"
+                              id={`accept-invite-btn-${invite.id}`}
+                              style={{
+                                flex: 1,
+                                padding: '0.45rem 1rem',
+                                fontSize: '0.8rem',
+                                borderRadius: 10,
+                                minHeight: 40
+                              }}
+                              onClick={() => handleAcceptInvite(invite)}
+                              disabled={isLoading}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              className="btn btn-secondary"
+                              id={`decline-invite-btn-${invite.id}`}
+                              style={{
+                                flex: 1,
+                                padding: '0.45rem 1rem',
+                                fontSize: '0.8rem',
+                                borderRadius: 10,
+                                minHeight: 40,
+                                color: 'hsl(var(--danger))',
+                                borderColor: 'hsl(var(--danger) / 0.3)'
+                              }}
+                              onClick={() => handleDeclineInvite(invite)}
+                              disabled={isLoading}
+                            >
+                              Reject
+                            </button>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          <button
-                            className="btn"
-                            id={`accept-invite-btn-${invite.id}`}
-                            style={{
-                              padding: '0.3rem 0.6rem',
-                              fontSize: '0.8rem',
-                              backgroundColor: 'hsl(var(--success) / 0.15)',
-                              color: 'hsl(var(--success))',
-                              border: '1px solid hsl(var(--success) / 0.3)',
-                              fontWeight: 600,
-                              minHeight: 44
-                            }}
-                            onClick={() => handleAcceptInvite(invite)}
-                            disabled={isLoading}
-                          >
-                            Accept
-                          </button>
-                          <button
-                            className="btn"
-                            id={`decline-invite-btn-${invite.id}`}
-                            style={{
-                              padding: '0.3rem 0.6rem',
-                              fontSize: '0.8rem',
-                              backgroundColor: 'hsl(var(--danger) / 0.15)',
-                              color: 'hsl(var(--danger))',
-                              border: '1px solid hsl(var(--danger) / 0.3)',
-                              fontWeight: 600,
-                              minHeight: 44
-                            }}
-                            onClick={() => handleDeclineInvite(invite)}
-                          >
-                            Decline
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -1306,7 +1347,7 @@ export default function MultiplayerPage() {
                             </div>
                             <div>
                               <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                {friend.username}
+                                {friend.displayName || (friend.username.includes('@') ? friend.username.split('@')[0] : friend.username)}
                                 {friend.selectedTitle && (
                                   <span style={{ fontSize: '0.65rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase' }}>
                                     {friend.selectedTitle}
@@ -1636,7 +1677,9 @@ export default function MultiplayerPage() {
 
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{player.username}</span>
+                            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                              {player.displayName || (player.username.includes('@') ? player.username.split('@')[0] : player.username)}
+                            </span>
                             {player.selectedTitle && (
                               <span style={{ fontSize: '0.68rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                 {player.selectedTitle}
@@ -1898,7 +1941,9 @@ export default function MultiplayerPage() {
                           }} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{friend.username}</span>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                            {friend.displayName || (friend.username.includes('@') ? friend.username.split('@')[0] : friend.username)}
+                          </span>
                           {friend.selectedTitle && (
                             <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase' }}>
                               {friend.selectedTitle}

@@ -634,7 +634,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn mobile-centered-wrapper">
+      <div style={{ width: '100%', maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn mobile-centered-wrapper">
         <ProfileHeaderSkeleton />
         <OverviewSkeleton />
       </div>
@@ -700,7 +700,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
+    <div style={{ width: '100%', maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       
       {/* Profile Header Card */}
       <div
@@ -727,7 +727,7 @@ export default function ProfilePage() {
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>
-              {profile.displayName || profile.username}
+              {profile.displayName || (profile.username.includes('@') ? profile.username.split('@')[0] : profile.username)}
             </h2>
             {profile.selectedTitle && (
               <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(45 100% 55%)', background: 'hsl(45 100% 50% / 0.12)', padding: '0.2rem 0.6rem', borderRadius: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -754,18 +754,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Tabs Menu Selection – horizontally swipeable on mobile */}
-      <div
-        className="no-scrollbar"
-        style={{
-          display: 'flex',
-          borderBottom: '1px solid hsl(220 15% 16%)',
-          gap: '0.25rem',
-          paddingBottom: '0.25rem',
-          overflowX: 'auto',
-          scrollSnapType: 'x mandatory',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
+      <div className="horizontal-tab-bar">
         {[
           { id: 'overview', label: 'Overview', icon: '👤' },
           { id: 'stats', label: 'Stats', icon: '📊' },
@@ -778,37 +767,13 @@ export default function ProfilePage() {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id as any)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: activeTab === t.id ? 'hsl(220 100% 70%)' : 'hsl(220 10% 50%)',
-              fontWeight: 700,
-              fontSize: '0.82rem',
-              padding: '0.5rem 0.65rem 0.75rem',
-              cursor: 'pointer',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              transition: 'color 0.2s',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              scrollSnapAlign: 'start',
-            }}
+            className={`horizontal-tab-item ${activeTab === t.id ? 'active' : ''}`}
             id={`profile-tab-${t.id}`}
           >
             <span>{t.icon}</span>
             {t.label}
             {activeTab === t.id && (
-              <div style={{
-                position: 'absolute',
-                bottom: -1,
-                left: 0,
-                right: 0,
-                height: 2,
-                background: 'hsl(220 100% 60%)',
-                boxShadow: '0 0 8px hsl(220 100% 60%)'
-              }} />
+              <div className="active-indicator" />
             )}
           </button>
         ))}
@@ -816,7 +781,7 @@ export default function ProfilePage() {
 
       {/* TAB OVERVIEW */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+        <div className="profile-overview-grid" style={{ alignItems: 'start' }}>
           
           {/* 👑 Premium Profile Prestige Showcase Card */}
           <div 
@@ -985,7 +950,7 @@ export default function ProfilePage() {
 
 
           {/* Badge Showcase Card */}
-          <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20 }}>
+          <div className="card glass" style={{ padding: '1.25rem', borderRadius: 20 }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem', letterSpacing: '0.05em' }}>
               Unlocked Badges ({profile.achievements.length})
             </h3>
@@ -994,7 +959,7 @@ export default function ProfilePage() {
                 No achievements unlocked yet. Play games to earn badges!
               </p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(85px, 1fr))', gap: '0.75rem' }}>
+              <div className="unlocked-badges-grid">
                 {profile.achievements.map((item, idx) => (
                   <div
                     key={idx}
@@ -1002,16 +967,19 @@ export default function ProfilePage() {
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
+                      justifyContent: 'center',
                       textAlign: 'center',
                       background: 'hsl(222 20% 8% / 0.8)',
                       border: '1px solid hsl(220 15% 15%)',
-                      padding: '0.75rem 0.5rem',
+                      padding: '0.5rem',
                       borderRadius: 14,
+                      aspectRatio: '1 / 1',
+                      boxSizing: 'border-box'
                     }}
                     title={`${item.achievement.name}: ${item.achievement.description}`}
                   >
-                    <span style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>🏅</span>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'white', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <span style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🏅</span>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'white', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
                       {item.achievement.name}
                     </span>
                   </div>
@@ -1030,7 +998,7 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* Summary stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div className="profile-stats-summary-grid">
             {[
               { label: 'Games Played', val: totalGames, color: 'white', icon: '🎮' },
               { label: 'Total Wins', val: totalWins, color: 'hsl(142 70% 55%)', icon: '🏆' },
@@ -1038,18 +1006,18 @@ export default function ProfilePage() {
               { label: 'XP Streak', val: `${profile.currentStreak} Days`, color: 'hsl(38 95% 60%)', icon: '🔥' },
               { label: 'Favorite Game', val: favoriteGameLabel, color: 'hsl(220 100% 70%)', icon: '⭐' }
             ].map((s, idx) => (
-              <div key={idx} className="card glass" style={{ padding: '1.1rem 1.25rem', borderRadius: 16, display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ fontSize: '1.75rem' }}>{s.icon}</span>
-                <div>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)' }}>{s.label}</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 850, color: s.color, marginTop: '0.15rem' }}>{s.val}</div>
+              <div key={idx} className="card glass" style={{ padding: '1.1rem 1.25rem', borderRadius: 16, display: 'flex', alignItems: 'center', gap: '1rem', height: '100%', boxSizing: 'border-box' }}>
+                <span style={{ fontSize: '1.75rem', flexShrink: 0 }}>{s.icon}</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 850, color: s.color, marginTop: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.val}</div>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Charts Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+          <div className="profile-stats-charts-grid">
             
             {/* SVG Weekly Bar Chart */}
             <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20 }}>
@@ -1603,26 +1571,29 @@ export default function ProfilePage() {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
+            <div className="profile-achievements-grid">
               {achievementProgress.map((ach, idx) => (
                 <div
                   key={ach.slug || idx}
                   className="card glass"
                   style={{
-                    padding: '1rem 1.25rem',
+                    padding: '1.25rem',
                     borderRadius: 16,
                     background: ach.isUnlocked
-                      ? 'linear-gradient(135deg, hsl(142 70% 10% / 0.6), hsl(142 70% 7% / 0.6))'
+                      ? 'linear-gradient(135deg, hsl(142 70% 10% / 0.4), hsl(142 70% 7% / 0.4))'
                       : 'hsl(222 20% 8% / 0.6)',
-                    border: `1px solid ${ach.isUnlocked ? 'hsl(142 70% 25%)' : 'hsl(220 15% 14%)'}`,
+                    border: `1px solid ${ach.isUnlocked ? 'hsl(142 70% 25% / 0.8)' : 'hsl(220 15% 14%)'}`,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.6rem',
+                    gap: '0.75rem',
+                    height: '100%',
+                    justifyContent: 'space-between',
+                    boxSizing: 'border-box'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                     <div style={{
-                      width: 38, height: 38, borderRadius: 10,
+                      width: 40, height: 40, borderRadius: 10,
                       background: ach.isUnlocked ? 'hsl(142 70% 20%)' : 'hsl(220 20% 12%)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '1.3rem', flexShrink: 0
@@ -1633,7 +1604,7 @@ export default function ProfilePage() {
                       <div style={{ fontWeight: 750, fontSize: '0.88rem', color: ach.isUnlocked ? 'hsl(142 70% 70%)' : 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {ach.name}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', marginTop: '0.1rem', lineHeight: 1.3 }}>
+                      <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', marginTop: '0.2rem', lineHeight: 1.3, height: '2.6rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {ach.description}
                       </div>
                     </div>
@@ -1643,18 +1614,23 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {/* Progress bar */}
-                  {!ach.isUnlocked && (
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'hsl(220 10% 45%)', marginBottom: '0.25rem' }}>
-                        <span>{ach.current} / {ach.target}</span>
-                        <span>{ach.progressPercentage}%</span>
-                      </div>
-                      <div style={{ height: 5, background: 'hsl(220 20% 12%)', borderRadius: 99, overflow: 'hidden' }}>
-                        <div style={{ width: `${ach.progressPercentage}%`, height: '100%', background: 'linear-gradient(90deg, hsl(220 100% 60%), hsl(270 80% 60%))', borderRadius: 99 }} />
-                      </div>
+                  {/* Progress bar (always rendered) */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'hsl(220 10% 45%)', marginBottom: '0.25rem' }}>
+                      <span>{ach.isUnlocked ? ach.target : ach.current} / {ach.target}</span>
+                      <span>{ach.isUnlocked ? 100 : ach.progressPercentage}%</span>
                     </div>
-                  )}
+                    <div style={{ height: 6, background: 'hsl(220 20% 12%)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ 
+                        width: `${ach.isUnlocked ? 100 : ach.progressPercentage}%`, 
+                        height: '100%', 
+                        background: ach.isUnlocked 
+                          ? 'linear-gradient(90deg, hsl(142 70% 45%), hsl(142 70% 55%))' 
+                          : 'linear-gradient(90deg, hsl(220 100% 60%), hsl(270 80% 60%))', 
+                        borderRadius: 99 
+                      }} />
+                    </div>
+                  </div>
 
                   {/* Category badge */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -1705,40 +1681,56 @@ export default function ProfilePage() {
                     key={friend.id}
                     className="card glass"
                     style={{
-                      padding: '0.9rem 1.1rem',
+                      padding: '1rem 1.25rem',
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: 'space-between',
                       gap: '1rem',
                       background: 'linear-gradient(135deg, hsl(222 18% 11%), hsl(222 18% 8%))',
                       border: '1px solid hsl(220 15% 14%)',
                       borderRadius: 16,
+                      minHeight: '80px',
+                      width: '100%',
+                      boxSizing: 'border-box'
                     }}
                   >
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg, hsl(220 100% 65%), hsl(270 80% 60%))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', color: 'white' }}>
-                        {friend.username?.[0]?.toUpperCase() ?? '?'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0, flex: 1 }}>
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <Avatar
+                          avatarUrl={friend.avatarUrl}
+                          username={friend.username}
+                          selectedFrame={friend.selectedFrame}
+                          size={42}
+                        />
+                        <div style={{
+                          position: 'absolute', bottom: -2, right: -2, width: 12, height: 12,
+                          borderRadius: '50%', background: presence.dot, border: '2px solid hsl(222 18% 11%)',
+                          boxShadow: `0 0 5px ${presence.dot}`
+                        }} />
                       </div>
-                      <div style={{
-                        position: 'absolute', bottom: 0, right: 0, width: 11, height: 11,
-                        borderRadius: '50%', background: presence.dot, border: '2px solid hsl(222 18% 11%)',
-                        boxShadow: `0 0 5px ${presence.dot}`
-                      }} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: 750, fontSize: '0.95rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {friend.displayName || (friend.username.includes('@') ? friend.username.split('@')[0] : friend.username)}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          @{friend.username}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: presence.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '0.15rem' }}>
+                          {presence.label}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 750, fontSize: '0.9rem', color: 'white' }}>{friend.username}</div>
-                      <div style={{ fontSize: '0.68rem', color: presence.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{presence.label}</div>
-                    </div>
-                    <a
-                      href="/dashboard/friends"
+                    <Link
+                      href={`/dashboard/profile/${friend.id}`}
                       style={{
                         fontSize: '0.72rem', fontWeight: 700, color: 'hsl(220 100% 65%)',
                         background: 'hsl(220 100% 60% / 0.1)', border: '1px solid hsl(220 100% 60% / 0.25)',
-                        padding: '0.3rem 0.65rem', borderRadius: 8, textDecoration: 'none',
-                        whiteSpace: 'nowrap'
+                        padding: '0.4rem 0.8rem', borderRadius: 8, textDecoration: 'none',
+                        whiteSpace: 'nowrap', flexShrink: 0
                       }}
                     >
-                      View
-                    </a>
+                      View Profile
+                    </Link>
                   </div>
                 )
               })}
@@ -1756,7 +1748,7 @@ export default function ProfilePage() {
               <div style={{ fontSize: '0.78rem', color: 'hsl(220 10% 50%)' }}>
                 {profile.inventory.length} item{profile.inventory.length !== 1 ? 's' : ''} in your collection
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.75rem' }}>
+              <div className="profile-cosmetics-grid">
                 {profile.inventory.map((item: any, idx: number) => {
                   const cosmetic = item.cosmeticItem
                   const typeEmoji: Record<string, string> = {
@@ -1775,27 +1767,32 @@ export default function ProfilePage() {
                       key={cosmetic.id || idx}
                       className="card glass"
                       style={{
-                        padding: '1.1rem',
+                        padding: '1.25rem 1rem',
                         borderRadius: 16,
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
+                        justifyContent: 'space-between',
                         textAlign: 'center',
                         gap: '0.5rem',
+                        height: '140px',
                         background: cosmetic.isDefault
                           ? 'hsl(222 20% 8% / 0.5)'
-                          : 'linear-gradient(135deg, hsl(270 50% 12% / 0.6), hsl(220 30% 9% / 0.6))',
-                        border: `1px solid ${cosmetic.isDefault ? 'hsl(220 15% 14%)' : 'hsl(270 50% 25%)'}`,
+                          : 'linear-gradient(135deg, hsl(270 50% 12% / 0.4), hsl(220 30% 9% / 0.4))',
+                        border: `1px solid ${cosmetic.isDefault ? 'hsl(220 15% 14%)' : 'hsl(270 50% 25% / 0.8)'}`,
+                        boxSizing: 'border-box'
                       }}
                     >
-                      <div style={{ fontSize: '2rem' }}>{typeEmoji[cosmetic.type] || '🎁'}</div>
-                      <div style={{ fontWeight: 750, fontSize: '0.8rem', color: 'white', lineHeight: 1.2 }}>{cosmetic.name}</div>
-                      <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'hsl(270 60% 60%)', background: 'hsl(270 50% 15%)', padding: '0.15rem 0.5rem', borderRadius: 99 }}>
-                        {cosmetic.type.replace(/_/g, ' ')}
+                      <div style={{ fontSize: '2rem', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{typeEmoji[cosmetic.type] || '🎁'}</div>
+                      <div style={{ fontWeight: 750, fontSize: '0.8rem', color: 'white', lineHeight: 1.2, height: '2.4rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{cosmetic.name}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center', width: '100%' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'hsl(270 60% 60%)', background: 'hsl(270 50% 15%)', padding: '0.15rem 0.5rem', borderRadius: 99, width: 'fit-content' }}>
+                          {cosmetic.type.replace(/_/g, ' ')}
+                        </div>
+                        {cosmetic.isDefault && (
+                          <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 40%)', fontWeight: 600 }}>Default</div>
+                        )}
                       </div>
-                      {cosmetic.isDefault && (
-                        <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 40%)', fontWeight: 600 }}>Default</div>
-                      )}
                     </div>
                   )
                 })}

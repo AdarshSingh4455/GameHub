@@ -135,7 +135,9 @@ export default function ProfileClient({
 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', margin: 0 }}>{profile.displayName || profile.username}</h1>
+                <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', margin: 0 }}>
+                  {profile.displayName || (profile.username.includes('@') ? profile.username.split('@')[0] : profile.username)}
+                </h1>
                 {profile.selectedTitle && (
                   <span className="badge badge-gold" style={{ fontSize: '0.68rem', padding: '0.2rem 0.55rem' }}>
                     {profile.selectedTitle}

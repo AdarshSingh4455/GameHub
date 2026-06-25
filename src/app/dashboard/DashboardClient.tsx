@@ -64,33 +64,68 @@ export default function DashboardClient({ user, username }: Props) {
       </div>
 
       {/* Spotlight Featured Game Card */}
-      <Card className="animate-pulse-glow" style={{
-        background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.12), hsl(270 80% 60% / 0.12))',
-        border: '1px solid hsl(220 100% 60% / 0.35)',
-        borderRadius: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        boxShadow: 'var(--shadow-glow-primary)',
-      }} id="dashboard-spotlight-card">
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'hsl(45 100% 65%)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.4rem' }}>
-            🔥 FEATURED SPOTLIGHT
+      <div 
+        className="animate-pulse-glow" 
+        style={{
+          background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.15), hsl(270 80% 60% / 0.15))',
+          border: '1px solid hsl(220 100% 60% / 0.4)',
+          borderRadius: '24px',
+          padding: '2.5rem 2.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '2rem',
+          boxShadow: 'var(--shadow-glow-primary)',
+          position: 'relative',
+          overflow: 'hidden',
+          minHeight: '220px',
+          width: '100%',
+          boxSizing: 'border-box'
+        }} 
+        id="dashboard-spotlight-card"
+      >
+        <div style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-10%',
+          width: '350px',
+          height: '350px',
+          background: 'radial-gradient(circle, hsl(220 100% 60% / 0.12) 0%, transparent 70%)',
+          pointerEvents: 'none',
+          filter: 'blur(35px)'
+        }} />
+
+        <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '0.8rem', position: 'relative', zIndex: 2 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 65%)', textTransform: 'uppercase', letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span>🔥</span> Featured Spotlight
           </div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem', letterSpacing: '-0.02em' }}>
-            <span>{featuredGame.emoji}</span>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.75rem', letterSpacing: '-0.02em', margin: 0 }}>
+            <span style={{ fontSize: '2.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '3.2rem', height: '3.2rem', background: 'hsl(220 100% 60% / 0.1)', borderRadius: '14px', border: '1px solid hsl(220 100% 60% / 0.2)' }}>{featuredGame.emoji}</span>
             <span>{featuredGame.name}</span>
           </h2>
-          <p style={{ color: 'hsl(220 10% 65%)', fontSize: '0.78rem', margin: 0, lineHeight: 1.4 }}>
+          <p style={{ color: 'hsl(220 10% 75%)', fontSize: '0.88rem', margin: 0, lineHeight: 1.6, maxWidth: '600px' }}>
             {featuredGame.description}
           </p>
         </div>
-        <Link href={`/dashboard/games/${featuredGame.slug}`} className="btn btn-primary" style={{ borderRadius: 12, padding: '0.5rem 1.25rem', fontSize: '0.85rem' }} id="spotlight-play-btn">
+
+        <Link 
+          href={`/dashboard/games/${featuredGame.slug}`} 
+          className="btn btn-primary" 
+          style={{ 
+            borderRadius: 14, 
+            padding: '0.65rem 1.6rem', 
+            fontSize: '0.85rem', 
+            flexShrink: 0, 
+            position: 'relative', 
+            zIndex: 2,
+            boxShadow: '0 4px 14px hsl(220 100% 60% / 0.25)' 
+          }} 
+          id="spotlight-play-btn"
+        >
           🚀 Play Spotlight
         </Link>
-      </Card>
+      </div>
 
       {/* Engagement & Daily claim widgets */}
       <DashboardRetentionPanel user={user} />

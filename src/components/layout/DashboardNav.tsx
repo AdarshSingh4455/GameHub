@@ -378,7 +378,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
                 />
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'hsl(220 15% 92%)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {userStats.displayName || userStats.username || user?.email || 'Player'}
+                    {userStats.displayName || (userStats.username ? (userStats.username.includes('@') ? userStats.username.split('@')[0] : userStats.username) : '') || (user?.email ? (user.email.includes('@') ? user.email.split('@')[0] : user.email) : 'Player')}
                   </div>
                   {userStats.selectedTitle && (
                     <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(45 100% 60%)', textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: '1px' }}>

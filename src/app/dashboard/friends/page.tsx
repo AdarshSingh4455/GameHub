@@ -351,20 +351,7 @@ export default function FriendsPage() {
 
       {/* Tabs Menu selection - swipeable on mobile */}
       {user && (
-        <div
-          style={{
-            display: 'flex',
-            borderBottom: '1px solid hsl(220 15% 18%)',
-            gap: '1rem',
-            paddingBottom: '0.25rem',
-            overflowX: 'auto',
-            scrollSnapType: 'x mandatory',
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}
-          className="no-scrollbar"
-        >
+        <div className="horizontal-tab-bar">
           {[
             { id: 'friends', label: 'My Friends', badge: friends.length },
             { id: 'pending', label: 'Pending', badge: pendingIncoming.length + pendingOutgoing.length },
@@ -374,23 +361,7 @@ export default function FriendsPage() {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as any)}
-              style={{
-                scrollSnapAlign: 'start',
-                flexShrink: 0,
-                background: 'transparent',
-                border: 'none',
-                color: activeTab === t.id ? 'hsl(220 100% 70%)' : 'hsl(220 10% 50%)',
-                fontWeight: 700,
-                fontSize: '0.92rem',
-                padding: '0.5rem 0.25rem 0.75rem',
-                cursor: 'pointer',
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                transition: 'color 0.2s',
-                whiteSpace: 'nowrap'
-              }}
+              className={`horizontal-tab-item ${activeTab === t.id ? 'active' : ''}`}
               id={`friends-tab-${t.id}`}
             >
               {t.label}
@@ -407,15 +378,7 @@ export default function FriendsPage() {
                 </span>
               )}
               {activeTab === t.id && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: -1,
-                  left: 0,
-                  right: 0,
-                  height: 2,
-                  background: 'hsl(220 100% 60%)',
-                  boxShadow: '0 0 8px hsl(220 100% 60%)'
-                }} />
+                <div className="active-indicator" />
               )}
             </button>
           ))}
@@ -522,7 +485,7 @@ export default function FriendsPage() {
                                   style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.92rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                   className="hover-underline"
                                 >
-                                  {friend.displayName || friend.username}
+                                  {friend.displayName || (friend.username.includes('@') ? friend.username.split('@')[0] : friend.username)}
                                 </button>
                                 {friend.selectedTitle && (
                                   <span style={{ fontSize: '0.65rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -602,7 +565,7 @@ export default function FriendsPage() {
                                     style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >
-                                    {req.displayName || req.username}
+                                    {req.displayName || (req.username.includes('@') ? req.username.split('@')[0] : req.username)}
                                   </button>
                                   {req.selectedTitle && (
                                     <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -653,7 +616,7 @@ export default function FriendsPage() {
                                     style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'hsl(220 10% 80%)', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >
-                                    {req.displayName || req.username}
+                                    {req.displayName || (req.username.includes('@') ? req.username.split('@')[0] : req.username)}
                                   </button>
                                   {req.selectedTitle && (
                                     <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -719,7 +682,7 @@ export default function FriendsPage() {
                                     style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >
-                                    {p.displayName || p.username}
+                                    {p.displayName || (p.username.includes('@') ? p.username.split('@')[0] : p.username)}
                                   </button>
                                   {p.selectedTitle && (
                                     <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -810,7 +773,7 @@ export default function FriendsPage() {
                                 style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.9rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                 className="hover-underline"
                               >
-                                {player.displayName || player.username}
+                                {player.displayName || (player.username.includes('@') ? player.username.split('@')[0] : player.username)}
                               </button>
                               {player.selectedTitle && (
                                 <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>

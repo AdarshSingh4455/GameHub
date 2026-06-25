@@ -98,14 +98,19 @@ code, pre, .mono {
 
 /* ─── Card ───────────────────────────────────────────────────────────────── */
 .card {
-  background: hsl(var(--bg-surface));
-  border: 1px solid hsl(var(--border-subtle));
+  background: hsl(var(--bg-surface) / 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(220 15% 20% / 0.8);
   border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-card);
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
 }
 
 .card:hover {
-  border-color: hsl(var(--border-default));
+  border-color: hsl(var(--border-default) / 0.8);
 }
 
 .card-hover:hover {
@@ -123,7 +128,7 @@ code, pre, .mono {
   background: hsl(var(--bg-surface) / 0.6);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid hsl(var(--border-subtle));
+  border: 1px solid hsl(220 15% 20% / 0.8);
 }
 
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
@@ -850,7 +855,7 @@ body.game-page-active .app-content {
 }
 @media (max-width: 767px) {
   .safe-bottom-padding {
-    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 32px) !important;
   }
 }
 
@@ -1118,11 +1123,11 @@ body.game-page-active .app-content {
 
 @media (max-width: 767px) {
   .mobile-centered-wrapper {
-    max-width: 560px !important;
+    max-width: 100% !important;
     margin-inline: auto !important;
     width: 100% !important;
-    padding-left: 0.25rem !important;
-    padding-right: 0.25rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
   }
 }
 
@@ -1144,15 +1149,183 @@ body {
 
 /* Ensure no content is hidden behind the bottom navigation bar */
 .app-content {
-  padding-bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom, 0px) + 24px) !important;
+  padding-bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom, 0px) + 32px) !important;
 }
 
 @media (max-width: 767px) {
   .app-content {
     padding-top: calc(60px + env(safe-area-inset-top, 0px) + 12px) !important;
-    padding-bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom, 0px) + 16px) !important;
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
+    padding-bottom: calc(var(--bottom-nav-height, 60px) + env(safe-area-inset-bottom, 0px) + 32px) !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
+
+/* Helper display utility classes */
+.mobile-only {
+  display: none !important;
+}
+.desktop-only {
+  display: block !important;
+}
+
+@media (max-width: 767px) {
+  .mobile-only {
+    display: block !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* Standardized Tab Bar container */
+.horizontal-tab-bar {
+  display: flex;
+  border-bottom: 1px solid hsl(220 15% 16%);
+  gap: 0.5rem;
+  padding-bottom: 0.25rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.horizontal-tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Standardized Tab Bar item button */
+.horizontal-tab-item {
+  background: transparent;
+  border: none;
+  color: hsl(220 10% 50%) !important;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.6rem 0.8rem 0.75rem;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+
+.horizontal-tab-item:hover {
+  color: hsl(220 100% 75%) !important;
+}
+
+.horizontal-tab-item.active {
+  color: hsl(220 100% 70%) !important;
+}
+
+.horizontal-tab-item .active-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: hsl(220 100% 60%);
+  box-shadow: 0 0 8px hsl(220 100% 60%);
+}
+
+/* Symmetrical Layout Grids */
+.profile-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+@media (min-width: 640px) {
+  .profile-overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .profile-overview-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.unlocked-badges-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+@media (min-width: 768px) {
+  .unlocked-badges-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+.profile-stats-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+@media (min-width: 640px) {
+  .profile-stats-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .profile-stats-summary-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.profile-stats-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+@media (min-width: 768px) {
+  .profile-stats-charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.profile-achievements-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 768px) {
+  .profile-achievements-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.profile-cosmetics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+@media (min-width: 480px) {
+  .profile-cosmetics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 768px) {
+  .profile-cosmetics-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .profile-cosmetics-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.user-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 768px) {
+  .user-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

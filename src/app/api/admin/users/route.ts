@@ -17,12 +17,15 @@ export async function GET() {
       select: { role: true }
     })
 
-    if (!profile || profile.role !== 'ADMIN') {
+    if (!profile || (profile.role !== 'ADMIN' && profile.role !== 'SUPER_ADMIN')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Fetch all profiles from prisma
+    // Fetch all profiles from prisma (source of truth), including game stats
     const profiles = await prisma.profile.findMany({
+      include: {
+        gameStats: true
+      },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -57,11 +60,20 @@ export async function GET() {
         }
       }
 
+      // Compute game stats
+      const wins = p.gameStats?.reduce((sum, gs) => sum + gs.winCount, 0) || 0
+      const playCount = p.gameStats?.reduce((sum, gs) => sum + gs.playCount, 0) || 0
+      const losses = Math.max(0, playCount - wins)
+      const winRate = playCount > 0 ? parseFloat(((wins / playCount) * 100).toFixed(1)) : 0.0
+
+      // Compute online status
+      const isOnline = p.lastSeenAt ? (Date.now() - new Date(p.lastSeenAt).getTime()) < 60000 : false
+
       return {
         id: p.id,
         userId: p.userId,
         username: p.username,
-        displayName: p.displayName || p.username || 'N/A',
+        displayName: p.displayName || (p.username.includes('@') ? p.username.split('@')[0] : p.username),
         role: p.role,
         xp: p.xp,
         level: p.level,
@@ -71,7 +83,15 @@ export async function GET() {
         email,
         phone,
         lastSignIn,
+        lastLoginDate: p.lastLoginDate,
         provider,
+        wins,
+        losses,
+        winRate,
+        rank: p.currentRank || 'N/A',
+        lastSeenAt: p.lastSeenAt,
+        onlineStatus: isOnline ? 'online' : 'offline',
+        banStatus: 'active', // Placeholder since there is no ban column in schema
       }
     })
 

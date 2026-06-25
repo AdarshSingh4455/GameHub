@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         username: true,
+        displayName: true,
         level: true,
         rankedMmr: true,
         rankedWins: true,
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
         rank: idx + 1,
         profileId: p.id,
         username: p.username,
+        displayName: p.displayName,
         level: p.level,
         mmr: p.rankedMmr,
         wins: p.rankedWins,

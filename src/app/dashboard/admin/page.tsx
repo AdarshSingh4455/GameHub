@@ -62,14 +62,22 @@ export default function AdminPage() {
 
   const [role, setRole] = useState<string | null>(null)
   const [loadingAuth, setLoadingAuth] = useState(true)
-  const [activeTab, setActiveTab] = useState<'ads' | 'analytics' | 'tournaments' | 'updates' | 'tools'>('ads')
+  const [activeTab, setActiveTab] = useState<'ads' | 'analytics' | 'tournaments' | 'updates' | 'tools' | 'users'>('ads')
 
   // Data States
   const [ads, setAds] = useState<Ad[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [cosmetics, setCosmetics] = useState<Cosmetic[]>([])
   const [analytics, setAnalytics] = useState<any>(null)
+  const [users, setUsers] = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(false)
+
+  // Users Directory pagination and sorting state
+  const [userSearch, setUserSearch] = useState('')
+  const [userPage, setUserPage] = useState(1)
+  const [userSortField, setUserSortField] = useState<'username' | 'level' | 'xp' | 'coins' | 'createdAt' | 'lastSignIn'>('createdAt')
+  const [userSortOrder, setUserSortOrder] = useState<'asc' | 'desc'>('desc')
+  const USERS_PER_PAGE = 10
 
   // Forms / Upload States
   const [adForm, setAdForm] = useState({
@@ -110,6 +118,48 @@ export default function AdminPage() {
     isDefault: false,
     chatMessages: '', // parsed to messages array in metadata
   })
+
+  const filteredUsers = users.filter(u => {
+    const q = userSearch.toLowerCase().trim()
+    if (!q) return true
+    return (
+      (u.username || '').toLowerCase().includes(q) ||
+      (u.displayName || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.phone || '').toLowerCase().includes(q) ||
+      (u.provider || '').toLowerCase().includes(q)
+    )
+  })
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    let valA = a[userSortField]
+    let valB = b[userSortField]
+    
+    if (userSortField === 'createdAt' || userSortField === 'lastSignIn') {
+      valA = valA ? new Date(valA).getTime() : 0
+      valB = valB ? new Date(valB).getTime() : 0
+    } else if (typeof valA === 'string') {
+      valA = valA.toLowerCase()
+      valB = valB.toLowerCase()
+    }
+    
+    if (valA < valB) return userSortOrder === 'asc' ? -1 : 1
+    if (valA > valB) return userSortOrder === 'asc' ? 1 : -1
+    return 0
+  })
+
+  const totalUserPages = Math.ceil(sortedUsers.length / USERS_PER_PAGE)
+  const paginatedUsers = sortedUsers.slice((userPage - 1) * USERS_PER_PAGE, userPage * USERS_PER_PAGE)
+
+  const handleSort = (field: typeof userSortField) => {
+    if (userSortField === field) {
+      setUserSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setUserSortField(field)
+      setUserSortOrder('desc')
+    }
+    setUserPage(1)
+  }
 
   // Auth Verification
   useEffect(() => {
@@ -153,6 +203,10 @@ export default function AdminPage() {
         const res = await fetch('/api/admin/cosmetics')
         const data = await res.json()
         setCosmetics(data.cosmetics || [])
+      } else if (activeTab === 'users') {
+        const res = await fetch('/api/admin/users')
+        const data = await res.json()
+        setUsers(data.users || [])
       }
     } catch (err) {
       console.error(err)
@@ -386,6 +440,7 @@ export default function AdminPage() {
           { id: 'tournaments', label: 'Tournaments', emoji: '🏆' },
           { id: 'updates', label: 'Updates / Cosmetics', emoji: '📦' },
           { id: 'tools', label: 'Admin Tools', emoji: '🔧' },
+          { id: 'users', label: 'User Directory', emoji: '👥' },
         ].map((t) => (
           <button
             key={t.id}
@@ -1230,6 +1285,138 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: USER DIRECTORY */}
+      {activeTab === 'users' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.10rem', fontWeight: 800, color: 'white', margin: 0 }}>👥 Platform User Directory</h2>
+                <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.82rem', marginTop: '0.2rem', margin: 0 }}>
+                  Search, filter, and view sign-in details for all registered accounts.
+                </p>
+              </div>
+              <input
+                type="text"
+                placeholder="Search by name, email, provider..."
+                value={userSearch}
+                onChange={(e) => {
+                  setUserSearch(e.target.value)
+                  setUserPage(1)
+                }}
+                className="input"
+                style={{ maxWidth: '300px', fontSize: '0.8rem', padding: '0.45rem 0.75rem' }}
+              />
+            </div>
+
+            {loadingData ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'hsl(220 10% 50%)' }}>Loading users database...</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ overflowX: 'auto', border: '1px solid hsl(220 15% 18%)', borderRadius: '12px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
+                    <thead>
+                      <tr style={{ background: 'hsl(220 20% 8%)', borderBottom: '1px solid hsl(220 15% 18%)', fontSize: '0.72rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>
+                        <th style={{ padding: '0.75rem 1rem', cursor: 'pointer' }} onClick={() => handleSort('username')}>
+                          Player {userSortField === 'username' ? (userSortOrder === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th style={{ padding: '0.75rem 1rem' }}>Credentials (Email/Phone)</th>
+                        <th style={{ padding: '0.75rem 1rem' }}>Auth Provider</th>
+                        <th style={{ padding: '0.75rem 1rem', cursor: 'pointer' }} onClick={() => handleSort('level')}>
+                          Level {userSortField === 'level' ? (userSortOrder === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th style={{ padding: '0.75rem 1rem', cursor: 'pointer' }} onClick={() => handleSort('xp')}>
+                          XP {userSortField === 'xp' ? (userSortOrder === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th style={{ padding: '0.75rem 1rem', cursor: 'pointer' }} onClick={() => handleSort('coins')}>
+                          Coins {userSortField === 'coins' ? (userSortOrder === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th style={{ padding: '0.75rem 1rem', cursor: 'pointer' }} onClick={() => handleSort('createdAt')}>
+                          Registered {userSortField === 'createdAt' ? (userSortOrder === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th style={{ padding: '0.75rem 1rem', cursor: 'pointer' }} onClick={() => handleSort('lastSignIn')}>
+                          Last Active {userSortField === 'lastSignIn' ? (userSortOrder === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedUsers.map((u) => (
+                        <tr key={u.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid hsl(220 15% 18%)', background: u.role === 'ADMIN' ? 'rgba(251, 191, 36, 0.02)' : 'none' }}>
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                              <img
+                                src={u.avatarUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=Explorer'}
+                                alt="avatar"
+                                style={{ width: 28, height: 28, borderRadius: '50%', background: 'hsl(220 20% 8%)', border: u.role === 'ADMIN' ? '1px solid hsl(45 100% 55%)' : 'none' }}
+                              />
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight: 700, color: 'white' }}>{u.displayName || u.username}</span>
+                                <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)' }}>@{u.username}</span>
+                              </div>
+                              {u.role === 'ADMIN' && (
+                                <span style={{ fontSize: '0.62rem', background: 'hsl(45 100% 50% / 0.15)', color: 'hsl(45 100% 55%)', padding: '0.1rem 0.35rem', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase' }}>Admin</span>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={{ color: 'white' }}>{u.email}</span>
+                              {u.phone !== 'N/A' && <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>📱 {u.phone}</span>}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <span style={{ background: 'hsl(220 15% 15%)', color: 'hsl(220 100% 80%)', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', textTransform: 'capitalize', fontWeight: 600 }}>
+                              {u.provider}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', color: 'hsl(270 80% 65%)', fontWeight: 700 }}>Lv {u.level}</td>
+                          <td style={{ padding: '0.75rem 1rem', color: 'hsl(220 100% 65%)', fontWeight: 600 }}>{u.xp.toLocaleString()}</td>
+                          <td style={{ padding: '0.75rem 1rem', color: 'hsl(45 100% 55%)', fontWeight: 600 }}>{u.coins.toLocaleString()}</td>
+                          <td style={{ padding: '0.75rem 1rem', color: 'hsl(220 10% 55%)' }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                          <td style={{ padding: '0.75rem 1rem', color: u.lastSignIn ? 'hsl(142 70% 55%)' : 'hsl(220 10% 50%)' }}>
+                            {u.lastSignIn ? new Date(u.lastSignIn).toLocaleString() : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                      {paginatedUsers.length === 0 && (
+                        <tr>
+                          <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }}>No player accounts match your search.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination controls */}
+                {totalUserPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                      disabled={userPage === 1}
+                      style={{ opacity: userPage === 1 ? 0.5 : 1, cursor: userPage === 1 ? 'not-allowed' : 'pointer' }}
+                    >
+                      ◀ Previous
+                    </button>
+                    <span style={{ fontSize: '0.8rem', color: 'hsl(220 10% 60%)', padding: '0 0.5rem' }}>
+                      Page {userPage} of {totalUserPages}
+                    </span>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
+                      disabled={userPage === totalUserPages}
+                      style={{ opacity: userPage === totalUserPages ? 0.5 : 1, cursor: userPage === totalUserPages ? 'not-allowed' : 'pointer' }}
+                    >
+                      Next ▶
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

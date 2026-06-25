@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
+import GameHUD from '@/components/layout/GameHUD'
 
 type Orientation = 'h' | 'v'
 type VehicleType = 'car' | 'suv' | 'truck' | 'van'
@@ -1844,15 +1845,10 @@ export default function UnblockTrafficGame() {
           id="unblock-traffic-board-container"
         >
           {/* Header Stats */}
-          <div
+          <GameHUD
+            id="traffic-header-hud"
             style={{
               padding: '0.6rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'hsl(222 18% 13%)',
-              borderRadius: 14,
-              border: '1px solid hsl(220 15% 16%)',
             }}
           >
             <div>
@@ -1873,7 +1869,7 @@ export default function UnblockTrafficGame() {
                 </span>
               </div>
             </div>
-          </div>
+          </GameHUD>
 
           {/* dynamically themed premium wrapper */}
           <div

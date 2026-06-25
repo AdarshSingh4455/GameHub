@@ -68,6 +68,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
     selectedTitle: null as string | null,
     selectedFrame: null as string | null,
     username: '' as string,
+    displayName: '' as string,
     avatarUrl: null as string | null,
   })
 
@@ -151,6 +152,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
             selectedTitle: data.profile.selectedTitle,
             selectedFrame: data.profile.selectedFrame,
             username: data.profile.username,
+            displayName: data.profile.displayName,
             avatarUrl: data.profile.avatarUrl,
           })
           
@@ -186,6 +188,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
         selectedTitle: typeof window !== 'undefined' ? localStorage.getItem('gamehub_guest_selected_title') || null : null,
         selectedFrame: typeof window !== 'undefined' ? localStorage.getItem('gamehub_guest_selected_frame') || null : null,
         username: 'Guest',
+        displayName: 'Guest',
         avatarUrl: null,
       })
     }
@@ -375,7 +378,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
                 />
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'hsl(220 15% 92%)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {userStats.username || user?.email || 'Player'}
+                    {userStats.displayName || userStats.username || user?.email || 'Player'}
                   </div>
                   {userStats.selectedTitle && (
                     <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(45 100% 60%)', textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: '1px' }}>

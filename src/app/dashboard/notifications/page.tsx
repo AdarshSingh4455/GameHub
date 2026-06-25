@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
+import PageWrapper from '@/components/layout/PageWrapper'
+import Card from '@/components/layout/Card'
 
 interface Notification {
   id: string
@@ -120,7 +122,7 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn safe-bottom-padding">
+    <PageWrapper className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 700, marginInline: 'auto' }}>
       
       {/* Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -149,17 +151,16 @@ export default function NotificationsPage() {
           Loading notifications...
         </div>
       ) : notifications.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'hsl(222 20% 8% / 0.6)', border: '1px dashed hsl(220 15% 16%)', borderRadius: 20 }}>
+        <Card style={{ textAlign: 'center', padding: '4rem 2rem', background: 'hsl(222 20% 8% / 0.6)', border: '1px dashed hsl(220 15% 16%)' }}>
           <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem' }}>📭</span>
           <h3 style={{ fontWeight: 700, color: 'white', margin: 0 }}>In-box Empty</h3>
           <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.82rem', margin: '0.5rem 0 0' }}>All clean! No new alert logs compiled.</p>
-        </div>
+        </Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {notifications.map(n => (
-            <div
+            <Card
               key={n.id}
-              className="card"
               style={{
                 padding: '1rem 1.25rem',
                 display: 'flex',
@@ -168,7 +169,6 @@ export default function NotificationsPage() {
                 gap: '1rem',
                 background: n.isRead ? 'hsl(222 18% 10% / 0.7)' : 'linear-gradient(135deg, hsl(222 18% 12%), hsl(222 18% 10%))',
                 border: n.isRead ? '1px solid hsl(220 15% 15%)' : '1px solid hsl(220 100% 60% / 0.25)',
-                borderRadius: 16,
                 position: 'relative'
               }}
             >
@@ -212,11 +212,11 @@ export default function NotificationsPage() {
                   Delete
                 </button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
 
-    </div>
+    </PageWrapper>
   )
 }

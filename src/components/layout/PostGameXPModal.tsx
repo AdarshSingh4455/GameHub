@@ -558,7 +558,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button
               className="btn btn-primary"
-              onClick={() => onClose()}
+              onClick={() => onClose('replay')}
               style={{ flex: 1, borderRadius: 12 }}
               id="modal-replay-btn"
             >

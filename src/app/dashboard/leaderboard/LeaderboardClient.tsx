@@ -11,6 +11,7 @@ interface LeaderboardRow {
   rank: number
   profileId: string
   username: string
+  displayName?: string | null
   level: number
   xp?: number
   score?: number
@@ -27,6 +28,7 @@ interface RankedRow {
   rank: number
   profileId: string
   username: string
+  displayName?: string | null
   level: number
   mmr: number
   wins: number
@@ -384,8 +386,11 @@ export default function LeaderboardClient() {
                               style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: 'white', cursor: 'pointer', textAlign: 'left' }}
                               className="hover-underline"
                             >
-                              {row.username}
+                              {row.displayName || row.username}
                             </button>
+                            <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)' }}>
+                              @{row.username}
+                            </span>
                             {row.title && (
                               <span style={{ fontSize: '0.7rem', color: 'hsl(45 100% 60%)', fontWeight: 600, letterSpacing: '0.05em' }}>
                                 {row.title}
@@ -532,8 +537,11 @@ export default function LeaderboardClient() {
                               style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: 'white', cursor: 'pointer', textAlign: 'left' }}
                               className="hover-underline"
                             >
-                              {row.username}
+                              {row.displayName || row.username}
                             </button>
+                            <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)' }}>
+                              @{row.username}
+                            </span>
                             {row.selectedTitle && (
                               <span style={{ fontSize: '0.7rem', color: 'hsl(45 100% 60%)', fontWeight: 600, letterSpacing: '0.05em' }}>
                                 {row.selectedTitle}

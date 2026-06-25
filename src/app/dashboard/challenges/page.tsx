@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getStoredDailyChallenges, DailyChallenge } from '@/lib/dailyChallenges'
+import PageWrapper from '@/components/layout/PageWrapper'
+import Card from '@/components/layout/Card'
 
 interface EnrichedChallenge {
   id: string
@@ -258,13 +260,13 @@ export default function ChallengesPage() {
   }, [challenges, activeTab])
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%' }} className="animate-fadeIn mobile-centered-wrapper">
+    <PageWrapper style={{ maxWidth: 1100, marginInline: 'auto' }} className="animate-fadeIn mobile-centered-wrapper">
       {/* Header Panel */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-900/20 via-indigo-900/10 to-slate-900/80 border border-indigo-500/10 p-6 md:p-8 mb-8 backdrop-blur-xl">
+      <Card variant="glass" className="relative overflow-hidden mb-8" style={{ background: 'linear-gradient(to right, rgba(109, 40, 217, 0.05), rgba(79, 70, 229, 0.05), rgba(15, 23, 42, 0.8))', padding: '2rem 1.5rem' }}>
         <div style={{ position: 'absolute', top: 0, right: 0, width: '160px', height: '160px', background: 'hsl(270 80% 60% / 0.05)', borderRadius: '999px', filter: 'blur(60px)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, width: '160px', height: '160px', background: 'hsl(220 100% 60% / 0.05)', borderRadius: '999px', filter: 'blur(60px)', pointerEvents: 'none' }} />
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'flex-start' }} className="md:flex-row md:items-center">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'flex-start' }} className="md:flex-row md:items-center animate-fadeIn">
           <div>
             <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 900, marginBottom: '0.4rem', color: 'white', letterSpacing: '-0.02em' }}>
               ⚡ Challenges Hub
@@ -292,7 +294,7 @@ export default function ChallengesPage() {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Tabs Menu - swipeable on mobile */}
       <div
@@ -402,18 +404,15 @@ export default function ChallengesPage() {
             const isCompleted = ch.completed && !ch.claimed
 
             return (
-              <div
+              <Card
                 key={ch.id}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   gap: 'clamp(0.75rem, 3vw, 1.25rem)',
-                  padding: 'clamp(0.85rem, 3.5vw, 1.25rem)',
                   background: isCompleted ? 'rgba(157, 78, 221, 0.05)' : 'rgba(255,255,255,0.02)',
-                  border: '1px solid',
                   borderColor: isCompleted ? 'rgba(157, 78, 221, 0.25)' : 'rgba(255,255,255,0.06)',
-                  borderRadius: '20px',
                   boxShadow: isCompleted ? '0 0 15px rgba(157, 78, 221, 0.08)' : 'none',
                   transition: 'all 0.2s',
                 }}
@@ -485,11 +484,11 @@ export default function ChallengesPage() {
                     </button>
                   )}
                 </div>
-              </div>
+              </Card>
             )
           })}
         </div>
       )}
-    </div>
+    </PageWrapper>
   )
 }

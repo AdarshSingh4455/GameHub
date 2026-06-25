@@ -6,10 +6,13 @@ import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import ProfileCardModal from '@/components/layout/ProfileCardModal'
 import { useToast } from '@/lib/contexts/ToastContext'
 import Avatar from '@/components/shared/Avatar'
+import PageWrapper from '@/components/layout/PageWrapper'
+import Card from '@/components/layout/Card'
 
 interface ProfileSummary {
   id: string
   username: string
+  displayName?: string | null
   level: number
   xp: number
   avatarUrl: string | null
@@ -268,7 +271,7 @@ export default function FriendsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
+    <PageWrapper style={{ maxWidth: 800, marginInline: 'auto' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       
       {/* Header and Friend Code info */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
@@ -283,13 +286,9 @@ export default function FriendsPage() {
 
         {/* Friend Code Display Widget */}
         {user && myProfile && (
-          <div
-            className="card"
+          <Card
             style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: 16,
               background: 'linear-gradient(135deg, hsl(220 20% 12%), hsl(220 20% 8%))',
-              border: '1px solid hsl(220 15% 18%)',
               textAlign: 'center'
             }}
           >
@@ -315,7 +314,7 @@ export default function FriendsPage() {
             >
               {myProfile.friendCode || 'GH-GENERATE'} 📋
             </div>
-          </div>
+          </Card>
         )}
       </div>
 
@@ -481,18 +480,14 @@ export default function FriendsPage() {
                       const isOnline = presence.label === 'Online'
                       
                       return (
-                        <div
+                        <Card
                           key={friend.id}
-                          className="card"
                           style={{
-                            padding: '1rem 1.25rem',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             gap: '1rem',
-                            background: 'linear-gradient(135deg, hsl(222 18% 12%), hsl(222 18% 9%))',
-                            border: '1px solid hsl(220 15% 15%)',
-                            borderRadius: 16
+                            background: 'linear-gradient(135deg, hsl(222 18% 12%), hsl(222 18% 9%))'
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -520,14 +515,14 @@ export default function FriendsPage() {
                               />
                             </div>
 
-                            <div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <button
                                   onClick={() => setSelectedProfileId(friend.id)}
-                                  style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.92rem', color: 'white', cursor: 'pointer' }}
+                                  style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.92rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                   className="hover-underline"
                                 >
-                                  {friend.username}
+                                  {friend.displayName || friend.username}
                                 </button>
                                 {friend.selectedTitle && (
                                   <span style={{ fontSize: '0.65rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -538,9 +533,12 @@ export default function FriendsPage() {
                                   {presence.label}
                                 </span>
                               </div>
-                              <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '0.15rem' }}>
-                                Level {friend.level} · {friend.xp.toLocaleString()} XP{presence.label === 'Offline' && ` · ${formatLastSeen(friend.lastSeenAt)}`}
-                              </div>
+                              <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)', marginTop: '1px' }}>
+                                @{friend.username}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '0.35rem' }}>
+                              Level {friend.level} · {friend.xp.toLocaleString()} XP{presence.label === 'Offline' && ` · ${formatLastSeen(friend.lastSeenAt)}`}
                             </div>
                           </div>
 
@@ -567,7 +565,7 @@ export default function FriendsPage() {
                               {actionLoadingId === friend.id ? 'Removing...' : 'Unfriend'}
                             </button>
                           </div>
-                        </div>
+                        </Card>
                       )
                     })
                   )}
@@ -589,7 +587,7 @@ export default function FriendsPage() {
                         </p>
                       ) : (
                         pendingIncoming.map(req => (
-                          <div key={req.id} className="card" style={{ padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)', borderRadius: 14 }}>
+                          <Card key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                               <Avatar
                                 avatarUrl={req.avatarUrl}
@@ -597,14 +595,14 @@ export default function FriendsPage() {
                                 selectedFrame={req.selectedFrame}
                                 size={36}
                               />
-                              <div>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                                   <button
                                     onClick={() => setSelectedProfileId(req.id)}
-                                    style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer' }}
+                                    style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >
-                                    {req.username}
+                                    {req.displayName || req.username}
                                   </button>
                                   {req.selectedTitle && (
                                     <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -612,14 +610,17 @@ export default function FriendsPage() {
                                     </span>
                                   )}
                                 </div>
-                                <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>Level {req.level}</div>
+                                <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)', marginTop: '1px' }}>
+                                  @{req.username}
+                                </span>
                               </div>
+                              <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', marginTop: '0.25rem' }}>Level {req.level}</div>
                             </div>
                             <div style={{ display: 'flex', gap: '0.4rem' }}>
                               <button className="btn btn-primary btn-sm" onClick={() => handleAction(req.id, 'accept')} disabled={actionLoadingId === req.id} style={{ padding: '0.35rem 0.75rem' }}>Accept</button>
                               <button className="btn btn-secondary btn-sm" onClick={() => handleAction(req.id, 'decline')} disabled={actionLoadingId === req.id} style={{ padding: '0.35rem 0.75rem', color: 'hsl(220 10% 70%)' }}>Decline</button>
                             </div>
-                          </div>
+                          </Card>
                         ))
                       )}
                     </div>
@@ -637,7 +638,7 @@ export default function FriendsPage() {
                         </p>
                       ) : (
                         pendingOutgoing.map(req => (
-                          <div key={req.id} className="card" style={{ padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)', borderRadius: 14 }}>
+                          <Card key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                               <Avatar
                                 avatarUrl={req.avatarUrl}
@@ -645,14 +646,14 @@ export default function FriendsPage() {
                                 selectedFrame={req.selectedFrame}
                                 size={36}
                               />
-                              <div>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                                   <button
                                     onClick={() => setSelectedProfileId(req.id)}
-                                    style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'hsl(220 10% 80%)', cursor: 'pointer' }}
+                                    style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'hsl(220 10% 80%)', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >
-                                    {req.username}
+                                    {req.displayName || req.username}
                                   </button>
                                   {req.selectedTitle && (
                                     <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -660,11 +661,14 @@ export default function FriendsPage() {
                                     </span>
                                   )}
                                 </div>
-                                <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>Level {req.level}</div>
+                                <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)', marginTop: '1px' }}>
+                                  @{req.username}
+                                </span>
                               </div>
+                              <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', marginTop: '0.25rem' }}>Level {req.level}</div>
                             </div>
                             <button className="btn btn-secondary btn-sm" onClick={() => handleAction(req.id, 'remove')} disabled={actionLoadingId === req.id} style={{ padding: '0.35rem 0.75rem', color: 'hsl(0 80% 60%)' }}>Cancel</button>
-                          </div>
+                          </Card>
                         ))
                       )}
                     </div>
@@ -700,7 +704,7 @@ export default function FriendsPage() {
                         </div>
                       ) : (
                         searchResults.map(p => (
-                          <div key={p.id} className="card" style={{ padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)', borderRadius: 14 }}>
+                          <Card key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                               <Avatar
                                 avatarUrl={p.avatarUrl}
@@ -708,14 +712,14 @@ export default function FriendsPage() {
                                 selectedFrame={p.selectedFrame}
                                 size={36}
                               />
-                              <div>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                                   <button
                                     onClick={() => setSelectedProfileId(p.id)}
-                                    style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer' }}
+                                    style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >
-                                    {p.username}
+                                    {p.displayName || p.username}
                                   </button>
                                   {p.selectedTitle && (
                                     <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -723,9 +727,12 @@ export default function FriendsPage() {
                                     </span>
                                   )}
                                 </div>
-                                <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>
-                                  Level {p.level} · {p.xp.toLocaleString()} XP
-                                </div>
+                                <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)', marginTop: '1px' }}>
+                                  @{p.username}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', marginTop: '0.25rem' }}>
+                                Level {p.level} · {p.xp.toLocaleString()} XP
                               </div>
                             </div>
                             
@@ -756,7 +763,7 @@ export default function FriendsPage() {
                                 {actionLoadingId === p.id ? 'Sending...' : 'Add Friend'}
                               </button>
                             )}
-                          </div>
+                          </Card>
                         ))
                       )
                     ) : (
@@ -779,18 +786,14 @@ export default function FriendsPage() {
                     </div>
                   ) : (
                     recentPlayers.map(player => (
-                      <div
+                      <Card
                         key={player.id}
-                        className="card"
                         style={{
-                          padding: '1rem 1.25rem',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           gap: '1rem',
                           background: 'hsl(222 18% 12%)',
-                          border: '1px solid hsl(220 15% 15%)',
-                          borderRadius: 16
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
@@ -800,14 +803,14 @@ export default function FriendsPage() {
                             selectedFrame={player.selectedFrame}
                             size={38}
                           />
-                          <div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                               <button
                                 onClick={() => setSelectedProfileId(player.id)}
-                                style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.9rem', color: 'white', cursor: 'pointer' }}
+                                style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.9rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                 className="hover-underline"
                               >
-                                {player.username}
+                                {player.displayName || player.username}
                               </button>
                               {player.selectedTitle && (
                                 <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -815,9 +818,12 @@ export default function FriendsPage() {
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '0.1rem' }}>
-                              Level {player.level} · {player.xp.toLocaleString()} XP
-                            </div>
+                            <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)', marginTop: '1px' }}>
+                              @{player.username}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '0.25rem' }}>
+                            Level {player.level} · {player.xp.toLocaleString()} XP
                           </div>
                         </div>
 
@@ -835,7 +841,7 @@ export default function FriendsPage() {
                             {player.friendshipStatus === 'sent-pending' ? 'Request Sent' : 'Pending Action'}
                           </span>
                         )}
-                      </div>
+                      </Card>
                     ))
                   )}
                 </div>
@@ -862,19 +868,16 @@ export default function FriendsPage() {
           }}
           onClick={() => setInviteModalOpen(false)}
         >
-          <div
-            className="card glass"
+          <Card
+            variant="glass"
             style={{
               width: '100%',
               maxWidth: 380,
               background: 'linear-gradient(135deg, hsl(222 20% 10%), hsl(222 18% 13%))',
-              border: '1px solid hsl(220 15% 20%)',
-              padding: '1.5rem',
               display: 'flex',
               flexDirection: 'column',
               gap: '1.25rem',
               boxShadow: '0 20px 50px rgba(0, 0, 0, 0.55)',
-              borderRadius: 20
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -917,7 +920,7 @@ export default function FriendsPage() {
             >
               Cancel
             </button>
-          </div>
+          </Card>
         </div>
       )}
 
@@ -926,6 +929,6 @@ export default function FriendsPage() {
         isOpen={!!selectedProfileId}
         onClose={() => setSelectedProfileId(null)}
       />
-    </div>
+    </PageWrapper>
   )
 }

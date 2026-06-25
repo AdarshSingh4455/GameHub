@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
+import PageWrapper from '@/components/layout/PageWrapper'
+import Card from '@/components/layout/Card'
 
 interface Participant {
   id: string
@@ -250,7 +252,7 @@ export default function TournamentsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn safe-bottom-padding">
+    <PageWrapper style={{ maxWidth: 900, marginInline: 'auto' }} className="animate-fadeIn safe-bottom-padding">
       
       {/* Title Header */}
       <div>
@@ -314,7 +316,7 @@ export default function TournamentsPage() {
           </div>
 
           {selectedTournament ? (
-            <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', background: 'linear-gradient(135deg, hsl(222 18% 11%), hsl(222 18% 8%))', borderRadius: 20 }}>
+            <Card style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', background: 'linear-gradient(135deg, hsl(222 18% 11%), hsl(222 18% 8%))' }}>
               
               {/* Tournament Info Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '1rem' }}>
@@ -505,7 +507,7 @@ export default function TournamentsPage() {
                 </div>
               )}
 
-            </div>
+            </Card>
           ) : (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'hsl(220 10% 50%)' }}>
               Loading selected tournament details...
@@ -516,7 +518,7 @@ export default function TournamentsPage() {
       )}
 
       {activeSubTab === 'leaderboard' && (
-        <div className="card" style={{ padding: '1.25rem', borderRadius: 18, background: 'hsl(222 18% 10%)' }}>
+        <Card style={{ background: 'hsl(222 18% 10%)' }}>
           <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 800, color: 'white' }}>
             🏆 Tournament Triumphs Leaderboard
           </h3>
@@ -564,7 +566,7 @@ export default function TournamentsPage() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {activeSubTab === 'history' && (
@@ -577,7 +579,7 @@ export default function TournamentsPage() {
             </div>
           ) : (
             history.map(t => (
-              <div key={t.id} className="card" style={{ padding: '1rem 1.25rem', background: 'hsl(222 18% 10%)', borderRadius: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Card key={t.id} style={{ background: 'hsl(222 18% 10%)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h4 style={{ margin: 0, fontWeight: 750, color: 'white', fontSize: '0.92rem' }}>{t.name}</h4>
                   <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: 'hsl(220 10% 50%)' }}>Ended: {new Date(t.endDate).toLocaleDateString()}</p>
@@ -585,7 +587,7 @@ export default function TournamentsPage() {
                 <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(142 70% 50%)', background: 'hsl(142 70% 50% / 0.1)', padding: '0.25rem 0.5rem', borderRadius: 8 }}>
                   COMPLETED
                 </span>
-              </div>
+              </Card>
             ))
           )}
         </div>
@@ -606,15 +608,11 @@ export default function TournamentsPage() {
             padding: '1rem'
           }}
         >
-          <div
-            className="card"
+          <Card
             style={{
               width: '100%',
               maxWidth: 400,
               background: 'linear-gradient(135deg, hsl(222 20% 12%), hsl(222 18% 14%))',
-              border: '1px solid hsl(220 15% 22%)',
-              padding: '1.75rem',
-              borderRadius: 20,
               display: 'flex',
               flexDirection: 'column',
               gap: '1.25rem',
@@ -682,10 +680,10 @@ export default function TournamentsPage() {
                 </button>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       )}
 
-    </div>
+    </PageWrapper>
   )
 }

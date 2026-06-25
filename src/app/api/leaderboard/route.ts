@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             username: true,
+            displayName: true,
             level: true,
             selectedTitle: true,
             currentRank: true,
@@ -87,6 +88,7 @@ export async function GET(request: NextRequest) {
             rank: idx + 1,
             profileId: p?.id || x.profileId,
             username: p?.username || 'Unknown',
+            displayName: p?.displayName || null,
             level: p?.level || 1,
             score: x._count.id,
             wins: p?._count.wonMatches || 0,
@@ -141,6 +143,7 @@ export async function GET(request: NextRequest) {
               select: {
                 id: true,
                 username: true,
+                displayName: true,
                 level: true,
                 selectedTitle: true,
                 currentRank: true,
@@ -175,6 +178,7 @@ export async function GET(request: NextRequest) {
             rank: idx + 1,
             profileId: p.id,
             username: p.username,
+            displayName: p.displayName || null,
             level: p.level,
             score: s.score,
             wins: p._count.wonMatches,
@@ -201,6 +205,7 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               username: true,
+              displayName: true,
               level: true,
               xp: true,
               selectedTitle: true,
@@ -229,6 +234,7 @@ export async function GET(request: NextRequest) {
           rank: idx + 1,
           profileId: p.id,
           username: p.username,
+          displayName: p.displayName || null,
           level: p.level,
           score: s.highScore, // show high score instead of total XP
           wins: s.winCount, // show game-specific win count
@@ -278,6 +284,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           username: true,
+          displayName: true,
           level: true,
           currentRank: true,
           previousRank: true,
@@ -303,6 +310,7 @@ export async function GET(request: NextRequest) {
           rank: idx + 1,
           profileId: p?.id || x.profileId,
           username: p?.username || 'Unknown',
+          displayName: p?.displayName || null,
           level: p?.level || 1,
           xp: x._sum.amount || 0, // show XP gained in this period
           wins: p?._count.wonMatches || 0,
@@ -328,6 +336,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         username: true,
+        displayName: true,
         level: true,
         xp: true,
         currentRank: true,
@@ -352,6 +361,7 @@ export async function GET(request: NextRequest) {
         rank: idx + 1,
         profileId: p.id,
         username: p.username,
+        displayName: p.displayName,
         level: p.level,
         xp: p.xp,
         wins: p.wins || p._count.wonMatches,

@@ -10,6 +10,7 @@ interface ProfileData {
   profile: {
     id: string
     username: string
+    displayName?: string | null
     avatarUrl: string | null
     selectedTitle: string | null
     selectedFrame?: string | null
@@ -372,8 +373,11 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
 
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'white', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {data.profile.username}
+                    {data.profile.displayName || data.profile.username}
                   </h3>
+                  <div style={{ fontSize: '0.78rem', color: 'hsl(220 10% 55%)', margin: 0 }}>
+                    @{data.profile.username}
+                  </div>
                   {data.profile.selectedTitle && (
                     <div style={{ fontSize: '0.72rem', color: 'hsl(45 100% 60%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '0.08rem' }}>
                       ⚡ {data.profile.selectedTitle}

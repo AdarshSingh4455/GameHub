@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
+import GameHUD from '@/components/layout/GameHUD'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { incrementDailyChallengeProgress } from '@/lib/dailyChallenges'
 
@@ -983,15 +984,10 @@ export default function WaterConnectGame() {
       )}
 
       {/* 2. Top Stats HUD */}
-      <div
+      <GameHUD
+        id="waterconnect-top-hud"
         style={{
           padding: '0.6rem 0.85rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'hsl(222 18% 13%)',
-          borderRadius: 14,
-          border: '1px solid hsl(220 15% 16%)',
         }}
       >
         <div>
@@ -1018,7 +1014,7 @@ export default function WaterConnectGame() {
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(220 10% 60%)' }}>🥇{goldTime}s</span>
           </div>
         </div>
-      </div>
+      </GameHUD>
 
       {/* 3. The Grid Canvas Board */}
       <div

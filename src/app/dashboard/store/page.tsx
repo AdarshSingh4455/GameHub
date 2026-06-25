@@ -5,6 +5,8 @@ import { useToast } from '@/lib/contexts/ToastContext'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { prefetchProfileDetails } from '@/lib/prefetch'
 import Avatar from '@/components/shared/Avatar'
+import PageWrapper from '@/components/layout/PageWrapper'
+import Card from '@/components/layout/Card'
 
 interface StoreItem {
   id: string
@@ -563,7 +565,8 @@ export default function StorePage() {
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0 0.75rem', width: '100%' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
+    <>
+      <PageWrapper style={{ maxWidth: 640, marginInline: 'auto', gap: '1.25rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -587,9 +590,7 @@ export default function StorePage() {
       </div>
 
       {/* Interactive Preview Card Mockup */}
-      <div className="card glass" style={{
-        padding: '1.25rem',
-        borderRadius: 20,
+      <Card variant="glass" style={{
         background: 'linear-gradient(135deg, hsl(222 25% 10%), hsl(222 20% 7%))',
         border: '1px solid rgba(255,255,255,0.08)',
         display: 'flex',
@@ -654,7 +655,7 @@ export default function StorePage() {
             </span>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Tabs Menu */}
       <div className="category-chips-container" style={{ borderBottom: '1px solid hsl(220 15% 18%)', marginBottom: '1rem' }}>
@@ -676,9 +677,9 @@ export default function StorePage() {
 
       {/* Redesigned Compact Loader */}
       {loading ? (
-        <div className="card glass" style={{
+        <Card variant="glass" style={{
           height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: '10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)'
+          gap: '10px', border: '1px solid rgba(255,255,255,0.08)'
         }}>
           <div style={{
             width: 24, height: 24, borderRadius: '50%',
@@ -686,7 +687,7 @@ export default function StorePage() {
             animation: 'spin 0.8s linear infinite'
           }} />
           <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Loading Store Catalog...</span>
-        </div>
+        </Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Items Grid */}
@@ -752,9 +753,8 @@ export default function StorePage() {
               }
 
               return (
-                <div
+                <Card
                   key={item.id}
-                  className="card card-hover"
                   style={{
                     padding: '0.6rem',
                     display: 'flex',
@@ -762,9 +762,7 @@ export default function StorePage() {
                     alignItems: 'center',
                     textAlign: 'center',
                     gap: '0.4rem',
-                    borderRadius: 14,
                     background: 'hsl(222 18% 12% / 0.95)',
-                    border: '1px solid hsl(220 15% 20%)',
                     borderColor: isEquipped ? 'hsl(142 70% 50% / 0.6)' : owned ? 'hsl(210 100% 50% / 0.4)' : !requirementMet ? 'hsl(0 80% 40% / 0.3)' : 'hsl(220 15% 20%)',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -922,17 +920,17 @@ export default function StorePage() {
                       </div>
                     )}
                   </div>
-                </div>
+                </Card>
               )
             })}
             {activeCategoryItems.length === 0 && (
               ['TITLE', 'AVATAR_FRAME', 'EFFECT'].includes(activeCategory) ? (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', alignItems: 'center' }}>
-                  <div className="card glass" style={{ width: '100%', padding: '2rem 1rem', textAlign: 'center', background: 'hsl(220 20% 10% / 0.6)', border: '1px dashed hsl(220 15% 20%)', borderRadius: 16 }}>
+                  <Card variant="glass" style={{ padding: '2rem 1rem', textAlign: 'center', background: 'hsl(220 20% 10% / 0.6)', borderStyle: 'dashed' }}>
                     <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔒</div>
                     <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: 'white', margin: '0 0 0.25rem 0' }}>No items unlocked yet</h3>
                     <p style={{ fontSize: '0.8rem', color: 'hsl(220 10% 55%)', margin: 0 }}>Unlock locked items by leveling up or opening mystery crates!</p>
-                  </div>
+                  </Card>
                   
                   <div style={{ width: '100%' }}>
                     <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>
@@ -940,12 +938,11 @@ export default function StorePage() {
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem', width: '100%' }}>
                       {(LOCKED_PREVIEWS[activeCategory] || []).map((preview, i) => (
-                        <div 
+                        <Card 
                           key={i} 
-                          className="card glass" 
+                          variant="glass" 
                           style={{ 
                             padding: '1rem', 
-                            borderRadius: 16, 
                             display: 'flex', 
                             flexDirection: 'column', 
                             alignItems: 'center', 
@@ -975,7 +972,7 @@ export default function StorePage() {
                           <div style={{ width: '100%', padding: '0.35rem', background: 'hsl(220 20% 12%)', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, color: 'hsl(45 100% 55%)' }}>
                             💰 {preview.priceCoins} Coins
                           </div>
-                        </div>
+                        </Card>
                       ))}
                     </div>
                   </div>
@@ -989,6 +986,7 @@ export default function StorePage() {
           </div>
         </div>
       )}
+    </PageWrapper>
 
       {/* --- INTERACTIVE SCRATCHER CARD MODAL --- */}
       {scratchingAd && scratcherReward && (
@@ -1314,7 +1312,7 @@ export default function StorePage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 

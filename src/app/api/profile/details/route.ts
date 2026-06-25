@@ -77,11 +77,13 @@ export async function GET(request: Request) {
               player1: {
                 select: {
                   username: true,
+                  displayName: true,
                 },
               },
               player2: {
                 select: {
                   username: true,
+                  displayName: true,
                 },
               },
             },

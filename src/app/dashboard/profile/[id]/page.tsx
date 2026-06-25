@@ -158,6 +158,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const serializableProfile = {
     id: profile.id,
     username: profile.username,
+    displayName: profile.displayName,
     avatarUrl: profile.avatarUrl,
     selectedTitle: profile.selectedTitle,
     selectedFrame: profile.selectedFrame,

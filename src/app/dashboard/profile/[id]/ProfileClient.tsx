@@ -9,6 +9,7 @@ interface ProfileClientProps {
   profile: {
     id: string
     username: string
+    displayName?: string | null
     avatarUrl: string | null
     selectedTitle: string | null
     selectedFrame: string | null
@@ -134,13 +135,16 @@ export default function ProfileClient({
 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', margin: 0 }}>{profile.username}</h1>
+                <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', margin: 0 }}>{profile.displayName || profile.username}</h1>
                 {profile.selectedTitle && (
                   <span className="badge badge-gold" style={{ fontSize: '0.68rem', padding: '0.2rem 0.55rem' }}>
                     {profile.selectedTitle}
                   </span>
                 )}
               </div>
+              <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.85rem', marginTop: '0.1rem', marginBottom: '0.25rem', margin: 0 }}>
+                @{profile.username}
+              </p>
               <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.8rem', marginTop: '0.25rem', margin: 0 }}>
                 Joined on {new Date(profile.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>

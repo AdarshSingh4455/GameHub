@@ -94,6 +94,7 @@ export function GameSessionProvider({
   const pathname = usePathname()
   const router = useRouter()
   const [modalData, setModalData] = useState<GameResultPayload | null>(null)
+  const [isReplay, setIsReplay] = useState(false)
 
   // Listen to auth state changes and refresh router to sync cookies with Server Components
   useEffect(() => {
@@ -115,6 +116,7 @@ export function GameSessionProvider({
     setPostGameStage('IDLE')
     setAdToShow(null)
     setModalData(null)
+    setIsReplay(false)
   }, [pathname])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -276,8 +278,8 @@ export function GameSessionProvider({
       })
     }
     
-    // Do not show ads in offline mode
-    if (payload.metadata?.offline) {
+    // Do not show ads in offline mode or during replay
+    if (payload.metadata?.offline || isReplay) {
       setPostGameStage('XP_MODAL_SHOWING')
       return
     }
@@ -726,6 +728,11 @@ export function GameSessionProvider({
   function closeModal(action?: 'replay' | 'next') {
     setPostGameStage('IDLE')
     setModalData(null)
+    if (action === 'replay' || action === 'next') {
+      setIsReplay(true)
+    } else {
+      setIsReplay(false)
+    }
     if (action === 'next') {
       window.dispatchEvent(new Event('gamehub_next_level'))
     } else {

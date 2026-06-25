@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import Link from 'next/link'
+import PageWrapper from '@/components/layout/PageWrapper'
+import Card from '@/components/layout/Card'
 
 interface Achievement {
   slug: string
@@ -211,7 +213,7 @@ export default function AchievementsClient({ user }: Props) {
   const totalCoinsUnlocks = achievements.filter(a => a.isUnlocked).reduce((sum, a) => sum + a.coinReward, 0)
 
   return (
-    <div className="animate-fadeIn" style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <PageWrapper className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 960, marginInline: 'auto', gap: '1.5rem' }}>
       
       {/* Header Banner */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -225,13 +227,11 @@ export default function AchievementsClient({ user }: Props) {
 
       {/* Guest Mode Warning Banner */}
       {!user && (
-        <div
-          className="card"
+        <Card
           style={{
             background: 'linear-gradient(135deg, hsl(38 95% 60% / 0.1), hsl(220 100% 60% / 0.1))',
             border: '1px solid hsl(38 95% 55% / 0.3)',
             padding: '1rem 1.25rem',
-            borderRadius: 16,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -248,15 +248,14 @@ export default function AchievementsClient({ user }: Props) {
             </div>
           </div>
           <Link href="/register" className="btn btn-primary btn-sm">Create Account</Link>
-        </div>
+        </Card>
       )}
 
       {/* Overall Progress Dashboard Widget */}
-      <div
-        className="card glass"
+      <Card
+        variant="glass"
         style={{
           padding: '1.5rem',
-          borderRadius: 24,
           background: 'linear-gradient(135deg, hsl(220 20% 10%), hsl(220 20% 7%))',
           border: '1px solid hsl(220 15% 16%)',
           display: 'flex',
@@ -300,7 +299,7 @@ export default function AchievementsClient({ user }: Props) {
             />
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Interactive Filters Panel */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -360,9 +359,9 @@ export default function AchievementsClient({ user }: Props) {
           className="stagger"
         >
           {filteredAchievements.map(ach => (
-            <div
+            <Card
               key={ach.slug}
-              className="card hover-card"
+              className="hover-card"
               style={{
                 padding: '1.25rem',
                 display: 'flex',
@@ -374,7 +373,6 @@ export default function AchievementsClient({ user }: Props) {
                   : 'hsl(220 20% 8% / 0.8)',
                 border: '1px solid',
                 borderColor: ach.isUnlocked ? 'hsl(38 95% 50% / 0.2)' : 'hsl(220 15% 15%)',
-                borderRadius: 18,
                 transition: 'transform 0.2s, border-color 0.2s',
                 position: 'relative',
                 overflow: 'hidden'
@@ -476,7 +474,7 @@ export default function AchievementsClient({ user }: Props) {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
           {filteredAchievements.length === 0 && (
             <div style={{ gridColumn: '1 / -1', padding: '3rem', textAlign: 'center', color: 'hsl(220 10% 45%)', fontSize: '0.88rem' }}>
@@ -485,6 +483,6 @@ export default function AchievementsClient({ user }: Props) {
           )}
         </div>
       )}
-    </div>
+    </PageWrapper>
   )
 }

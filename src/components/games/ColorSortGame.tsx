@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
+import GameHUD from '@/components/layout/GameHUD'
 
 // Distinct vibrant HSL color palettes for liquids
 const LIQUID_COLORS = [
@@ -1451,15 +1452,10 @@ export default function ColorSortGame() {
           )}
 
           {/* Header Stats */}
-          <div
+          <GameHUD
+            id="colorsort-header-hud"
             style={{
               padding: '0.6rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'hsl(222 18% 13%)',
-              borderRadius: 14,
-              border: '1px solid hsl(220 15% 16%)',
             }}
           >
             <div>
@@ -1493,7 +1489,7 @@ export default function ColorSortGame() {
                 </span>
               </div>
             </div>
-          </div>
+          </GameHUD>
 
           {/* Jars Grid Area — Progressive Layout */}
           <div

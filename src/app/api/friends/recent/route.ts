@@ -26,10 +26,10 @@ export async function GET(request: Request) {
       take: 20,
       include: {
         player1: {
-          select: { id: true, username: true, level: true, xp: true, avatarUrl: true }
+          select: { id: true, username: true, displayName: true, level: true, xp: true, avatarUrl: true }
         },
         player2: {
-          select: { id: true, username: true, level: true, xp: true, avatarUrl: true }
+          select: { id: true, username: true, displayName: true, level: true, xp: true, avatarUrl: true }
         }
       }
     })

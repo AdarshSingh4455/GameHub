@@ -10,6 +10,7 @@ model Profile {
   id                   String              @id @default(uuid())
   userId               String              @unique
   username             String              @unique
+  displayName          String?
   avatarUrl            String?
   isGuest              Boolean             @default(false)
   role                 Role                @default(USER)

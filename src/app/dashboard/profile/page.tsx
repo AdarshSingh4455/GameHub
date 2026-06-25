@@ -13,6 +13,7 @@ import Avatar from '@/components/shared/Avatar'
 interface DBProfile {
   id: string
   username: string
+  displayName?: string | null
   xp: number
   level: number
   currentStreak: number
@@ -70,9 +71,11 @@ interface DBMatch {
   }
   player1: {
     username: string
+    displayName?: string | null
   }
   player2: {
     username: string
+    displayName?: string | null
   } | null
 }
 
@@ -724,7 +727,7 @@ export default function ProfilePage() {
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>
-              {profile.username}
+              {profile.displayName || profile.username}
             </h2>
             {profile.selectedTitle && (
               <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(45 100% 55%)', background: 'hsl(45 100% 50% / 0.12)', padding: '0.2rem 0.6rem', borderRadius: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -732,6 +735,9 @@ export default function ProfilePage() {
               </span>
             )}
           </div>
+          <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.85rem', marginTop: '0.1rem', marginBottom: '0.25rem', margin: 0 }}>
+            @{profile.username}
+          </p>
           
           <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.65rem', flexWrap: 'wrap' }}>
             <div style={{ fontSize: '0.82rem', color: 'hsl(220 10% 55%)' }}>

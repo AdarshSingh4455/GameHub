@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
+import PageWrapper from '@/components/layout/PageWrapper'
+import Card from '@/components/layout/Card'
 
 interface PlatformStats {
   totalPlayers: number
@@ -44,11 +46,11 @@ export default function AboutPage() {
   }
 
   return (
-    <div className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
+    <PageWrapper className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 800, marginInline: 'auto' }}>
       
       {/* ── Premium Hero Banner ── */}
-      <div 
-        className="card glass" 
+      <Card 
+        variant="glass" 
         style={{ 
           padding: '3rem 2rem', 
           borderRadius: 24, 
@@ -56,7 +58,6 @@ export default function AboutPage() {
           position: 'relative', 
           overflow: 'hidden',
           background: 'linear-gradient(135deg, hsl(220 30% 8% / 0.95), hsl(260 30% 8% / 0.95))',
-          border: '1px solid hsl(220 15% 18%)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -83,10 +84,10 @@ export default function AboutPage() {
         >
           <span>🔗</span> Share GameHub
         </button>
-      </div>
+      </Card>
 
       {/* ── Live Platform Statistics ── */}
-      <div className="card" style={{ padding: '1.5rem', borderRadius: 20 }}>
+      <Card>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem 0', letterSpacing: '0.05em' }}>
           📈 Live Platform Statistics
         </h2>
@@ -129,9 +130,9 @@ export default function AboutPage() {
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      <div className="card" style={{ padding: '1.5rem', borderRadius: 20 }}>
+      <Card>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem 0', letterSpacing: '0.05em' }}>
           ℹ️ About
         </h2>
@@ -143,16 +144,14 @@ export default function AboutPage() {
             Unlike traditional gaming websites that focus on a single game, GameHub combines multiple skill-based games, progression systems, achievements, rankings, cosmetics, social features and real-time multiplayer interactions into one ecosystem.
           </p>
         </div>
-      </div>
+      </Card>
 
       {/* ── Founder section ── */}
-      <div 
-        className="card glass" 
+      <Card 
+        variant="glass" 
         style={{ 
           padding: '2rem 1.5rem', 
-          borderRadius: 20, 
           background: 'linear-gradient(135deg, hsl(220 20% 10% / 0.8), hsl(220 20% 8% / 0.8))',
-          border: '1px solid hsl(220 15% 18%)',
           display: 'flex',
           flexDirection: 'column',
           gap: '1rem'
@@ -193,10 +192,10 @@ export default function AboutPage() {
             </p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* ── Vision Section ── */}
-      <div className="card" style={{ padding: '1.5rem', borderRadius: 20 }}>
+      <Card>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem 0', letterSpacing: '0.05em' }}>
           👁️ Platform Vision & Roadmap
         </h2>
@@ -224,10 +223,10 @@ export default function AboutPage() {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* ── Timeline Section ── */}
-      <div className="card" style={{ padding: '1.5rem', borderRadius: 20 }}>
+      <Card>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1.25rem 0', letterSpacing: '0.05em' }}>
           🗓️ Platform Timeline
         </h2>
@@ -259,10 +258,10 @@ export default function AboutPage() {
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* ── Technology Stack ── */}
-      <div className="card" style={{ padding: '1.5rem', borderRadius: 20 }}>
+      <Card>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem 0', letterSpacing: '0.05em' }}>
           🛠️ Technology Stack
         </h2>
@@ -297,7 +296,7 @@ export default function AboutPage() {
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* ── Footer Section ── */}
       <footer 
@@ -321,6 +320,6 @@ export default function AboutPage() {
         </span>
       </footer>
 
-    </div>
+    </PageWrapper>
   )
 }

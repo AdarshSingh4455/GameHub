@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
+import GameHUD from '@/components/layout/GameHUD'
 
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'
 
@@ -1582,15 +1583,10 @@ export default function ArrowPuzzleGame() {
             </div>
           )}
           {/* Header Stats Bar */}
-          <div
-            className="card"
+          <GameHUD
+            id="arrow-header-hud"
             style={{
               padding: '0.6rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'hsl(222 18% 13%)',
-              borderRadius: 14,
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1621,7 +1617,7 @@ export default function ArrowPuzzleGame() {
                 <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }} id="arrow-left-count">{getRemainingArrowCount()}</span>
               </div>
             </div>
-          </div>
+          </GameHUD>
 
           {/* Redesigned Dark Board, No Cell Grids */}
           <div

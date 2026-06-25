@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
+import GameHUD from '@/components/layout/GameHUD'
 import { getTTTMove } from '@/lib/gameAI'
 
 type Cell = 'X' | 'O' | null
@@ -510,16 +511,7 @@ export default function TicTacToeGame() {
       id="ttt-active-game"
     >
       {/* scoreboard */}
-      <div
-        className="card glass"
-        style={{
-          padding: '0.75rem 1rem',
-          display: 'flex',
-          justifyContent: 'space-around',
-          textAlign: 'center',
-          borderRadius: 16,
-        }}
-      >
+      <GameHUD id="ttt-scoreboard-hud" style={{ justifyContent: 'space-around' }}>
         <div>
           <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>{scores.X}</div>
           <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 50%)', fontWeight: 700 }}>X (P1)</div>
@@ -532,7 +524,7 @@ export default function TicTacToeGame() {
           <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(270 80% 65%)' }}>{scores.O}</div>
           <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 50%)', fontWeight: 700 }}>O {gameMode === 'vs-ai' ? '(AI)' : '(P2)'}</div>
         </div>
-      </div>
+      </GameHUD>
 
       {/* Info Status Indicator */}
       <div

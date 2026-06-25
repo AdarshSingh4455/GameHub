@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
+import GameHUD from '@/components/layout/GameHUD'
 import { getMemoryMatchMoves } from '@/lib/gameAI'
 
 const EMOJIS = [
@@ -849,16 +850,7 @@ export default function MemoryMatchGame() {
       `}</style>
 
       {/* scoreboard HUD */}
-      <div
-        className="card glass"
-        style={{
-          padding: '0.75rem 1rem',
-          display: 'flex',
-          justifyContent: 'space-around',
-          textAlign: 'center',
-          borderRadius: 16,
-        }}
-      >
+      <GameHUD id="memory-scoreboard-hud" style={{ justifyContent: 'space-around' }}>
         <div>
           <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>{scores.p1}</div>
           <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 50%)', fontWeight: 700 }}>P1 matches</div>
@@ -869,7 +861,7 @@ export default function MemoryMatchGame() {
             {gameMode === 'vs-ai' ? 'AI matches' : 'P2 matches'}
           </div>
         </div>
-      </div>
+      </GameHUD>
 
       {/* Turn indicator banner */}
       <div

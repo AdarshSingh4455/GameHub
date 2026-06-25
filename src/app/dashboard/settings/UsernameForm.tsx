@@ -6,7 +6,7 @@ import { useToast } from '@/lib/contexts/ToastContext'
 
 interface UsernameFormProps {
   initialUsername: string
-  initialTitle: string
+  initialDisplayName: string
   initialAvatarUrl: string
 }
 
@@ -18,12 +18,12 @@ const PRESET_AVATARS = [
   { name: 'Cyber', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Cyber' },
 ]
 
-export default function UsernameForm({ initialUsername, initialTitle, initialAvatarUrl }: UsernameFormProps) {
+export default function UsernameForm({ initialUsername, initialDisplayName, initialAvatarUrl }: UsernameFormProps) {
   const router = useRouter()
   const { addToast } = useToast()
   
   const [username, setUsername] = useState(initialUsername)
-  const [title, setTitle] = useState(initialTitle)
+  const [displayName, setDisplayName] = useState(initialDisplayName)
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl)
   
   const [usernameAvailable, setUsernameAvailable] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
@@ -86,7 +86,7 @@ export default function UsernameForm({ initialUsername, initialTitle, initialAva
 
   const hasChanges =
     username.trim().toLowerCase() !== initialUsername.toLowerCase() ||
-    title.trim() !== initialTitle ||
+    displayName.trim() !== initialDisplayName ||
     avatarUrl.trim() !== initialAvatarUrl
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,7 +95,7 @@ export default function UsernameForm({ initialUsername, initialTitle, initialAva
     setSuccess(null)
 
     const trimmedUser = username.trim().toLowerCase()
-    const trimmedTitle = title.trim()
+    const trimmedDisplayName = displayName.trim()
     const trimmedAvatar = avatarUrl.trim()
 
     // Validations
@@ -126,7 +126,7 @@ export default function UsernameForm({ initialUsername, initialTitle, initialAva
         },
         body: JSON.stringify({
           username: trimmedUser,
-          title: trimmedTitle,
+          displayName: trimmedDisplayName,
           avatarUrl: trimmedAvatar,
         }),
       })
@@ -273,23 +273,23 @@ export default function UsernameForm({ initialUsername, initialTitle, initialAva
         </p>
       </div>
 
-      {/* Title Field */}
+      {/* Display Name Field */}
       <div>
         <label 
-          htmlFor="settings-title" 
+          htmlFor="settings-displayname" 
           style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem', color: 'hsl(220 10% 65%)' }}
         >
-          Custom Title (e.g. Grandmaster, Pixel Warrior)
+          Display Name
         </label>
         <input
-          id="settings-title"
+          id="settings-displayname"
           className="input"
           type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
           disabled={loading}
-          maxLength={30}
-          placeholder="No Title"
+          maxLength={25}
+          placeholder="Enter display name"
         />
       </div>
 

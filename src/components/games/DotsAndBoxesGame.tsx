@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
+import GameHUD from '@/components/layout/GameHUD'
 import { incrementDailyChallengeProgress } from '@/lib/dailyChallenges'
 import { io, Socket } from 'socket.io-client'
 
@@ -977,16 +978,7 @@ export default function DotsAndBoxesGame() {
       id="db-active-game"
     >
       {/* scoreboard HUD */}
-      <div
-        className="card glass"
-        style={{
-          padding: '0.65rem 1rem',
-          display: 'flex',
-          justifyContent: 'space-around',
-          textAlign: 'center',
-          borderRadius: 16,
-        }}
-      >
+      <GameHUD id="db-scoreboard-hud" style={{ justifyContent: 'space-around' }}>
         <div>
           <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(210 100% 55%)' }}>{scores.p1}</div>
           <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', fontWeight: 700 }}>
@@ -999,7 +991,7 @@ export default function DotsAndBoxesGame() {
             {gameMode === 'vs-ai' ? 'AI' : gameMode === 'online' ? 'Opponent (P2)' : 'Player 2'}
           </div>
         </div>
-      </div>
+      </GameHUD>
 
       {/* Persistent Turn Indicator Banner */}
       <div

@@ -297,6 +297,42 @@ export default function SinglePlayerXPModal({ data, onClose }: Props) {
           </p>
         </div>
 
+        {/* Star Rating Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', position: 'relative', zIndex: 1, margin: '0.25rem 0' }} id="modal-star-rating-container">
+          <div style={{ display: 'flex', gap: '0.5rem', fontSize: '2rem', justifyContent: 'center' }}>
+            {[1, 2, 3].map((star) => {
+              const isActive = star <= starsCount
+              return (
+                <span
+                  key={star}
+                  style={{
+                    color: isActive ? 'hsl(45 100% 55%)' : 'hsl(220 10% 25%)',
+                    animation: isActive 
+                      ? `star-pop-bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both` 
+                      : `star-fade-in 0.3s ease forwards`,
+                    animationDelay: isActive ? `${(star - 1) * 0.15}s` : '0s',
+                    opacity: isActive ? 1 : 0.25,
+                    display: 'inline-block',
+                  }}
+                >
+                  ★
+                </span>
+              )
+            })}
+          </div>
+          <div
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 800,
+              color: 'white',
+              letterSpacing: '0.02em',
+            }}
+            id="modal-star-text"
+          >
+            {starText}
+          </div>
+        </div>
+
         {isNewPersonalBest && (
           <div
             style={{

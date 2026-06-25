@@ -79,6 +79,7 @@ export async function GET(request: Request) {
           select: {
             id: true,
             username: true,
+            displayName: true,
             level: true,
             xp: true,
             avatarUrl: true,
@@ -101,6 +102,7 @@ export async function GET(request: Request) {
           select: {
             id: true,
             username: true,
+            displayName: true,
             level: true,
             xp: true,
             avatarUrl: true,
@@ -147,10 +149,10 @@ export async function GET(request: Request) {
       },
       include: {
         requester: {
-          select: { id: true, userId: true, username: true, level: true, xp: true, avatarUrl: true, lastSeenAt: true, selectedFrame: true, selectedTitle: true }
+          select: { id: true, userId: true, username: true, displayName: true, level: true, xp: true, avatarUrl: true, lastSeenAt: true, selectedFrame: true, selectedTitle: true }
         },
         addressee: {
-          select: { id: true, userId: true, username: true, level: true, xp: true, avatarUrl: true, lastSeenAt: true, selectedFrame: true, selectedTitle: true }
+          select: { id: true, userId: true, username: true, displayName: true, level: true, xp: true, avatarUrl: true, lastSeenAt: true, selectedFrame: true, selectedTitle: true }
         }
       }
     })
@@ -167,7 +169,7 @@ export async function GET(request: Request) {
       },
       include: {
         requester: {
-          select: { id: true, username: true, level: true, xp: true, avatarUrl: true, selectedFrame: true, selectedTitle: true }
+          select: { id: true, username: true, displayName: true, level: true, xp: true, avatarUrl: true, selectedFrame: true, selectedTitle: true }
         }
       }
     })
@@ -181,7 +183,7 @@ export async function GET(request: Request) {
       },
       include: {
         addressee: {
-          select: { id: true, username: true, level: true, xp: true, avatarUrl: true, selectedFrame: true, selectedTitle: true }
+          select: { id: true, username: true, displayName: true, level: true, xp: true, avatarUrl: true, selectedFrame: true, selectedTitle: true }
         }
       }
     })

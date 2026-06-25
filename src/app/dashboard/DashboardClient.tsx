@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import { GAMES_REGISTRY, GameInfo } from '@/lib/games'
 import DashboardRetentionPanel from '@/components/layout/DashboardRetentionPanel'
 import { prefetchProfileDetails } from '@/lib/prefetch'
 import GameIcon from '@/components/games/GameIcon'
+import PageWrapper from '@/components/layout/PageWrapper'
+import Card from '@/components/layout/Card'
 
 interface Props {
   user: User | null
@@ -16,6 +19,7 @@ interface Props {
 const CATEGORIES = ['All', 'Dual Player', 'Social', 'Puzzle', 'Arcade', 'Strategy', 'Match-3']
 
 export default function DashboardClient({ user, username }: Props) {
+  const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState('All')
 
   useEffect(() => {
@@ -35,7 +39,7 @@ export default function DashboardClient({ user, username }: Props) {
     : GAMES_REGISTRY.filter(g => g.category.toLowerCase() === selectedCategory.toLowerCase())
 
   return (
-    <div style={{ maxWidth: 1100, display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%', marginInline: 'auto' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
+    <PageWrapper style={{ maxWidth: 1100, marginInline: 'auto', gap: '1.25rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       {/* Header */}
       <div>
         <h1 style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.8rem)', fontWeight: 900, marginBottom: '0.25rem', color: 'white' }}>
@@ -46,7 +50,7 @@ export default function DashboardClient({ user, username }: Props) {
         </p>
 
         {!user && (
-          <div className="card" style={{ marginTop: '1rem', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <Card style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'white' }}>🔒 Unlock full features</div>
               <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4 }}>Create a free account to earn XP, unlock achievements, and compete on leaderboards.</div>
@@ -55,15 +59,14 @@ export default function DashboardClient({ user, username }: Props) {
               <Link href="/register" className="btn btn-primary btn-sm" style={{ fontSize: '0.75rem' }}>Create Account</Link>
               <Link href="/login"    className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }}>Sign In</Link>
             </div>
-          </div>
+          </Card>
         )}
       </div>
 
       {/* Spotlight Featured Game Card */}
-      <div className="card animate-pulse-glow" style={{
+      <Card className="animate-pulse-glow" style={{
         background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.12), hsl(270 80% 60% / 0.12))',
         border: '1px solid hsl(220 100% 60% / 0.35)',
-        padding: '1.25rem',
         borderRadius: '20px',
         display: 'flex',
         alignItems: 'center',
@@ -87,7 +90,7 @@ export default function DashboardClient({ user, username }: Props) {
         <Link href={`/dashboard/games/${featuredGame.slug}`} className="btn btn-primary" style={{ borderRadius: 12, padding: '0.5rem 1.25rem', fontSize: '0.85rem' }} id="spotlight-play-btn">
           🚀 Play Spotlight
         </Link>
-      </div>
+      </Card>
 
       {/* Engagement & Daily claim widgets */}
       <DashboardRetentionPanel user={user} />
@@ -104,10 +107,9 @@ export default function DashboardClient({ user, username }: Props) {
           scrollbarWidth: 'none',
         }} id="quick-play-row">
           {quickPlayGames.map(game => (
-            <Link
+            <Card
               key={`quick-${game.slug}`}
-              href={`/dashboard/games/${game.slug}`}
-              className="card card-hover"
+              onClick={() => router.push(`/dashboard/games/${game.slug}`)}
               style={{
                 flex: '0 0 130px',
                 padding: '0.9rem 0.5rem',
@@ -116,8 +118,6 @@ export default function DashboardClient({ user, username }: Props) {
                 alignItems: 'center',
                 textAlign: 'center',
                 gap: '0.4rem',
-                textDecoration: 'none',
-                borderRadius: 14,
               }}
               id={`quick-play-${game.slug}`}
             >
@@ -126,7 +126,7 @@ export default function DashboardClient({ user, username }: Props) {
               <span style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: 'hsl(220 20% 16%)', color: 'hsl(220 10% 60%)', fontWeight: 600 }}>
                 {game.category}
               </span>
-            </Link>
+            </Card>
           ))}
         </div>
       </div>
@@ -176,14 +176,12 @@ export default function DashboardClient({ user, username }: Props) {
         {/* 2-Columns grid on mobile, maps to custom css classes */}
         <div className="dashboard-games-grid stagger" id="games-grid-container">
           {filteredGames.map((game) => (
-            <Link
+            <Card
               key={game.slug}
-              href={`/dashboard/games/${game.slug}`}
-              className="card card-hover dashboard-game-card animate-slideUp"
-              style={{
-                borderRadius: 14,
-              }}
+              onClick={() => router.push(`/dashboard/games/${game.slug}`)}
+              className="dashboard-game-card animate-slideUp cursor-pointer"
               id={`game-card-${game.slug}`}
+              style={{ display: 'flex', flexDirection: 'column' }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.4rem' }}>
                 <GameIcon slug={game.slug} size={30} />
@@ -212,7 +210,7 @@ export default function DashboardClient({ user, username }: Props) {
                 </span>
                 <span style={{ fontSize: '0.72rem', color: 'hsl(220 100% 65%)', fontWeight: 800 }}>Play →</span>
               </div>
-            </Link>
+            </Card>
           ))}
           {filteredGames.length === 0 && (
             <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '3rem', color: 'hsl(220 10% 50%)', fontSize: '0.8rem' }}>
@@ -221,6 +219,6 @@ export default function DashboardClient({ user, username }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </PageWrapper>
   )
 }

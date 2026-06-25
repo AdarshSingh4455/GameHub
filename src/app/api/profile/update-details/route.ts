@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { username, title, avatarUrl } = await request.json()
+    const { username, displayName, avatarUrl } = await request.json()
 
     // Fetch profile
     const profile = await prisma.profile.findUnique({
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    const updateData: { username?: string; selectedTitle?: string | null; avatarUrl?: string | null } = {}
+    const updateData: { username?: string; displayName?: string | null; avatarUrl?: string | null } = {}
 
     // Username update
     if (username !== undefined) {
@@ -48,10 +48,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // Title update (non-unique, editable)
-    if (title !== undefined) {
-      const trimmedTitle = title.trim()
-      updateData.selectedTitle = trimmedTitle || null
+    // Display Name update (non-unique, editable, max 25 chars)
+    if (displayName !== undefined) {
+      const trimmedDisplayName = displayName.trim()
+      if (trimmedDisplayName.length > 25) {
+        return NextResponse.json({ error: 'Display name must be 25 characters or less' }, { status: 400 })
+      }
+      updateData.displayName = trimmedDisplayName || null
     }
 
     // Profile picture/Avatar URL update
@@ -95,7 +98,7 @@ export async function POST(request: Request) {
       success: true,
       profile: {
         username: updatedProfile.username,
-        title: updatedProfile.selectedTitle,
+        displayName: updatedProfile.displayName,
         avatarUrl: updatedProfile.avatarUrl
       }
     }, { status: 200 })

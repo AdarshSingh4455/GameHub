@@ -7,6 +7,8 @@ import { DAILY_REWARD_TABLE, getUtcDaysElapsed } from '@/lib/dailyRewards'
 import { getLevelProgress } from '@/lib/xpUtils'
 import type { AchievementProgressInfo } from '@/lib/achievements'
 import { getCachedProfileDetails, prefetchProfileDetails } from '@/lib/prefetch'
+import PageWrapper from '@/components/layout/PageWrapper'
+import Card from '@/components/layout/Card'
 
 interface ProfileStats {
   level: number
@@ -292,7 +294,7 @@ export default function RewardsPage() {
 
   if (loading && !stats) {
     return (
-      <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }} className="mobile-centered-wrapper">
+      <PageWrapper style={{ maxWidth: 1000, marginInline: 'auto' }} className="mobile-centered-wrapper">
         <style>{`
           @keyframes skeleton-shimmer {
             0% { background-position: -200% 0; }
@@ -335,7 +337,7 @@ export default function RewardsPage() {
             </div>
           ))}
         </div>
-      </div>
+      </PageWrapper>
     )
   }
 
@@ -347,7 +349,7 @@ export default function RewardsPage() {
   } = getLevelProgress(stats.xp)
 
   return (
-    <div className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
+    <PageWrapper className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 1000, marginInline: 'auto' }}>
       {/* Header */}
       <div>
         <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: 900, marginBottom: '0.25rem' }}>🎯 Rewards Hub</h1>
@@ -359,7 +361,7 @@ export default function RewardsPage() {
       {/* Row 1: XP Progress, Streaks, Coins */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
         {/* Level Progression */}
-        <div className="card glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h2 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 50%)', letterSpacing: '0.05em', margin: 0 }}>
             XP Progression
           </h2>
@@ -375,10 +377,10 @@ export default function RewardsPage() {
               {xpToNextLevel} XP to Level {stats.level + 1}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Login Streak */}
-        <div className="card glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <h2 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 50%)', letterSpacing: '0.05em', margin: 0 }}>
             Login Streak
           </h2>
@@ -393,10 +395,10 @@ export default function RewardsPage() {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Coins Wallet */}
-        <div className="card glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <h2 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 50%)', letterSpacing: '0.05em', margin: 0 }}>
             Coins Balance
           </h2>
@@ -411,11 +413,11 @@ export default function RewardsPage() {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Row 2: Daily Login Rewards Calendar */}
-      <div className="card glass" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>🎁 Daily Login Calendar</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.15rem' }}>
@@ -524,10 +526,10 @@ export default function RewardsPage() {
             <strong style={{ fontFamily: 'monospace', color: 'white' }}>{formatCountdown(countdown)}</strong>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Row 3: Upcoming Unlocks */}
-      <div className="card glass" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         <div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>🔓 Upcoming Unlocks</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.15rem' }}>
@@ -539,17 +541,13 @@ export default function RewardsPage() {
           {UPCOMING_UNLOCKS.map((unlock) => {
             const isUnlocked = stats.level >= unlock.level
             return (
-              <div
+              <Card
                 key={unlock.level}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '1rem',
-                  padding: '1rem',
                   background: isUnlocked ? 'hsl(220 20% 12% / 0.3)' : 'hsl(220 20% 7%)',
-                  border: '1px solid',
-                  borderColor: isUnlocked ? 'hsl(220 100% 65% / 0.15)' : 'hsl(220 20% 14%)',
-                  borderRadius: '12px',
                   opacity: isUnlocked ? 0.75 : 1,
                 }}
               >
@@ -578,14 +576,14 @@ export default function RewardsPage() {
                     {unlock.description}
                   </div>
                 </div>
-              </div>
+              </Card>
             )
           })}
         </div>
-      </div>
+      </Card>
 
       {/* Row 4: Achievements List */}
-      <div className="card glass" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>🎯 Badges & Achievements</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.15rem' }}>
@@ -595,18 +593,14 @@ export default function RewardsPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
           {stats.achievementProgress.map((ach) => (
-            <div
+            <Card
               key={ach.slug}
-              className="card"
               style={{
-                padding: '1.25rem',
                 display: 'flex',
                 gap: '1rem',
                 alignItems: 'flex-start',
                 background: ach.isUnlocked ? 'hsl(220 20% 12% / 0.4)' : 'hsl(220 20% 8%)',
-                borderColor: ach.isUnlocked ? 'hsl(45 100% 55% / 0.15)' : 'hsl(220 20% 14%)',
                 opacity: ach.isUnlocked ? 1 : 0.65,
-                transition: 'opacity 0.2s',
               }}
             >
               <div
@@ -656,7 +650,7 @@ export default function RewardsPage() {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
 
@@ -665,10 +659,10 @@ export default function RewardsPage() {
             ⚠️ Guest achievements progress is not tracked. Create an account to unlock badges permanently!
           </p>
         )}
-      </div>
+      </Card>
 
       {/* Row 5: Owned Chat Packs */}
-      <div className="card glass" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>💬 Owned Chat Packs</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.15rem' }}>
@@ -678,16 +672,13 @@ export default function RewardsPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
           {stats.ownedChatPacks.map((pack) => (
-            <div
+            <Card
               key={pack.id}
-              className="card"
               style={{
-                padding: '1.25rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.75rem',
                 background: 'hsl(220 20% 8%)',
-                borderColor: 'hsl(220 20% 14%)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -719,7 +710,7 @@ export default function RewardsPage() {
                   ))}
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
           {stats.ownedChatPacks.length === 0 && (
             <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '2rem 1rem', color: 'hsl(220 10% 45%)', fontSize: '0.82rem', border: '1px dashed hsl(220 15% 16%)', borderRadius: 12 }}>
@@ -727,7 +718,7 @@ export default function RewardsPage() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </Card>
+    </PageWrapper>
   )
 }

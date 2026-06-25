@@ -166,8 +166,10 @@ export async function GET(
       profile: {
         id: profile.id,
         username: profile.username,
+        displayName: profile.displayName,
         avatarUrl: profile.avatarUrl,
         selectedTitle: profile.selectedTitle,
+        selectedFrame: profile.selectedFrame,
         level: profile.level,
         xp: profile.xp,
         coins: profile.coins,

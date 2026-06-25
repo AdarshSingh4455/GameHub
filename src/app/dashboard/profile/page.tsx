@@ -634,7 +634,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ width: '100%', maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn mobile-centered-wrapper">
+      <div className="animate-fadeIn profile-page-container" style={{ gap: '1.5rem' }}>
         <ProfileHeaderSkeleton />
         <OverviewSkeleton />
       </div>
@@ -700,7 +700,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
+    <div className="animate-fadeIn safe-bottom-padding profile-page-container">
       
       {/* Profile Header Card */}
       <div

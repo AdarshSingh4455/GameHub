@@ -213,7 +213,7 @@ export default function LeaderboardClient() {
   const myDetails = getRankDetails(myMmr)
 
   return (
-    <div className="animate-fadeIn safe-bottom-padding" style={{ maxWidth: 760, margin: '0 auto' }}>
+    <div className="animate-fadeIn safe-bottom-padding leaderboard-page-container">
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}>🏆 Global Leaderboard</h1>

@@ -425,7 +425,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div style={{ maxWidth: 840, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fadeIn">
+    <div className="animate-fadeIn admin-page-container">
       {/* Header */}
       <div>
         <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}>🛠️ Super Admin Control Center</h1>
@@ -1333,7 +1333,7 @@ export default function AdminPage() {
                                 style={{ width: 28, height: 28, borderRadius: '50%', background: 'hsl(220 20% 8%)', border: u.role === 'ADMIN' ? '1px solid hsl(45 100% 55%)' : 'none' }}
                               />
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight: 700, color: 'white' }}>{u.displayName || u.username}</span>
+                                <span style={{ fontWeight: 700, color: 'white' }}>{u.displayName || (u.username.includes('@') ? u.username.split('@')[0] : u.username)}</span>
                                 <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)' }}>@{u.username}</span>
                               </div>
                               {u.role === 'ADMIN' && (
@@ -1397,7 +1397,7 @@ export default function AdminPage() {
                           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                               <span style={{ fontWeight: 750, fontSize: '0.95rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {u.displayName || u.username}
+                                {u.displayName || (u.username.includes('@') ? u.username.split('@')[0] : u.username)}
                               </span>
                               {u.role === 'ADMIN' && (
                                 <span style={{ fontSize: '0.6rem', background: 'hsl(45 100% 50% / 0.15)', color: 'hsl(45 100% 55%)', padding: '0.1rem 0.35rem', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase' }}>Admin</span>

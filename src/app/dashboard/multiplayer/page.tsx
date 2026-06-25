@@ -933,7 +933,7 @@ export default function MultiplayerPage() {
 
   if (dashboardLoading && screen === 'MENU') {
     return (
-      <div style={{ maxWidth: 900, margin: '2rem auto', padding: '1.5rem', color: 'hsl(var(--text-primary))', width: '100%' }} className="mobile-centered-wrapper">
+      <div className="animate-fadeIn multiplayer-loading-container">
         <div className="text-center" style={{ marginBottom: '2.5rem' }}>
           <div style={{ width: 100, height: 16, backgroundColor: 'hsl(var(--bg-elevated))', borderRadius: 8, margin: '0 auto 1rem', animation: 'pulse 1.5s infinite' }} />
           <div style={{ width: 300, height: 40, backgroundColor: 'hsl(var(--bg-elevated))', borderRadius: 8, margin: '0 auto', animation: 'pulse 1.5s infinite' }} />
@@ -960,8 +960,7 @@ export default function MultiplayerPage() {
   return (
     <div
       data-screen={screen}
-      style={{ width: '100%', maxWidth: 1100, margin: '0 auto', padding: '1rem', boxSizing: 'border-box' }}
-      className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper"
+      className="animate-fadeIn safe-bottom-padding multiplayer-page-container"
     >
       {/* ── Screen: MENU ── */}
       {screen === 'MENU' && (
@@ -1215,50 +1214,55 @@ export default function MultiplayerPage() {
                             border: '1px solid hsl(var(--border-subtle) / 0.8)',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '1rem',
+                            gap: '0.75rem',
                             boxSizing: 'border-box',
                             width: '100%'
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ position: 'relative', flexShrink: 0 }}>
-                              <Avatar
-                                avatarUrl={invite.sender.avatarUrl}
-                                username={invite.sender.username}
-                                selectedFrame={invite.sender.selectedFrame}
-                                size={44}
-                              />
-                            </div>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: 750, fontSize: '0.95rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {senderName}
-                                </span>
-                                {invite.sender.selectedTitle && (
-                                  <span style={{ fontSize: '0.62rem', background: 'hsl(45 100% 50% / 0.15)', color: 'hsl(45 100% 55%)', padding: '0.1rem 0.35rem', borderRadius: 4, fontWeight: 700 }}>
-                                    {invite.sender.selectedTitle}
-                                  </span>
-                                )}
-                              </div>
-                              <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', display: 'block' }}>
-                                @{invite.sender.username}
+                          {/* 1. Avatar */}
+                          <div style={{ position: 'relative', width: 'fit-content' }}>
+                            <Avatar
+                              avatarUrl={invite.sender.avatarUrl}
+                              username={invite.sender.username}
+                              selectedFrame={invite.sender.selectedFrame}
+                              size={44}
+                            />
+                          </div>
+
+                          {/* 2. Display Name */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 750, fontSize: '0.95rem', color: 'white' }}>
+                              {senderName}
+                            </span>
+                            {invite.sender.selectedTitle && (
+                              <span style={{ fontSize: '0.62rem', background: 'hsl(45 100% 50% / 0.15)', color: 'hsl(45 100% 55%)', padding: '0.1rem 0.35rem', borderRadius: 4, fontWeight: 700 }}>
+                                {invite.sender.selectedTitle}
                               </span>
-                            </div>
+                            )}
                           </div>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.82rem', borderTop: '1px solid hsl(var(--border-subtle) / 0.6)', paddingTop: '0.75rem' }}>
-                            <div style={{ color: 'white', fontWeight: 600 }}>
-                              🎮 Game: <span style={{ color: 'hsl(220 100% 70%)' }}>{gameName}</span> (Code: <span style={{ fontFamily: 'monospace' }}>{invite.room.roomCode}</span>)
-                            </div>
-                            <div style={{ color: 'hsl(var(--text-secondary))', fontStyle: 'italic' }}>
-                              "{inviteMessage}"
-                            </div>
-                            <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))', marginTop: '0.15rem' }}>
-                              🕒 {timestamp}
-                            </div>
+                          {/* 3. @username */}
+                          <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', marginTop: '-0.25rem' }}>
+                            @{invite.sender.username}
+                          </span>
+
+                          {/* 4. Game Name */}
+                          <div style={{ color: 'white', fontWeight: 600, fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                            🎮 Game: <span style={{ color: 'hsl(220 100% 70%)' }}>{gameName}</span> (Code: <span style={{ fontFamily: 'monospace' }}>{invite.room.roomCode}</span>)
                           </div>
 
-                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                          {/* 5. Invite message */}
+                          <div style={{ color: 'hsl(var(--text-secondary))', fontStyle: 'italic', fontSize: '0.82rem' }}>
+                            "{inviteMessage}"
+                          </div>
+
+                          {/* 6. Timestamp */}
+                          <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))' }}>
+                            🕒 {timestamp}
+                          </div>
+
+                          {/* 7. Accept / Reject buttons */}
+                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                             <button
                               className="btn btn-primary"
                               id={`accept-invite-btn-${invite.id}`}
@@ -1267,7 +1271,11 @@ export default function MultiplayerPage() {
                                 padding: '0.45rem 1rem',
                                 fontSize: '0.8rem',
                                 borderRadius: 10,
-                                minHeight: 40
+                                minHeight: 40,
+                                fontWeight: 700,
+                                background: 'linear-gradient(135deg, hsl(142 70% 45%), hsl(142 70% 35%))',
+                                color: '#fff',
+                                cursor: 'pointer'
                               }}
                               onClick={() => handleAcceptInvite(invite)}
                               disabled={isLoading}
@@ -1284,7 +1292,8 @@ export default function MultiplayerPage() {
                                 borderRadius: 10,
                                 minHeight: 40,
                                 color: 'hsl(var(--danger))',
-                                borderColor: 'hsl(var(--danger) / 0.3)'
+                                borderColor: 'hsl(var(--danger) / 0.3)',
+                                cursor: 'pointer'
                               }}
                               onClick={() => handleDeclineInvite(invite)}
                               disabled={isLoading}
@@ -1377,7 +1386,7 @@ export default function MultiplayerPage() {
 
       {/* ── Screen: CREATE ── */}
       {screen === 'CREATE' && (
-        <div className="card glass" style={{ padding: '2rem', maxWidth: 500, margin: '0 auto', border: '1px solid hsl(var(--border-subtle))' }}>
+        <div className="card glass multiplayer-dialog-card">
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem', textAlign: 'center' }}>Host Game Room</h2>
 
           <div style={{ marginBottom: '1.5rem' }}>
@@ -1458,7 +1467,7 @@ export default function MultiplayerPage() {
 
       {/* ── Screen: JOIN ── */}
       {screen === 'JOIN' && (
-        <div className="card glass" style={{ padding: '2rem', maxWidth: 500, margin: '0 auto', border: '1px solid hsl(var(--border-subtle))' }}>
+        <div className="card glass multiplayer-dialog-card">
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem', textAlign: 'center' }}>Enter Room Code</h2>
 
           <div style={{ marginBottom: '2rem' }}>

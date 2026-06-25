@@ -90,7 +90,7 @@ export default function ProfileClient({
   }
 
   return (
-    <div className="animate-fadeIn mobile-centered-wrapper" style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="animate-fadeIn public-profile-container">
       
       {/* Profile Header Card */}
       <div className="card glass profile-header-container" style={{ padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative', overflow: 'hidden' }}>

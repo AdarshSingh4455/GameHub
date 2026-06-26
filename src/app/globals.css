@@ -1459,15 +1459,11 @@ body {
 /* Responsive container wrappers to prevent inline style locking on mobile viewports */
 .multiplayer-page-container {
   width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
   padding: 1rem;
   box-sizing: border-box;
 }
 .multiplayer-loading-container {
   width: 100%;
-  max-width: 900px;
-  margin: 2rem auto;
   padding: 1.5rem;
   color: hsl(var(--text-primary));
   box-sizing: border-box;
@@ -1475,8 +1471,6 @@ body {
 .multiplayer-dialog-card {
   padding: 2rem;
   width: 100%;
-  max-width: 500px;
-  margin: 0 auto;
   border: 1px solid hsl(var(--border-subtle));
   box-sizing: border-box;
 }
@@ -1515,9 +1509,18 @@ body {
 }
 
 @media (max-width: 767px) {
+  body:has(.multiplayer-page-container) .app-content {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
   .multiplayer-page-container,
   .multiplayer-loading-container,
-  .multiplayer-dialog-card,
+  .multiplayer-dialog-card {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
   .profile-page-container,
   .public-profile-container,
   .leaderboard-page-container,

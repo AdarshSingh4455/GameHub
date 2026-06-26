@@ -25,13 +25,18 @@ exports.MOCK_COSMETIC_ITEMS = [
     { id: 'item-chat-pro', name: 'Pro Pack', type: 'CHAT_PACK', priceCoins: 90, assetUrl: 'Pro', isDefault: false, metadata: { messages: ['Calculated. 😎', 'GG! 🏆', 'GG WP! 🤝', 'Next game? 🎮'] } },
     { id: 'item-chat-cricket', name: 'Cricket Pack', type: 'CHAT_PACK', priceCoins: 80, assetUrl: 'Cricket', isDefault: false, metadata: { messages: ['Sixer! 🏏', 'Bowled him! 🎯', 'Howzzat! 📢', 'Good bowling! ⚾'] } },
     { id: 'item-chat-legend', name: 'Legend Pack', type: 'CHAT_PACK', priceCoins: 120, assetUrl: 'Legend', isDefault: false, metadata: { messages: ['What A Move! 🧠', 'Too Easy! ⚡', 'Close One! 😱', 'Good Luck! 🍀'] } },
+    { id: 'item-chat-cricket-sledge', name: 'Cricket Sledge Pack', type: 'CHAT_PACK', priceCoins: 120, assetUrl: 'Cricket Sledge', isDefault: false, metadata: { messages: ['Nice Duck 🦆', 'Lucky Shot 😏', 'Pressure 😈', 'Easy Catch 😂'] } },
+    { id: 'item-chat-dating', name: 'Dating Pack', type: 'CHAT_PACK', priceCoins: 120, assetUrl: 'Dating', isDefault: false, metadata: { messages: ['Nice Move 🙂', 'Impressed ✨', 'Cute Play 🌸', 'Good Choice 💫'] } },
+    { id: 'item-chat-savage', name: 'Savage Pack', type: 'CHAT_PACK', priceCoins: 150, assetUrl: 'Savage', isDefault: false, metadata: { messages: ['Too Slow', 'Skill Issue', 'Lucky Win', 'Try Again'] } },
     // Scratchers
     { id: 'item-scratch-bronze', name: 'Bronze Scratcher', type: 'SCRATCHER', priceCoins: 20, assetUrl: 'Bronze', isDefault: false, metadata: { rarity: 'COMMON', description: 'Scratch to win basic Coins or XP.' } },
     { id: 'item-scratch-silver', name: 'Silver Scratcher', type: 'SCRATCHER', priceCoins: 50, assetUrl: 'Silver', isDefault: false, metadata: { rarity: 'RARE', description: 'Scratch to win decent Coins, XP, or Rare items.' } },
     { id: 'item-scratch-gold', name: 'Gold Scratcher', type: 'SCRATCHER', priceCoins: 100, assetUrl: 'Gold', isDefault: false, metadata: { rarity: 'EPIC', description: 'Scratch to win huge Coins, XP, or Epic items.' } },
     { id: 'item-scratch-legendary', name: 'Legendary Scratcher', type: 'SCRATCHER', priceCoins: 250, assetUrl: 'Legendary', isDefault: false, metadata: { rarity: 'LEGENDARY', description: 'Scratch to win Legendary rewards!' } },
     // Titles
-    { id: 'title-rookie', name: 'Rookie', type: 'TITLE', priceCoins: 50, isDefault: false, metadata: { description: 'New kid on the block' } },
+    { id: 'title-rookie', name: 'Rookie', type: 'TITLE', priceCoins: 0, isDefault: false, metadata: { minWins: 25, description: 'Unlocked at 25 Wins' } },
+    { id: 'title-challenger', name: 'Challenger', type: 'TITLE', priceCoins: 0, isDefault: false, metadata: { minWins: 100, description: 'Unlocked at 100 Wins' } },
+    { id: 'title-immortal', name: 'Immortal', type: 'TITLE', priceCoins: 0, isDefault: false, metadata: { minWins: 500, description: 'Unlocked at 500 Wins' } },
     { id: 'title-champion', name: 'Champion', type: 'TITLE', priceCoins: 120, isDefault: false, metadata: { description: 'A proven winner' } },
     { id: 'title-legend', name: 'Legend', type: 'TITLE', priceCoins: 200, isDefault: false, metadata: { description: 'Known by everyone' } },
     { id: 'title-grandmaster', name: 'Grandmaster', type: 'TITLE', priceCoins: 300, isDefault: false, metadata: { description: 'Absolute master of games' } },
@@ -53,7 +58,14 @@ exports.MOCK_COSMETIC_ITEMS = [
     { id: 'frame-silver', name: 'Silver', type: 'AVATAR_FRAME', priceCoins: 100, isDefault: false, metadata: { description: 'Polished silver lining' } },
     { id: 'frame-gold', name: 'Gold', type: 'AVATAR_FRAME', priceCoins: 180, isDefault: false, metadata: { description: 'Gleaming golden borders' } },
     { id: 'frame-diamond', name: 'Diamond', type: 'AVATAR_FRAME', priceCoins: 250, isDefault: false, metadata: { description: 'Sparkling diamond shell' } },
-    { id: 'frame-mythic', name: 'Mythic', type: 'AVATAR_FRAME', priceCoins: 400, isDefault: false, metadata: { description: 'Ascendant legendary border' } }
+    { id: 'frame-mythic', name: 'Mythic', type: 'AVATAR_FRAME', priceCoins: 400, isDefault: false, metadata: { description: 'Ascendant legendary border' } },
+    { id: 'frame-lvl-bronze', name: 'Bronze Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 15, description: 'Requires Level 15' } },
+    { id: 'frame-lvl-silver', name: 'Silver Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 30, description: 'Requires Level 30' } },
+    { id: 'frame-lvl-gold', name: 'Gold Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 45, description: 'Requires Level 45' } },
+    { id: 'frame-lvl-platinum', name: 'Platinum Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 60, description: 'Requires Level 60' } },
+    { id: 'frame-lvl-diamond', name: 'Diamond Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 75, description: 'Requires Level 75' } },
+    { id: 'frame-lvl-master', name: 'Master Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 90, description: 'Requires Level 90' } },
+    { id: 'frame-lvl-legendary', name: 'Legendary Frame', type: 'AVATAR_FRAME', priceCoins: 0, isDefault: false, metadata: { minLevel: 100, description: 'Requires Level 100' } }
 ];
 let cachedDb = null;
 function loadDb() {
@@ -114,6 +126,7 @@ function loadDb() {
             selectedTitle: null,
             selectedBadge: null,
             selectedFrame: null,
+            selectedChatPack: null,
             selectedTheme: null,
             selectedEffect: null,
             currentRank: null,
@@ -136,6 +149,7 @@ function loadDb() {
             selectedTitle: null,
             selectedBadge: null,
             selectedFrame: null,
+            selectedChatPack: null,
             selectedTheme: null,
             selectedEffect: null,
             currentRank: null,
@@ -158,6 +172,7 @@ function loadDb() {
             selectedTitle: null,
             selectedBadge: null,
             selectedFrame: null,
+            selectedChatPack: null,
             selectedTheme: null,
             selectedEffect: null,
             currentRank: null,
@@ -289,6 +304,7 @@ function getOrCreateProfile(db, userId, overrideName) {
             selectedTitle: null,
             selectedBadge: null,
             selectedFrame: null,
+            selectedChatPack: null,
             selectedTheme: null,
             selectedEffect: null,
             currentRank: null,
@@ -308,6 +324,8 @@ function getOrCreateProfile(db, userId, overrideName) {
         profile.selectedBadge = null;
     if (profile.selectedFrame === undefined)
         profile.selectedFrame = null;
+    if (profile.selectedChatPack === undefined)
+        profile.selectedChatPack = null;
     if (profile.selectedTheme === undefined)
         profile.selectedTheme = null;
     if (profile.selectedEffect === undefined)
@@ -419,6 +437,8 @@ function createModelMock(modelName) {
                                     p.selectedBadge = null;
                                 if (p.selectedFrame === undefined)
                                     p.selectedFrame = null;
+                                if (p.selectedChatPack === undefined)
+                                    p.selectedChatPack = null;
                                 if (p.selectedTheme === undefined)
                                     p.selectedTheme = null;
                                 if (p.selectedEffect === undefined)

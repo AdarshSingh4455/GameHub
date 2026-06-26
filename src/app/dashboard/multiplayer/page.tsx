@@ -9,6 +9,7 @@ import { useSocket } from '@/lib/contexts/SocketContext'
 import PartyPanel from '@/components/layout/PartyPanel'
 import Avatar from '@/components/shared/Avatar'
 import SocketDiagnostics from '@/components/layout/SocketDiagnostics'
+import GameIcon from '@/components/games/GameIcon'
 
 interface Player {
   id: string
@@ -153,6 +154,26 @@ export default function MultiplayerPage() {
   const [dashboardLoading, setDashboardLoading] = useState(true)
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [staleRoom, setStaleRoom] = useState<{ roomCode: string; roomId: string } | null>(null)
+  const [hasStuckMatch, setHasStuckMatch] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkStuckMatch = () => {
+        let found = false
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith('gamehub_room_recovery_')) {
+            found = true
+            break
+          }
+        }
+        setHasStuckMatch(found)
+      }
+      checkStuckMatch()
+      window.addEventListener('storage', checkStuckMatch)
+      return () => window.removeEventListener('storage', checkStuckMatch)
+    }
+  }, [screen])
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const chatPollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -976,28 +997,31 @@ export default function MultiplayerPage() {
             <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '1rem' }}>
               Connect with friends, chat in real-time, and challenge opponents!
             </p>
-            <button
-              className="btn"
-              style={{
-                marginTop: '1rem',
-                fontSize: '0.85rem',
-                padding: '0.4rem 1.2rem',
-                borderRadius: 20,
-                border: '1px solid hsl(var(--danger) / 0.4)',
-                color: 'hsl(var(--danger))',
-                backgroundColor: 'hsl(var(--danger) / 0.05)',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                margin: '1rem auto 0 auto'
-              }}
-              onClick={handleEmergencyClearData}
-              id="emergency-clear-match-btn"
-            >
-              ⚠️ Clear Stuck Match Data
-            </button>
+            {hasStuckMatch && (
+              <button
+                className="btn animate-pulse"
+                style={{
+                  marginTop: '1rem',
+                  fontSize: '0.85rem',
+                  padding: '0.4rem 1.2rem',
+                  borderRadius: 20,
+                  border: '1px solid hsl(var(--danger) / 0.4)',
+                  color: 'hsl(var(--danger))',
+                  backgroundColor: 'hsl(var(--danger) / 0.05)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  margin: '1rem auto 0 auto',
+                  boxShadow: '0 0 15px hsl(var(--danger) / 0.2)'
+                }}
+                onClick={handleEmergencyClearData}
+                id="emergency-clear-match-btn"
+              >
+                ⚠️ Clear Stuck Match Data
+              </button>
+            )}
           </div>
 
           <div className="multiplayer-grid">
@@ -1012,7 +1036,8 @@ export default function MultiplayerPage() {
                     minHeight: 48,
                     background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))',
                     color: '#fff',
-                    fontWeight: 700
+                    fontWeight: 700,
+                    borderRadius: 12
                   }}
                   onClick={() => setScreen('CREATE')}
                 >
@@ -1027,7 +1052,8 @@ export default function MultiplayerPage() {
                     backgroundColor: 'hsl(var(--bg-elevated))',
                     border: '1px solid hsl(var(--border-subtle))',
                     color: 'hsl(var(--text-primary))',
-                    fontWeight: 700
+                    fontWeight: 700,
+                    borderRadius: 12
                   }}
                   onClick={() => setScreen('JOIN')}
                 >
@@ -1043,34 +1069,36 @@ export default function MultiplayerPage() {
                 {SUPPORTED_MULTIPLAYER_GAMES.map(game => (
                   <div
                     key={game.slug}
-                    className="card glass"
+                    className="card glass hover-lift"
                     style={{
-                      padding: '1rem',
+                      padding: '1.25rem',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '0.75rem',
                       border: '1px solid hsl(var(--border-subtle))',
-                      borderRadius: 16
+                      borderRadius: 16,
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '1.75rem' }}>{game.emoji}</span>
-                      <h4 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>{game.name}</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <GameIcon slug={game.slug} size={36} />
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>{game.name}</h4>
                     </div>
-                    <p style={{ fontSize: '0.78rem', color: 'hsl(var(--text-muted))', margin: 0, lineHeight: 1.3 }}>{game.desc}</p>
-                    <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', margin: 0, lineHeight: 1.4 }}>{game.desc}</p>
+                    <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.25rem' }}>
                       <button
                         className="btn"
                         style={{
                           flex: 1,
-                          padding: '0.4rem 0.8rem',
-                          fontSize: '0.78rem',
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.8rem',
                           backgroundColor: 'hsl(var(--success) / 0.12)',
                           border: '1px solid hsl(var(--success) / 0.25)',
                           color: 'hsl(var(--success))',
                           fontWeight: 700,
                           borderRadius: 10,
-                          minHeight: 38
+                          minHeight: 38,
+                          cursor: 'pointer'
                         }}
                         onClick={() => handleQuickJoin(game.slug)}
                         disabled={isLoading}
@@ -1081,13 +1109,14 @@ export default function MultiplayerPage() {
                         className="btn"
                         style={{
                           flex: 1,
-                          padding: '0.4rem 0.8rem',
-                          fontSize: '0.78rem',
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.8rem',
                           backgroundColor: 'hsl(var(--bg-elevated))',
                           border: '1px solid hsl(var(--border-subtle))',
                           fontWeight: 700,
                           borderRadius: 10,
-                          minHeight: 38
+                          minHeight: 38,
+                          cursor: 'pointer'
                         }}
                         onClick={() => {
                           setSelectedGame(game.slug)
@@ -1106,73 +1135,6 @@ export default function MultiplayerPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Active Party System V2 */}
               <PartyPanel />
-
-              {/* Notification Center */}
-              <div className="card glass" style={{ padding: '1.5rem', border: '1px solid hsl(var(--border-subtle))' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  🔔 Notifications Center
-                  {notifications.filter(n => !n.isRead).length > 0 && (
-                    <span style={{
-                      fontSize: '0.75rem',
-                      padding: '0.1rem 0.4rem',
-                      borderRadius: '50%',
-                      backgroundColor: 'hsl(var(--brand-primary))',
-                      color: '#fff',
-                      fontWeight: 700
-                    }}>
-                      {notifications.filter(n => !n.isRead).length}
-                    </span>
-                  )}
-                </h3>
-                {notifications.length === 0 ? (
-                  <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.9rem', textAlign: 'center', padding: '1rem 0' }}>
-                    No recent notifications.
-                  </p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: 220, overflowY: 'auto', paddingRight: '0.25rem' }}>
-                    {notifications.map(notif => (
-                      <div
-                        key={notif.id}
-                        style={{
-                          padding: '0.75rem 1rem',
-                          borderRadius: 'var(--radius-md)',
-                          backgroundColor: notif.isRead ? 'hsl(var(--bg-surface) / 0.5)' : 'hsl(var(--bg-surface))',
-                          border: '1px solid hsl(var(--border-subtle))',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '1rem',
-                          opacity: notif.isRead ? 0.7 : 1,
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <span style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', color: notif.isRead ? 'hsl(var(--text-secondary))' : 'hsl(var(--text-primary))' }}>
-                            {notif.title}
-                          </span>
-                          <span style={{ display: 'block', fontSize: '0.75rem', color: 'hsl(var(--text-muted))', marginTop: '0.1rem' }}>
-                            {notif.message}
-                          </span>
-                        </div>
-                        <button
-                          className="btn"
-                          style={{
-                            padding: '0.25rem 0.5rem',
-                            fontSize: '0.75rem',
-                            backgroundColor: 'hsl(var(--bg-elevated))',
-                            border: '1px solid hsl(var(--border-subtle))',
-                            color: 'hsl(var(--text-secondary))',
-                            minHeight: 32
-                          }}
-                          onClick={() => handleDismissNotification(notif.id)}
-                        >
-                          {notif.isRead ? 'Delete' : 'Mark Read'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               {/* Room Invites */}
               <div className="card glass" style={{ padding: '1.5rem', border: '1px solid hsl(var(--border-subtle))' }}>

@@ -6,10 +6,15 @@ import { useToast } from '@/lib/contexts/ToastContext'
 import { validateAndSuggest } from '@/lib/wordValidation'
 import WordValidationModal from '@/components/shared/WordValidationModal'
 import MatchReactions from './MatchReactions'
+import Avatar from '@/components/shared/Avatar'
 
 interface Player {
   userId: string
   username: string
+  displayName?: string | null
+  avatarUrl?: string | null
+  level?: number
+  selectedFrame?: string | null
 }
 
 interface MultiplayerHangmanGameProps {
@@ -269,164 +274,239 @@ export default function MultiplayerHangmanGame({
       )}
 
       {/* 2. PLAYING STAGE */}
-      {stage === 'PLAYING' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: 500 }} className="animate-fadeIn">
-          {/* HUD Turn Indicator */}
-          <div
-            style={{
-              padding: '0.75rem', borderRadius: 12, textAlign: 'center', fontWeight: 800, fontSize: '0.95rem', border: '1px solid',
-              borderColor: isMyTurn ? 'hsl(220 100% 50% / 0.3)' : 'hsl(220 15% 18%)',
-              background: isMyTurn ? 'linear-gradient(90deg, hsl(220 100% 60% / 0.1), hsl(270 80% 60% / 0.1))' : 'hsl(220 20% 8%)',
-              color: isMyTurn ? 'hsl(220 100% 70%)' : 'hsl(220 10% 60%)'
-            }}
-          >
-            {isMyTurn 
-              ? `👉 It is Your Turn! ${timeLeft !== null ? `⏳ ${timeLeft}s` : ''}` 
-              : `⏳ Waiting for ${opponent.username}... ${timeLeft !== null ? `(${timeLeft}s)` : ''}`
-            }
-          </div>
+      {stage === 'PLAYING' && (() => {
+        const me = players.find(p => p.userId === currentUserId) || { userId: currentUserId, username: 'You', avatarUrl: null, level: 1, selectedFrame: null, displayName: null }
+        const opponentUser = players.find(p => p.userId === opponentId) || { userId: opponentId || 'opponent-id', username: opponent.username || 'Opponent', avatarUrl: null, level: 1, selectedFrame: null, displayName: null }
+        const mySolvedCount = opponentWord ? opponentWord.split('').filter((c: string) => c !== '_').length : 0
+        const myTotalWordLength = opponentWord ? opponentWord.length : 0
+        const myProgressPct = myTotalWordLength > 0 ? (mySolvedCount / myTotalWordLength) * 100 : 0
+        const opponentTotalWordLength = myWord ? myWord.length : 0
+        const opponentProgressPct = opponentTotalWordLength > 0 ? (opponentSolvedCount / opponentTotalWordLength) * 100 : 0
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            {/* My Gameboard */}
-            <div style={isMyTurn && timeLeft !== null ? {
-              background: `conic-gradient(from 0deg, hsl(220 100% 60%) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg, rgba(255,255,255,0.05) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg)`,
-              padding: '3px',
-              borderRadius: '16px',
-              boxShadow: '0 0 15px hsl(220 100% 60% / 0.3)',
-              transition: 'background 0.5s linear'
-            } : { padding: '3px' }}>
-              <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderRadius: 14, background: 'hsl(222 20% 10%)', position: 'relative', height: '100%' }}>
-                {isMyTurn && timeLeft !== null && (
-                  <span style={{
-                    position: 'absolute', top: '10px', right: '10px',
-                    backgroundColor: 'hsl(220 100% 50%)', color: 'white',
-                    padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800
-                  }}>
-                    ⏳ {timeLeft}s
-                  </span>
-                )}
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(270 80% 75%)', textTransform: 'uppercase' }}>
-                  Your Puzzle
-                </div>
-                <div style={{ minHeight: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {renderHangmanSVG(myLives)}
-                </div>
-                {/* Masked opponent's word representation */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', flexWrap: 'wrap', margin: '0.5rem 0' }}>
-                  {(opponentWord || '').split('').map((char: string, index: number) => (
-                    <span
-                      key={index}
-                      style={{
-                        width: 14, height: 22, borderBottom: '2px solid', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.95rem', fontWeight: 800, color: char !== '_' ? 'white' : 'transparent',
-                        borderColor: char !== '_' ? 'hsl(220 100% 60%)' : 'hsl(220 15% 25%)'
-                      }}
-                    >
-                      {char !== '_' ? char : ''}
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: 500 }} className="animate-fadeIn">
+            {/* Local Styles for Active Hover / Click Glow effects */}
+            <style>{`
+              .btn-press:active:not(:disabled) {
+                transform: scale(0.9) !important;
+                box-shadow: 0 0 10px hsl(var(--brand-primary) / 0.4) !important;
+              }
+              .active-letter:hover:not(:disabled) {
+                border-color: hsl(var(--brand-primary) / 0.8) !important;
+                color: white !important;
+                background-color: hsl(220 20% 12%) !important;
+              }
+              .progress-bar-glow {
+                box-shadow: 0 0 8px hsl(var(--brand-primary) / 0.5);
+              }
+            `}</style>
+
+            {/* HUD Turn Indicator */}
+            <div
+              style={{
+                padding: '0.75rem', borderRadius: 12, textAlign: 'center', fontWeight: 800, fontSize: '0.95rem', border: '1px solid',
+                borderColor: isMyTurn ? 'hsl(220 100% 50% / 0.3)' : 'hsl(220 15% 18%)',
+                background: isMyTurn ? 'linear-gradient(90deg, hsl(220 100% 60% / 0.1), hsl(270 80% 60% / 0.1))' : 'hsl(220 20% 8%)',
+                color: isMyTurn ? 'hsl(220 100% 70%)' : 'hsl(220 10% 60%)'
+              }}
+            >
+              {isMyTurn 
+                ? `👉 It is Your Turn! ${timeLeft !== null ? `⏳ ${timeLeft}s` : ''}` 
+                : `⏳ Waiting for ${opponentUser.username}... ${timeLeft !== null ? `(${timeLeft}s)` : ''}`
+              }
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              {/* My Gameboard */}
+              <div style={isMyTurn && timeLeft !== null ? {
+                background: `conic-gradient(from 0deg, hsl(220 100% 60%) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg, rgba(255,255,255,0.05) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg)`,
+                padding: '3px',
+                borderRadius: '16px',
+                boxShadow: '0 0 15px hsl(220 100% 60% / 0.3)',
+                transition: 'background 0.5s linear'
+              } : { padding: '3px' }}>
+                <div className="card glass" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', borderRadius: 14, background: 'hsl(222 20% 10%)', position: 'relative', height: '100%' }}>
+                  {isMyTurn && timeLeft !== null && (
+                    <span style={{
+                      position: 'absolute', top: '8px', right: '8px',
+                      backgroundColor: 'hsl(220 100% 50%)', color: 'white',
+                      padding: '0.15rem 0.4rem', borderRadius: '5px', fontSize: '0.65rem', fontWeight: 800, zIndex: 10
+                    }}>
+                      ⏳ {timeLeft}s
                     </span>
-                  ))}
+                  )}
+                  
+                  {/* Player Profile Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Avatar avatarUrl={me?.avatarUrl} username={me?.username} selectedFrame={me?.selectedFrame} size={32} />
+                    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        {me?.displayName || me?.username}
+                      </span>
+                      <span style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))' }}>
+                        Level {me?.level || 1} · Solved: {mySolvedCount}/{myTotalWordLength}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Animated Progress Bar */}
+                  <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div className="progress-bar-glow" style={{ width: `${myProgressPct}%`, height: '100%', background: 'linear-gradient(90deg, hsl(220 100% 60%), hsl(270 80% 60%))', borderRadius: '3px', transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                  </div>
+
+                  <div style={{ minHeight: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {renderHangmanSVG(myLives)}
+                  </div>
+                  {/* Masked opponent's word representation */}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', flexWrap: 'wrap', margin: '0.25rem 0' }}>
+                    {(opponentWord || '').split('').map((char: string, index: number) => (
+                      <span
+                        key={index}
+                        style={{
+                          width: 14, height: 22, borderBottom: '2px solid', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.95rem', fontWeight: 800, color: char !== '_' ? 'white' : 'transparent',
+                          borderColor: char !== '_' ? 'hsl(220 100% 60%)' : 'hsl(220 15% 25%)'
+                        }}
+                      >
+                        {char !== '_' ? char : ''}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'hsl(var(--text-secondary))', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                    <span>❤️</span> <strong style={{ color: 'white' }}>{myLives} Lives</strong>
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', textAlign: 'center' }}>
-                  ❤️ Lives: <strong style={{ color: 'white' }}>{myLives}</strong>
+              </div>
+
+              {/* Opponent Progress Board */}
+              <div style={!isMyTurn && timeLeft !== null ? {
+                background: `conic-gradient(from 0deg, hsl(220 100% 60%) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg, rgba(255,255,255,0.05) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg)`,
+                padding: '3px',
+                borderRadius: '16px',
+                boxShadow: '0 0 15px hsl(220 100% 60% / 0.3)',
+                transition: 'background 0.5s linear'
+              } : { padding: '3px' }}>
+                <div className="card glass" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', borderRadius: 14, background: 'hsl(222 20% 10%)', position: 'relative', height: '100%' }}>
+                  {!isMyTurn && timeLeft !== null && (
+                    <span style={{
+                      position: 'absolute', top: '8px', right: '8px',
+                      backgroundColor: 'hsl(220 100% 50%)', color: 'white',
+                      padding: '0.15rem 0.4rem', borderRadius: '5px', fontSize: '0.65rem', fontWeight: 800, zIndex: 10
+                    }}>
+                      ⏳ {timeLeft}s
+                    </span>
+                  )}
+                  
+                  {/* Player Profile Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Avatar avatarUrl={opponentUser?.avatarUrl} username={opponentUser?.username} selectedFrame={opponentUser?.selectedFrame} size={32} />
+                    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        {opponentUser?.displayName || opponentUser?.username}
+                      </span>
+                      <span style={{ fontSize: '0.65rem', color: 'hsl(var(--text-muted))' }}>
+                        Level {opponentUser?.level || 1} · Solved: {opponentSolvedCount}/{opponentTotalWordLength}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Animated Progress Bar */}
+                  <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div className="progress-bar-glow" style={{ width: `${opponentProgressPct}%`, height: '100%', background: 'linear-gradient(90deg, hsl(220 100% 60%), hsl(270 80% 60%))', borderRadius: '3px', transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                  </div>
+
+                  <div style={{ minHeight: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {renderHangmanSVG(opponentLives)}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center', margin: '0.25rem 0' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))' }}>Progress:</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>
+                      {opponentSolvedCount}
+                      <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))' }}>
+                        /{opponentTotalWordLength}
+                      </span>
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'hsl(var(--text-secondary))', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                    <span>❤️</span> <strong style={{ color: 'white' }}>{opponentLives} Lives</strong>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Opponent Progress Board */}
-            <div style={!isMyTurn && timeLeft !== null ? {
-              background: `conic-gradient(from 0deg, hsl(220 100% 60%) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg, rgba(255,255,255,0.05) ${Math.min(360, Math.round((timeLeft / 60) * 360))}deg)`,
-              padding: '3px',
-              borderRadius: '16px',
-              boxShadow: '0 0 15px hsl(220 100% 60% / 0.3)',
-              transition: 'background 0.5s linear'
-            } : { padding: '3px' }}>
-              <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderRadius: 14, opacity: 0.85, background: 'hsl(222 20% 10%)', position: 'relative', height: '100%' }}>
-                {!isMyTurn && timeLeft !== null && (
-                  <span style={{
-                    position: 'absolute', top: '10px', right: '10px',
-                    backgroundColor: 'hsl(220 100% 50%)', color: 'white',
-                    padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800
-                  }}>
-                    ⏳ {timeLeft}s
-                  </span>
-                )}
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(220 10% 55%)', textTransform: 'uppercase' }}>
-                  {opponent.username} Progress
-                </div>
-                <div style={{ minHeight: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {renderHangmanSVG(opponentLives)}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center', margin: '0.5rem 0' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)' }}>Solved Letters:</span>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>
-                    {opponentSolvedCount}
-                    <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 50%)' }}>
-                      /{myWord?.length || 0}
-                    </span>
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', textAlign: 'center' }}>
-                  ❤️ Lives: <strong style={{ color: 'white' }}>{opponentLives}</strong>
-                </div>
+            {/* Action options */}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => setGuessModalOpen(true)}
+                disabled={!isMyTurn || myGuessesLeft <= 0}
+                className="btn btn-secondary btn-press"
+                style={{ flex: 1, borderRadius: 10, fontSize: '0.8rem', padding: '0.5rem', cursor: 'pointer' }}
+              >
+                💡 Guess Word ({myGuessesLeft} left)
+              </button>
+              <button
+                onClick={onLeave}
+                className="btn btn-ghost btn-press"
+                style={{ flex: 1, borderRadius: 10, fontSize: '0.8rem', padding: '0.5rem', border: '1px solid hsl(220 15% 18%)', cursor: 'pointer' }}
+              >
+                🚪 Quit Room
+              </button>
+            </div>
+
+            {/* Interactive virtual keyboard (A-Z Row-based format) */}
+            <div className="card glass" style={{ padding: '0.75rem', borderRadius: 14, border: '1px solid hsl(var(--border-subtle))' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
+                {[
+                  'ABCDEFGHI'.split(''),
+                  'JKLMNOPQR'.split(''),
+                  'STUVWXYZ'.split('')
+                ].map((row, rowIdx) => (
+                  <div key={rowIdx} style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', width: '100%' }}>
+                    {row.map(letter => {
+                      const isGuessed = myGuesses.includes(letter)
+                      const isCorrect = isGuessed && opponentWord?.includes(letter)
+
+                      let bg = 'hsl(220 20% 9%)'
+                      let text = 'hsl(220 10% 70%)'
+                      if (isGuessed) {
+                        bg = isCorrect ? 'hsl(142 70% 35% / 0.25)' : 'hsl(350 70% 40% / 0.2)'
+                        text = isCorrect ? 'hsl(142 75% 55%)' : 'hsl(350 75% 60%)'
+                      }
+
+                      return (
+                        <button
+                          key={letter}
+                          disabled={isGuessed || !isMyTurn}
+                          onClick={() => handleLetterGuess(letter)}
+                          className={`btn-press ${isGuessed ? 'disabled-letter' : 'active-letter'}`}
+                          style={{
+                            flex: 1,
+                            height: 48,
+                            minWidth: 28,
+                            maxWidth: 64,
+                            border: isGuessed ? '1.5px solid transparent' : '1px solid hsl(220 15% 18%)',
+                            borderRadius: 8,
+                            fontSize: '1.05rem',
+                            fontWeight: 800,
+                            cursor: isGuessed || !isMyTurn ? 'default' : 'pointer',
+                            backgroundColor: bg,
+                            color: text,
+                            borderColor: isGuessed ? (isCorrect ? 'hsl(142 70% 40%)' : 'hsl(350 70% 40%)') : 'hsl(220 15% 18%)',
+                            opacity: isGuessed ? 0.75 : (!isMyTurn ? 0.5 : 1),
+                            transition: 'all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                          }}
+                        >
+                          {letter}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-
-          {/* Action options */}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              onClick={() => setGuessModalOpen(true)}
-              disabled={!isMyTurn || myGuessesLeft <= 0}
-              className="btn btn-secondary"
-              style={{ flex: 1, borderRadius: 10, fontSize: '0.8rem', padding: '0.5rem' }}
-            >
-              💡 Guess Word ({myGuessesLeft} left)
-            </button>
-            <button
-              onClick={onLeave}
-              className="btn btn-ghost"
-              style={{ flex: 1, borderRadius: 10, fontSize: '0.8rem', padding: '0.5rem', border: '1px solid hsl(220 15% 18%)' }}
-            >
-              🚪 Quit Room
-            </button>
-          </div>
-
-          {/* Interactive virtual keyboard */}
-          <div className="card glass" style={{ padding: '0.75rem', borderRadius: 14 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.3rem' }}>
-              {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => {
-                const isGuessed = myGuesses.includes(letter)
-                const isCorrect = isGuessed && opponentWord?.includes(letter)
-
-                let bg = 'hsl(220 20% 9%)'
-                let text = 'hsl(220 10% 70%)'
-                if (isGuessed) {
-                  bg = isCorrect ? 'hsl(142 70% 45% / 0.15)' : 'hsl(350 90% 60% / 0.12)'
-                  text = isCorrect ? 'hsl(142 70% 55%)' : 'hsl(350 90% 65%)'
-                }
-
-                return (
-                  <button
-                    key={letter}
-                    disabled={isGuessed || !isMyTurn}
-                    onClick={() => handleLetterGuess(letter)}
-                    style={{
-                      height: 38, border: '1px solid hsl(220 15% 18%)', borderRadius: 8, fontSize: '0.9rem', fontWeight: 800, cursor: isGuessed || !isMyTurn ? 'default' : 'pointer',
-                      backgroundColor: bg,
-                      color: text,
-                      borderColor: isGuessed ? 'transparent' : 'hsl(220 15% 18%)',
-                      opacity: isGuessed || !isMyTurn ? 0.6 : 1,
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    {letter}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* 3. FINISHED STAGE */}
       {stage === 'FINISHED' && (

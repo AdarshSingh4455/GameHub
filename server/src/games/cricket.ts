@@ -448,3 +448,19 @@ export async function processCricketMove(
     winnerId
   }
 }
+
+/**
+ * Masks the moves of other players in the game state before sending to clients
+ */
+export function getMaskedCricketState(state: any, targetUserId: string): any {
+  if (!state || !state.moves) return state
+  const maskedMoves: Record<string, any> = {}
+  Object.keys(state.moves).forEach(uid => {
+    maskedMoves[uid] = uid === targetUserId ? state.moves[uid] : 'hidden'
+  })
+  return {
+    ...state,
+    moves: maskedMoves
+  }
+}
+

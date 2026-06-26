@@ -4,6 +4,7 @@ exports.getCricketSession = getCricketSession;
 exports.saveCricketSession = saveCricketSession;
 exports.deleteCricketSession = deleteCricketSession;
 exports.processCricketMove = processCricketMove;
+exports.getMaskedCricketState = getMaskedCricketState;
 const redis_1 = require("../utils/redis");
 const logger_1 = require("../utils/logger");
 const GAME_CACHE_TTL = 7200;
@@ -374,5 +375,20 @@ async function processCricketMove(roomCode, roomId, userId, move, players, prism
         snapshotPersisted,
         gameFinished,
         winnerId
+    };
+}
+/**
+ * Masks the moves of other players in the game state before sending to clients
+ */
+function getMaskedCricketState(state, targetUserId) {
+    if (!state || !state.moves)
+        return state;
+    const maskedMoves = {};
+    Object.keys(state.moves).forEach(uid => {
+        maskedMoves[uid] = uid === targetUserId ? state.moves[uid] : 'hidden';
+    });
+    return {
+        ...state,
+        moves: maskedMoves
     };
 }

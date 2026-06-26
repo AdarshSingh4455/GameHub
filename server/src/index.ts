@@ -32,7 +32,7 @@ import {
 } from './middleware/rateLimit'
 
 // In-Memory Game Controllers
-import { processCricketMove, deleteCricketSession, getCricketSession, saveCricketSession } from './games/cricket'
+import { processCricketMove, deleteCricketSession, getCricketSession, saveCricketSession, getMaskedCricketState } from './games/cricket'
 import { processDotsBoxesMove, deleteDotsBoxesSession, getDotsBoxesSession, saveDotsBoxesSession, getRandomDotsBoxesMove } from './games/dotsBoxes'
 import { processTicTacToeMove, deleteTicTacToeSession, getTicTacToeSession, saveTicTacToeSession } from './games/ticTacToe'
 import { processMemoryMove, deleteMemorySession, getMemorySession, saveMemorySession } from './games/memory'
@@ -281,14 +281,19 @@ function startTurnTimer(roomCode: string) {
         if (result) {
           const { state, gameFinished, winnerId } = result
 
-          if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman') {
-            // Asymmetric broadcasts for private word states
+          if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket') {
+            // Asymmetric broadcasts for private game states
             for (const player of room.players) {
               const socketId = userSockets.get(player.userId)
               if (socketId) {
-                const playerMaskedState = room.gameSlug === 'scribble'
-                  ? getScribbleMaskedState(state, player.userId)
-                  : getMaskedHangmanState(state, player.userId)
+                let playerMaskedState = state
+                if (room.gameSlug === 'scribble') {
+                  playerMaskedState = getScribbleMaskedState(state, player.userId)
+                } else if (room.gameSlug === 'hangman') {
+                  playerMaskedState = getMaskedHangmanState(state, player.userId)
+                } else if (room.gameSlug === 'cricket') {
+                  playerMaskedState = getMaskedCricketState(state, player.userId)
+                }
                 io.to(socketId).emit('game-update', {
                   gameState: playerMaskedState,
                   gameFinished,
@@ -1081,6 +1086,8 @@ io.on('connection', async (rawSocket) => {
         broadcastState = getScribbleMaskedState(broadcastState, userId)
       } else if (room.gameSlug === 'hangman' && broadcastState) {
         broadcastState = getMaskedHangmanState(broadcastState, userId)
+      } else if (room.gameSlug === 'cricket' && broadcastState) {
+        broadcastState = getMaskedCricketState(broadcastState, userId)
       }
 
       logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${broadcastState?.stage} gameSlug=${room.gameSlug}`)
@@ -1181,14 +1188,19 @@ io.on('connection', async (rawSocket) => {
           broadcastState = getMaskedNumberGuessingState(state)
         }
 
-        if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman') {
+        if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket') {
           for (const player of room.players) {
             const pSocketId = userSockets.get(player.userId)
             const targetSocket = player.userId === userId ? socket : (pSocketId ? io.to(pSocketId) : null)
             if (targetSocket) {
-              const maskedState = room.gameSlug === 'scribble'
-                ? getScribbleMaskedState(state, player.userId)
-                : getMaskedHangmanState(state, player.userId)
+              let maskedState = state
+              if (room.gameSlug === 'scribble') {
+                maskedState = getScribbleMaskedState(state, player.userId)
+              } else if (room.gameSlug === 'hangman') {
+                maskedState = getMaskedHangmanState(state, player.userId)
+              } else if (room.gameSlug === 'cricket') {
+                maskedState = getMaskedCricketState(state, player.userId)
+              }
               targetSocket.emit('game-update', {
                 gameState: maskedState,
                 gameFinished,
@@ -1505,11 +1517,16 @@ io.on('connection', async (rawSocket) => {
                         data: { gameState: state }
                       })
                       await saveCricketSession(roomCode, state)
-                      io.to(`game:${roomCode}`).emit('game-update', {
-                        gameState: state,
-                        gameFinished: false,
-                        winnerId: null
-                      })
+                      for (const p of room.players) {
+                        const pSocketId = userSockets.get(p.userId)
+                        if (pSocketId) {
+                          io.to(pSocketId).emit('game-update', {
+                            gameState: getMaskedCricketState(state, p.userId),
+                            gameFinished: false,
+                            winnerId: null
+                          })
+                        }
+                      }
                     }
                   }
                 }

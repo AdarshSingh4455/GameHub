@@ -45,6 +45,7 @@ export default function MultiplayerScribbleGame({
   const isDrawingRef = useRef(false)
   const lastPosRef = useRef({ x: 0, y: 0 })
   const localLinesRef = useRef<any[]>([])
+  const pointsRef = useRef<{ x: number; y: number }[]>([])
   
   // Draw batching buffer
   const pendingDrawRef = useRef<any[]>([])
@@ -91,14 +92,29 @@ export default function MultiplayerScribbleGame({
   const sortedPlayers = [...players].sort((a, b) => (playerScores[b.userId] || 0) - (playerScores[a.userId] || 0))
   const leaderId = sortedPlayers[0]?.userId
 
-  // 1. Draw existing lines on mount/update (Reconnect Canvas Recovery)
+  // Scroll locking cleanup
+  useEffect(() => {
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = ''
+      }
+    }
+  }, [])
+
+  // 1. Draw existing lines on mount/update with High-DPI support (Reconnect Canvas Recovery)
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const ratio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+    // Scale backing store by device pixel ratio for crisp lines
+    canvas.width = 800 * ratio
+    canvas.height = 600 * ratio
+    ctx.scale(ratio, ratio)
+
+    ctx.clearRect(0, 0, 800, 600)
 
     const lines = canvasLines || []
     lines.forEach((line: any) => {
@@ -192,75 +208,127 @@ export default function MultiplayerScribbleGame({
     ctx.stroke()
   }
 
-  // Touch/Mouse coordinate helper — FIXED: changedTouches fallback
-  const getCoordinates = (e: React.MouseEvent | React.TouchEvent): { x: number; y: number } => {
+  // Unified Pointer coordinate helper normalized to 800x600 logical canvas
+  const getCoordinates = (e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
     const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-
-    if ('touches' in e) {
-      // Use changedTouches[0] as fallback when touches is empty (touchend event)
-      const touch = e.touches.length > 0 ? e.touches[0] : e.changedTouches?.[0]
-      if (!touch) return lastPosRef.current // return last known position on release
-      return {
-        x: (touch.clientX - rect.left) * scaleX,
-        y: (touch.clientY - rect.top) * scaleY
-      }
-    } else {
-      return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY
-      }
+    // Always normalize coordinates back to the logical 800x600 grid
+    const scaleX = 800 / rect.width
+    const scaleY = 600 / rect.height
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
     }
   }
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawer || stage !== 'DRAWING') return
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    // Capture pointer to receive pointermove even outside canvas bounding rect
+    try {
+      canvas.setPointerCapture(e.pointerId)
+    } catch (err) {}
+
+    // Lock page scroll on mobile
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = 'hidden'
+    }
+
     isDrawingRef.current = true
     const pos = getCoordinates(e)
     lastPosRef.current = pos
+    pointsRef.current = [pos]
   }
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current || !isDrawer || stage !== 'DRAWING') return
-    if ('touches' in e) {
-      e.preventDefault()
-    }
-
+    
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     const currentPos = getCoordinates(e)
+    const points = pointsRef.current
+    points.push(currentPos)
+
     const strokeColor = color
     const strokeWidth = brushSize
     const isEraser = tool === 'eraser'
 
-    drawOnCanvas(ctx, lastPosRef.current.x, lastPosRef.current.y, currentPos.x, currentPos.y, strokeColor, strokeWidth, isEraser)
+    // Bezier / Quadratic curve smoothing locally
+    if (points.length >= 3) {
+      const xc = (points[points.length - 2].x + points[points.length - 1].x) / 2
+      const yc = (points[points.length - 2].y + points[points.length - 1].y) / 2
+      
+      ctx.beginPath()
+      ctx.strokeStyle = isEraser ? '#0a0b0d' : strokeColor
+      ctx.lineWidth = strokeWidth
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
 
-    const drawData = {
-      x0: lastPosRef.current.x,
-      y0: lastPosRef.current.y,
-      x1: currentPos.x,
-      y1: currentPos.y,
-      color: strokeColor,
-      width: strokeWidth,
-      isEraser
+      const prevMidX = (points[points.length - 3].x + points[points.length - 2].x) / 2
+      const prevMidY = (points[points.length - 3].y + points[points.length - 2].y) / 2
+      ctx.moveTo(prevMidX, prevMidY)
+      ctx.quadraticCurveTo(points[points.length - 2].x, points[points.length - 2].y, xc, yc)
+      ctx.stroke()
+
+      const drawData = {
+        x0: prevMidX,
+        y0: prevMidY,
+        x1: xc,
+        y1: yc,
+        color: strokeColor,
+        width: strokeWidth,
+        isEraser
+      }
+      localLinesRef.current.push(drawData)
+      pendingDrawRef.current.push(drawData)
+    } else if (points.length === 2) {
+      // First segment line fallback
+      ctx.beginPath()
+      ctx.strokeStyle = isEraser ? '#0a0b0d' : strokeColor
+      ctx.lineWidth = strokeWidth
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.moveTo(points[0].x, points[0].y)
+      ctx.lineTo(points[1].x, points[1].y)
+      ctx.stroke()
+
+      const drawData = {
+        x0: points[0].x,
+        y0: points[0].y,
+        x1: points[1].x,
+        y1: points[1].y,
+        color: strokeColor,
+        width: strokeWidth,
+        isEraser
+      }
+      localLinesRef.current.push(drawData)
+      pendingDrawRef.current.push(drawData)
     }
-
-    localLinesRef.current.push(drawData)
-    // Buffer for batch emission instead of immediate per-stroke emit
-    pendingDrawRef.current.push(drawData)
 
     lastPosRef.current = currentPos
   }
 
-  const stopDrawing = () => {
+  const stopDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current || !isDrawer || stage !== 'DRAWING') return
     isDrawingRef.current = false
+
+    const canvas = canvasRef.current
+    if (canvas) {
+      try {
+        canvas.releasePointerCapture(e.pointerId)
+      } catch (err) {}
+    }
+
+    // Restore page scroll
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = ''
+    }
 
     // Flush remaining buffer immediately on stroke end
     if (pendingDrawRef.current.length > 0 && socket) {
@@ -272,6 +340,8 @@ export default function MultiplayerScribbleGame({
     if (socket) {
       socket.emit('submit-move', { roomCode, move: { type: 'draw', lines: localLinesRef.current } })
     }
+
+    pointsRef.current = []
   }
 
   const clearCanvas = () => {
@@ -465,10 +535,10 @@ export default function MultiplayerScribbleGame({
       </div>
 
       {/* ── Main Grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: '0.75rem', width: '100%' }} className="scribble-layout-grid">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
         
-        {/* Left: Canvas */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {/* Top: Canvas & Tools */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
           
           {/* Canvas board */}
           <div style={{
@@ -483,13 +553,11 @@ export default function MultiplayerScribbleGame({
               ref={canvasRef}
               width={800}
               height={600}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
+              onPointerDown={startDrawing}
+              onPointerMove={draw}
+              onPointerUp={stopDrawing}
+              onPointerCancel={stopDrawing}
+              onPointerLeave={stopDrawing}
               style={{
                 width: '100%', height: '100%',
                 display: stage === 'DRAWING' ? 'block' : 'none',
@@ -510,7 +578,7 @@ export default function MultiplayerScribbleGame({
                     </p>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                       {[15, 30, 45, 60].map(time => (
-                        <button id={`scribble-settings-time-${time}`} key={time} className="btn btn-primary" onClick={() => handleStartMatchWithSettings(time)} style={{ minWidth: 80, borderRadius: 10 }}>
+                        <button id={`scribble-settings-time-${time}`} key={time} className="btn btn-primary" onClick={() => handleStartMatchWithSettings(time)} style={{ minWidth: 80, borderRadius: 10, cursor: 'pointer' }}>
                           ⏱ {time}s
                         </button>
                       ))}
@@ -536,7 +604,7 @@ export default function MultiplayerScribbleGame({
                     </p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxWidth: 360, margin: '0 auto' }}>
                       {(wordsToSelect as string[]).map((word: string) => (
-                        <button key={word} className="btn btn-primary" onClick={() => handleSelectWord(word)} style={{ padding: '0.75rem', borderRadius: 8, fontSize: '0.9rem', fontWeight: 700 }}>
+                        <button key={word} className="btn btn-primary" onClick={() => handleSelectWord(word)} style={{ padding: '0.75rem', borderRadius: 8, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer' }}>
                           {word}
                         </button>
                       ))}
@@ -604,21 +672,21 @@ export default function MultiplayerScribbleGame({
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', maxWidth: 400, margin: '0 auto 0.75rem', width: '100%' }}>
-                  <button className="btn btn-secondary" onClick={handleCopyCode} style={{ flex: 1, borderRadius: 12, fontSize: '0.85rem' }}>
+                  <button className="btn btn-secondary" onClick={handleCopyCode} style={{ flex: 1, borderRadius: 12, fontSize: '0.85rem', cursor: 'pointer' }}>
                     {copiedCode ? '✅ Copied!' : '📋 Copy Code'}
                   </button>
-                  <button className="btn btn-secondary" onClick={handleCopyLink} style={{ flex: 1, borderRadius: 12, fontSize: '0.85rem' }}>
+                  <button className="btn btn-secondary" onClick={handleCopyLink} style={{ flex: 1, borderRadius: 12, fontSize: '0.85rem', cursor: 'pointer' }}>
                     {copiedLink ? '✅ Copied!' : '🔗 Invite Friend'}
                   </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', maxWidth: 400, margin: '0 auto', width: '100%' }}>
-                  <button className="btn btn-secondary" onClick={onLeave} style={{ flex: 1, borderRadius: 12 }}>🚪 Leave Room</button>
+                  <button className="btn btn-secondary" onClick={onLeave} style={{ flex: 1, borderRadius: 12, cursor: 'pointer' }}>🚪 Leave Room</button>
                   <button
                     className="btn btn-primary"
                     onClick={handlePlayAgain}
                     disabled={replayVotes[currentUserId] || isSubmitting}
-                    style={{ flex: 1, borderRadius: 12, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))' }}
+                    style={{ flex: 1, borderRadius: 12, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))', cursor: 'pointer' }}
                   >
                     {replayVotes[currentUserId] ? '⏳ Voted' : '🔄 Play Again'}
                   </button>
@@ -632,7 +700,7 @@ export default function MultiplayerScribbleGame({
             <div className="card glass" style={{ padding: '0.75rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', borderRadius: 12 }}>
               <div style={{ display: 'flex', gap: '0.4rem' }}>
                 {(['pencil', 'eraser'] as const).map(t => (
-                  <button key={t} onClick={() => setTool(t)} className="btn" style={{ padding: '0.4rem 0.75rem', minWidth: 'auto', backgroundColor: tool === t ? 'hsl(var(--brand-primary) / 0.2)' : 'transparent', border: tool === t ? '1px solid hsl(var(--brand-primary))' : '1px solid transparent', color: 'white', fontSize: '0.8rem' }}>
+                  <button key={t} onClick={() => setTool(t)} className="btn" style={{ padding: '0.4rem 0.75rem', minWidth: 'auto', backgroundColor: tool === t ? 'hsl(var(--brand-primary) / 0.2)' : 'transparent', border: tool === t ? '1px solid hsl(var(--brand-primary))' : '1px solid transparent', color: 'white', fontSize: '0.8rem', cursor: 'pointer' }}>
                     {t === 'pencil' ? '✏️ Pencil' : '🧽 Eraser'}
                   </button>
                 ))}
@@ -650,7 +718,7 @@ export default function MultiplayerScribbleGame({
                   <button key={col} onClick={() => { setColor(col); setTool('pencil') }} style={{ width: 20, height: 20, borderRadius: '50%', border: color === col && tool === 'pencil' ? '2px solid white' : '1px solid rgba(255,255,255,0.1)', background: col, cursor: 'pointer' }} />
                 ))}
               </div>
-              <button className="btn" onClick={clearCanvas} style={{ padding: '0.4rem 0.75rem', minWidth: 'auto', border: '1px solid hsl(var(--danger) / 0.3)', color: 'hsl(var(--danger))', fontSize: '0.8rem', backgroundColor: 'transparent' }}>
+              <button className="btn" onClick={clearCanvas} style={{ padding: '0.4rem 0.75rem', minWidth: 'auto', border: '1px solid hsl(var(--danger) / 0.3)', color: 'hsl(var(--danger))', fontSize: '0.8rem', backgroundColor: 'transparent', cursor: 'pointer' }}>
                 🗑️ Clear
               </button>
             </div>
@@ -676,7 +744,7 @@ export default function MultiplayerScribbleGame({
                   type="submit"
                   className="btn btn-primary"
                   disabled={hasGuessed || !guess.trim() || isSubmitting}
-                  style={{ minHeight: '40px', padding: '0.4rem 0.9rem', fontSize: '0.85rem', borderRadius: 8 }}
+                  style={{ minHeight: '40px', padding: '0.4rem 0.9rem', fontSize: '0.85rem', borderRadius: 8, cursor: 'pointer' }}
                 >
                   Guess
                 </button>
@@ -685,15 +753,15 @@ export default function MultiplayerScribbleGame({
           )}
         </div>
 
-        {/* Right Column: Scoreboard + Commentary */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', height: '100%' }}>
-
+        {/* Bottom row: Scoreboard + Commentary Feed expanded side-by-side */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem', width: '100%' }}>
+          
           {/* Live Scoreboard */}
-          <div className="card glass" style={{ padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', borderRadius: 12 }}>
-            <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+          <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderRadius: 12, border: '1px solid hsl(var(--border-subtle))' }}>
+            <h4 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
               Live Scoreboard
             </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {sortedPlayers.map((p, idx) => {
                 const isCurDrawer = p.userId === drawerId
                 const didGuess = guessedPlayers.includes(p.userId)
@@ -704,7 +772,7 @@ export default function MultiplayerScribbleGame({
                     key={p.userId}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      fontSize: '0.78rem', padding: '5px 6px', borderRadius: 8,
+                      fontSize: '0.85rem', padding: '6px 8px', borderRadius: 8,
                       backgroundColor: isCurDrawer
                         ? 'hsl(var(--brand-primary) / 0.12)'
                         : didGuess ? 'hsl(var(--success) / 0.1)'
@@ -712,8 +780,8 @@ export default function MultiplayerScribbleGame({
                       border: isMe ? '1px solid hsl(220 15% 22%)' : '1px solid transparent'
                     }}
                   >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
-                      <span style={{ fontSize: '0.8rem' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                      <span style={{ fontSize: '0.85rem' }}>
                         {isCurDrawer ? '✏️' : isLeader ? '👑' : didGuess ? '✅' : '👤'}
                       </span>
                       <button
@@ -721,9 +789,9 @@ export default function MultiplayerScribbleGame({
                         style={{
                           background: 'none', border: 'none', padding: 0, cursor: p.profileId ? 'pointer' : 'default',
                           color: isMe ? 'hsl(220 100% 75%)' : 'white',
-                          fontWeight: isMe ? 700 : 400, fontSize: '0.78rem',
+                          fontWeight: isMe ? 700 : 400, fontSize: '0.85rem',
                           textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap',
-                          maxWidth: 110, textAlign: 'left'
+                          maxWidth: 160, textAlign: 'left'
                         }}
                         title={p.username}
                       >
@@ -731,7 +799,7 @@ export default function MultiplayerScribbleGame({
                       </button>
                     </span>
                     <strong style={{ color: (playerScores[p.userId] || 0) > 0 ? 'hsl(var(--brand-primary))' : 'hsl(220 10% 50%)', flexShrink: 0 }}>
-                      {playerScores[p.userId] || 0}
+                      {playerScores[p.userId] || 0} pts
                     </strong>
                   </div>
                 )
@@ -740,11 +808,11 @@ export default function MultiplayerScribbleGame({
           </div>
 
           {/* Commentary Feed */}
-          <div className="card glass" style={{ padding: '0.875rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', borderRadius: 12, minHeight: 160 }}>
-            <h4 style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+          <div className="card glass" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderRadius: 12, minHeight: 180, border: '1px solid hsl(var(--border-subtle))' }}>
+            <h4 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
               Guesses & Feed
             </h4>
-            <div style={{ flex: 1, maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column-reverse', gap: '0.3rem', fontSize: '0.78rem', paddingRight: '2px' }}>
+            <div style={{ flex: 1, maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column-reverse', gap: '0.4rem', fontSize: '0.82rem', paddingRight: '4px' }}>
               {commentary.map((line: string, idx: number) => {
                 const isSuccess = line.startsWith('✅') || line.startsWith('⭐')
                 const isMsg = line.startsWith('💬')
@@ -755,32 +823,12 @@ export default function MultiplayerScribbleGame({
                 else if (isMsg) { col = 'hsl(220 10% 55%)' }
                 else if (isWarning) { col = 'hsl(var(--warning))'; fontWt = 700 }
                 return (
-                  <div key={idx} style={{ color: col, fontWeight: fontWt, lineHeight: '1.35' }}>
+                  <div key={idx} style={{ color: col, fontWeight: fontWt, lineHeight: '1.4' }}>
                     {line}
                   </div>
                 )
               })}
             </div>
-
-            {/* Guess input for drawing stage (spectators — also shown in right column on mobile) */}
-            {stage === 'DRAWING' && !isDrawer && (
-              <form onSubmit={handleGuessSubmit} style={{ display: 'flex', gap: '0.35rem', marginTop: 'auto' }}>
-                <input
-                  className="input"
-                  value={guess}
-                  onChange={e => setGuess(e.target.value)}
-                  placeholder={hasGuessed ? '✅ Correct!' : 'Your guess...'}
-                  disabled={hasGuessed || isSubmitting}
-                  style={{ flex: 1, fontSize: '0.78rem', minHeight: '36px', padding: '0.3rem 0.6rem' }}
-                  maxLength={24}
-                  id="scribble-guess-sidebar"
-                  autoComplete="off"
-                />
-                <button type="submit" className="btn btn-primary" disabled={hasGuessed || !guess.trim() || isSubmitting} style={{ minHeight: '36px', padding: '0.3rem 0.7rem', fontSize: '0.78rem', borderRadius: 8 }}>
-                  Go
-                </button>
-              </form>
-            )}
           </div>
         </div>
       </div>

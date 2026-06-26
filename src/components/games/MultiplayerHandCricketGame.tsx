@@ -4,12 +4,14 @@ import React, { useState } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import MatchReactions from './MatchReactions'
+import Avatar from '@/components/shared/Avatar'
 
 interface Player {
   userId: string
   username: string
   avatarUrl: string | null
   level: number
+  selectedFrame?: string | null
 }
 
 interface CricketGameProps {
@@ -266,6 +268,12 @@ export default function MultiplayerHandCricketGame({
     return tName === 'BLUE' ? 'hsl(210 100% 50% / 0.4)' : 'hsl(142 70% 50% / 0.4)'
   }
 
+  const batsmanHasMoved = moves[battingUserId] !== undefined || (battingUserId === currentUserId && optimisticSelection !== null)
+  const bowlerHasMoved = moves[bowlingUserId] !== undefined || (bowlingUserId === currentUserId && optimisticSelection !== null)
+  
+  const isBatsmanFlipped = !!(lastBall && (revealState === 'result' || (revealState === 'idle' && !batsmanHasMoved && !bowlerHasMoved)))
+  const isBowlerFlipped = !!(lastBall && (revealState === 'result' || (revealState === 'idle' && !batsmanHasMoved && !bowlerHasMoved)))
+
   const activeBattingColor = getTeamColor(battingTeam)
   const activeBattingBg = getTeamBg(battingTeam)
   const activeBattingBorder = getTeamBorder(battingTeam)
@@ -282,16 +290,100 @@ export default function MultiplayerHandCricketGame({
 
         @keyframes shake-impact {
           0% { transform: translate(0, 0) scale(1); }
-          20% { transform: translate(-2px, 2px) scale(1.1); }
-          40% { transform: translate(2px, -2px) scale(1.1); }
-          60% { transform: translate(-2px, -2px) scale(1.05); }
-          80% { transform: translate(2px, 2px) scale(1.05); }
+          20% { transform: translate(-4px, 4px) scale(1.1); }
+          40% { transform: translate(4px, -4px) scale(1.1); }
+          60% { transform: translate(-4px, -4px) scale(1.05); }
+          80% { transform: translate(4px, 4px) scale(1.05); }
           100% { transform: translate(0, 0) scale(1); }
         }
 
         @keyframes zoom-result {
           0% { transform: scale(0.6); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes bounce-trophy {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-12px); }
+        }
+
+        @keyframes subtle-sparkle {
+          0%, 100% { transform: scale(0.6); opacity: 0.2; }
+          50% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .flip-card {
+          background-color: transparent;
+          width: 44px;
+          height: 44px;
+          perspective: 1000px;
+          margin: 0 auto;
+        }
+
+        .flip-card-inner {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          text-align: center;
+          transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          transform-style: preserve-3d;
+        }
+
+        .flip-card.flipped .flip-card-inner {
+          transform: rotateY(180deg);
+        }
+
+        .flip-card-front, .flip-card-back {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 900;
+          font-size: 1.25rem;
+        }
+
+        .flip-card-front {
+          background-color: hsl(var(--bg-elevated));
+          color: hsl(var(--text-muted));
+          border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .flip-card-front.submitted {
+          border: 2px solid hsl(var(--success));
+          color: hsl(var(--success));
+        }
+
+        .flip-card-back {
+          background-color: hsl(var(--bg-elevated));
+          color: white;
+          transform: rotateY(180deg);
+          border: 2px solid hsl(var(--brand-primary));
+        }
+
+        .cricket-keypad-btn {
+          height: 56px !important;
+          font-size: 1.25rem !important;
+          font-weight: 900 !important;
+          border-radius: 12px !important;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        }
+
+        .cricket-keypad-btn:active:not(:disabled) {
+          transform: scale(0.9) !important;
+        }
+
+        @media (hover: hover) {
+          .cricket-keypad-btn:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.05);
+            background-color: hsl(220 20% 16%) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+          }
         }
 
         @media (max-width: 480px) {
@@ -702,30 +794,29 @@ export default function MultiplayerHandCricketGame({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 1fr', gap: '1rem', alignItems: 'center' }}>
             {/* Active Batsman block */}
             <div className="card glass text-center" style={{ padding: '1.25rem 0.75rem', border: isMeBatting ? `1px solid ${activeBattingColor}` : '1px solid transparent', background: isMeBatting ? activeBattingBg : 'hsl(222 20% 8% / 0.6)' }}>
-              <img
-                src={getPlayerDetails(battingUserId)?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${getUsername(battingUserId)}`}
-                alt="Batsman"
-                style={{ width: 44, height: 44, borderRadius: '50%', margin: '0 auto 0.5rem', border: `2px solid ${activeBattingColor}` }}
-              />
+              <div style={{ margin: '0 auto 0.5rem', display: 'inline-flex', borderRadius: '50%', border: `2px solid ${activeBattingColor}` }}>
+                <Avatar
+                  avatarUrl={getPlayerDetails(battingUserId)?.avatarUrl}
+                  username={getUsername(battingUserId)}
+                  selectedFrame={getPlayerDetails(battingUserId)?.selectedFrame}
+                  size={40}
+                />
+              </div>
               <div style={{ fontWeight: 700, fontSize: '0.85rem', color: isMeBatting ? activeBattingColor : 'white' }}>
                 {getUsername(battingUserId)}
               </div>
               <div style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', marginBottom: '0.5rem' }}>
                 Active Batsman {isMeBatting && '(You)'}
               </div>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: 800,
-                width: 44,
-                height: 44,
-                lineHeight: '44px',
-                borderRadius: 10,
-                backgroundColor: 'hsl(var(--bg-elevated))',
-                margin: '0 auto',
-                border: (moves[battingUserId] !== undefined || (battingUserId === currentUserId && optimisticSelection !== null)) ? '2px solid hsl(var(--success))' : '1px solid rgba(255,255,255,0.06)',
-                color: (moves[battingUserId] !== undefined || (battingUserId === currentUserId && optimisticSelection !== null)) ? 'hsl(var(--success))' : 'hsl(var(--text-muted))'
-              }}>
-                {(moves[battingUserId] !== undefined || (battingUserId === currentUserId && optimisticSelection !== null)) ? '✓' : '?'}
+              <div className={`flip-card ${isBatsmanFlipped ? 'flipped' : ''} ${lastBall?.isOut && revealState === 'result' ? 'shake-out' : ''}`}>
+                <div className="flip-card-inner">
+                  <div className={`flip-card-front ${batsmanHasMoved ? 'submitted' : ''}`}>
+                    {batsmanHasMoved ? '✓' : '?'}
+                  </div>
+                  <div className="flip-card-back">
+                    {lastBall?.batMove || '?'}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -768,30 +859,29 @@ export default function MultiplayerHandCricketGame({
 
             {/* Active Bowler block */}
             <div className="card glass text-center" style={{ padding: '1.25rem 0.75rem', border: isMeBowling ? `1px solid ${getTeamColor(bowlingTeam)}` : '1px solid transparent', background: isMeBowling ? getTeamBg(bowlingTeam) : 'hsl(222 20% 8% / 0.6)' }}>
-              <img
-                src={getPlayerDetails(bowlingUserId)?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${getUsername(bowlingUserId)}`}
-                alt="Bowler"
-                style={{ width: 44, height: 44, borderRadius: '50%', margin: '0 auto 0.5rem', border: `2px solid ${getTeamColor(bowlingTeam)}` }}
-              />
+              <div style={{ margin: '0 auto 0.5rem', display: 'inline-flex', borderRadius: '50%', border: `2px solid ${getTeamColor(bowlingTeam)}` }}>
+                <Avatar
+                  avatarUrl={getPlayerDetails(bowlingUserId)?.avatarUrl}
+                  username={getUsername(bowlingUserId)}
+                  selectedFrame={getPlayerDetails(bowlingUserId)?.selectedFrame}
+                  size={40}
+                />
+              </div>
               <div style={{ fontWeight: 700, fontSize: '0.85rem', color: isMeBowling ? getTeamColor(bowlingTeam) : 'white' }}>
                 {getUsername(bowlingUserId)}
               </div>
               <div style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', marginBottom: '0.5rem' }}>
                 Active Bowler {isMeBowling && '(You)'}
               </div>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: 800,
-                width: 44,
-                height: 44,
-                lineHeight: '44px',
-                borderRadius: 10,
-                backgroundColor: 'hsl(var(--bg-elevated))',
-                margin: '0 auto',
-                border: (moves[bowlingUserId] !== undefined || (bowlingUserId === currentUserId && optimisticSelection !== null)) ? '2px solid hsl(var(--success))' : '1px solid rgba(255,255,255,0.06)',
-                color: (moves[bowlingUserId] !== undefined || (bowlingUserId === currentUserId && optimisticSelection !== null)) ? 'hsl(var(--success))' : 'hsl(var(--text-muted))'
-              }}>
-                {(moves[bowlingUserId] !== undefined || (bowlingUserId === currentUserId && optimisticSelection !== null)) ? '✓' : '?'}
+              <div className={`flip-card ${isBowlerFlipped ? 'flipped' : ''}`}>
+                <div className="flip-card-inner">
+                  <div className={`flip-card-front ${bowlerHasMoved ? 'submitted' : ''}`}>
+                    {bowlerHasMoved ? '✓' : '?'}
+                  </div>
+                  <div className="flip-card-back">
+                    {lastBall?.bowlMove || '?'}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -812,22 +902,20 @@ export default function MultiplayerHandCricketGame({
                     onClick={() => handlePlayBall(num)}
                     disabled={myMoveSubmitted || isSubmitting}
                     style={{
-                      height: 48,
-                      fontSize: '1.25rem',
-                      fontWeight: 900,
-                      borderRadius: 10,
                       backgroundColor: currentSelection === num
-                        ? 'hsl(var(--success))'
-                        : 'hsl(var(--bg-elevated))',
+                        ? 'hsl(142 75% 50% / 0.2)'
+                        : 'hsl(220 20% 12%)',
                       border: currentSelection === num
-                        ? '1px solid hsl(var(--success))'
-                        : '1px solid rgba(255,255,255,0.05)',
+                        ? '2px solid hsl(142 75% 50%)'
+                        : '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: currentSelection === num
+                        ? '0 0 15px hsl(142 75% 50% / 0.5)'
+                        : 'none',
                       color: 'white',
                       cursor: myMoveSubmitted || isSubmitting ? 'default' : 'pointer',
-                      opacity: currentSelection !== null && currentSelection !== num ? 0.35 : 1,
-                      transition: 'all 0.15s ease'
+                      opacity: currentSelection !== null && currentSelection !== num ? 0.35 : 1
                     }}
-                    className={!myMoveSubmitted ? 'card-hover' : ''}
+                    className={`cricket-keypad-btn ${!myMoveSubmitted ? 'card-hover' : ''}`}
                   >
                     {num}
                   </button>
@@ -899,48 +987,78 @@ export default function MultiplayerHandCricketGame({
 
       {/* ── STAGE: FINISHED ── */}
       {stage === 'FINISHED' && (
-        <div className="card glass text-center animate-fadeIn" style={{ padding: '3.5rem 2rem', border: '1px solid hsl(var(--border-subtle))' }}>
-          <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>
-            {session.winnerId === myTeamKey ? '🏆' : session.winnerId === 'DRAW' ? '🤝' : '💀'}
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(5, 8, 16, 0.85)',
+          backdropFilter: 'blur(8px)', zIndex: 99999, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', padding: '2rem'
+        }}>
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  fontSize: '1.5rem',
+                  left: `${15 + i * 15}%`,
+                  top: `${20 + (i % 3) * 20}%`,
+                  animation: 'subtle-sparkle 2s infinite ease-in-out',
+                  animationDelay: `${i * 0.3}s`
+                }}
+              >
+                ✨
+              </div>
+            ))}
           </div>
           
-          <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem' }}>
-            {session.winnerId === myTeamKey ? 'Your Team Won!' : session.winnerId === 'DRAW' ? "It's a Draw!" : 'Your Team Lost'}
-          </h2>
-          
-          <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '2rem', fontSize: '1.05rem' }}>
-            {session.winnerId === myTeamKey 
-              ? 'Outstanding performance! Victory for your side.' 
-              : session.winnerId === 'DRAW'
-              ? 'Incredible tie! Scorecard is perfectly balanced.'
-              : `Opponent Team (${session.winnerId === 'BLUE' ? 'Blue' : 'Green'}) took this match.`}
-          </p>
-
-          <div style={{ display: 'flex', gap: '1rem', maxWidth: 400, margin: '0 auto' }}>
-            <button
-              id="cricket-leave-room-btn"
-              className="btn"
-              onClick={onLeave}
-              style={{ flex: 1, backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-default))', color: 'hsl(var(--text-primary))' }}
-            >
-              🚪 Leave Room
-            </button>
-            <button
-              className="btn btn-primary"
-              id="multiplayer-replay-btn"
-              disabled={replayVotes[currentUserId] || isSubmitting}
-              onClick={handlePlayAgain}
-              style={{ flex: 2, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))' }}
-            >
-              {replayVotes[currentUserId] ? '⏳ Voted' : '🔄 Play Again'}
-            </button>
-          </div>
-          
-          {Object.keys(replayVotes).length > 0 && !replayVotes[currentUserId] && (
-            <p style={{ color: 'hsl(var(--brand-secondary))', fontSize: '0.85rem', fontWeight: 600, marginTop: '1rem' }}>
-              Other players want to play again! Click Play Again to restart.
+          <div className="card glass text-center animate-fadeIn" style={{
+            maxWidth: 450, width: '100%', padding: '3.5rem 2rem', borderRadius: 24,
+            border: '2px solid hsl(var(--brand-primary) / 0.5)',
+            background: 'linear-gradient(135deg, hsl(222 20% 10%), hsl(222 20% 5%))',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            position: 'relative'
+          }}>
+            <div style={{ fontSize: '6rem', marginBottom: '1rem', animation: 'bounce-trophy 2s infinite ease-in-out' }}>
+              {session.winnerId === myTeamKey ? '🏆' : session.winnerId === 'DRAW' ? '🤝' : '💀'}
+            </div>
+            
+            <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem', color: 'white' }}>
+              {session.winnerId === myTeamKey ? 'Your Team Won!' : session.winnerId === 'DRAW' ? "It's a Draw!" : 'Your Team Lost'}
+            </h2>
+            
+            <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '2.5rem', fontSize: '1.05rem' }}>
+              {session.winnerId === myTeamKey 
+                ? 'Outstanding performance! Victory for your side.' 
+                : session.winnerId === 'DRAW'
+                ? 'Incredible tie! Scorecard is perfectly balanced.'
+                : `Opponent Team (${session.winnerId === 'BLUE' ? 'Blue' : 'Green'}) took this match.`}
             </p>
-          )}
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                id="cricket-leave-room-btn"
+                className="btn btn-secondary"
+                onClick={onLeave}
+                style={{ flex: 1, borderRadius: 12 }}
+              >
+                🚪 Leave Room
+              </button>
+              <button
+                className="btn btn-primary"
+                id="multiplayer-replay-btn"
+                disabled={replayVotes[currentUserId] || isSubmitting}
+                onClick={handlePlayAgain}
+                style={{ flex: 2, borderRadius: 12, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))' }}
+              >
+                {replayVotes[currentUserId] ? '⏳ Voted' : '🔄 Play Again'}
+              </button>
+            </div>
+            
+            {Object.keys(replayVotes).length > 0 && !replayVotes[currentUserId] && (
+              <p style={{ color: 'hsl(var(--brand-secondary))', fontSize: '0.85rem', fontWeight: 600, marginTop: '1.25rem' }}>
+                Other players want to play again! Click Play Again to restart.
+              </p>
+            )}
+          </div>
         </div>
       )}
 

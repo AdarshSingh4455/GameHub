@@ -48,8 +48,8 @@ const io = new socket_io_1.Server(server, {
         origin: process.env.CLIENT_URL || 'http://localhost:3000',
         methods: ['GET', 'POST']
     },
-    pingInterval: 10000,
-    pingTimeout: 5000,
+    pingInterval: 25000,
+    pingTimeout: 20000,
     transports: ['websocket'] // Enforce WebSocket-only transport for horizontal scaling compatibility
 });
 const mockPrisma_1 = require("./utils/mockPrisma");
@@ -197,21 +197,100 @@ function startTurnTimer(roomCode) {
                         lastMoveApplied = { guess: randomGuess };
                     }
                 }
+                else if (room.gameSlug === 'hangman') {
+                    const state = await (0, hangman_1.getHangmanSession)(roomCode, room.id, exports.prisma);
+                    if (state && state.stage === 'PLAYING') {
+                        const isP1 = currentTurnUserId === state.p1Id;
+                        const opponentUserId = isP1 ? state.p2Id : state.p1Id;
+                        // Deduct life
+                        if (isP1) {
+                            state.p1Lives--;
+                        }
+                        else {
+                            state.p2Lives--;
+                        }
+                        // Log timeout message to commentary
+                        if (!state.commentary)
+                            state.commentary = [];
+                        state.commentary.unshift(`⏰ Time Out! ${isP1 ? state.p1Username || 'Player 1' : state.p2Username || 'Player 2'} lost 1 life due to inactivity.`);
+                        // Check if lives run out
+                        const livesOut = isP1 ? state.p1Lives <= 0 : state.p2Lives <= 0;
+                        let gameFinished = false;
+                        let winnerId = null;
+                        if (livesOut) {
+                            gameFinished = true;
+                            winnerId = opponentUserId;
+                            state.stage = 'FINISHED';
+                            state.winnerId = winnerId;
+                            state.currentTurn = null;
+                            state.turnExpiration = null;
+                            await (0, hangman_1.deleteHangmanSession)(roomCode);
+                        }
+                        else {
+                            // Switch turn
+                            state.currentTurn = opponentUserId;
+                            state.turnExpiration = new Date(Date.now() + 60000).toISOString();
+                        }
+                        // Persist the updated state
+                        await (0, hangman_1.saveHangmanSession)(roomCode, state);
+                        await exports.prisma.multiplayerGameSession.update({
+                            where: { roomId: room.id },
+                            data: {
+                                gameState: state,
+                                status: gameFinished ? 'FINISHED' : 'PLAYING'
+                            }
+                        });
+                        result = {
+                            state,
+                            gameFinished,
+                            winnerId
+                        };
+                        lastMoveApplied = { type: 'TIMEOUT' };
+                    }
+                }
                 if (result) {
                     const { state, gameFinished, winnerId } = result;
-                    let broadcastState = state;
-                    if (room.gameSlug === 'rps' && state.moves && Object.keys(state.moves).length > 0) {
-                        broadcastState = (0, rps_1.getMaskedRpsState)(state);
+                    if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket') {
+                        // Asymmetric broadcasts for private game states
+                        for (const player of room.players) {
+                            const socketId = exports.userSockets.get(player.userId);
+                            if (socketId) {
+                                let playerMaskedState = state;
+                                if (room.gameSlug === 'scribble') {
+                                    playerMaskedState = (0, scribble_1.getScribbleMaskedState)(state, player.userId);
+                                }
+                                else if (room.gameSlug === 'hangman') {
+                                    playerMaskedState = (0, hangman_1.getMaskedHangmanState)(state, player.userId);
+                                }
+                                else if (room.gameSlug === 'cricket') {
+                                    playerMaskedState = (0, cricket_1.getMaskedCricketState)(state, player.userId);
+                                }
+                                io.to(socketId).emit('game-update', {
+                                    gameState: playerMaskedState,
+                                    gameFinished,
+                                    winnerId,
+                                    lastMove: { userId: currentTurnUserId, move: lastMoveApplied, isAutoMove: true },
+                                    serverTime: Date.now()
+                                });
+                            }
+                        }
                     }
-                    else if (room.gameSlug === 'number-guessing') {
-                        broadcastState = (0, numberGuessing_1.getMaskedNumberGuessingState)(state);
+                    else {
+                        let broadcastState = state;
+                        if (room.gameSlug === 'rps' && state.moves && Object.keys(state.moves).length > 0) {
+                            broadcastState = (0, rps_1.getMaskedRpsState)(state);
+                        }
+                        else if (room.gameSlug === 'number-guessing') {
+                            broadcastState = (0, numberGuessing_1.getMaskedNumberGuessingState)(state);
+                        }
+                        io.to(`game:${roomCode}`).emit('game-update', {
+                            gameState: broadcastState,
+                            gameFinished,
+                            winnerId,
+                            lastMove: { userId: currentTurnUserId, move: lastMoveApplied, isAutoMove: true },
+                            serverTime: Date.now()
+                        });
                     }
-                    io.to(`game:${roomCode}`).emit('game-update', {
-                        gameState: broadcastState,
-                        gameFinished,
-                        winnerId,
-                        lastMove: { userId: currentTurnUserId, move: lastMoveApplied, isAutoMove: true }
-                    });
                     if (gameFinished) {
                         await (0, framework_1.handleMatchCompletion)(room, state, winnerId, exports.prisma);
                         (0, queue_1.deleteRoomQueue)(roomCode);
@@ -228,7 +307,7 @@ function startTurnTimer(roomCode) {
         }).catch(err => {
             logger_1.logger.error(`[TURN TIMEOUT QUEUE ERROR] roomCode=${roomCode} error=${err.message}`);
         });
-    }, 60000); // 60s turn timer
+    }, process.env.TEST_FAST_TIMEOUT === 'true' ? 2000 : 60000); // 60s turn timer
     exports.roomTurnTimeouts.set(roomCode, timeout);
 }
 // Health check endpoint
@@ -359,6 +438,10 @@ io.on('connection', async (rawSocket) => {
             where: { userId },
             data: { lastSeenAt: new Date() }
         }).catch((err) => (0, logger_1.logError)(err, { userId }));
+    });
+    socket.on('ping-latency', (callback) => {
+        if (typeof callback === 'function')
+            callback();
     });
     // Manual status presence updates (ONLINE, AWAY, OFFLINE)
     socket.on('presence-update', async ({ status }) => {
@@ -887,7 +970,7 @@ io.on('connection', async (rawSocket) => {
                     players: {
                         include: {
                             profile: {
-                                select: { username: true, avatarUrl: true, level: true }
+                                select: { username: true, avatarUrl: true, level: true, selectedTitle: true, selectedFrame: true }
                             }
                         },
                         orderBy: { joinedAt: 'asc' }
@@ -895,10 +978,10 @@ io.on('connection', async (rawSocket) => {
                 }
             });
             if (!room)
-                throw new Error('Room not found');
+                throw new Error('ROOM_NOT_FOUND');
             const isPlayer = room.players.some(p => p.userId === userId);
             if (!isPlayer)
-                throw new Error('Not authorized to access this match');
+                throw new Error('PLAYER_NOT_IN_ROOM');
             // Set presence to IN_GAME
             (0, presence_1.setUserPresence)(userId, 'IN_GAME').catch(err => (0, logger_1.logError)(err, { userId }));
             socket.join(`game:${normalizedCode}`);
@@ -928,13 +1011,15 @@ io.on('connection', async (rawSocket) => {
             else if (room.gameSlug === 'hangman') {
                 gameState = await (0, hangman_1.getHangmanSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
-            if (callback)
-                callback({ success: true });
             // Send current state
             const dbSession = await exports.prisma.multiplayerGameSession.findUnique({
                 where: { roomId: room.id }
             });
             let broadcastState = gameState ?? dbSession?.gameState;
+            if (!broadcastState)
+                throw new Error('SESSION_NOT_FOUND');
+            if (callback)
+                callback({ success: true });
             if (room.gameSlug === 'rps' && broadcastState && broadcastState.moves) {
                 const maskedMoves = {};
                 Object.keys(broadcastState.moves).forEach(uid => {
@@ -951,6 +1036,9 @@ io.on('connection', async (rawSocket) => {
             else if (room.gameSlug === 'hangman' && broadcastState) {
                 broadcastState = (0, hangman_1.getMaskedHangmanState)(broadcastState, userId);
             }
+            else if (room.gameSlug === 'cricket' && broadcastState) {
+                broadcastState = (0, cricket_1.getMaskedCricketState)(broadcastState, userId);
+            }
             logger_1.logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${broadcastState?.stage} gameSlug=${room.gameSlug}`);
             socket.emit('game-state', {
                 room,
@@ -963,7 +1051,9 @@ io.on('connection', async (rawSocket) => {
                     status: p.disconnectedAt ? 'DISCONNECTED' : p.status,
                     username: p.profile?.username || 'Player',
                     avatarUrl: p.profile?.avatarUrl || null,
-                    level: p.profile?.level || 1
+                    level: p.profile?.level || 1,
+                    selectedTitle: p.profile?.selectedTitle || null,
+                    selectedFrame: p.profile?.selectedFrame || null
                 })),
                 serverTime: Date.now()
             });
@@ -1046,14 +1136,21 @@ io.on('connection', async (rawSocket) => {
                 else if (room.gameSlug === 'number-guessing') {
                     broadcastState = (0, numberGuessing_1.getMaskedNumberGuessingState)(state);
                 }
-                if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman') {
+                if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket') {
                     for (const player of room.players) {
                         const pSocketId = exports.userSockets.get(player.userId);
                         const targetSocket = player.userId === userId ? socket : (pSocketId ? io.to(pSocketId) : null);
                         if (targetSocket) {
-                            const maskedState = room.gameSlug === 'scribble'
-                                ? (0, scribble_1.getScribbleMaskedState)(state, player.userId)
-                                : (0, hangman_1.getMaskedHangmanState)(state, player.userId);
+                            let maskedState = state;
+                            if (room.gameSlug === 'scribble') {
+                                maskedState = (0, scribble_1.getScribbleMaskedState)(state, player.userId);
+                            }
+                            else if (room.gameSlug === 'hangman') {
+                                maskedState = (0, hangman_1.getMaskedHangmanState)(state, player.userId);
+                            }
+                            else if (room.gameSlug === 'cricket') {
+                                maskedState = (0, cricket_1.getMaskedCricketState)(state, player.userId);
+                            }
                             targetSocket.emit('game-update', {
                                 gameState: maskedState,
                                 gameFinished,
@@ -1078,7 +1175,11 @@ io.on('connection', async (rawSocket) => {
                     await (0, framework_1.handleMatchCompletion)(room, state, winnerId, exports.prisma);
                     (0, queue_1.deleteRoomQueue)(roomCode);
                 }
-                else if (room.gameSlug === 'dots-boxes' || room.gameSlug === 'memory' || room.gameSlug === 'rps' || room.gameSlug === 'number-guessing') {
+                else if (room.gameSlug === 'dots-boxes' ||
+                    room.gameSlug === 'memory' ||
+                    room.gameSlug === 'rps' ||
+                    room.gameSlug === 'number-guessing' ||
+                    (room.gameSlug === 'hangman' && state.stage === 'PLAYING')) {
                     startTurnTimer(roomCode);
                 }
                 if (callback)
@@ -1359,11 +1460,16 @@ io.on('connection', async (rawSocket) => {
                                                 data: { gameState: state }
                                             });
                                             await (0, cricket_1.saveCricketSession)(roomCode, state);
-                                            io.to(`game:${roomCode}`).emit('game-update', {
-                                                gameState: state,
-                                                gameFinished: false,
-                                                winnerId: null
-                                            });
+                                            for (const p of room.players) {
+                                                const pSocketId = exports.userSockets.get(p.userId);
+                                                if (pSocketId) {
+                                                    io.to(pSocketId).emit('game-update', {
+                                                        gameState: (0, cricket_1.getMaskedCricketState)(state, p.userId),
+                                                        gameFinished: false,
+                                                        winnerId: null
+                                                    });
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1619,7 +1725,7 @@ async function broadcastRoomUpdate(roomCode) {
                 players: {
                     include: {
                         profile: {
-                            select: { username: true, avatarUrl: true, level: true }
+                            select: { username: true, avatarUrl: true, level: true, selectedTitle: true, selectedFrame: true }
                         }
                     },
                     orderBy: { joinedAt: 'asc' }
@@ -1634,7 +1740,9 @@ async function broadcastRoomUpdate(roomCode) {
             joinedAt: p.joinedAt,
             username: p.profile.username,
             avatarUrl: p.profile.avatarUrl,
-            level: p.profile.level
+            level: p.profile.level,
+            selectedTitle: p.profile.selectedTitle,
+            selectedFrame: p.profile.selectedFrame
         }));
         io.to(`room:${roomCode}`).emit('room-update', {
             room: {

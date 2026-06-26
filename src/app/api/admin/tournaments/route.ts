@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
+import { parseIST, parseISTDateTime } from '@/lib/utils'
 
 export async function GET() {
   try {
@@ -73,8 +74,24 @@ export async function POST(request: Request) {
       eligibleGames
     } = body
 
-    if (!name || !startDate || !endDate) {
-      return NextResponse.json({ error: 'Name, Start Date, and End Date are required' }, { status: 400 })
+    if (!name || !name.trim()) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+    if (!startDate || !startDate.trim()) {
+      return NextResponse.json({ error: 'Start Date is required' }, { status: 400 })
+    }
+    if (!endDate || !endDate.trim()) {
+      return NextResponse.json({ error: 'End Date is required' }, { status: 400 })
+    }
+
+    // Combine date and time using IST helpers
+    const startDatetime = parseISTDateTime(startDate, startTime || '10:00 AM')
+    const endDatetime = parseISTDateTime(endDate, startTime || '10:00 AM')
+    const finalRegStart = (regStart && regStart.trim()) ? (parseIST(regStart) || new Date()) : new Date()
+    const finalRegEnd = (regEnd && regEnd.trim()) ? (parseIST(regEnd) || startDatetime) : startDatetime
+
+    if (isNaN(startDatetime.getTime()) || isNaN(endDatetime.getTime())) {
+      return NextResponse.json({ error: 'Invalid dates provided' }, { status: 400 })
     }
 
     const tournament = await prisma.tournament.create({
@@ -83,10 +100,10 @@ export async function POST(request: Request) {
         description: description || null,
         gameSlug: gameSlug || 'tic-tac-toe',
         type: type || 'ONE_DAY',
-        regStart: regStart ? new Date(regStart) : new Date(),
-        regEnd: regEnd ? new Date(regEnd) : new Date(startDate),
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        regStart: finalRegStart,
+        regEnd: finalRegEnd,
+        startDate: startDatetime,
+        endDate: endDatetime,
         durationDays: parseInt(durationDays, 10) || 1,
         maxPlayers: parseInt(maxPlayers, 10) || 16,
         bannerUrl: bannerUrl || null,
@@ -101,7 +118,7 @@ export async function POST(request: Request) {
         rewardBadge: rewardBadge || null,
         rewardTitle: rewardTitle || null,
         rewardCosmetic: rewardCosmetic || null,
-        status: 'ANNOUNCEMENT'
+        status: 'REGISTRATION_OPEN' // Set status directly to REGISTRATION_OPEN
       },
     })
 
@@ -188,10 +205,10 @@ export async function PUT(request: Request) {
         description: description || null,
         gameSlug: gameSlug || undefined,
         type: type || undefined,
-        regStart: regStart ? new Date(regStart) : undefined,
-        regEnd: regEnd ? new Date(regEnd) : undefined,
-        startDate: startDate ? new Date(startDate) : undefined,
-        endDate: endDate ? new Date(endDate) : undefined,
+        regStart: regStart ? (parseIST(regStart) || undefined) : undefined,
+        regEnd: regEnd ? (parseIST(regEnd) || undefined) : undefined,
+        startDate: startDate ? parseISTDateTime(startDate, startTime || oldTournament?.startTime || '10:00 AM') : undefined,
+        endDate: endDate ? parseISTDateTime(endDate, startTime || oldTournament?.startTime || '10:00 AM') : undefined,
         durationDays: durationDays ? parseInt(durationDays, 10) : undefined,
         maxPlayers: maxPlayers ? parseInt(maxPlayers, 10) : undefined,
         bannerUrl: bannerUrl !== undefined ? bannerUrl : undefined,

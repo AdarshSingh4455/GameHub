@@ -378,7 +378,7 @@ model Tournament {
   rewardTitle    String?
   rewardCosmetic String?
   bracketData    Json?    // Deprecated but kept for backward compat if needed
-  status         String   @default("ANNOUNCEMENT")
+  status         String   @default("REGISTRATION_OPEN")
   format         String   @default("SINGLE_ELIMINATION")
   bestOf         Int      @default(1)
   metadata       Json?

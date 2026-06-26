@@ -53,33 +53,36 @@ export function getMatchTiming(
   roundIndex: number,
   type: 'ONE_DAY' | 'MULTI_DAY'
 ): { matchTime: Date; joinStart: Date; joinEnd: Date } {
-  const start = new Date(startDateStr);
+  const d = new Date(startDateStr);
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const datePart = formatter.format(d); // "YYYY-MM-DD"
   
+  let hours = 10;
+  let minutes = 0;
   if (startTimeStr) {
-    // Parse time like "10:00 AM" or "20:00"
     const match = startTimeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
     if (match) {
-      let hours = parseInt(match[1], 10);
-      const minutes = parseInt(match[2], 10);
+      hours = parseInt(match[1], 10);
+      minutes = parseInt(match[2], 10);
       const ampm = match[3];
       if (ampm) {
         if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
         if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
       }
-      start.setHours(hours, minutes, 0, 0);
     }
   }
 
-  const matchTime = new Date(start);
+  const hh = hours.toString().padStart(2, '0');
+  const mm = minutes.toString().padStart(2, '0');
+  const start = new Date(`${datePart}T${hh}:${mm}:00+05:30`);
+
+  const matchTime = new Date(start.getTime());
   if (type === 'ONE_DAY') {
-    // Round 0 = start, Round 1 = start + 2 hrs, Round 2 = start + 4 hrs
-    matchTime.setHours(matchTime.getHours() + roundIndex * 2);
+    matchTime.setTime(start.getTime() + roundIndex * 2 * 60 * 60 * 1000);
   } else {
-    // Multi Day: Round 0 = start, Round 1 = start + 1 day, Round 2 = start + 2 days
-    matchTime.setDate(matchTime.getDate() + roundIndex);
+    matchTime.setTime(start.getTime() + roundIndex * 24 * 60 * 60 * 1000);
   }
 
-  // Join opens 5 mins before, closes 10 mins after match start
   const joinStart = new Date(matchTime.getTime() - 5 * 60 * 1000);
   const joinEnd = new Date(matchTime.getTime() + 10 * 60 * 1000);
 

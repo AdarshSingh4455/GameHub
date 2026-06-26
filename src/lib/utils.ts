@@ -28,3 +28,37 @@ export async function getUniqueFriendCode(): Promise<string> {
   return `GH-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
 }
 
+
+export function parseISTDateTime(dateStr: string, timeStr: string | null): Date {
+  let hours = 10;
+  let minutes = 0;
+  if (timeStr) {
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    if (match) {
+      hours = parseInt(match[1], 10);
+      minutes = parseInt(match[2], 10);
+      const ampm = match[3];
+      if (ampm) {
+        if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+        if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+      }
+    }
+  }
+  const hh = hours.toString().padStart(2, '0');
+  const mm = minutes.toString().padStart(2, '0');
+  return new Date(`${dateStr}T${hh}:${mm}:00+05:30`);
+}
+
+export function parseIST(val: string | null | undefined): Date | null {
+  if (!val) return null;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val)) {
+    return new Date(`${val}:00+05:30`);
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    return new Date(`${val}T00:00:00+05:30`);
+  }
+  if (val.includes('Z') || /[+-]\d{2}:\d{2}$/.test(val)) {
+    return new Date(val);
+  }
+  return new Date(`${val}+05:30`);
+}

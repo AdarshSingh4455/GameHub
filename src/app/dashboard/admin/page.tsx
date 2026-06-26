@@ -4,6 +4,69 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/lib/contexts/ToastContext'
 
+const toISTInputString = (dateVal: any) => {
+  if (!dateVal) return '';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return '';
+  
+  const datePart = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(d);
+  
+  const timePart = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(d);
+  
+  return `${datePart}T${timePart}`;
+};
+
+const toISTDateInputString = (dateVal: any) => {
+  if (!dateVal) return '';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return '';
+  
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(d);
+};
+
+const formatIST = (dateVal: string | Date | number, type: 'datetime' | 'time' | 'date' = 'datetime') => {
+  if (!dateVal) return 'N/A';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return 'Invalid Date';
+  
+  const options: Intl.DateTimeFormatOptions = { timeZone: 'Asia/Kolkata' };
+  
+  if (type === 'datetime') {
+    options.year = 'numeric';
+    options.month = 'short';
+    options.day = 'numeric';
+    options.hour = 'numeric';
+    options.minute = '2-digit';
+    options.hour12 = true;
+  } else if (type === 'time') {
+    options.hour = 'numeric';
+    options.minute = '2-digit';
+    options.hour12 = true;
+  } else if (type === 'date') {
+    options.year = 'numeric';
+    options.month = 'short';
+    options.day = 'numeric';
+  }
+  
+  return d.toLocaleString('en-US', options);
+};
+
+
 interface Ad {
   id: string
   imageUrl: string
@@ -1157,12 +1220,12 @@ export default function AdminPage() {
                         {t.status && (
                           <span style={{
                             fontSize: '0.65rem',
-                            background: t.status === 'ANNOUNCEMENT' ? 'rgba(59, 130, 246, 0.15)' :
-                                        t.status === 'REGISTRATION' ? 'rgba(16, 185, 129, 0.15)' :
+                            background: t.status === 'REGISTRATION_OPEN' ? 'rgba(16, 185, 129, 0.15)' :
+                                        t.status === 'REGISTRATION_CLOSED' ? 'rgba(107, 114, 128, 0.15)' :
                                         t.status === 'ACTIVE' ? 'rgba(245, 158, 11, 0.15)' :
                                         'rgba(107, 114, 128, 0.15)',
-                            color: t.status === 'ANNOUNCEMENT' ? '#60a5fa' :
-                                   t.status === 'REGISTRATION' ? '#34d399' :
+                            color: t.status === 'REGISTRATION_OPEN' ? '#34d399' :
+                                   t.status === 'REGISTRATION_CLOSED' ? '#9ca3af' :
                                    t.status === 'ACTIVE' ? '#fbbf24' :
                                    '#9ca3af',
                             padding: '0.1rem 0.4rem',
@@ -1178,10 +1241,10 @@ export default function AdminPage() {
                       
                       <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                         <div>
-                          Start: <strong>{new Date(t.startDate).toLocaleDateString()}</strong> · End: <strong>{new Date(t.endDate).toLocaleDateString()}</strong> at <strong>{t.startTime || '10:00 AM'}</strong>
+                          Start: <strong>{formatIST(t.startDate, 'date')}</strong> · End: <strong>{formatIST(t.endDate, 'date')}</strong> at <strong>{t.startTime || '10:00 AM'}</strong>
                         </div>
                         <div>
-                          Reg Opens: <strong>{t.regStart ? new Date(t.regStart).toLocaleString() : 'N/A'}</strong> · Closes: <strong>{t.regEnd ? new Date(t.regEnd).toLocaleString() : 'N/A'}</strong>
+                          Reg Opens: <strong>{t.regStart ? formatIST(t.regStart) : 'N/A'}</strong> · Closes: <strong>{t.regEnd ? formatIST(t.regEnd) : 'N/A'}</strong>
                         </div>
                         <div>
                           Max Players: <strong>{t.maxPlayers || 16}</strong> · Split: <strong>{t.preferredSplit === '4x4' ? '4 + 4 + 4 + 4' : '8 + 8'}</strong> · Type: <strong>{t.type || 'ONE_DAY'}</strong>
@@ -1206,10 +1269,10 @@ export default function AdminPage() {
                             description: t.description || '',
                             gameSlug: t.gameSlug || 'tic-tac-toe',
                             type: t.type || 'ONE_DAY',
-                            regStart: t.regStart ? new Date(t.regStart).toISOString().slice(0, 16) : '',
-                            regEnd: t.regEnd ? new Date(t.regEnd).toISOString().slice(0, 16) : '',
-                            startDate: t.startDate ? new Date(t.startDate).toISOString().split('T')[0] : '',
-                            endDate: t.endDate ? new Date(t.endDate).toISOString().split('T')[0] : '',
+                            regStart: toISTInputString(t.regStart),
+                            regEnd: toISTInputString(t.regEnd),
+                            startDate: toISTDateInputString(t.startDate),
+                            endDate: toISTDateInputString(t.endDate),
                             durationDays: t.durationDays || 1,
                             maxPlayers: t.maxPlayers || 16,
                             bannerUrl: t.bannerUrl || '',

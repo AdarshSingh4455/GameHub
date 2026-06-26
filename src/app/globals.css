@@ -221,6 +221,17 @@ code, pre, .mono {
   box-shadow: 0 0 0 3px hsl(var(--brand-primary) / 0.1);
 }
 
+/* ─── Tournaments ────────────────────────────────────────────────────────── */
+.tournament-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.tournament-card:hover {
+  transform: translateY(-4px);
+  border-color: #6366f1 !important;
+  box-shadow: 0 12px 30px rgba(99, 102, 241, 0.18) !important;
+  background: linear-gradient(135deg, #101326 0%, #1a1e36 100%) !important;
+}
+
 /* ─── XP Progress bar ────────────────────────────────────────────────────── */
 .xp-bar {
   height: 6px;

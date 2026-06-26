@@ -1930,7 +1930,7 @@ export default function ProfilePage() {
                 </h3>
                 {tournamentData.officialHistory.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'hsl(220 10% 50%)', fontSize: '0.8rem' }}>
-                    No official tournaments joined yet. Keep an eye out in the announcements tab!
+                    No official tournaments joined yet. Keep an eye out in the tournaments tab!
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

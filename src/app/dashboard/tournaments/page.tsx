@@ -3,6 +3,34 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase/client'
+
+const formatIST = (dateVal: string | Date | number, type: 'datetime' | 'time' | 'date' = 'datetime') => {
+  if (!dateVal) return 'N/A';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return 'Invalid Date';
+  
+  const options: Intl.DateTimeFormatOptions = { timeZone: 'Asia/Kolkata' };
+  
+  if (type === 'datetime') {
+    options.year = 'numeric';
+    options.month = 'short';
+    options.day = 'numeric';
+    options.hour = 'numeric';
+    options.minute = '2-digit';
+    options.hour12 = true;
+  } else if (type === 'time') {
+    options.hour = 'numeric';
+    options.minute = '2-digit';
+    options.hour12 = true;
+  } else if (type === 'date') {
+    options.year = 'numeric';
+    options.month = 'short';
+    options.day = 'numeric';
+  }
+  
+  return d.toLocaleString('en-US', options);
+};
 import PageWrapper from '@/components/layout/PageWrapper'
 import Card from '@/components/layout/Card'
 import { 
@@ -112,11 +140,10 @@ export default function TournamentsPage() {
   const { addToast } = useToast()
 
   // Tab selections
-  const [activeDashboardSection, setActiveDashboardSection] = useState<'announcements' | 'registrationOpen' | 'upcoming' | 'live' | 'myTournaments' | 'completed'>('registrationOpen')
+  const [activeDashboardSection, setActiveDashboardSection] = useState<'registrationOpen' | 'upcoming' | 'live' | 'myTournaments' | 'completed'>('registrationOpen')
   const [activeDetailsTab, setActiveDetailsTab] = useState<'overview' | 'schedule' | 'bracket' | 'players' | 'results' | 'rules'>('overview')
 
   // Lists
-  const [announcements, setAnnouncements] = useState<Tournament[]>([])
   const [registrationOpen, setRegistrationOpen] = useState<Tournament[]>([])
   const [upcoming, setUpcoming] = useState<Tournament[]>([])
   const [live, setLive] = useState<Tournament[]>([])
@@ -129,25 +156,16 @@ export default function TournamentsPage() {
   // Loading states
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
-  // Creation state
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [creationForm, setCreationForm] = useState({
     name: '',
-    description: '',
     gameSlug: 'tic-tac-toe',
-    type: 'ONE_DAY',
-    regStart: '',
-    regEnd: '',
-    startDate: '',
-    endDate: '',
-    durationDays: 1,
     maxPlayers: 8,
-    bannerUrl: '',
-    rules: '',
-    privacy: 'PUBLIC',
-    preferredSplit: '8x2',
-    startTime: '10:00 AM'
+    startDate: '',
+    startTime: '10:00 AM',
+    privacy: 'PUBLIC'
   })
 
   // Match / Play flow
@@ -181,11 +199,20 @@ export default function TournamentsPage() {
   const fetchTournaments = async (autoSelectId?: string) => {
     try {
       setLoading(true)
+      setFetchError(null)
       const res = await fetch('/api/tournaments')
-      if (!res.ok) throw new Error('Failed to load tournaments')
+      
+      let errorMsg = 'Failed to load tournaments'
+      if (!res.ok) {
+        try {
+          const data = await res.json()
+          errorMsg = data.error || errorMsg
+        } catch (_) {}
+        throw new Error(errorMsg)
+      }
+      
       const data = await res.json()
 
-      setAnnouncements(data.announcements || [])
       setRegistrationOpen(data.registrationOpen || [])
       setUpcoming(data.upcoming || [])
       setLive(data.live || [])
@@ -197,7 +224,6 @@ export default function TournamentsPage() {
       if (currentSelectedId) {
         // Look up in all sections
         const all = [
-          ...(data.announcements || []),
           ...(data.registrationOpen || []),
           ...(data.upcoming || []),
           ...(data.live || []),
@@ -208,9 +234,10 @@ export default function TournamentsPage() {
           setSelectedTournament(refreshed)
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      addToast('error', 'Error', 'Failed to fetch tournaments')
+      setFetchError(err.message || 'Failed to fetch tournaments')
+      addToast('error', 'Error', err.message || 'Failed to fetch tournaments')
     } finally {
       setLoading(false)
     }
@@ -225,12 +252,35 @@ export default function TournamentsPage() {
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase
+      .channel('tournament-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Tournament' }, () => {
+        fetchTournaments();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'TournamentRegistration' }, () => {
+        fetchTournaments();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'SubTournament' }, () => {
+        fetchTournaments();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'TournamentMatch' }, () => {
+        fetchTournaments();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTournament?.id]);
+
+
   // Timer tick for countdowns
   useEffect(() => {
     const tickCountdowns = () => {
       const updateList = (list: Tournament[]) =>
         list.map(t => (t.countdown > 0 ? { ...t, countdown: t.countdown - 1 } : t))
-      setAnnouncements(prev => updateList(prev))
       setRegistrationOpen(prev => updateList(prev))
       setUpcoming(prev => updateList(prev))
       if (selectedTournament && selectedTournament.countdown > 0) {
@@ -332,7 +382,6 @@ export default function TournamentsPage() {
               // Find our active match in the fresh lists
               let foundMatch = null
               const allLists = [
-                ...(data.announcements || []),
                 ...(data.registrationOpen || []),
                 ...(data.upcoming || []),
                 ...(data.live || []),
@@ -366,7 +415,6 @@ export default function TournamentsPage() {
             if (refreshRes.ok) {
               const refreshData = await refreshRes.json()
               const allLists = [
-                ...(refreshData.announcements || []),
                 ...(refreshData.registrationOpen || []),
                 ...(refreshData.upcoming || []),
                 ...(refreshData.live || []),
@@ -443,24 +491,15 @@ export default function TournamentsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Creation failed')
-      addToast('success', 'Success! 🎉', 'Tournament created in Announcement phase.')
+      addToast('success', 'Success! 🎉', 'Tournament created and registration is open.')
       setCreateModalOpen(false)
       setCreationForm({
         name: '',
-        description: '',
         gameSlug: 'tic-tac-toe',
-        type: 'ONE_DAY',
-        regStart: '',
-        regEnd: '',
-        startDate: '',
-        endDate: '',
-        durationDays: 1,
         maxPlayers: 8,
-        bannerUrl: '',
-        rules: '',
-        privacy: 'PUBLIC',
-        preferredSplit: '8x2',
-        startTime: '10:00 AM'
+        startDate: '',
+        startTime: '10:00 AM',
+        privacy: 'PUBLIC'
       })
       fetchTournaments()
     } catch (err: any) {
@@ -844,41 +883,79 @@ export default function TournamentsPage() {
       {/* Header banner */}
       <div style={{
         display: 'flex',
-        justifyContent: 'space-between',
+        flexDirection: 'column',
         alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem',
+        justifyContent: 'center',
+        textAlign: 'center',
         background: 'linear-gradient(90deg, #131525 0%, #1e213d 100%)',
         border: '1px solid #1e293b',
         borderRadius: 16,
-        padding: '1.5rem',
+        padding: '2rem 1.5rem',
         marginBottom: '1.5rem',
-        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.4)'
+        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.4)',
+        gap: '1.25rem',
+        width: '100%'
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '1.8rem' }}>🏆</span>
-            <h1 style={{ fontSize: '1.7rem', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', margin: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', justifyContent: 'center' }}>
+            <span style={{ fontSize: '2rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🏆</span>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', margin: 0, lineHeight: 1.2 }}>
               ESPORTS TOURNAMENT ARENA
             </h1>
           </div>
-          <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: '0.35rem 0 0' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: '0.25rem 0 0', maxWidth: 680, lineHeight: 1.4 }}>
             Compete in official ranked events or create community brackets with friends. Automatically split, match, and climb brackets!
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
           <button 
             className="btn btn-secondary btn-sm"
             onClick={() => setCreateModalOpen(true)}
-            style={{ fontWeight: 800, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            style={{ fontWeight: 800, padding: '0.55rem 1.2rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
           >
             <Plus size={16} /> Create Tournament
           </button>
         </div>
       </div>
 
-      {!selectedTournament ? (
+      {fetchError ? (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: '4rem 1.5rem', background: '#0e111e', border: '1px solid #ef4444', borderRadius: 16,
+          boxShadow: '0 8px 32px rgba(239, 68, 68, 0.08)', gap: '1.25rem', textAlign: 'center', margin: '2rem 0'
+        }}>
+          <span style={{ fontSize: '3rem' }}>🔌</span>
+          <div>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'white', margin: 0 }}>
+              Connection Error
+            </h2>
+            <p style={{ color: '#f87171', fontSize: '0.88rem', margin: '0.5rem 0 0', maxWidth: 460 }}>
+              {fetchError}
+            </p>
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={() => fetchTournaments()}
+            style={{ fontWeight: 800, padding: '0.6rem 1.5rem', background: '#ef4444', border: 'none', cursor: 'pointer', borderRadius: 8 }}
+          >
+            🔄 Retry Connection
+          </button>
+        </div>
+      ) : loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '6rem 1rem', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{
+            width: 48, height: 48, border: '4px solid rgba(99, 102, 241, 0.1)', borderTop: '4px solid #6366f1',
+            borderRadius: '50%', animation: 'spin 1s infinite linear'
+          }} />
+          <style>{`
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          `}</style>
+          <p style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>
+            Loading Tournament Arena...
+          </p>
+        </div>
+      ) : !selectedTournament ? (
         <>
           {/* Dashboard Section Selection */}
           <div className="horizontal-tab-bar" style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.5rem', marginBottom: '1.5rem', overflowX: 'auto' }}>
@@ -887,7 +964,6 @@ export default function TournamentsPage() {
               { id: 'live', label: 'Live Events', count: live.length },
               { id: 'upcoming', label: 'Upcoming Brackets', count: upcoming.length },
               { id: 'myTournaments', label: 'My Tournaments', count: myTournaments.length },
-              { id: 'announcements', label: 'Announcements', count: announcements.length },
               { id: 'completed', label: 'Completed', count: completed.length }
             ].map(tab => (
               <button
@@ -929,8 +1005,7 @@ export default function TournamentsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '1.25rem' }}>
             {(() => {
               let currentList: Tournament[] = []
-              if (activeDashboardSection === 'announcements') currentList = announcements
-              else if (activeDashboardSection === 'registrationOpen') currentList = registrationOpen
+              if (activeDashboardSection === 'registrationOpen') currentList = registrationOpen
               else if (activeDashboardSection === 'upcoming') currentList = upcoming
               else if (activeDashboardSection === 'live') currentList = live
               else if (activeDashboardSection === 'completed') currentList = completed
@@ -1056,9 +1131,6 @@ export default function TournamentsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #1e293b' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.72rem', color: '#94a3b8' }}>
                       <Clock size={12} />
-                      {t.status === 'ANNOUNCEMENT' && (
-                        <span>Starts in: <strong style={{ color: '#fff' }}>{formatTime(t.countdown)}</strong></span>
-                      )}
                       {t.status === 'REGISTRATION_OPEN' && (
                         <span>Closes in: <strong style={{ color: '#ef4444' }}>{formatTime(t.countdown)}</strong></span>
                       )}
@@ -1320,19 +1392,19 @@ export default function TournamentsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
                     <span style={{ color: '#64748b' }}>Reg Starts</span>
-                    <strong style={{ color: '#fff' }}>{new Date(selectedTournament.regStart).toLocaleString()}</strong>
+                    <strong style={{ color: '#fff' }}>{formatIST(selectedTournament.regStart)}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
                     <span style={{ color: '#64748b' }}>Reg Ends</span>
-                    <strong style={{ color: '#fff' }}>{new Date(selectedTournament.regEnd).toLocaleString()}</strong>
+                    <strong style={{ color: '#fff' }}>{formatIST(selectedTournament.regEnd)}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
                     <span style={{ color: '#64748b' }}>Event Start</span>
-                    <strong style={{ color: '#fff' }}>{new Date(selectedTournament.startDate).toLocaleString()}</strong>
+                    <strong style={{ color: '#fff' }}>{formatIST(selectedTournament.startDate)}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
                     <span style={{ color: '#64748b' }}>Event Conclusion</span>
-                    <strong style={{ color: '#fff' }}>{new Date(selectedTournament.endDate).toLocaleString()}</strong>
+                    <strong style={{ color: '#fff' }}>{formatIST(selectedTournament.endDate)}</strong>
                   </div>
                 </div>
               </Card>
@@ -1371,7 +1443,7 @@ export default function TournamentsPage() {
                           VS {myMatch.p1Id === user?.id ? (myMatch.p2Name || 'Bot Opponent') : (myMatch.p1Name || 'Bot Opponent')}
                         </h4>
                         <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: 0 }}>
-                          Match Time: <strong>{new Date(myMatch.matchTime).toLocaleString()}</strong>
+                          Match Time: <strong>{formatIST(myMatch.matchTime)}</strong>
                         </p>
                       </div>
 
@@ -1387,7 +1459,7 @@ export default function TournamentsPage() {
                           <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>JOIN WINDOW OPENS</div>
                             <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f3f4f6' }}>
-                              {new Date(myMatch.joinWindowStart).toLocaleTimeString()}
+                              {formatIST(myMatch.joinWindowStart, 'time')}
                             </div>
                           </div>
                         )}
@@ -1585,15 +1657,6 @@ export default function TournamentsPage() {
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Description</label>
-                <textarea 
-                  className="input" style={{ minHeight: 60 }}
-                  value={creationForm.description}
-                  onChange={e => setCreationForm(prev => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Select Game</label>
@@ -1621,32 +1684,6 @@ export default function TournamentsPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Schedule Type</label>
-                  <select 
-                    value={creationForm.type}
-                    onChange={e => setCreationForm(prev => ({ ...prev, type: e.target.value }))}
-                    style={{ background: '#090b14', border: '1px solid #1e293b', color: '#fff', borderRadius: 8, padding: '0.4rem', width: '100%', fontSize: '0.8rem' }}
-                  >
-                    <option value="ONE_DAY">One Day Tournament</option>
-                    <option value="MULTI_DAY">Multi Day Tournament</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Preferred Split (16p)</label>
-                  <select 
-                    value={creationForm.preferredSplit}
-                    onChange={e => setCreationForm(prev => ({ ...prev, preferredSplit: e.target.value }))}
-                    style={{ background: '#090b14', border: '1px solid #1e293b', color: '#fff', borderRadius: 8, padding: '0.4rem', width: '100%', fontSize: '0.8rem' }}
-                  >
-                    <option value="8x2">8 + 8 Split</option>
-                    <option value="4x4">4 + 4 + 4 + 4 Split</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Start Date</label>
                   <input 
                     className="input" type="date" required
@@ -1665,48 +1702,17 @@ export default function TournamentsPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Registration Start</label>
-                  <input 
-                    className="input" type="datetime-local" required
-                    value={creationForm.regStart}
-                    onChange={e => setCreationForm(prev => ({ ...prev, regStart: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Registration End</label>
-                  <input 
-                    className="input" type="datetime-local" required
-                    value={creationForm.regEnd}
-                    onChange={e => setCreationForm(prev => ({ ...prev, regEnd: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Privacy</label>
-                  <select 
-                    value={creationForm.privacy}
-                    onChange={e => setCreationForm(prev => ({ ...prev, privacy: e.target.value as any }))}
-                    style={{ background: '#090b14', border: '1px solid #1e293b', color: '#fff', borderRadius: 8, padding: '0.4rem', width: '100%', fontSize: '0.8rem' }}
-                  >
-                    <option value="PUBLIC">Public</option>
-                    <option value="PRIVATE">Private (Approval req)</option>
-                    <option value="INVITE_CODE">Invite Code Only</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Rules Text (Optional)</label>
-                  <input 
-                    className="input" type="text" placeholder="No cheats..."
-                    value={creationForm.rules}
-                    onChange={e => setCreationForm(prev => ({ ...prev, rules: e.target.value }))}
-                  />
-                </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, marginBottom: '0.3rem' }}>Privacy</label>
+                <select 
+                  value={creationForm.privacy}
+                  onChange={e => setCreationForm(prev => ({ ...prev, privacy: e.target.value as any }))}
+                  style={{ background: '#090b14', border: '1px solid #1e293b', color: '#fff', borderRadius: 8, padding: '0.4rem', width: '100%', fontSize: '0.8rem' }}
+                >
+                  <option value="PUBLIC">Public</option>
+                  <option value="PRIVATE">Private (Approval req)</option>
+                  <option value="INVITE_CODE">Invite Code Only</option>
+                </select>
               </div>
 
               <button 
@@ -1715,7 +1721,7 @@ export default function TournamentsPage() {
                 disabled={actionLoading}
                 style={{ marginTop: '0.5rem', width: '100%', fontWeight: 800 }}
               >
-                {actionLoading ? 'Hosting...' : 'Publish Tournament Announcement'}
+                {actionLoading ? 'Creating...' : 'Create Tournament'}
               </button>
             </form>
           </Card>
@@ -1751,7 +1757,7 @@ export default function TournamentsPage() {
             {activeMatch.status === 'PENDING' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', background: '#090b14', padding: '0.5rem', borderRadius: 8 }}>
-                  ⏱️ Join window closes at: {new Date(activeMatch.joinWindowEnd).toLocaleTimeString()}
+                  ⏱️ Join window closes at: {formatIST(activeMatch.joinWindowEnd, 'time')}
                 </div>
                 
                 {/* Player Cards Row */}

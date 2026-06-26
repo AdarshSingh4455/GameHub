@@ -53,14 +53,12 @@ export async function GET(request: Request) {
       // Determine calculated status based on dates
       let calculatedStatus = t.status
       if (t.status !== 'COMPLETED' && t.status !== 'CLAIMED') {
-        if (now < regStart) {
-          calculatedStatus = 'ANNOUNCEMENT'
-        } else if (now >= regStart && now <= regEnd) {
-          calculatedStatus = 'REGISTRATION_OPEN'
-        } else if (now > regEnd && t.subTournaments.length === 0) {
-          calculatedStatus = 'REGISTRATION_CLOSED'
-        } else {
+        if (t.status === 'ACTIVE' || t.subTournaments.length > 0) {
           calculatedStatus = 'ACTIVE'
+        } else if (now <= regEnd) {
+          calculatedStatus = 'REGISTRATION_OPEN'
+        } else {
+          calculatedStatus = 'REGISTRATION_CLOSED'
         }
       }
 
@@ -115,17 +113,13 @@ export async function GET(request: Request) {
         currentRound = `${roundName} Live`
       } else if (calculatedStatus === 'REGISTRATION_OPEN') {
         currentRound = 'Registration Open'
-      } else if (calculatedStatus === 'ANNOUNCEMENT') {
-        currentRound = 'Announcement Phase'
       } else if (calculatedStatus === 'COMPLETED' || calculatedStatus === 'CLAIMED') {
         currentRound = 'Tournament Completed'
       }
 
       // Countdown timer calculation
       let countdown = 0
-      if (calculatedStatus === 'ANNOUNCEMENT') {
-        countdown = Math.max(0, Math.floor((regStart.getTime() - now.getTime()) / 1000))
-      } else if (calculatedStatus === 'REGISTRATION_OPEN') {
+      if (calculatedStatus === 'REGISTRATION_OPEN') {
         countdown = Math.max(0, Math.floor((regEnd.getTime() - now.getTime()) / 1000))
       } else if (calculatedStatus === 'REGISTRATION_CLOSED') {
         countdown = Math.max(0, Math.floor((startDate.getTime() - now.getTime()) / 1000))
@@ -174,7 +168,7 @@ export async function GET(request: Request) {
     })
 
     // Sort into categories
-    const announcements = processed.filter(t => t.status === 'ANNOUNCEMENT')
+    const announcements: any[] = []
     const registrationOpen = processed.filter(t => t.status === 'REGISTRATION_OPEN')
     const upcoming = processed.filter(t => t.status === 'REGISTRATION_CLOSED')
     const live = processed.filter(t => t.status === 'ACTIVE')
@@ -384,7 +378,7 @@ export async function POST(request: Request) {
           sub.id,
           participants,
           tournament.type as 'ONE_DAY' | 'MULTI_DAY',
-          tournament.startDate.toISOString(),
+          new Date(tournament.startDate).toISOString(),
           tournament.startTime
         )
 

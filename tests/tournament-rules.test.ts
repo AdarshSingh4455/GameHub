@@ -48,7 +48,7 @@ async function runTests() {
       startDate: new Date(),
       endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
       eligibleGames: ['tic-tac-toe'],
-      status: 'ANNOUNCEMENT',
+      status: 'REGISTRATION_OPEN',
       isOfficial: true,
       rewardCoins: 500
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthenticatedProfile } from '@/lib/multiplayer'
+import { parseIST, parseISTDateTime } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,10 +35,17 @@ export async function POST(request: Request) {
       rewardTitle
     } = body
 
-    if (!name || !gameSlug || !startDate || !endDate) {
-      return NextResponse.json({ error: 'Name, game, start date, and end date are required' }, { status: 400 })
+    if (!name) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+    if (!gameSlug) {
+      return NextResponse.json({ error: 'Game is required' }, { status: 400 })
+    }
+    if (!startDate) {
+      return NextResponse.json({ error: 'Start Date is required' }, { status: 400 })
     }
 
+    const parsedDurationDays = parseInt(durationDays, 10) || 1
     const minPlayers = 4
     const parsedMaxPlayers = parseInt(maxPlayers, 10) || 16
     if (parsedMaxPlayers < minPlayers) {
@@ -71,6 +79,24 @@ export async function POST(request: Request) {
       }
     }
 
+    // Combine date and time to construct exact IST start date
+    const startDatetime = parseISTDateTime(startDate, startTime || '10:00 AM')
+    if (isNaN(startDatetime.getTime())) {
+      return NextResponse.json({ error: 'Invalid Start Date or Time' }, { status: 400 })
+    }
+
+    // Automatically calculate registration start/end, end date, and duration
+    // Registration opens immediately
+    const finalRegStart = (regStart && regStart.trim()) ? (parseIST(regStart) || new Date()) : new Date()
+    // Registration ends when the tournament starts
+    const finalRegEnd = (regEnd && regEnd.trim()) ? (parseIST(regEnd) || startDatetime) : startDatetime
+    // End date defaults to start date + durationDays
+    const finalEndDate = (endDate && endDate.trim()) ? (parseISTDateTime(endDate, startTime || '10:00 AM')) : new Date(startDatetime.getTime() + parsedDurationDays * 24 * 60 * 60 * 1000)
+
+    if (isNaN(finalEndDate.getTime())) {
+      return NextResponse.json({ error: 'Invalid End Date' }, { status: 400 })
+    }
+
     // Generate invite code for private/invite-code community tournaments
     let inviteCode: string | null = null
     if (privacy === 'INVITE_CODE' || privacy === 'PRIVATE') {
@@ -83,11 +109,11 @@ export async function POST(request: Request) {
         description: description || null,
         gameSlug,
         type: type || 'ONE_DAY',
-        regStart: regStart ? new Date(regStart) : new Date(),
-        regEnd: regEnd ? new Date(regEnd) : new Date(startDate),
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        durationDays: parseInt(durationDays, 10) || 1,
+        regStart: finalRegStart,
+        regEnd: finalRegEnd,
+        startDate: startDatetime,
+        endDate: finalEndDate,
+        durationDays: parsedDurationDays,
         maxPlayers: parsedMaxPlayers,
         bannerUrl: bannerUrl || null,
         rules: rules || null,
@@ -100,7 +126,7 @@ export async function POST(request: Request) {
         rewardCoins: forceOfficial ? (parseInt(rewardCoins, 10) || 0) : 0,
         rewardBadge: forceOfficial ? (rewardBadge || null) : null,
         rewardTitle: forceOfficial ? (rewardTitle || null) : null,
-        status: 'ANNOUNCEMENT' // Must start in announcement phase
+        status: 'REGISTRATION_OPEN' // Set status directly to REGISTRATION_OPEN
       }
     })
 

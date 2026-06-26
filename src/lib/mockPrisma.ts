@@ -1144,15 +1144,58 @@ function createModelMock(modelName: string) {
 
         // ── Tournament ────────────────────────────────────────────────────────
         if (modelName === 'tournament') {
+          const populateTournamentRelations = (t: any, db: any, include: any) => {
+            if (!t) return t
+            const clone = { ...t }
+            if (include?.registrations) {
+              let regs = Object.values(db.tournamentRegistrations || {}).filter((r: any) => r.tournamentId === t.id)
+              if (include.registrations.include?.profile) {
+                regs = regs.map((r: any) => ({
+                  ...r,
+                  profile: db.profiles[r.profileId] || null
+                }))
+              }
+              if (include.registrations.include?.team) {
+                regs = regs.map((r: any) => ({
+                  ...r,
+                  team: db.tournamentTeams[r.teamId] || null
+                }))
+              }
+              clone.registrations = regs
+            } else {
+              clone.registrations = clone.registrations || []
+            }
+
+            if (include?.subTournaments) {
+              let subs = Object.values(db.subTournaments || {}).filter((s: any) => s.tournamentId === t.id)
+              if (include.subTournaments.include?.matches) {
+                subs = subs.map((s: any) => ({
+                  ...s,
+                  matches: Object.values(db.tournamentMatches || {}).filter((m: any) => m.subTournamentId === s.id)
+                }))
+              }
+              clone.subTournaments = subs
+            } else {
+              clone.subTournaments = clone.subTournaments || []
+            }
+            return clone
+          }
+
           if (action === 'findMany') {
             const db = loadDb()
-            return Object.values(db.tournaments || {})
+            let list = Object.values(db.tournaments || {})
+            list.sort((a: any, b: any) => new Date(a.regStart || 0).getTime() - new Date(b.regStart || 0).getTime())
+            return list.map((t: any) => populateTournamentRelations(t, db, params.include))
           }
           if (action === 'findUnique' || action === 'findFirst') {
             const db = loadDb()
             const id = params.where?.id
-            if (id && db.tournaments) return db.tournaments[id] || null
-            return null
+            let t = null
+            if (id && db.tournaments) t = db.tournaments[id] || null
+            if (!t && params.where?.inviteCode) {
+              t = Object.values(db.tournaments || {}).find((x: any) => x.inviteCode === params.where.inviteCode) || null
+            }
+            return populateTournamentRelations(t, db, params.include)
           }
           if (action === 'create') {
             const db = loadDb()
@@ -1172,7 +1215,8 @@ function createModelMock(modelName: string) {
               bracketData: d.bracketData || null,
               status: d.status || 'REGISTERING',
               createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
+              ...d
             }
             db.tournaments[t.id] = t
             saveDb(db)

@@ -22,13 +22,25 @@ interface Tournament {
   id: string
   name: string
   description: string | null
+  gameSlug?: string
+  type?: string
+  regStart?: string
+  regEnd?: string
   startDate: string
   endDate: string
+  durationDays?: number
+  maxPlayers?: number
+  bannerUrl?: string | null
+  rules?: string | null
+  privacy?: string
+  preferredSplit?: string
+  startTime?: string
   eligibleGames: string[]
   rewardCoins: number
   rewardBadge: string | null
   rewardTitle: string | null
   rewardCosmetic: string | null
+  status?: string
 }
 
 interface Cosmetic {
@@ -99,8 +111,19 @@ export default function AdminPage() {
     id: '',
     name: '',
     description: '',
+    gameSlug: 'tic-tac-toe',
+    type: 'ONE_DAY',
+    regStart: '',
+    regEnd: '',
     startDate: '',
     endDate: '',
+    durationDays: 1,
+    maxPlayers: 16,
+    bannerUrl: '',
+    rules: '',
+    privacy: 'PUBLIC',
+    preferredSplit: '8x2',
+    startTime: '10:00 AM',
     eligibleGames: [] as string[],
     rewardCoins: 0,
     rewardBadge: '',
@@ -315,13 +338,24 @@ export default function AdminPage() {
 
       if (!res.ok) throw new Error(data.error || 'Failed to save tournament')
 
-      addToast('success', 'Tournament Saved', 'Tournament configurations created!')
+      addToast('success', 'Tournament Saved', tournamentForm.id ? 'Tournament configurations updated!' : 'Tournament configurations created!')
       setTournamentForm({
         id: '',
         name: '',
         description: '',
+        gameSlug: 'tic-tac-toe',
+        type: 'ONE_DAY',
+        regStart: '',
+        regEnd: '',
         startDate: '',
         endDate: '',
+        durationDays: 1,
+        maxPlayers: 16,
+        bannerUrl: '',
+        rules: '',
+        privacy: 'PUBLIC',
+        preferredSplit: '8x2',
+        startTime: '10:00 AM',
         eligibleGames: [],
         rewardCoins: 0,
         rewardBadge: '',
@@ -786,33 +820,98 @@ export default function AdminPage() {
       {activeTab === 'tournaments' && !loadingData && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Create Tournament Form */}
-          <div className="card" style={{ padding: '1.25rem' }}>
-            <h2 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '1rem', color: 'white' }}>🏆 Create Tournament Configuration</h2>
-            <form onSubmit={handleTournamentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.35rem' }}>Tournament Name</label>
-                  <input
-                    className="input"
-                    type="text"
-                    value={tournamentForm.name}
-                    onChange={(e) => setTournamentForm((prev) => ({ ...prev, name: e.target.value }))}
-                    required
-                  />
+          <div className="card" style={{ padding: '1.5rem', background: 'hsl(222 18% 10%)', border: '1px solid hsl(220 15% 16%)', borderRadius: '16px' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.25rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              🏆 Create Tournament Configuration
+            </h2>
+            <form onSubmit={handleTournamentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                
+                {/* Column 1: Core Details */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 100% 70%)', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '0.25rem', margin: 0 }}>Core Info</h3>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Tournament Name</label>
+                    <input
+                      className="input"
+                      type="text"
+                      value={tournamentForm.name}
+                      onChange={(e) => setTournamentForm((prev) => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g. Grand Esports Championship"
+                      required
+                    />
+                  </div>
 
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.35rem', marginTop: '0.5rem' }}>Description</label>
-                  <textarea
-                    className="input"
-                    rows={2}
-                    value={tournamentForm.description}
-                    onChange={(e) => setTournamentForm((prev) => ({ ...prev, description: e.target.value }))}
-                  />
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Primary Game</label>
+                    <select
+                      className="input"
+                      value={tournamentForm.gameSlug}
+                      onChange={(e) => setTournamentForm((prev) => ({ ...prev, gameSlug: e.target.value }))}
+                      style={{ height: '38px', width: '100%' }}
+                    >
+                      {GAMES_LIST.map((g) => (
+                        <option key={g.slug} value={g.slug}>{g.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Banner Image URL</label>
+                    <input
+                      className="input"
+                      type="text"
+                      value={tournamentForm.bannerUrl}
+                      onChange={(e) => setTournamentForm((prev) => ({ ...prev, bannerUrl: e.target.value }))}
+                      placeholder="https://example.com/banner.png"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Description</label>
+                    <textarea
+                      className="input"
+                      rows={3}
+                      value={tournamentForm.description}
+                      onChange={(e) => setTournamentForm((prev) => ({ ...prev, description: e.target.value }))}
+                      placeholder="Enter a brief description for players..."
+                    />
+                  </div>
                 </div>
 
-                <div>
+                {/* Column 2: Date & Time Configuration */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 100% 70%)', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '0.25rem', margin: 0 }}>Schedule & Type</h3>
+                  
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.35rem' }}>Start Date</label>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Type</label>
+                      <select
+                        className="input"
+                        value={tournamentForm.type}
+                        onChange={(e) => setTournamentForm((prev) => ({ ...prev, type: e.target.value }))}
+                        style={{ height: '38px', width: '100%' }}
+                      >
+                        <option value="ONE_DAY">One Day</option>
+                        <option value="MULTI_DAY">Multi Day</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Duration (Days)</label>
+                      <input
+                        className="input"
+                        type="number"
+                        min={1}
+                        value={tournamentForm.durationDays}
+                        onChange={(e) => setTournamentForm((prev) => ({ ...prev, durationDays: parseInt(e.target.value) || 1 }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Start Date</label>
                       <input
                         className="input"
                         type="date"
@@ -822,7 +921,7 @@ export default function AdminPage() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.35rem' }}>End Date</label>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>End Date</label>
                       <input
                         className="input"
                         type="date"
@@ -833,36 +932,127 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.35rem', marginTop: '0.5rem' }}>Eligible Games (Targeted Slugs)</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.35rem' }}>
-                    {GAMES_LIST.slice(0, 8).map((g) => {
-                      const checked = tournamentForm.eligibleGames.includes(g.slug)
-                      return (
-                        <label key={g.slug} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', color: 'hsl(220 10% 70%)', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              setTournamentForm((prev) => {
-                                const nextGames = checked
-                                  ? prev.eligibleGames.filter((s) => s !== g.slug)
-                                  : [...prev.eligibleGames, g.slug]
-                                return { ...prev, eligibleGames: nextGames }
-                              })
-                            }}
-                            style={{ width: 14, height: 14 }}
-                          />
-                          {g.name}
-                        </label>
-                      )
-                    })}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Start Time</label>
+                      <input
+                        className="input"
+                        type="text"
+                        value={tournamentForm.startTime}
+                        onChange={(e) => setTournamentForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                        placeholder="e.g. 10:00 AM"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Privacy</label>
+                      <select
+                        className="input"
+                        value={tournamentForm.privacy}
+                        onChange={(e) => setTournamentForm((prev) => ({ ...prev, privacy: e.target.value }))}
+                        style={{ height: '38px', width: '100%' }}
+                      >
+                        <option value="PUBLIC">Public</option>
+                        <option value="PRIVATE">Private</option>
+                        <option value="INVITE_CODE">Invite Code Only</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Registration Opens</label>
+                    <input
+                      className="input"
+                      type="datetime-local"
+                      value={tournamentForm.regStart}
+                      onChange={(e) => setTournamentForm((prev) => ({ ...prev, regStart: e.target.value }))}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Registration Closes</label>
+                    <input
+                      className="input"
+                      type="datetime-local"
+                      value={tournamentForm.regEnd}
+                      onChange={(e) => setTournamentForm((prev) => ({ ...prev, regEnd: e.target.value }))}
+                    />
                   </div>
                 </div>
+
+                {/* Column 3: Rules & Splitting */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 100% 70%)', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '0.25rem', margin: 0 }}>Rules & Splits</h3>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Max Players</label>
+                      <input
+                        className="input"
+                        type="number"
+                        min={4}
+                        value={tournamentForm.maxPlayers}
+                        onChange={(e) => setTournamentForm((prev) => ({ ...prev, maxPlayers: parseInt(e.target.value) || 16 }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>16-Player Split</label>
+                      <select
+                        className="input"
+                        value={tournamentForm.preferredSplit}
+                        onChange={(e) => setTournamentForm((prev) => ({ ...prev, preferredSplit: e.target.value }))}
+                        style={{ height: '38px', width: '100%' }}
+                      >
+                        <option value="8x2">Two Tournaments (8 + 8)</option>
+                        <option value="4x4">Four Tournaments (4 + 4 + 4 + 4)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.3rem' }}>Tournament Rules</label>
+                    <textarea
+                      className="input"
+                      rows={3}
+                      value={tournamentForm.rules}
+                      onChange={(e) => setTournamentForm((prev) => ({ ...prev, rules: e.target.value }))}
+                      placeholder="e.g. Fair play rules. Match joins open 5m before start. Auto walkover after 10m."
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 50%)', marginBottom: '0.3rem' }}>Eligible Games (Alternative Fallbacks)</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.35rem', maxHeight: '100px', overflowY: 'auto', padding: '0.25rem', border: '1px solid hsl(220 15% 16%)', borderRadius: '6px' }}>
+                      {GAMES_LIST.map((g) => {
+                        const checked = tournamentForm.eligibleGames.includes(g.slug)
+                        return (
+                          <label key={g.slug} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', color: 'hsl(220 10% 70%)', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setTournamentForm((prev) => {
+                                  const nextGames = checked
+                                    ? prev.eligibleGames.filter((s) => s !== g.slug)
+                                    : [...prev.eligibleGames, g.slug]
+                                  return { ...prev, eligibleGames: nextGames }
+                                })
+                              }}
+                              style={{ width: 14, height: 14 }}
+                            />
+                            {g.name}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               {/* Rewards Configuration */}
               <div style={{ borderTop: '1px solid hsl(220 15% 18%)', paddingTop: '0.75rem' }}>
-                <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>🎁 Reward Configuration (PVP Winners)</h4>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>🎁 Reward Configuration (Official Winners Only)</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'hsl(220 10% 65%)', marginBottom: '0.2rem' }}>Reward Coins</label>
@@ -906,9 +1096,43 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start', marginTop: '0.5rem' }}>
-                Publish Tournament Structure
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '0.5rem 1rem' }}>
+                  {tournamentForm.id ? 'Save Tournament Changes' : 'Publish Tournament Structure'}
+                </button>
+                {tournamentForm.id && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setTournamentForm({
+                      id: '',
+                      name: '',
+                      description: '',
+                      gameSlug: 'tic-tac-toe',
+                      type: 'ONE_DAY',
+                      regStart: '',
+                      regEnd: '',
+                      startDate: '',
+                      endDate: '',
+                      durationDays: 1,
+                      maxPlayers: 16,
+                      bannerUrl: '',
+                      rules: '',
+                      privacy: 'PUBLIC',
+                      preferredSplit: '8x2',
+                      startTime: '10:00 AM',
+                      eligibleGames: [],
+                      rewardCoins: 0,
+                      rewardBadge: '',
+                      rewardTitle: '',
+                      rewardCosmetic: '',
+                    })}
+                    style={{ padding: '0.5rem 1rem' }}
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -918,33 +1142,104 @@ export default function AdminPage() {
               Published Tournaments ({tournaments.length})
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {tournaments.map((t) => (
-                <div key={t.id} className="card" style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'white' }}>
-                      🏆 {t.name}
+              {tournaments.map((t) => {
+                const gameName = GAMES_LIST.find((g) => g.slug === t.gameSlug)?.name || t.gameSlug || 'Tic-Tac-Toe'
+                return (
+                  <div key={t.id} className="card" style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: 'hsl(222 18% 12%)' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'white' }}>
+                          🏆 {t.name}
+                        </span>
+                        <span style={{ fontSize: '0.65rem', background: 'hsl(220 100% 70% / 0.15)', color: 'hsl(220 100% 75%)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 600 }}>
+                          {gameName}
+                        </span>
+                        {t.status && (
+                          <span style={{
+                            fontSize: '0.65rem',
+                            background: t.status === 'ANNOUNCEMENT' ? 'rgba(59, 130, 246, 0.15)' :
+                                        t.status === 'REGISTRATION' ? 'rgba(16, 185, 129, 0.15)' :
+                                        t.status === 'ACTIVE' ? 'rgba(245, 158, 11, 0.15)' :
+                                        'rgba(107, 114, 128, 0.15)',
+                            color: t.status === 'ANNOUNCEMENT' ? '#60a5fa' :
+                                   t.status === 'REGISTRATION' ? '#34d399' :
+                                   t.status === 'ACTIVE' ? '#fbbf24' :
+                                   '#9ca3af',
+                            padding: '0.1rem 0.4rem',
+                            borderRadius: '4px',
+                            fontWeight: 600
+                          }}>
+                            {t.status}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {t.description && <p style={{ margin: '0.15rem 0', fontSize: '0.78rem', color: 'hsl(220 10% 60%)' }}>{t.description}</p>}
+                      
+                      <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                        <div>
+                          Start: <strong>{new Date(t.startDate).toLocaleDateString()}</strong> · End: <strong>{new Date(t.endDate).toLocaleDateString()}</strong> at <strong>{t.startTime || '10:00 AM'}</strong>
+                        </div>
+                        <div>
+                          Reg Opens: <strong>{t.regStart ? new Date(t.regStart).toLocaleString() : 'N/A'}</strong> · Closes: <strong>{t.regEnd ? new Date(t.regEnd).toLocaleString() : 'N/A'}</strong>
+                        </div>
+                        <div>
+                          Max Players: <strong>{t.maxPlayers || 16}</strong> · Split: <strong>{t.preferredSplit === '4x4' ? '4 + 4 + 4 + 4' : '8 + 8'}</strong> · Type: <strong>{t.type || 'ONE_DAY'}</strong>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                        {t.rewardCoins > 0 && <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>💰 {t.rewardCoins} Coins</span>}
+                        {t.rewardBadge && <span className="badge badge-blue" style={{ fontSize: '0.62rem' }}>🎖️ {t.rewardBadge}</span>}
+                        {t.rewardTitle && <span className="badge badge-purple" style={{ fontSize: '0.62rem' }}>⚡ {t.rewardTitle}</span>}
+                        {t.rewardCosmetic && <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>💎 {t.rewardCosmetic} (Limited)</span>}
+                      </div>
                     </div>
-                    {t.description && <p style={{ margin: '0.15rem 0', fontSize: '0.78rem', color: 'hsl(220 10% 60%)' }}>{t.description}</p>}
-                    <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', marginTop: '0.2rem' }}>
-                      Start: <strong>{new Date(t.startDate).toLocaleDateString()}</strong> · End: <strong>{new Date(t.endDate).toLocaleDateString()}</strong>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
-                      {t.rewardCoins > 0 && <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>💰 {t.rewardCoins} Coins</span>}
-                      {t.rewardBadge && <span className="badge badge-blue" style={{ fontSize: '0.62rem' }}>🎖️ {t.rewardBadge}</span>}
-                      {t.rewardTitle && <span className="badge badge-purple" style={{ fontSize: '0.62rem' }}>⚡ {t.rewardTitle}</span>}
-                      {t.rewardCosmetic && <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>💎 {t.rewardCosmetic} (Limited)</span>}
+
+                    <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setTournamentForm({
+                            id: t.id,
+                            name: t.name,
+                            description: t.description || '',
+                            gameSlug: t.gameSlug || 'tic-tac-toe',
+                            type: t.type || 'ONE_DAY',
+                            regStart: t.regStart ? new Date(t.regStart).toISOString().slice(0, 16) : '',
+                            regEnd: t.regEnd ? new Date(t.regEnd).toISOString().slice(0, 16) : '',
+                            startDate: t.startDate ? new Date(t.startDate).toISOString().split('T')[0] : '',
+                            endDate: t.endDate ? new Date(t.endDate).toISOString().split('T')[0] : '',
+                            durationDays: t.durationDays || 1,
+                            maxPlayers: t.maxPlayers || 16,
+                            bannerUrl: t.bannerUrl || '',
+                            rules: t.rules || '',
+                            privacy: t.privacy || 'PUBLIC',
+                            preferredSplit: t.preferredSplit || '8x2',
+                            startTime: t.startTime || '10:00 AM',
+                            eligibleGames: t.eligibleGames || [],
+                            rewardCoins: t.rewardCoins || 0,
+                            rewardBadge: t.rewardBadge || '',
+                            rewardTitle: t.rewardTitle || '',
+                            rewardCosmetic: t.rewardCosmetic || '',
+                          })
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                        style={{ padding: '0.3rem 0.5rem', fontSize: '0.72rem' }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleTournamentDelete(t.id)}
+                        style={{ padding: '0.3rem 0.5rem', color: 'hsl(0 80% 60%)', fontSize: '0.72rem' }}
+                      >
+                        🗑️ Delete
+                      </button>
                     </div>
                   </div>
-
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => handleTournamentDelete(t.id)}
-                    style={{ padding: '0.3rem', color: 'hsl(0 80% 60%)', flexShrink: 0 }}
-                  >
-                    🗑️ Delete
-                  </button>
-                </div>
-              ))}
+                )
+              })}
               {tournaments.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '2.5rem', color: 'hsl(220 10% 50%)', border: '1px dashed hsl(220 15% 15%)', borderRadius: 16 }}>
                   No tournaments registered yet.

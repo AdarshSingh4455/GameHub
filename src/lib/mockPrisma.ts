@@ -14,7 +14,13 @@ export interface MockDbState {
   challengeClaims?: Record<string, any>
   matches?: Record<string, any>
   xpEvents?: Record<string, any>
-  tournaments?: Record<string, any>
+  tournaments: Record<string, any>
+  tournamentRegistrations: Record<string, any>
+  subTournaments: Record<string, any>
+  tournamentMatches: Record<string, any>
+  tournamentTeams: Record<string, any>
+  tournamentTeamMembers: Record<string, any>
+  tournamentAuditLogs: Record<string, any>
   rankedMatches?: Record<string, any>
   rankedSeasons?: Record<string, any>
   seasonSnapshots?: Record<string, any>
@@ -119,6 +125,12 @@ export function loadDb(): MockDbState {
             if (!parsed.rankedSeasons) parsed.rankedSeasons = {}
             if (!parsed.seasonSnapshots) parsed.seasonSnapshots = {}
             if (!parsed.ads) parsed.ads = {}
+            if (!parsed.tournamentRegistrations) parsed.tournamentRegistrations = {}
+            if (!parsed.subTournaments) parsed.subTournaments = {}
+            if (!parsed.tournamentMatches) parsed.tournamentMatches = {}
+            if (!parsed.tournamentTeams) parsed.tournamentTeams = {}
+            if (!parsed.tournamentTeamMembers) parsed.tournamentTeamMembers = {}
+            if (!parsed.tournamentAuditLogs) parsed.tournamentAuditLogs = {}
             cachedDb = parsed
             return parsed
           }
@@ -297,7 +309,13 @@ export function loadDb(): MockDbState {
     tournaments: {},
     rankedMatches: {},
     rankedSeasons: {},
-    seasonSnapshots: {}
+    seasonSnapshots: {},
+    tournamentRegistrations: {},
+    subTournaments: {},
+    tournamentMatches: {},
+    tournamentTeams: {},
+    tournamentTeamMembers: {},
+    tournamentAuditLogs: {}
   }
 
   cachedDb = defaultDb
@@ -1175,6 +1193,489 @@ function createModelMock(modelName: string) {
           }
         }
 
+        // ── TournamentRegistration ────────────────────────────────────────────
+        if (modelName === 'tournamentRegistration') {
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.tournamentRegistrations) db.tournamentRegistrations = {}
+            const d = params.data || {}
+            const profileId = d.profile?.connect?.id || d.profileId
+            const tournamentId = d.tournament?.connect?.id || d.tournamentId
+            const teamId = d.team?.connect?.id || d.teamId
+            
+            const r = {
+              id: d.id || `reg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              tournamentId,
+              profileId,
+              teamId: teamId || null,
+              status: d.status || 'REGISTERED',
+              waitingPosition: d.waitingPosition || 0,
+              registeredAt: new Date().toISOString()
+            }
+            db.tournamentRegistrations[r.id] = r
+            saveDb(db)
+            return r
+          }
+          if (action === 'findMany') {
+            const db = loadDb()
+            let list = Object.values(db.tournamentRegistrations || {})
+            const where = params.where || {}
+            if (where.tournamentId) list = list.filter((r: any) => r.tournamentId === where.tournamentId)
+            if (where.profileId) list = list.filter((r: any) => r.profileId === where.profileId)
+            if (where.teamId) list = list.filter((r: any) => r.teamId === where.teamId)
+            if (where.status) list = list.filter((r: any) => r.status === where.status)
+            
+            if (params.include?.profile) {
+              list = list.map((r: any) => ({
+                ...r,
+                profile: db.profiles[r.profileId] || null
+              }))
+            }
+            if (params.include?.tournament) {
+              list = list.map((r: any) => ({
+                ...r,
+                tournament: db.tournaments[r.tournamentId] || null
+              }))
+            }
+            return list
+          }
+          if (action === 'findFirst' || action === 'findUnique') {
+            const db = loadDb()
+            let list = Object.values(db.tournamentRegistrations || {})
+            const where = params.where || {}
+            let r: any = null
+            if (where.id) {
+              r = db.tournamentRegistrations[where.id] || null
+            } else {
+              if (where.tournamentId) list = list.filter((r: any) => r.tournamentId === where.tournamentId)
+              if (where.profileId) list = list.filter((r: any) => r.profileId === where.profileId)
+              if (where.tournamentId_profileId) {
+                const { tournamentId, profileId } = where.tournamentId_profileId
+                list = list.filter((r: any) => r.tournamentId === tournamentId && r.profileId === profileId)
+              }
+              r = list[0] || null
+            }
+            if (r) {
+              if (params.include?.profile) {
+                r.profile = db.profiles[r.profileId] || null
+              }
+              if (params.include?.tournament) {
+                r.tournament = db.tournaments[r.tournamentId] || null
+              }
+            }
+            return r
+          }
+          if (action === 'update') {
+            const db = loadDb()
+            const id = params.where?.id
+            let r = null
+            if (id) {
+              r = db.tournamentRegistrations[id]
+            } else if (params.where?.tournamentId_profileId) {
+              const { tournamentId, profileId } = params.where.tournamentId_profileId
+              r = Object.values(db.tournamentRegistrations || {}).find((x: any) => x.tournamentId === tournamentId && x.profileId === profileId)
+            }
+            if (r) {
+              Object.assign(r, params.data || {})
+              saveDb(db)
+            }
+            return r
+          }
+          if (action === 'delete') {
+            const db = loadDb()
+            const id = params.where?.id
+            let rId = id
+            if (!rId && params.where?.tournamentId_profileId) {
+              const { tournamentId, profileId } = params.where.tournamentId_profileId
+              const found = Object.values(db.tournamentRegistrations || {}).find((x: any) => x.tournamentId === tournamentId && x.profileId === profileId) as any
+              if (found) rId = found.id
+            }
+            if (rId && db.tournamentRegistrations) {
+              delete db.tournamentRegistrations[rId]
+              saveDb(db)
+            }
+            return { success: true }
+          }
+          if (action === 'deleteMany') {
+            const db = loadDb()
+            const where = params.where || {}
+            let count = 0
+            if (db.tournamentRegistrations) {
+              for (const [key, value] of Object.entries(db.tournamentRegistrations) as any) {
+                let match = true
+                if (where.tournamentId && value.tournamentId !== where.tournamentId) match = false
+                if (where.profileId && value.profileId !== where.profileId) match = false
+                if (match) {
+                  delete db.tournamentRegistrations[key]
+                  count++
+                }
+              }
+              saveDb(db)
+            }
+            return { count }
+          }
+        }
+
+        // ── SubTournament ─────────────────────────────────────────────────────
+        if (modelName === 'subTournament') {
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.subTournaments) db.subTournaments = {}
+            const d = params.data || {}
+            const s = {
+              id: d.id || `subt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              tournamentId: d.tournament?.connect?.id || d.tournamentId,
+              name: d.name || 'Division Bracket',
+              capacity: d.capacity || 8,
+              status: d.status || 'ACTIVE',
+              winnerId: d.winnerId || null,
+              createdAt: new Date().toISOString()
+            }
+            db.subTournaments[s.id] = s
+            saveDb(db)
+            return s
+          }
+          if (action === 'findMany') {
+            const db = loadDb()
+            let list = Object.values(db.subTournaments || {})
+            const where = params.where || {}
+            if (where.tournamentId) list = list.filter((s: any) => s.tournamentId === where.tournamentId)
+            if (where.status) list = list.filter((s: any) => s.status === where.status)
+            
+            if (params.include?.matches) {
+              list = list.map((s: any) => {
+                const matches = Object.values(db.tournamentMatches || {}).filter((m: any) => m.subTournamentId === s.id)
+                return { ...s, matches }
+              })
+            }
+            if (params.include?.tournament) {
+              list = list.map((s: any) => ({
+                ...s,
+                tournament: db.tournaments[s.tournamentId] || null
+              }))
+            }
+            return list
+          }
+          if (action === 'count') {
+            const db = loadDb()
+            let list = Object.values(db.subTournaments || {})
+            const where = params.where || {}
+            if (where.tournamentId) list = list.filter((s: any) => s.tournamentId === where.tournamentId)
+            if (where.status) list = list.filter((s: any) => s.status === where.status)
+            return list.length
+          }
+          if (action === 'findFirst' || action === 'findUnique') {
+            const db = loadDb()
+            const where = params.where || {}
+            const id = where.id
+            if (id && db.subTournaments) {
+              const s = db.subTournaments[id]
+              if (s) {
+                if (params.include?.matches) {
+                  s.matches = Object.values(db.tournamentMatches || {}).filter((m: any) => m.subTournamentId === s.id)
+                }
+                if (params.include?.tournament) {
+                  s.tournament = db.tournaments[s.tournamentId] || null
+                }
+              }
+              return s || null
+            }
+            let list = Object.values(db.subTournaments || {})
+            if (where.tournamentId) list = list.filter((s: any) => s.tournamentId === where.tournamentId)
+            if (where.status) list = list.filter((s: any) => s.status === where.status)
+            const s = list[0] || null
+            if (s) {
+              if (params.include?.matches) {
+                s.matches = Object.values(db.tournamentMatches || {}).filter((m: any) => m.subTournamentId === s.id)
+              }
+              if (params.include?.tournament) {
+                s.tournament = db.tournaments[s.tournamentId] || null
+              }
+            }
+            return s || null
+          }
+          if (action === 'update') {
+            const db = loadDb()
+            const id = params.where?.id
+            const s = db.subTournaments[id]
+            if (s) {
+              Object.assign(s, params.data || {})
+              saveDb(db)
+            }
+            return s || null
+          }
+        }
+
+        // ── TournamentMatch ───────────────────────────────────────────────────
+        if (modelName === 'tournamentMatch') {
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.tournamentMatches) db.tournamentMatches = {}
+            const d = params.data || {}
+            const m = {
+              id: d.id || `tmatch-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              subTournamentId: d.subTournament?.connect?.id || d.subTournamentId,
+              roundIndex: d.roundIndex || 0,
+              roundName: d.roundName || '',
+              matchIndex: d.matchIndex || 0,
+              p1Id: d.p1Id || null,
+              p2Id: d.p2Id || null,
+              p1Name: d.p1Name || null,
+              p2Name: d.p2Name || null,
+              p1Score: d.p1Score !== undefined ? d.p1Score : null,
+              p2Score: d.p2Score !== undefined ? d.p2Score : null,
+              winnerId: d.winnerId || null,
+              status: d.status || 'PENDING',
+              matchTime: d.matchTime || new Date().toISOString(),
+              joinWindowStart: d.joinWindowStart || new Date().toISOString(),
+              joinWindowEnd: d.joinWindowEnd || new Date().toISOString(),
+              p1Joined: d.p1Joined || false,
+              p2Joined: d.p2Joined || false,
+              p1Ready: d.p1Ready || false,
+              p2Ready: d.p2Ready || false,
+              createdAt: new Date().toISOString()
+            }
+            db.tournamentMatches[m.id] = m
+            saveDb(db)
+            return m
+          }
+          if (action === 'findMany') {
+            const db = loadDb()
+            let list = Object.values(db.tournamentMatches || {})
+            const where = params.where || {}
+            if (where.subTournamentId) list = list.filter((m: any) => m.subTournamentId === where.subTournamentId)
+            if (where.status) {
+              if (typeof where.status === 'string') {
+                list = list.filter((m: any) => m.status === where.status)
+              } else if (where.status.in) {
+                list = list.filter((m: any) => where.status.in.includes(m.status))
+              }
+            }
+            if (where.OR) {
+              list = list.filter((m: any) => {
+                return where.OR.some((cond: any) => {
+                  if (cond.p1Id && m.p1Id === cond.p1Id) return true
+                  if (cond.p2Id && m.p2Id === cond.p2Id) return true
+                  return false
+                })
+              })
+            }
+            
+            if (params.include?.subTournament) {
+              list = list.map((m: any) => {
+                const sub = db.subTournaments[m.subTournamentId]
+                if (sub && params.include.subTournament.include?.tournament) {
+                  sub.tournament = db.tournaments[sub.tournamentId] || null
+                }
+                return { ...m, subTournament: sub || null }
+              })
+            }
+            return list
+          }
+          if (action === 'findFirst' || action === 'findUnique') {
+            const db = loadDb()
+            const where = params.where || {}
+            const id = where.id
+            if (id && db.tournamentMatches) {
+              const m = db.tournamentMatches[id]
+              if (m && params.include?.subTournament) {
+                const sub = db.subTournaments[m.subTournamentId]
+                if (sub && params.include.subTournament.include?.tournament) {
+                  sub.tournament = db.tournaments[sub.tournamentId] || null
+                }
+                m.subTournament = sub || null
+              }
+              return m || null
+            }
+            let list = Object.values(db.tournamentMatches || {})
+            if (where.subTournamentId) list = list.filter((m: any) => m.subTournamentId === where.subTournamentId)
+            if (where.roundIndex !== undefined) list = list.filter((m: any) => m.roundIndex === where.roundIndex)
+            if (where.matchIndex !== undefined) list = list.filter((m: any) => m.matchIndex === where.matchIndex)
+            if (where.status) list = list.filter((m: any) => m.status === where.status)
+            const m = list[0] || null
+            if (m && params.include?.subTournament) {
+              const sub = db.subTournaments[m.subTournamentId]
+              if (sub && params.include.subTournament.include?.tournament) {
+                sub.tournament = db.tournaments[sub.tournamentId] || null
+              }
+              m.subTournament = sub || null
+            }
+            return m
+          }
+          if (action === 'update') {
+            const db = loadDb()
+            const id = params.where?.id
+            const m = db.tournamentMatches[id]
+            if (m) {
+              Object.assign(m, params.data || {})
+              saveDb(db)
+            }
+            return m || null
+          }
+        }
+
+        // ── TournamentTeam ────────────────────────────────────────────────────
+        if (modelName === 'tournamentTeam') {
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.tournamentTeams) db.tournamentTeams = {}
+            const d = params.data || {}
+            const t = {
+              id: d.id || `team-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              tournamentId: d.tournament?.connect?.id || d.tournamentId,
+              name: d.name || 'Team Name',
+              captainId: d.captainId || '',
+              inviteCode: d.inviteCode || Math.random().toString(36).substring(2, 8).toUpperCase(),
+              isReady: d.isReady || false,
+              createdAt: new Date().toISOString()
+            }
+            db.tournamentTeams[t.id] = t
+            saveDb(db)
+            return t
+          }
+          if (action === 'findMany') {
+            const db = loadDb()
+            let list = Object.values(db.tournamentTeams || {})
+            const where = params.where || {}
+            if (where.tournamentId) list = list.filter((t: any) => t.tournamentId === where.tournamentId)
+            
+            if (params.include?.members) {
+              list = list.map((t: any) => {
+                const members = Object.values(db.tournamentTeamMembers || {}).filter((m: any) => m.teamId === t.id)
+                return { ...t, members }
+              })
+            }
+            return list
+          }
+          if (action === 'findFirst' || action === 'findUnique') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = Object.values(db.tournamentTeams || {})
+            if (where.id) return db.tournamentTeams[where.id] || null
+            if (where.inviteCode) list = list.filter((t: any) => t.inviteCode === where.inviteCode)
+            if (where.tournamentId) list = list.filter((t: any) => t.tournamentId === where.tournamentId)
+            if (where.captainId) list = list.filter((t: any) => t.captainId === where.captainId)
+            const t = list[0] || null
+            if (t) {
+              if (params.include?.members) {
+                t.members = Object.values(db.tournamentTeamMembers || {}).filter((m: any) => m.teamId === t.id).map((m: any) => ({
+                  ...m,
+                  profile: db.profiles[m.profileId] || null
+                }))
+              }
+            }
+            return t
+          }
+          if (action === 'update') {
+            const db = loadDb()
+            const id = params.where?.id
+            const t = db.tournamentTeams[id]
+            if (t) {
+              Object.assign(t, params.data || {})
+              saveDb(db)
+            }
+            return t || null
+          }
+          if (action === 'delete') {
+            const db = loadDb()
+            const id = params.where?.id
+            if (id && db.tournamentTeams) {
+              delete db.tournamentTeams[id]
+              saveDb(db)
+            }
+            return { success: true }
+          }
+        }
+
+        // ── TournamentTeamMember ──────────────────────────────────────────────
+        if (modelName === 'tournamentTeamMember') {
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.tournamentTeamMembers) db.tournamentTeamMembers = {}
+            const d = params.data || {}
+            const m = {
+              id: d.id || `teamm-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              teamId: d.team?.connect?.id || d.teamId,
+              profileId: d.profile?.connect?.id || d.profileId,
+              joinedAt: new Date().toISOString()
+            }
+            db.tournamentTeamMembers[m.id] = m
+            saveDb(db)
+            return m
+          }
+          if (action === 'findMany') {
+            const db = loadDb()
+            let list = Object.values(db.tournamentTeamMembers || {})
+            const where = params.where || {}
+            if (where.teamId) list = list.filter((m: any) => m.teamId === where.teamId)
+            if (where.profileId) list = list.filter((m: any) => m.profileId === where.profileId)
+            
+            if (params.include?.profile) {
+              list = list.map((m: any) => ({
+                ...m,
+                profile: db.profiles[m.profileId] || null
+              }))
+            }
+            return list
+          }
+          if (action === 'findFirst' || action === 'findUnique') {
+            const db = loadDb()
+            const where = params.where || {}
+            let list = Object.values(db.tournamentTeamMembers || {})
+            if (where.id) return db.tournamentTeamMembers[where.id] || null
+            if (where.teamId_profileId) {
+              const { teamId, profileId } = where.teamId_profileId
+              list = list.filter((m: any) => m.teamId === teamId && m.profileId === profileId)
+            }
+            const m = list[0] || null
+            if (m && params.include?.profile) {
+              m.profile = db.profiles[m.profileId] || null
+            }
+            return m
+          }
+          if (action === 'delete') {
+            const db = loadDb()
+            const id = params.where?.id
+            let mId = id
+            if (!mId && params.where?.teamId_profileId) {
+              const { teamId, profileId } = params.where.teamId_profileId
+              const found = Object.values(db.tournamentTeamMembers || {}).find((x: any) => x.teamId === teamId && x.profileId === profileId) as any
+              if (found) mId = found.id
+            }
+            if (mId && db.tournamentTeamMembers) {
+              delete db.tournamentTeamMembers[mId]
+              saveDb(db)
+            }
+            return { success: true }
+          }
+        }
+
+        // ── TournamentAuditLog ──────────────────────────────────────────────
+        if (modelName === 'tournamentAuditLog') {
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.tournamentAuditLogs) db.tournamentAuditLogs = {}
+            const d = params.data || {}
+            const m = {
+              id: d.id || `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              tournamentId: d.tournament?.connect?.id || d.tournamentId,
+              event: d.event || '',
+              details: d.details || null,
+              createdAt: new Date().toISOString()
+            }
+            db.tournamentAuditLogs[m.id] = m
+            saveDb(db)
+            return m
+          }
+          if (action === 'findMany') {
+            const db = loadDb()
+            let list = Object.values(db.tournamentAuditLogs || {})
+            const where = params.where || {}
+            if (where.tournamentId) list = list.filter((m: any) => m.tournamentId === where.tournamentId)
+            return list
+          }
+        }
+
         // ── MatchRecord ──────────────────────────────────────────────────────
         if (modelName === 'matchRecord') {
           if (action === 'create') {
@@ -1626,6 +2127,8 @@ export function createPrismaMockProxy(realPrisma: any) {
         'multiplayerRoom', 'multiplayerGameSession', 'multiplayerRoomPlayer',
         'multiplayerInvite', 'multiplayerChatMessage', 'challengeClaim', 'tournament',
         'rankedSeason', 'seasonSnapshot', 'rankedMatch', 'ad',
+        'tournamentRegistration', 'subTournament', 'tournamentMatch', 'tournamentTeam', 'tournamentTeamMember',
+        'tournamentAuditLog',
         // Also support potential legacy aliases just in case
         'matchResult', 'gameScore',
       ]

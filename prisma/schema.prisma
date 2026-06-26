@@ -70,6 +70,8 @@ model Profile {
   hangmanWins          Int                 @default(0)
   hangmanLosses        Int                 @default(0)
   hangmanStreak        Int                 @default(0)
+  tournamentRegistrations TournamentRegistration[]
+  tournamentTeamMembers   TournamentTeamMember[]
 
   @@index([xp(sort: Desc)])
   @@index([level(sort: Desc)])
@@ -353,17 +355,123 @@ model Tournament {
   id             String   @id @default(uuid())
   name           String
   description    String?
+  gameSlug       String   @default("tic-tac-toe")
+  type           String   @default("ONE_DAY") // "ONE_DAY" or "MULTI_DAY"
+  regStart       DateTime @default(now())
+  regEnd         DateTime @default(now())
   startDate      DateTime
   endDate        DateTime
+  durationDays   Int      @default(1)
+  maxPlayers     Int      @default(16)
+  bannerUrl      String?
+  rules          String?
+  isOfficial     Boolean  @default(true)
+  creatorId      String? // Profile creator for community tournaments
+  privacy        String   @default("PUBLIC") // PUBLIC, PRIVATE, INVITE_CODE
+  inviteCode     String?  @unique
+  preferredSplit String   @default("8x2") // "8x2" or "4x4"
+  startTime      String?  @default("10:00 AM")
+  winnerId       String?  // Winner profile/team ID
   eligibleGames  String[]
   rewardCoins    Int      @default(0)
   rewardBadge    String?
   rewardTitle    String?
   rewardCosmetic String?
-  bracketData    Json?
-  status         String   @default("REGISTERING")
+  bracketData    Json?    // Deprecated but kept for backward compat if needed
+  status         String   @default("ANNOUNCEMENT")
+  format         String   @default("SINGLE_ELIMINATION")
+  bestOf         Int      @default(1)
+  metadata       Json?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  registrations  TournamentRegistration[]
+  subTournaments SubTournament[]
+  teams          TournamentTeam[]
+  auditLogs      TournamentAuditLog[]
+}
+
+model TournamentRegistration {
+  id              String   @id @default(uuid())
+  tournamentId    String
+  profileId       String
+  teamId          String?
+  status          String   @default("REGISTERED") // "REGISTERED", "WAITING_LIST"
+  waitingPosition Int      @default(0)
+  registeredAt    DateTime @default(now())
+
+  profile    Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  tournament Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       TournamentTeam? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, profileId])
+}
+
+model SubTournament {
+  id           String   @id @default(uuid())
+  tournamentId String
+  name         String
+  capacity     Int
+  status       String   @default("ACTIVE") // ACTIVE, COMPLETED
+  winnerId     String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  tournament Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matches    TournamentMatch[]
+}
+
+model TournamentMatch {
+  id              String   @id @default(uuid())
+  subTournamentId String
+  roundIndex      Int
+  roundName       String
+  matchIndex      Int
+  p1Id            String? // Profile/Team ID
+  p2Id            String?
+  p1Name          String?
+  p2Name          String?
+  p1Score         Int?
+  p2Score         Int?
+  winnerId        String?
+  status          String   @default("PENDING") // PENDING, PLAYING, COMPLETED, WALK_OVER, DISQUALIFIED
+  matchTime       DateTime
+  joinWindowStart DateTime
+  joinWindowEnd   DateTime
+  p1Joined        Boolean  @default(false)
+  p2Joined        Boolean  @default(false)
+  p1Ready         Boolean  @default(false)
+  p2Ready         Boolean  @default(false)
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  subTournament SubTournament @relation(fields: [subTournamentId], references: [id], onDelete: Cascade)
+}
+
+model TournamentTeam {
+  id           String   @id @default(uuid())
+  tournamentId String
+  name         String
+  captainId    String
+  inviteCode   String   @unique
+  isReady      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  tournament Tournament               @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  members    TournamentTeamMember[]
+  registrations TournamentRegistration[]
+}
+
+model TournamentTeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  profileId String
+  joinedAt  DateTime @default(now())
+
+  team    TournamentTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  profile Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, profileId])
 }
 
 enum MultiplayerRoomStatus {
@@ -508,5 +616,15 @@ model RankedMatch {
   mmrChange    Int
   playedAt     DateTime @default(now())
   profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model TournamentAuditLog {
+  id           String     @id @default(uuid())
+  tournamentId String
+  event        String
+  details      String?
+  createdAt    DateTime   @default(now())
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 }
 

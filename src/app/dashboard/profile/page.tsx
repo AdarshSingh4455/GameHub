@@ -172,9 +172,40 @@ function FriendsSkeleton() {
 
 export default function ProfilePage() {
   const { user } = useGameSession()
-  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'ranked' | 'matches' | 'friends' | 'achievements' | 'cosmetics'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'ranked' | 'matches' | 'friends' | 'achievements' | 'cosmetics' | 'tournaments'>('overview')
   const [profile, setProfile] = useState<DBProfile | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Tournaments states
+  const [tournamentData, setTournamentData] = useState<{
+    stats: {
+      totalMatches: number
+      wins: number
+      runnerUps: number
+      winRate: number
+    }
+    officialHistory: Array<{
+      id: string
+      name: string
+      gameSlug: string
+      startDate: string
+      isOfficial: boolean
+      status: string
+      regStatus: string
+      result: 'CHAMPION' | 'PARTICIPANT'
+    }>
+    communityHistory: Array<{
+      id: string
+      name: string
+      gameSlug: string
+      startDate: string
+      isOfficial: boolean
+      status: string
+      regStatus: string
+      result: 'CHAMPION' | 'PARTICIPANT'
+    }>
+  } | null>(null)
+  const [tournamentsLoading, setTournamentsLoading] = useState(false)
 
   // Friends states
   const [friends, setFriends] = useState<any[]>([])
@@ -330,6 +361,26 @@ export default function ProfilePage() {
         .catch((err) => {
           console.error(err)
           setActivityLoading(false)
+        })
+    }
+  }, [user, activeTab])
+
+  // Fetch tournaments data on tab click
+  useEffect(() => {
+    if (user && activeTab === 'tournaments') {
+      setTournamentsLoading(true)
+      fetch('/api/profile/details?tournaments=true')
+        .then((res) => {
+          if (res.ok) return res.json()
+          throw new Error('Failed to load tournaments')
+        })
+        .then((data) => {
+          setTournamentData(data.tournamentData)
+          setTournamentsLoading(false)
+        })
+        .catch((err) => {
+          console.error(err)
+          setTournamentsLoading(false)
         })
     }
   }, [user, activeTab])
@@ -759,8 +810,9 @@ export default function ProfilePage() {
           { id: 'overview', label: 'Overview', icon: '👤' },
           { id: 'stats', label: 'Stats', icon: '📊' },
           { id: 'ranked', label: 'Ranked', icon: '🏆' },
+          { id: 'tournaments', label: 'Tournaments', icon: '🎖️' },
           { id: 'matches', label: 'Matches', icon: '📜' },
-          { id: 'achievements', label: 'Achievements', icon: '🎖️' },
+          { id: 'achievements', label: 'Achievements', icon: '🏅' },
           { id: 'friends', label: 'Friends', icon: '👥' },
           { id: 'cosmetics', label: 'Cosmetics', icon: '🎨' },
         ].map(t => (
@@ -1806,6 +1858,171 @@ export default function ProfilePage() {
                 Visit the <a href="/dashboard/store" style={{ color: 'hsl(270 80% 65%)', textDecoration: 'none', fontWeight: 700 }}>Store</a> to get cosmetics.
               </p>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB TOURNAMENTS */}
+      {activeTab === 'tournaments' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {tournamentsLoading ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'hsl(220 10% 50%)' }}>
+              Loading tournament stats...
+            </div>
+          ) : !tournamentData ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'hsl(220 10% 50%)' }}>
+              No tournament data available. Guest players or new profiles do not have histories recorded.
+            </div>
+          ) : (
+            <>
+              {/* Stats Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
+                {[
+                  { label: 'Total Matches', value: tournamentData.stats.totalMatches, color: 'hsl(220 100% 65%)', bg: 'hsl(220 100% 50% / 0.08)', border: 'hsl(220 100% 50% / 0.15)' },
+                  { label: 'Wins (Champion)', value: tournamentData.stats.wins, color: 'hsl(45 100% 55%)', bg: 'hsl(45 100% 50% / 0.08)', border: 'hsl(45 100% 50% / 0.15)' },
+                  { label: 'Runner-ups', value: tournamentData.stats.runnerUps, color: 'hsl(280 100% 65%)', bg: 'hsl(280 100% 50% / 0.08)', border: 'hsl(280 100% 50% / 0.15)' },
+                  { label: 'Win Rate', value: `${tournamentData.stats.winRate}%`, color: 'hsl(140 100% 45%)', bg: 'hsl(140 100% 50% / 0.08)', border: 'hsl(140 100% 50% / 0.15)' }
+                ].map((stat, idx) => (
+                  <div
+                    key={idx}
+                    className="card glass"
+                    style={{
+                      padding: '1.25rem 1rem',
+                      borderRadius: 16,
+                      textAlign: 'center',
+                      background: stat.bg,
+                      border: `1px solid ${stat.border}`
+                    }}
+                  >
+                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: stat.color, marginBottom: '0.2rem' }}>
+                      {stat.value}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'hsl(220 10% 60%)' }}>
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Notice for community tournaments */}
+              <div 
+                style={{ 
+                  padding: '0.85rem 1.25rem', 
+                  borderRadius: 12, 
+                  background: 'hsl(220 20% 8% / 0.8)', 
+                  border: '1px solid hsl(220 15% 15%)', 
+                  fontSize: '0.78rem', 
+                  color: 'hsl(220 10% 55%)',
+                  lineHeight: 1.4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.65rem'
+                }}
+              >
+                <span>ℹ️</span>
+                <span><strong>Progression Notice:</strong> Community (User-created) tournaments are for practice and community engagement, and do not grant XP, Coins, or Achievements. Only Official Tournaments provide seasonal rewards.</span>
+              </div>
+
+              {/* Official History */}
+              <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20, background: 'hsl(222 20% 8% / 0.6)', border: '1px solid hsl(220 15% 15%)' }}>
+                <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '1rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  🏅 Official Esports Tournaments
+                </h3>
+                {tournamentData.officialHistory.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'hsl(220 10% 50%)', fontSize: '0.8rem' }}>
+                    No official tournaments joined yet. Keep an eye out in the announcements tab!
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {tournamentData.officialHistory.map((h) => (
+                      <div
+                        key={h.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '0.85rem 1.1rem',
+                          borderRadius: 12,
+                          background: 'hsl(222 18% 10%)',
+                          border: '1px solid hsl(220 15% 15%)'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'white' }}>{h.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', marginTop: '0.15rem' }}>
+                            🎮 {getGameBySlug(h.gameSlug)?.name || h.gameSlug} • {new Date(h.startDate).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          {h.result === 'CHAMPION' ? (
+                            <span style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 50%)', background: 'hsl(45 100% 50% / 0.12)', padding: '0.2rem 0.5rem', borderRadius: 6, border: '1px solid hsl(45 100% 50% / 0.3)' }}>
+                              🏆 CHAMPION
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(220 10% 60%)', background: 'hsl(222 15% 15%)', padding: '0.2rem 0.5rem', borderRadius: 6 }}>
+                              Participant
+                            </span>
+                          )}
+                          <span style={{ fontSize: '0.72rem', fontWeight: 900, color: h.regStatus === 'CLAIMED' ? 'hsl(140 100% 45%)' : 'hsl(200 100% 50%)' }}>
+                            {h.regStatus}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Community History */}
+              <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20, background: 'hsl(222 20% 8% / 0.6)', border: '1px solid hsl(220 15% 15%)' }}>
+                <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '1rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  👥 Community Tournaments
+                </h3>
+                {tournamentData.communityHistory.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'hsl(220 10% 50%)', fontSize: '0.8rem' }}>
+                    No community tournaments joined yet. You can create your own from the Tournaments tab!
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {tournamentData.communityHistory.map((h) => (
+                      <div
+                        key={h.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '0.85rem 1.1rem',
+                          borderRadius: 12,
+                          background: 'hsl(222 18% 10%)',
+                          border: '1px solid hsl(220 15% 15%)'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'white' }}>{h.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', marginTop: '0.15rem' }}>
+                            🎮 {getGameBySlug(h.gameSlug)?.name || h.gameSlug} • {new Date(h.startDate).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          {h.result === 'CHAMPION' ? (
+                            <span style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 50%)', background: 'hsl(45 100% 50% / 0.12)', padding: '0.2rem 0.5rem', borderRadius: 6, border: '1px solid hsl(45 100% 50% / 0.3)' }}>
+                              🏆 CHAMPION
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(220 10% 60%)', background: 'hsl(222 15% 15%)', padding: '0.2rem 0.5rem', borderRadius: 6 }}>
+                              Participant
+                            </span>
+                          )}
+                          <span style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(200 100% 50%)' }}>
+                            {h.regStatus}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}

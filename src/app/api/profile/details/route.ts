@@ -54,8 +54,9 @@ export async function GET(request: Request) {
     const fetchAchievements = url.searchParams.get('achievements') === 'true'
     const fetchActivity = url.searchParams.get('activity') === 'true'
     const fetchMatches = url.searchParams.get('matches') === 'true'
+    const fetchTournaments = url.searchParams.get('tournaments') === 'true'
 
-    const [matches, achievementProgress, activity, inventory, gameStats, userAchievements] = await Promise.all([
+    const [matches, achievementProgress, activity, inventory, gameStats, userAchievements, userRegistrations, userMatches] = await Promise.all([
       // 1. Fetch last 10 matches
       fetchMatches
         ? prisma.matchRecord.findMany({
@@ -126,7 +127,32 @@ export async function GET(request: Request) {
         orderBy: { unlockedAt: 'desc' }
       }),
 
-      // 7. Analytics event hook for profile viewed
+      // 7. Fetch tournament registrations
+      fetchTournaments
+        ? prisma.tournamentRegistration.findMany({
+            where: { profileId: profile.id },
+            include: { tournament: true }
+          })
+        : Promise.resolve([]),
+
+      // 8. Fetch tournament matches
+      fetchTournaments
+        ? prisma.tournamentMatch.findMany({
+            where: {
+              OR: [
+                { p1Id: profile.id },
+                { p2Id: profile.id }
+              ]
+            },
+            include: {
+              subTournament: {
+                include: { tournament: true }
+              }
+            }
+          })
+        : Promise.resolve([]),
+
+      // 9. Analytics event hook for profile viewed
       prisma.analyticsEvent.create({
         data: {
           profileId: profile.id,
@@ -142,11 +168,67 @@ export async function GET(request: Request) {
       achievements: userAchievements
     }
 
+    // Process tournament stats and history
+    let tournamentData: any = null
+    if (fetchTournaments) {
+      const completedMatches = userMatches.filter((m: any) =>
+        ['COMPLETED', 'WALK_OVER', 'DISQUALIFIED'].includes(m.status)
+      )
+      const matchesWon = completedMatches.filter((m: any) => m.winnerId === profile.id).length
+      
+      const wins = userMatches.filter((m: any) =>
+        m.roundName === 'Finals' &&
+        ['COMPLETED', 'WALK_OVER', 'DISQUALIFIED'].includes(m.status) &&
+        m.winnerId === profile.id
+      ).length
+
+      const runnerUps = userMatches.filter((m: any) =>
+        m.roundName === 'Finals' &&
+        ['COMPLETED', 'WALK_OVER', 'DISQUALIFIED'].includes(m.status) &&
+        m.winnerId !== profile.id
+      ).length
+
+      const winRate = completedMatches.length > 0
+        ? Math.round((matchesWon / completedMatches.length) * 100)
+        : 0
+
+      const history = userRegistrations.map((r: any) => {
+        const tourn = r.tournament
+        const wonThisTourn = userMatches.some((m: any) =>
+          m.subTournament?.tournamentId === tourn.id &&
+          m.roundName === 'Finals' &&
+          m.winnerId === profile.id
+        )
+        return {
+          id: tourn.id,
+          name: tourn.name,
+          gameSlug: tourn.gameSlug,
+          startDate: tourn.startDate,
+          isOfficial: tourn.isOfficial,
+          status: tourn.status,
+          regStatus: r.status,
+          result: wonThisTourn ? 'CHAMPION' : 'PARTICIPANT'
+        }
+      })
+
+      tournamentData = {
+        stats: {
+          totalMatches: completedMatches.length,
+          wins,
+          runnerUps,
+          winRate
+        },
+        officialHistory: history.filter((h: any) => h.isOfficial),
+        communityHistory: history.filter((h: any) => !h.isOfficial)
+      }
+    }
+
     return NextResponse.json({
       profile: profileWithIncludes,
       matches,
       achievementProgress,
       activity,
+      tournamentData
     }, { status: 200 })
   } catch (err: unknown) {
     console.error('[GET /api/profile/details]', err)

@@ -23,6 +23,39 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('all')
+
+  const getTournamentCategory = (title: string, message: string): 'registration' | 'match' | 'walkover' | 'result' | 'other' => {
+    const text = `${title} ${message}`.toLowerCase()
+    if (text.includes('walkover') || text.includes('disqualified') || text.includes('inactivity') || text.includes('missed')) {
+      return 'walkover'
+    }
+    if (text.includes('winner') || text.includes('defeated') || text.includes('eliminated') || text.includes('completed') || text.includes('first place') || text.includes('advanced') || text.includes('won by')) {
+      return 'result'
+    }
+    if (text.includes('match') || text.includes('opponent') || text.includes('lobby') || text.includes('ready') || text.includes('joined')) {
+      return 'match'
+    }
+    if (text.includes('register') || text.includes('registration') || text.includes('waiting list') || text.includes('waitlist') || text.includes('bracket generated') || text.includes('announcement')) {
+      return 'registration'
+    }
+    return 'other'
+  }
+
+  const getTabNotifications = (tab: string) => {
+    return notifications.filter(n => {
+      if (tab === 'all') return true
+      if (n.type !== 'TOURNAMENT') {
+        return tab === 'other'
+      }
+      const cat = getTournamentCategory(n.title, n.message)
+      return cat === tab
+    })
+  }
+
+  const getUnreadCount = (tab: string) => {
+    return getTabNotifications(tab).filter(n => !n.isRead).length
+  }
 
   const fetchNotifications = async () => {
     try {
@@ -120,6 +153,7 @@ export default function NotificationsPage() {
   }
 
   const unreadCount = notifications.filter(n => !n.isRead).length
+  const filteredNotifications = getTabNotifications(activeTab)
 
   return (
     <PageWrapper className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 700, marginInline: 'auto' }}>
@@ -146,19 +180,73 @@ export default function NotificationsPage() {
         )}
       </div>
 
+      {/* Category Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', margin: '1.5rem 0 1rem' }}>
+        {[
+          { id: 'all', label: 'All' },
+          { id: 'registration', label: 'Registration' },
+          { id: 'match', label: 'Matches' },
+          { id: 'walkover', label: 'Walkovers' },
+          { id: 'result', label: 'Results' },
+          { id: 'other', label: 'Others' }
+        ].map(tab => {
+          const count = getUnreadCount(tab.id)
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.5rem 1rem',
+                borderRadius: '999px',
+                border: 'none',
+                background: isActive ? 'hsl(220 100% 60%)' : 'hsl(222 18% 10%)',
+                color: isActive ? 'white' : 'hsl(220 10% 75%)',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {tab.label}
+              {count > 0 && (
+                <span
+                  style={{
+                    background: isActive ? 'white' : 'hsl(340 85% 55%)',
+                    color: isActive ? 'hsl(220 100% 60%)' : 'white',
+                    fontSize: '0.7rem',
+                    fontWeight: 900,
+                    padding: '0.1rem 0.4rem',
+                    borderRadius: '999px',
+                    minWidth: '18px',
+                    textAlign: 'center'
+                  }}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'hsl(220 10% 50%)' }}>
           Loading notifications...
         </div>
-      ) : notifications.length === 0 ? (
+      ) : filteredNotifications.length === 0 ? (
         <Card style={{ textAlign: 'center', padding: '4rem 2rem', background: 'hsl(222 20% 8% / 0.6)', border: '1px dashed hsl(220 15% 16%)' }}>
           <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem' }}>📭</span>
           <h3 style={{ fontWeight: 700, color: 'white', margin: 0 }}>In-box Empty</h3>
-          <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.82rem', margin: '0.5rem 0 0' }}>All clean! No new alert logs compiled.</p>
+          <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.82rem', margin: '0.5rem 0 0' }}>All clean! No alerts found in this category.</p>
         </Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {notifications.map(n => (
+          {filteredNotifications.map(n => (
             <Card
               key={n.id}
               style={{

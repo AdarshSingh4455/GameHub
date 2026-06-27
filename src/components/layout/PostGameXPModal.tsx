@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import type { GameResultPayload } from '@/lib/contexts/GameSessionContext'
 import { getLevelProgress, xpRequiredForLevel, xpForNextLevel } from '@/lib/xpUtils'
 import { GAMES_REGISTRY } from '@/lib/games'
-import SinglePlayerXPModal from './SinglePlayerXPModal'
 
 function getBlockProgressBar(percent: number, size: number = 10): string {
   const filledCount = Math.round((percent / 100) * size)
@@ -38,10 +37,11 @@ export default function PostGameXPModal({ data, onClose }: Props) {
     oldLevel,
     newLevel,
     leveledUp,
-    currentStreak,
-    unlockedAchievements,
+    currentStreak = 0,
+    unlockedAchievements = [],
     nextAchievement,
     isGuest,
+    highScore = 0,
     metadata = {},
   } = data
 
@@ -55,6 +55,37 @@ export default function PostGameXPModal({ data, onClose }: Props) {
   // Count-up states
   const [xpDisplay, setXpDisplay] = useState(0)
   const [coinsDisplay, setCoinsDisplay] = useState(0)
+
+  // Extract game specific metadata with fallbacks
+  const gameMetadata = metadata?.gameMetadata || {}
+  const currentLvl = gameMetadata?.level ?? metadata?.level ?? 1
+  const moves = gameMetadata?.moves ?? 0
+  const timeSecs = gameMetadata?.timeSecs ?? gameMetadata?.timeSpent ?? metadata?.timeSpent ?? 0
+  const starsCount = gameMetadata?.stars ?? (result === 'win' ? 3 : 0)
+  const score = (metadata?.score as number) ?? (highScore as number) ?? 0
+
+  // Local storage best time tracking for level games
+  const bestTimeKey = `gamehub_${gameSlug}_level_${currentLvl}_best_time`
+  const [personalBest, setPersonalBest] = useState<number | null>(null)
+  const [isNewPersonalBest, setIsNewPersonalBest] = useState(false)
+
+  useEffect(() => {
+    if (result !== 'win') return
+    const saved = localStorage.getItem(bestTimeKey)
+    const currentBest = saved ? parseInt(saved, 10) : null
+
+    if (timeSecs > 0) {
+      if (currentBest === null || timeSecs < currentBest) {
+        localStorage.setItem(bestTimeKey, timeSecs.toString())
+        setPersonalBest(timeSecs)
+        if (currentBest !== null) {
+          setIsNewPersonalBest(true)
+        }
+      } else {
+        setPersonalBest(currentBest)
+      }
+    }
+  }, [gameSlug, currentLvl, timeSecs, result, bestTimeKey])
 
   // Find next game slug in registry
   const currentGameIndex = GAMES_REGISTRY.findIndex(g => g.slug === gameSlug)
@@ -174,27 +205,39 @@ export default function PostGameXPModal({ data, onClose }: Props) {
     }
   }, [result])
 
+  if (!mounted) return null
+
+  // Determine game type and category
+  let layoutType: 'level' | 'endless' | 'puzzle' | 'multiplayer' = 'puzzle'
+  if (metadata?.multiplayer || gameSlug.startsWith('multiplayer-') || ['scribble', 'cricket'].includes(gameSlug)) {
+    layoutType = 'multiplayer'
+  } else if (['arrow-puzzle', 'color-sort', 'water-sort', 'unblock-traffic', 'unblock-me', 'water-connect', 'candy-blast', 'ai-infinite-candy-crush', 'pipe-connect'].includes(gameSlug)) {
+    layoutType = 'level'
+  } else if (['2048', 'snake', 'fighter-jet', 'fighter', 'neontetris', 'blockblast'].includes(gameSlug)) {
+    layoutType = 'endless'
+  }
+
   const outcomeConfigs = {
     win: {
-      bg: 'linear-gradient(135deg, hsl(45 100% 6% / 0.95), hsl(222 20% 9% / 0.95))',
+      bg: 'linear-gradient(135deg, hsl(45 100% 6% / 0.96), hsl(222 20% 9% / 0.96))',
       border: '1px solid hsl(45 100% 55% / 0.35)',
       text: 'hsl(45 100% 65%)',
       emoji: '🏆',
       emojiClass: 'trophy-bounce-animation',
-      title: 'Victory!',
+      title: layoutType === 'level' ? 'Level Cleared!' : 'Victory!',
       glow: '0 0 40px hsl(45 100% 55% / 0.15)',
     },
     loss: {
-      bg: 'linear-gradient(135deg, hsl(0 80% 6% / 0.95), hsl(222 20% 9% / 0.95))',
+      bg: 'linear-gradient(135deg, hsl(0 80% 6% / 0.96), hsl(222 20% 9% / 0.96))',
       border: '1px solid hsl(0 80% 55% / 0.35)',
       text: 'hsl(0 80% 65%)',
       emoji: '💀',
       emojiClass: 'skull-shake-animation',
-      title: 'Defeat',
+      title: layoutType === 'level' ? 'Level Failed' : 'Defeat',
       glow: '0 0 40px hsl(0 80% 55% / 0.15)',
     },
     draw: {
-      bg: 'linear-gradient(135deg, hsl(222 20% 9% / 0.95), hsl(222 18% 13% / 0.95))',
+      bg: 'linear-gradient(135deg, hsl(222 20% 9% / 0.96), hsl(222 18% 13% / 0.96))',
       border: '1px solid hsl(220 15% 22%)',
       text: 'hsl(220 10% 75%)',
       emoji: '🤝',
@@ -204,26 +247,18 @@ export default function PostGameXPModal({ data, onClose }: Props) {
     },
   }
 
-  const currentOutcome = outcomeConfigs[result]
+  const currentOutcome = outcomeConfigs[result] || outcomeConfigs.draw
+
+  const starText = {
+    3: 'Excellent!',
+    2: 'Good Job!',
+    1: 'Completed!',
+    0: 'Try Again!'
+  }[starsCount as 0 | 1 | 2 | 3] || 'Completed!'
 
   function handleBackToDashboard() {
     onClose()
     router.push('/dashboard')
-  }
-
-  function handleNextGame() {
-    onClose()
-    router.push(`/dashboard/games/${nextGame.slug}`)
-  }
-
-  const game = GAMES_REGISTRY.find(g => g.slug === gameSlug)
-  const isSinglePlayerPuzzle = (game ? (game.category.toLowerCase() === 'puzzle' && !game.multiplayer) : false) ||
-    ['arrow-puzzle', 'color-sort', 'water-sort', '2048', 'unblock-me', 'unblock-traffic', 'pipe-connect'].includes(gameSlug)
-
-  if (!mounted) return null
-
-  if (isSinglePlayerPuzzle) {
-    return <SinglePlayerXPModal data={data} onClose={onClose} />
   }
 
   return createPortal(
@@ -231,7 +266,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 8, 16, 0.88)',
+        backgroundColor: 'rgba(5, 8, 16, 0.92)',
         backdropFilter: 'blur(12px)',
         zIndex: 100000,
         display: 'flex',
@@ -257,11 +292,18 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           75% { transform: rotate(-4deg) translateX(-1px); }
           90% { transform: rotate(4deg) translateX(1px); }
         }
+        @keyframes star-pop {
+          0% { transform: scale(0); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
         .trophy-bounce-animation {
           animation: trophy-bounce 2s ease-in-out infinite;
         }
         .skull-shake-animation {
           animation: skull-shake 1.2s ease-in-out;
+        }
+        .star-pop-animation {
+          animation: star-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
         }
         .achievement-stagger-1 { animation-delay: 0.1s; }
         .achievement-stagger-2 { animation-delay: 0.2s; }
@@ -287,12 +329,12 @@ export default function PostGameXPModal({ data, onClose }: Props) {
         className="card glass animate-slideUp"
         style={{
           width: '100%',
-          maxWidth: 480,
+          maxWidth: 420,
           maxHeight: '94dvh',
           overflowY: 'auto',
           background: currentOutcome.bg,
           border: currentOutcome.border,
-          padding: 'clamp(1.25rem, 5vw, 2.25rem)',
+          padding: 'clamp(1.25rem, 5vw, 2rem)',
           display: 'flex',
           flexDirection: 'column',
           gap: '1.25rem',
@@ -334,13 +376,164 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               gap: '0.5rem'
             }}
           >
-            <span>{currentOutcome.emoji}</span>
-            <span>{currentOutcome.title.toUpperCase()}</span>
+            <span className={currentOutcome.emojiClass}>{currentOutcome.emoji}</span>
+            <span>{currentOutcome.title}</span>
           </h2>
-          <p style={{ fontSize: '0.82rem', color: 'hsl(220 10% 50%)', marginTop: '0.3rem' }}>
-            Finished playing {gameSlug.replace('-', ' ')}
+          <p style={{ fontSize: '0.8rem', color: 'hsl(220 10% 55%)', marginTop: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {gameSlug.replace('-', ' ')} {layoutType === 'level' && `• Level ${currentLvl}`}
           </p>
         </div>
+
+        {/* Level Stars Rating Display */}
+        {layoutType === 'level' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', position: 'relative', zIndex: 1, margin: '0.1rem 0' }} id="modal-star-rating-container">
+            <div style={{ display: 'flex', gap: '0.5rem', fontSize: '2.2rem', justifyContent: 'center' }}>
+              {[1, 2, 3].map((star) => {
+                const isActive = star <= starsCount
+                return (
+                  <span
+                    key={star}
+                    className={isActive ? 'star-pop-animation' : ''}
+                    style={{
+                      color: isActive ? 'hsl(45 100% 55%)' : 'hsl(220 10% 20%)',
+                      opacity: isActive ? 1 : 0.2,
+                      display: 'inline-block',
+                      animationDelay: isActive ? `${(star - 1) * 0.15}s` : '0s',
+                    }}
+                  >
+                    ★
+                  </span>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>
+              {starText}
+            </div>
+          </div>
+        )}
+
+        {/* New Personal Best Toast Banner */}
+        {isNewPersonalBest && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignSelf: 'center',
+              alignItems: 'center',
+              gap: '0.3rem',
+              background: 'linear-gradient(90deg, hsl(45 100% 55%), hsl(38 95% 45%))',
+              color: 'black',
+              fontWeight: 900,
+              fontSize: '0.7rem',
+              padding: '4px 14px',
+              borderRadius: '9999px',
+              boxShadow: '0 4px 14px rgba(230, 170, 0, 0.45)',
+              letterSpacing: '0.04em',
+              margin: '0 auto',
+              position: 'relative',
+              zIndex: 1,
+            }}
+            id="new-personal-best-badge"
+          >
+            🏆 <span>NEW PERSONAL BEST TIME!</span>
+          </div>
+        )}
+
+        {/* Game Stats Information Layout */}
+        {(layoutType === 'level' || layoutType === 'endless') && (
+          <div
+            style={{
+              background: 'hsl(222 20% 7% / 0.8)',
+              border: '1.5px solid hsl(220 15% 20%)',
+              borderRadius: 20,
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              position: 'relative',
+              zIndex: 1,
+              boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
+            }}
+          >
+            {/* Score row */}
+            {score > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Score</span>
+                <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
+                  {score.toLocaleString()}
+                </span>
+              </div>
+            )}
+
+            {/* Dynamic statistics details */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 16px', paddingTop: '4px', textAlign: 'left' }}>
+              {/* High Score (Endless) */}
+              {layoutType === 'endless' && (
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>High Score</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {Math.max(highScore, score).toLocaleString()}
+                  </div>
+                </div>
+              )}
+
+              {/* Moves (Level) */}
+              {layoutType === 'level' && moves > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Moves</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {moves}
+                  </div>
+                </div>
+              )}
+
+              {/* Time taken */}
+              {timeSecs > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Time</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {timeSecs}s
+                  </div>
+                </div>
+              )}
+
+              {/* Personal best level time */}
+              {layoutType === 'level' && result === 'win' && personalBest !== null && (
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Best Time</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {personalBest}s
+                  </div>
+                </div>
+              )}
+
+              {/* Game Specific Stats (Block Blast / Neon Tetris / Word Wizard) */}
+              {gameMetadata.linesCleared !== undefined && (
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Lines Cleared</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {gameMetadata.linesCleared}
+                  </div>
+                </div>
+              )}
+              {gameMetadata.wordsFound !== undefined && (
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Words Found</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {gameMetadata.wordsFound}
+                  </div>
+                </div>
+              )}
+              {gameMetadata.maxCombo !== undefined && (
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Max Combo</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ec4899', fontFamily: 'monospace', marginTop: '2px' }}>
+                    x{gameMetadata.maxCombo}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Rewards Summary Strip */}
         <div
@@ -348,7 +541,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             background: 'hsl(222 20% 7% / 0.7)',
             borderRadius: 18,
             border: '1px solid hsl(220 15% 16%)',
-            padding: '1.25rem',
+            padding: '1.1rem 1.25rem',
             display: 'flex',
             position: 'relative',
             zIndex: 1,
@@ -356,25 +549,25 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           }}
         >
           <div style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
               +{xpDisplay}
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
+            <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
           </div>
           {coinsGained > 0 && (
             <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
                 +{coinsDisplay}
               </div>
-              <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Coins Won</div>
+              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Coins Won</div>
             </div>
           )}
           {currentStreak > 0 && (
             <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'hsl(38 95% 60%)' }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(38 95% 60%)' }}>
                 🔥 {currentStreak}
               </div>
-              <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Streak</div>
+              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Streak</div>
             </div>
           )}
         </div>
@@ -394,8 +587,8 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               zIndex: 1,
             }}
           >
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.15rem', color: 'white' }}>🎉 LEVEL UP! 🎉</div>
-            <div style={{ fontSize: '0.85rem', color: 'hsl(220 10% 85%)' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.15rem', color: 'white' }}>🎉 LEVEL UP! 🎉</div>
+            <div style={{ fontSize: '0.82rem', color: 'hsl(220 10% 85%)' }}>
               You reached <strong style={{ color: 'hsl(270 80% 70%)' }}>Level {levelDisplay}</strong>!
             </div>
           </div>
@@ -403,7 +596,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
 
         {/* Level Progress Bar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
             <span style={{ color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Level {levelDisplay}</span>
             <span style={{ fontWeight: 700, color: 'hsl(220 100% 75%)' }}>
               {Math.max(0, (levelDisplay === oldLevel ? oldXP : newXP) - xpRequiredForLevel(levelDisplay))} / {xpForNextLevel(levelDisplay)} XP ({barPercent}%)
@@ -423,7 +616,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             />
           </div>
           {/* Next Level Unlock Preview */}
-          <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', background: 'hsl(220 20% 7% / 0.5)', padding: '0.5rem 0.75rem', borderRadius: 10, border: '1px dashed hsl(220 15% 15%)', textAlign: 'left', marginTop: '0.25rem' }}>
+          <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', background: 'hsl(220 20% 7% / 0.5)', padding: '0.5rem 0.75rem', borderRadius: 10, border: '1px dashed hsl(220 15% 15%)', textAlign: 'left', marginTop: '0.25rem' }}>
             <strong style={{ color: 'hsl(270 80% 65%)', display: 'block', marginBottom: '0.35rem' }}>🎁 Reward Preview: Next Level Unlocks:</strong>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
               {['Coins', 'Badge', 'Achievement Progress'].map((item, idx) => (
@@ -445,8 +638,6 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             </div>
           </div>
         </div>
-
-
 
         {/* Next Achievement Progress */}
         {nextAchievement && unlockedAchievements.length === 0 && (
@@ -556,14 +747,40 @@ export default function PostGameXPModal({ data, onClose }: Props) {
         {/* Actions Footer */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              className="btn btn-primary"
-              onClick={() => onClose('replay')}
-              style={{ flex: 1, borderRadius: 12 }}
-              id="modal-replay-btn"
-            >
-              Play Again
-            </button>
+            {/* Primary Action Button (Level vs Endless vs Puzzle) */}
+            {layoutType === 'level' && result === 'win' ? (
+              <button
+                className="btn btn-primary"
+                onClick={() => onClose('next')}
+                style={{ flex: 1.3, borderRadius: 12 }}
+                id="modal-next-btn"
+              >
+                ➡️ Next Level
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary"
+                onClick={() => onClose('replay')}
+                style={{ flex: 1.3, borderRadius: 12 }}
+                id="modal-replay-btn"
+              >
+                🔄 Play Again
+              </button>
+            )}
+
+            {/* Replay option for level games if won */}
+            {layoutType === 'level' && result === 'win' && (
+              <button
+                className="btn btn-secondary"
+                onClick={() => onClose('replay')}
+                style={{ flex: 1, borderRadius: 12 }}
+                id="modal-replay-btn-level-win"
+              >
+                🔄 Replay
+              </button>
+            )}
+
+            {/* Dashboard fallback */}
             <button
               className="btn btn-secondary"
               onClick={handleBackToDashboard}
@@ -574,20 +791,44 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             </button>
           </div>
 
-          <button
-            className="btn btn-secondary"
-            onClick={handleNextGame}
-            style={{
-              width: '100%',
-              borderRadius: 12,
-              background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.1), hsl(270 80% 60% / 0.1))',
-              borderColor: 'hsl(220 100% 60% / 0.25)',
-              color: 'hsl(220 100% 80%)',
-            }}
-            id="modal-nextgame-btn"
-          >
-            Next Game: {nextGame.name}
-          </button>
+          {/* Multiplayer buttons compatibility */}
+          {layoutType === 'multiplayer' && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => onClose('replay')} // Rematch trigger
+              style={{
+                width: '100%',
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.15), hsl(270 80% 60% / 0.15))',
+                borderColor: 'hsl(220 100% 60% / 0.3)',
+                color: 'white',
+                fontWeight: 700
+              }}
+              id="modal-rematch-btn"
+            >
+              ⚡ Rematch Request
+            </button>
+          )}
+
+          {layoutType !== 'multiplayer' && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                onClose()
+                router.push(`/dashboard/games/${nextGame.slug}`)
+              }}
+              style={{
+                width: '100%',
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.1), hsl(270 80% 60% / 0.1))',
+                borderColor: 'hsl(220 100% 60% / 0.25)',
+                color: 'hsl(220 100% 80%)',
+              }}
+              id="modal-nextgame-btn"
+            >
+              Next Game: {nextGame.name}
+            </button>
+          )}
         </div>
       </div>
     </div>,

@@ -133,11 +133,15 @@ const GAME_RULES: Record<string, string[]> = {
 
 export default function GameChromeWrapper({ slug, name, emoji, description, children }: Props) {
   const router = useRouter()
-  const { user } = useGameSession()
+  const { user, preloadAdsForGame } = useGameSession()
   const wrapperRef = useRef<HTMLDivElement>(null)
   const { isFullscreen, toggleFullscreen } = useFullscreen(wrapperRef, true)
   const [showDesc, setShowDesc] = useState(false)
   const [showRules, setShowRules] = useState(false)
+
+  useEffect(() => {
+    preloadAdsForGame(slug).catch((err) => console.error('Failed to preload ads:', err))
+  }, [slug, preloadAdsForGame])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

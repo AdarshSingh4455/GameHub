@@ -50,10 +50,16 @@ export default function TicTacToeGame() {
   const difficultyRef = useRef(difficulty)
   difficultyRef.current = difficulty
   const watchdogRef = useRef<NodeJS.Timeout | null>(null)
+  const hasSubmittedResult = useRef(false)
 
   // Submit result on game over
   useEffect(() => {
-    if (!winner) return
+    if (!winner) {
+      hasSubmittedResult.current = false
+      return
+    }
+    if (hasSubmittedResult.current) return
+    hasSubmittedResult.current = true
 
     let resultPayload: 'win' | 'loss' | 'draw'
     if (winner === 'draw') {
@@ -81,6 +87,7 @@ export default function TicTacToeGame() {
   }, [winner, gameMode, difficulty, submitGameResult])
 
   const startNewGame = (mode: GameMode) => {
+    hasSubmittedResult.current = false
     setGameMode(mode)
     setBoard(Array(9).fill(null))
     setCurrentTurn('X')

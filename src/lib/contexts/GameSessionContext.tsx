@@ -150,6 +150,12 @@ export function GameSessionProvider({
         const adData = await adRes.json()
         if (adData.ads && adData.ads.length > 0) {
           setAdsBuffer(adData.ads)
+          // Pre-cache/preload the image of the first ad so it can display instantly!
+          const firstAd = adData.ads[0]
+          if (firstAd && firstAd.imageUrl) {
+            const img = new Image()
+            img.src = firstAd.imageUrl
+          }
         }
       }
     } catch (err) {
@@ -284,22 +290,11 @@ export function GameSessionProvider({
       return
     }
 
+    // Determine ad status strictly from cached preloaded buffer. No extra network calls.
     let activeAd: any = null
     if (adsBuffer.length > 0) {
       activeAd = adsBuffer[0]
       setAdsBuffer((prev) => [...prev.slice(1), prev[0]]) // cycle buffer
-    } else {
-      try {
-        const adRes = await fetch(`/api/ads?gameSlug=${payload.gameSlug}`)
-        if (adRes.ok) {
-          const adData = await adRes.json()
-          if (adData.ads && adData.ads.length > 0) {
-            activeAd = adData.ads[Math.floor(Math.random() * adData.ads.length)]
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch active ads:', err)
-      }
     }
 
     if (activeAd) {
@@ -311,15 +306,16 @@ export function GameSessionProvider({
       }).catch(err => console.error('Failed to record ad impression:', err))
 
       let resolved = false
+      // Set strict 500ms timeout limit
       const timeoutId = setTimeout(() => {
         if (!resolved) {
           resolved = true
           console.warn('[AD FAIL-SAFE] Single-player ad load timeout, skipping.')
           setPostGameStage('XP_MODAL_SHOWING')
         }
-      }, 1000)
+      }, 500)
 
-      // Detect orientation
+      // Detect orientation and show immediately if loaded
       const img = new Image()
       img.onload = () => {
         if (resolved) return

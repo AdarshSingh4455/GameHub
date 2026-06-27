@@ -5,10 +5,13 @@ import { createPortal } from 'react-dom'
 import { useToast } from '@/lib/contexts/ToastContext'
 import { getLevelProgress } from '@/lib/xpUtils'
 import Avatar from '@/components/shared/Avatar'
+import { useSocket } from '@/lib/contexts/SocketContext'
+import { useRouter } from 'next/navigation'
 
 interface ProfileData {
   profile: {
     id: string
+    userId: string
     username: string
     displayName?: string | null
     avatarUrl: string | null
@@ -45,6 +48,18 @@ interface ProfileData {
   friendshipStatus: 'none' | 'friends' | 'sent-pending' | 'received-pending' | 'self'
 }
 
+const MULTIPLAYER_GAMES = [
+  { slug: 'tic-tac-toe', name: 'Tic-Tac-Toe' },
+  { slug: 'cricket', name: 'Hand Cricket' },
+  { slug: 'whos-spy', name: "Who's Spy" },
+  { slug: 'dots-boxes', name: 'Dots & Boxes' },
+  { slug: 'memory', name: 'Memory Match' },
+  { slug: 'rps', name: 'Rock Paper Scissors' },
+  { slug: 'number-guessing', name: 'Number Guessing' },
+  { slug: 'scribble', name: 'Scribble' },
+  { slug: 'hangman', name: 'Hangman' }
+]
+
 interface Props {
   profileId: string | null
   isOpen: boolean
@@ -53,10 +68,14 @@ interface Props {
 
 export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) {
   const { addToast } = useToast()
+  const router = useRouter()
+  const { presenceMap, socket } = useSocket()
   const [data, setData] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [showInviteMenu, setShowInviteMenu] = useState(false)
+  const [showChallengeMenu, setShowChallengeMenu] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -121,6 +140,44 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
     } finally {
       setActionLoading(false)
     }
+  }
+
+  const handleInviteToLobby = (gameSlug: string) => {
+    if (!data || !socket) return
+    const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+    
+    socket.emit('send-lobby-invite', {
+      targetUserId: data.profile.userId,
+      gameSlug,
+      roomCode
+    }, (response: any) => {
+      if (response && response.error) {
+        addToast('error', 'Invite Failed', response.error)
+      } else {
+        addToast('success', 'Invite Dispatched', `Lobby invite for ${gameSlug.replace('-', ' ').toUpperCase()} sent to ${data.profile.username}!`)
+        setShowInviteMenu(false)
+        onClose()
+        router.push(`/dashboard/multiplayer?action=join&code=${roomCode}`)
+      }
+    })
+  }
+
+  const handleChallengePlayer = (gameSlug: string) => {
+    if (!data || !socket) return
+    
+    socket.emit('send-challenge', {
+      targetUserId: data.profile.userId,
+      gameSlug
+    }, (response: any) => {
+      if (response && response.error) {
+        addToast('error', 'Challenge Failed', response.error)
+      } else if (response && response.roomCode) {
+        addToast('success', 'Challenge Issued ⚔️', `Challenged ${data.profile.username} to a match! Redirecting...`)
+        setShowChallengeMenu(false)
+        onClose()
+        router.push(`/dashboard/multiplayer/play/${response.roomCode}`)
+      }
+    })
   }
 
   const renderFriendshipButton = () => {
@@ -386,19 +443,99 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
                   <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', marginTop: '0.15rem' }}>
                     Joined: {formatDate(data.profile.createdAt)}
                   </div>
+                  {(() => {
+                    const live = presenceMap[data.profile.userId];
+                    const getPresenceText = () => {
+                      if (!live || live.status === 'OFFLINE') return '⚫ Offline'
+                      if (live.status === 'ONLINE') return '🟢 Online'
+                      if (live.status === 'IN_GAME') return `🎮 Playing ${live.activity || 'Game'}`
+                      if (live.status === 'IN_LOBBY') return '🏠 In Lobby'
+                      if (live.status === 'IN_CHAT') return '💬 In Chat'
+                      if (live.status === 'AWAY') return '🌙 Away'
+                      return '🟢 Online'
+                    }
+                    return (
+                      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: live && live.status !== 'OFFLINE' ? 'hsl(142 70% 55%)' : 'hsl(220 10% 45%)', marginTop: '0.25rem' }}>
+                        {getPresenceText()}
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
 
               {/* Action Buttons Strip */}
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
-                {renderFriendshipButton()}
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={onClose}
-                  style={{ flex: 1 }}
-                >
-                  Close
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.2rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {renderFriendshipButton()}
+                  {data.friendshipStatus === 'friends' && (() => {
+                    const live = presenceMap[data.profile.userId];
+                    const isOnline = live && live.status !== 'OFFLINE';
+                    if (!isOnline) return null;
+                    return (
+                      <>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          style={{ flex: 1 }}
+                          onClick={() => {
+                            setShowInviteMenu(!showInviteMenu)
+                            setShowChallengeMenu(false)
+                          }}
+                        >
+                          🎮 Invite
+                        </button>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          style={{ flex: 1, color: 'hsl(38 95% 60%)', borderColor: 'hsl(38 95% 40% / 0.3)' }}
+                          onClick={() => {
+                            setShowChallengeMenu(!showChallengeMenu)
+                            setShowInviteMenu(false)
+                          }}
+                        >
+                          ⚔️ Challenge
+                        </button>
+                      </>
+                    );
+                  })()}
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={onClose}
+                    style={{ flex: data.friendshipStatus === 'friends' ? 1 : 2 }}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {/* Submenu for Invite */}
+                {showInviteMenu && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.4rem', background: 'hsl(222 20% 7%)', padding: '0.5rem', borderRadius: 10, border: '1px solid hsl(220 15% 15%)' }}>
+                    {MULTIPLAYER_GAMES.map(g => (
+                      <button
+                        key={g.slug}
+                        className="btn btn-secondary btn-xs"
+                        style={{ fontSize: '0.72rem', padding: '0.3rem', justifyContent: 'center' }}
+                        onClick={() => handleInviteToLobby(g.slug)}
+                      >
+                        {g.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Submenu for Challenge */}
+                {showChallengeMenu && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.4rem', background: 'hsl(222 20% 7%)', padding: '0.5rem', borderRadius: 10, border: '1px solid hsl(220 15% 15%)' }}>
+                    {MULTIPLAYER_GAMES.map(g => (
+                      <button
+                        key={g.slug}
+                        className="btn btn-primary btn-xs"
+                        style={{ fontSize: '0.72rem', padding: '0.3rem', justifyContent: 'center' }}
+                        onClick={() => handleChallengePlayer(g.slug)}
+                      >
+                        {g.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Stats Block - 2 Column Grid */}

@@ -51,7 +51,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const { user, triggerAd } = useGameSession()
   const { addToast } = useToast()
   const router = useRouter()
-  const { socket } = useSocket()
+  const { socket, updateActivity } = useSocket()
 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +63,18 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   const [isLeaving, setIsLeaving] = useState(false)
   const [recoveryTimedOut, setRecoveryTimedOut] = useState(false)
   const [adTriggered, setAdTriggered] = useState(false)
+
+  useEffect(() => {
+    if (room?.gameSlug) {
+      const gameLabel = room.gameSlug.replace('-', ' ').toUpperCase()
+      updateActivity('IN_GAME', `Playing ${gameLabel}`, room.gameSlug, 'Multiplayer Match', Date.now())
+    } else {
+      updateActivity('IN_GAME', 'Playing Multiplayer Match', undefined, 'Multiplayer Match', Date.now())
+    }
+    return () => {
+      updateActivity('ONLINE', 'Browsing Games')
+    }
+  }, [room?.gameSlug, updateActivity])
 
   const playersRef = useRef<any[]>([])
   playersRef.current = players

@@ -396,9 +396,15 @@ io.on('connection', async (rawSocket) => {
 
   // Register socket mappings
   userSockets.set(userId, socket.id)
-  setUserPresence(userId, 'ONLINE').catch(err => logError(err, { userId }))
-  presenceStore.set(userId, { status: 'ONLINE', lastSeenAt: new Date().toISOString() })
-  io.emit('presence-change', { userId, status: 'ONLINE', lastSeenAt: new Date().toISOString() })
+  const initialPresence = {
+    status: 'ONLINE',
+    activity: 'Browsing Games',
+    lastSeenAt: new Date().toISOString(),
+    username
+  }
+  setUserPresence(userId, initialPresence).catch(err => logError(err, { userId }))
+  presenceStore.set(userId, initialPresence)
+  io.emit('presence-change', { userId, ...initialPresence })
 
   // Check if player is returning from a disconnect grace period
   if (disconnectTimers.has(userId)) {
@@ -479,8 +485,14 @@ io.on('connection', async (rawSocket) => {
 
   // Heartbeat ping keepalive updates presence state in Redis
   socket.on('heartbeat', async () => {
-    await setUserPresence(userId, 'ONLINE')
-    presenceStore.set(userId, { status: 'ONLINE', lastSeenAt: new Date().toISOString() })
+    const current = presenceStore.get(userId) || { status: 'ONLINE', activity: 'Browsing Games' }
+    const updated = {
+      ...current,
+      lastSeenAt: new Date().toISOString(),
+      username
+    }
+    await setUserPresence(userId, updated)
+    presenceStore.set(userId, updated)
     prisma.profile.update({
       where: { userId },
       data: { lastSeenAt: new Date() }
@@ -493,13 +505,175 @@ io.on('connection', async (rawSocket) => {
 
   // Manual status presence updates (ONLINE, AWAY, OFFLINE)
   socket.on('presence-update', async ({ status }: { status: 'ONLINE' | 'AWAY' | 'OFFLINE' }) => {
-    await setUserPresence(userId, status as any)
-    presenceStore.set(userId, { status, lastSeenAt: new Date().toISOString() })
-    io.emit('presence-change', { userId, status, lastSeenAt: new Date().toISOString() })
+    const current = presenceStore.get(userId) || { activity: 'Browsing Games' }
+    const updated = {
+      ...current,
+      status,
+      lastSeenAt: new Date().toISOString(),
+      username
+    }
+    await setUserPresence(userId, updated as any)
+    presenceStore.set(userId, updated)
+    io.emit('presence-change', { userId, ...updated })
     prisma.profile.update({
       where: { userId },
       data: { lastSeenAt: new Date() }
     }).catch((err: any) => logError(err, { userId }))
+  })
+
+  // Rich presence updates
+  socket.on('activity-update', async (data: {
+    status: 'ONLINE' | 'IN_GAME' | 'IN_LOBBY' | 'IN_CHAT' | 'AWAY',
+    activity?: string,
+    gameSlug?: string,
+    gameMode?: string,
+    startedAt?: number
+  }) => {
+    try {
+      const presenceInfo = {
+        status: data.status,
+        activity: data.activity || 'Browsing Games',
+        gameSlug: data.gameSlug,
+        gameMode: data.gameMode,
+        startedAt: data.startedAt,
+        lastSeenAt: new Date().toISOString(),
+        username
+      }
+      presenceStore.set(userId, presenceInfo)
+      await setUserPresence(userId, presenceInfo)
+      io.emit('presence-change', { userId, ...presenceInfo })
+    } catch (err) {
+      logError(err, { userId })
+    }
+  })
+
+  // Fetch current presence mapping for all online players
+  socket.on('get-presence-map', (callback: (map: Record<string, any>) => void) => {
+    try {
+      const mapObj: Record<string, any> = {}
+      presenceStore.forEach((value, key) => {
+        mapObj[key] = value
+      })
+      callback(mapObj)
+    } catch (err) {
+      logger.error('Failed to get presence map:', err)
+      callback({})
+    }
+  })
+
+  // Invite friend to a lobby
+  socket.on('send-lobby-invite', async (
+    { targetUserId, gameSlug, roomCode }: { targetUserId: string; gameSlug: string; roomCode: string },
+    callback: (res: { success?: boolean; error?: string }) => void
+  ) => {
+    try {
+      const targetSocketId = userSockets.get(targetUserId)
+      
+      const targetProfile = await prisma.profile.findUnique({
+        where: { userId: targetUserId }
+      })
+      if (!targetProfile) {
+        return callback({ error: 'Target profile not found' })
+      }
+
+      // Create a DB notification
+      const notif = await prisma.notification.create({
+        data: {
+          profileId: targetProfile.id,
+          type: 'ROOM_INVITE',
+          title: 'Game Invitation 🎮',
+          message: `${username} invited you to join a lobby for ${gameSlug.replace('-', ' ').toUpperCase()}!`,
+          linkUrl: `/dashboard/multiplayer?action=join&code=${roomCode}`,
+          meta: { roomCode, gameSlug, senderName: username, senderUserId: userId }
+        }
+      })
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('lobby-invite-received', {
+          id: notif.id,
+          roomCode,
+          gameSlug,
+          senderName: username,
+          senderUserId: userId
+        })
+      }
+
+      callback({ success: true })
+    } catch (err: any) {
+      callback({ error: err.message || 'Failed to send invite' })
+    }
+  })
+
+  // Challenge a friend to a match
+  socket.on('send-challenge', async (
+    { targetUserId, gameSlug }: { targetUserId: string; gameSlug: string },
+    callback: (res: { success?: boolean; roomCode?: string; error?: string }) => void
+  ) => {
+    try {
+      const targetSocketId = userSockets.get(targetUserId)
+      
+      const targetProfile = await prisma.profile.findUnique({
+        where: { userId: targetUserId }
+      })
+      if (!targetProfile) {
+        return callback({ error: 'Target profile not found' })
+      }
+
+      // Generate unique room code
+      let roomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+      const existing = await prisma.multiplayerRoom.findUnique({ where: { roomCode } })
+      if (existing) {
+        roomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+      }
+
+      // Create multiplayer room
+      const room = await prisma.multiplayerRoom.create({
+        data: {
+          roomCode,
+          gameSlug,
+          hostUserId: userId,
+          status: 'WAITING',
+          maxPlayers: 2
+        }
+      })
+
+      // Add challenger as host
+      await prisma.multiplayerRoomPlayer.create({
+        data: {
+          roomId: room.id,
+          userId,
+          status: 'NOT_READY',
+          isHost: true
+        }
+      })
+
+      // Create DB notification
+      const notif = await prisma.notification.create({
+        data: {
+          profileId: targetProfile.id,
+          type: 'ROOM_INVITE',
+          title: 'Direct Challenge ⚔️',
+          message: `${username} has challenged you to a duel of ${gameSlug.replace('-', ' ').toUpperCase()}!`,
+          linkUrl: `/dashboard/multiplayer?action=join&code=${roomCode}`,
+          meta: { roomCode, gameSlug, senderName: username, senderUserId: userId, isChallenge: true }
+        }
+      })
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('challenge-received', {
+          id: notif.id,
+          roomCode,
+          gameSlug,
+          senderName: username,
+          senderUserId: userId,
+          expiresAt: Date.now() + 30000
+        })
+      }
+
+      callback({ success: true, roomCode })
+    } catch (err: any) {
+      callback({ error: err.message || 'Failed to send challenge' })
+    }
   })
 
   // ─── LOBBY EVENTS ──────────────────────────────────────────────────────────
@@ -1546,8 +1720,8 @@ io.on('connection', async (rawSocket) => {
     logger.info(`[-] Disconnected: userId=${userId} socketId=${socket.id}`)
     userSockets.delete(userId)
     await setUserPresence(userId, 'OFFLINE')
-    presenceStore.set(userId, { status: 'OFFLINE', lastSeenAt: new Date().toISOString() })
-    io.emit('presence-change', { userId, status: 'OFFLINE', lastSeenAt: new Date().toISOString() })
+    presenceStore.set(userId, { status: 'OFFLINE', lastSeenAt: new Date().toISOString(), username })
+    io.emit('presence-change', { userId, status: 'OFFLINE', lastSeenAt: new Date().toISOString(), username })
 
     // Cleanly leave party on disconnect
     const partyCode = userParty.get(userId)

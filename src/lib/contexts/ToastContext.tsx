@@ -8,6 +8,10 @@ export interface NotificationEvent {
   title: string
   message: string
   meta?: Record<string, unknown>
+  action?: {
+    label: string
+    onClick: () => void
+  }
 }
 
 interface ToastContextType {
@@ -16,7 +20,8 @@ interface ToastContextType {
     type: NotificationEvent['type'],
     title: string,
     message: string,
-    meta?: Record<string, unknown>
+    meta?: Record<string, unknown>,
+    action?: { label: string; onClick: () => void }
   ) => void
   dismissToast: (id: string) => void
 }
@@ -35,17 +40,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       type: NotificationEvent['type'],
       title: string,
       message: string,
-      meta?: Record<string, unknown>
+      meta?: Record<string, unknown>,
+      action?: { label: string; onClick: () => void }
     ) => {
       const id = Math.random().toString(36).substring(2, 9)
-      const newToast: NotificationEvent = { id, type, title, message, meta }
+      const newToast: NotificationEvent = { id, type, title, message, meta, action }
       
       setToasts((prev) => [...prev, newToast])
 
-      // Auto dismiss after 5 seconds
+      // Auto dismiss after 7 seconds if it has an action, otherwise 5 seconds
       setTimeout(() => {
         dismissToast(id)
-      }, 5000)
+      }, action ? 7000 : 5000)
     },
     [dismissToast]
   )
@@ -138,6 +144,28 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4 }}>
                 {toast.message}
               </p>
+              {toast.action && (
+                <button
+                  onClick={() => {
+                    toast.action?.onClick()
+                    dismissToast(toast.id)
+                  }}
+                  style={{
+                    marginTop: '0.5rem',
+                    padding: '0.35rem 0.75rem',
+                    background: 'hsl(220 100% 60%)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: 'white',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    pointerEvents: 'auto'
+                  }}
+                >
+                  {toast.action.label}
+                </button>
+              )}
             </div>
             <button
               onClick={() => dismissToast(toast.id)}

@@ -7,6 +7,8 @@ import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getLevelProgress } from '@/lib/xpUtils'
 import GameIcon from '@/components/games/GameIcon'
 
+import { useSocket } from '@/lib/contexts/SocketContext'
+
 interface Props {
   slug: string
   name: string
@@ -138,6 +140,16 @@ export default function GameChromeWrapper({ slug, name, emoji, description, chil
   const { isFullscreen, toggleFullscreen } = useFullscreen(wrapperRef, true)
   const [showDesc, setShowDesc] = useState(false)
   const [showRules, setShowRules] = useState(false)
+  const { updateActivity } = useSocket()
+
+  useEffect(() => {
+    // Rich Presence update: status IN_GAME, activity "Playing Hangman", elapsed time tracking
+    const mode = slug.startsWith('multiplayer') || slug.includes('-multi') ? 'Multiplayer' : 'Solo Practice'
+    updateActivity('IN_GAME', `Playing ${name}`, slug, mode, Date.now())
+    return () => {
+      updateActivity('ONLINE', 'Browsing Games')
+    }
+  }, [slug, name, updateActivity])
 
   useEffect(() => {
     preloadAdsForGame(slug).catch((err) => console.error('Failed to preload ads:', err))

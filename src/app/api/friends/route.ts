@@ -78,6 +78,7 @@ export async function GET(request: Request) {
           },
           select: {
             id: true,
+            userId: true,
             username: true,
             displayName: true,
             level: true,
@@ -101,6 +102,7 @@ export async function GET(request: Request) {
           },
           select: {
             id: true,
+            userId: true,
             username: true,
             displayName: true,
             level: true,

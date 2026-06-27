@@ -129,7 +129,14 @@ export default function MultiplayerPage() {
   const { user } = useGameSession()
   const { addToast } = useToast()
   const router = useRouter()
-  const { socket } = useSocket()
+  const { socket, updateActivity } = useSocket()
+
+  useEffect(() => {
+    updateActivity('IN_LOBBY', 'In Multiplayer Lobby')
+    return () => {
+      updateActivity('ONLINE', 'Browsing Games')
+    }
+  }, [updateActivity])
 
   const [screen, setScreenState] = useState<Screen>(() => getPersistedScreen())
   const [selectedGame, setSelectedGame] = useState('cricket')

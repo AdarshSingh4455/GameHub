@@ -8,9 +8,12 @@ import { useToast } from '@/lib/contexts/ToastContext'
 import Avatar from '@/components/shared/Avatar'
 import PageWrapper from '@/components/layout/PageWrapper'
 import Card from '@/components/layout/Card'
+import { useSocket } from '@/lib/contexts/SocketContext'
+import { useRouter } from 'next/navigation'
 
 interface ProfileSummary {
   id: string
+  userId?: string
   username: string
   displayName?: string | null
   level: number
@@ -39,9 +42,28 @@ const MULTIPLAYER_GAMES = [
 export default function FriendsPage() {
   const { user } = useGameSession()
   const { addToast } = useToast()
+  const router = useRouter() // Wait! Let's check if useRouter is imported. If not, we will check or import it.
+  const { socket, presenceMap, updateActivity } = useSocket()
   
   const [activeTab, setActiveTab] = useState<'friends' | 'pending' | 'add' | 'recent'>('friends')
   const [friends, setFriends] = useState<ProfileSummary[]>([])
+  const [challengeModalOpen, setChallengeModalOpen] = useState(false)
+  const [selectedFriendForChallenge, setSelectedFriendForChallenge] = useState<ProfileSummary | null>(null)
+  const [secondsTick, setSecondsTick] = useState(0)
+
+  // Force re-renders for elapsed time counters
+  useEffect(() => {
+    const interval = setInterval(() => setSecondsTick(prev => prev + 1), 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // In Chat presence update on mount
+  useEffect(() => {
+    updateActivity('IN_CHAT', 'Browsing Friends')
+    return () => {
+      updateActivity('ONLINE', 'Browsing Games')
+    }
+  }, [updateActivity])
   const [pendingIncoming, setPendingIncoming] = useState<ProfileSummary[]>([])
   const [pendingOutgoing, setPendingOutgoing] = useState<ProfileSummary[]>([])
   const [recentPlayers, setRecentPlayers] = useState<ProfileSummary[]>([])
@@ -209,18 +231,36 @@ export default function FriendsPage() {
   }
 
   // 6. Online Status calculation rules
-  const getOnlinePresence = (lastSeenAt?: string | null) => {
-    if (!lastSeenAt) return { label: 'Offline', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)' }
+  const getOnlinePresence = (friendId: string, lastSeenAt?: string | null) => {
+    const live = presenceMap[friendId]
+    if (live) {
+      if (live.status === 'ONLINE') return { label: 'Online', emoji: '🟢', color: 'hsl(142 70% 55%)', dot: 'hsl(142 70% 50%)', activity: live.activity }
+      if (live.status === 'IN_GAME') return { label: 'In Game', emoji: '🎮', color: 'hsl(270 80% 65%)', dot: 'hsl(270 80% 60%)', activity: live.activity, gameSlug: live.gameSlug, gameMode: live.gameMode, startedAt: live.startedAt }
+      if (live.status === 'IN_LOBBY') return { label: 'In Lobby', emoji: '🏠', color: 'hsl(220 100% 65%)', dot: 'hsl(220 100% 60%)', activity: live.activity }
+      if (live.status === 'IN_CHAT') return { label: 'In Chat', emoji: '💬', color: 'hsl(180 80% 55%)', dot: 'hsl(180 80% 50%)', activity: live.activity }
+      if (live.status === 'AWAY') return { label: 'Away', emoji: '🌙', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)', activity: live.activity }
+      if (live.status === 'OFFLINE') return { label: 'Offline', emoji: '⚫', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)', activity: 'Offline' }
+    }
+
+    if (!lastSeenAt) return { label: 'Offline', emoji: '⚫', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)', activity: 'Offline' }
     
     const diffMs = Date.now() - new Date(lastSeenAt).getTime()
     const diffSecs = diffMs / 1000
 
     if (diffSecs < 60) {
-      return { label: 'Online', color: 'hsl(142 70% 55%)', dot: 'hsl(142 70% 50%)' }
+      return { label: 'Online', emoji: '🟢', color: 'hsl(142 70% 55%)', dot: 'hsl(142 70% 50%)', activity: 'Browsing Games' }
     } else if (diffSecs < 300) {
-      return { label: 'Away', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)' }
+      return { label: 'Away', emoji: '🌙', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)', activity: 'Idle' }
     }
-    return { label: 'Offline', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)' }
+    return { label: 'Offline', emoji: '⚫', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)', activity: 'Offline' }
+  }
+
+  const formatElapsedTime = (startedAt: number) => {
+    const diffMs = Date.now() - startedAt
+    const diffSecs = Math.max(0, Math.floor(diffMs / 1000))
+    const mins = Math.floor(diffSecs / 60)
+    const secs = diffSecs % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
   const formatLastSeen = (lastSeenAt?: string | null) => {
@@ -268,6 +308,23 @@ export default function FriendsPage() {
     } catch {
       addToast('error', 'Invite Failed', 'Could not send room invitation. Please try again.')
     }
+  }
+
+  const handleChallengePlayer = (gameSlug: string) => {
+    if (!selectedFriendForChallenge || !socket) return
+    
+    socket.emit('send-challenge', {
+      targetUserId: selectedFriendForChallenge.userId || selectedFriendForChallenge.id,
+      gameSlug
+    }, (response: any) => {
+      if (response && response.error) {
+        addToast('error', 'Challenge Failed', response.error)
+      } else if (response && response.roomCode) {
+        addToast('success', 'Challenge Issued ⚔️', `Challenged ${selectedFriendForChallenge.username} to a match! Redirecting...`)
+        setChallengeModalOpen(false)
+        router.push(`/dashboard/multiplayer/play/${response.roomCode}`)
+      }
+    })
   }
 
   return (
@@ -439,8 +496,8 @@ export default function FriendsPage() {
                     </div>
                   ) : (
                     friends.map(friend => {
-                      const presence = getOnlinePresence(friend.lastSeenAt)
-                      const isOnline = presence.label === 'Online'
+                      const presence = getOnlinePresence(friend.userId || friend.id, friend.lastSeenAt)
+                      const isOnline = presence.label !== 'Offline'
                       
                       return (
                         <Card
@@ -493,31 +550,54 @@ export default function FriendsPage() {
                                   </span>
                                 )}
                                 <span style={{ fontSize: '0.65rem', fontWeight: 700, color: presence.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                  {presence.label}
+                                  {presence.emoji} {presence.label}
                                 </span>
                               </div>
                               <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)', marginTop: '1px' }}>
                                 @{friend.username}
                               </span>
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '0.35rem' }}>
-                              Level {friend.level} · {friend.xp.toLocaleString()} XP{presence.label === 'Offline' && ` · ${formatLastSeen(friend.lastSeenAt)}`}
+                              
+                              {/* Activity Text */}
+                              <span style={{ fontSize: '0.72rem', color: presence.label === 'Offline' ? 'hsl(220 10% 45%)' : 'hsl(220 100% 75%)', marginTop: '0.2rem', fontWeight: 500 }}>
+                                {presence.activity}
+                                {presence.startedAt && (
+                                  <span style={{ color: 'hsl(220 10% 55%)', marginLeft: '0.25rem', fontSize: '0.68rem' }}>
+                                    ({formatElapsedTime(presence.startedAt)})
+                                  </span>
+                                )}
+                              </span>
+
+                              <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', marginTop: '0.3rem' }}>
+                                Level {friend.level} · {friend.xp.toLocaleString()} XP{presence.label === 'Offline' && ` · ${formatLastSeen(friend.lastSeenAt)}`}
+                              </div>
                             </div>
                           </div>
 
                           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            {/* Invite button only for online friends */}
+                            {/* Invite & Challenge buttons only for online friends */}
                             {isOnline && (
-                              <button
-                                className="btn btn-primary btn-sm"
-                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem' }}
-                                onClick={() => {
-                                  setSelectedFriendForInvite(friend)
-                                  setInviteModalOpen(true)
-                                }}
-                              >
-                                🎮 Invite
-                              </button>
+                              <>
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem' }}
+                                  onClick={() => {
+                                    setSelectedFriendForInvite(friend)
+                                    setInviteModalOpen(true)
+                                  }}
+                                >
+                                  🎮 Invite
+                                </button>
+                                <button
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', color: 'hsl(38 95% 60%)', borderColor: 'hsl(38 95% 40% / 0.3)' }}
+                                  onClick={() => {
+                                    setSelectedFriendForChallenge(friend)
+                                    setChallengeModalOpen(true)
+                                  }}
+                                >
+                                  ⚔️ Challenge
+                                </button>
+                              </>
                             )}
                             <button
                               className="btn btn-secondary btn-sm"
@@ -880,6 +960,75 @@ export default function FriendsPage() {
               className="btn btn-ghost"
               style={{ width: '100%', borderRadius: 10, fontSize: '0.82rem', padding: '0.4rem', color: 'hsl(220 10% 50%)' }}
               onClick={() => setInviteModalOpen(false)}
+            >
+              Cancel
+            </button>
+          </Card>
+        </div>
+      )}
+
+      {/* Challenge Modal Popover */}
+      {challengeModalOpen && selectedFriendForChallenge && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(5, 8, 16, 0.88)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+          onClick={() => setChallengeModalOpen(false)}
+        >
+          <Card
+            variant="glass"
+            style={{
+              width: '100%',
+              maxWidth: 380,
+              background: 'linear-gradient(135deg, hsl(222 20% 10%), hsl(222 18% 13%))',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.55)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 850, color: 'white' }}>
+                ⚔️ Challenge {selectedFriendForChallenge.username}
+              </h3>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'hsl(220 10% 55%)' }}>
+                Select a game to start a direct duel match!
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {MULTIPLAYER_GAMES.map(game => (
+                <button
+                  key={game.slug}
+                  className="btn btn-primary"
+                  style={{
+                    justifyContent: 'flex-start',
+                    textAlign: 'left',
+                    borderRadius: 12,
+                    fontSize: '0.88rem',
+                    padding: '0.75rem 1rem',
+                    fontWeight: 600
+                  }}
+                  onClick={() => handleChallengePlayer(game.slug)}
+                >
+                  ⚔️ Duel on {game.name}
+                </button>
+              ))}
+            </div>
+
+            <button
+              className="btn btn-ghost"
+              style={{ width: '100%', borderRadius: 10, fontSize: '0.82rem', padding: '0.4rem', color: 'hsl(220 10% 50%)' }}
+              onClick={() => setChallengeModalOpen(false)}
             >
               Cancel
             </button>

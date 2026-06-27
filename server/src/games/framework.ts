@@ -1,5 +1,6 @@
 import { redisClient } from '../utils/redis'
 import { logger, logError } from '../utils/logger'
+import { LOCAL_CATEGORIES, WORD_CATEGORIES } from './words'
 
 // Active Game Cache TTL: 2 hours
 const GAME_CACHE_TTL = 7200
@@ -196,6 +197,37 @@ export const INITIAL_STATES: Record<string, (players: any[], hostUserId: string)
       winnerId: null,
       turnExpiration: null
     }
+  },
+  'whos-spy': (players, hostUserId) => {
+    const spyPlayer = players[Math.floor(Math.random() * players.length)]
+    const spyId = spyPlayer.userId
+
+    const category = WORD_CATEGORIES[Math.floor(Math.random() * WORD_CATEGORIES.length)]
+    const wordsList = LOCAL_CATEGORIES[category] || LOCAL_CATEGORIES.Animals
+    const word = wordsList[Math.floor(Math.random() * wordsList.length)]
+
+    const clueOrder = players.map(p => p.userId).sort(() => Math.random() - 0.5)
+
+    return {
+      stage: 'REVEAL',
+      roomCode: null, // set by socket layer
+      hostUserId,
+      spyId,
+      category,
+      word,
+      usedWords: {
+        [category]: [word]
+      },
+      dismissedRole: {},
+      clues: {},
+      clueOrder,
+      currentTurnIndex: 0,
+      currentTurn: null,
+      discussionMessages: [],
+      votes: {},
+      winnerId: null,
+      replayVotes: {}
+    }
   }
 }
 
@@ -311,6 +343,10 @@ export async function handleMatchCompletion(
   prisma: any
 ): Promise<void> {
   logger.info(`[MATCH FINISHED] room=${room.roomCode} game=${room.gameSlug} winner=${winnerId || 'DRAW'}`)
+
+  if (room.gameSlug === 'whos-spy') {
+    return
+  }
 
   // Complete room status in PostgreSQL
   await prisma.multiplayerRoom.update({

@@ -87,7 +87,8 @@ const SUPPORTED_MULTIPLAYER_GAMES = [
   { slug: 'rps', name: 'Rock Paper Scissors', emoji: '✊', desc: 'Classic simultaneous choice duel.' },
   { slug: 'number-guessing', name: 'Number Guessing', emoji: '🔢', desc: 'Guess the secret number between 1–100. Hot and cold feedback.' },
   { slug: 'scribble', name: 'Scribble', emoji: '🎨', desc: 'Draw and guess with friends in real time.' },
-  { slug: 'hangman', name: 'Hangman', emoji: '🪓', desc: 'Guess the hidden word letter by letter.' }
+  { slug: 'hangman', name: 'Hangman', emoji: '🪓', desc: 'Guess the hidden word letter by letter.' },
+  { slug: 'whos-spy', name: "Who's Spy", emoji: '🕵️', desc: 'Find the secret word or deceive the civilians.' }
 ]
 
 const SESSION_KEY = 'mp_screen'
@@ -136,6 +137,15 @@ export default function MultiplayerPage() {
   const [roomCodeInput, setRoomCodeInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [loadingText, setLoadingText] = useState('')
+
+  useEffect(() => {
+    if (selectedGame === 'whos-spy') {
+      if (maxPlayers < 3) setMaxPlayers(3)
+      else if (maxPlayers > 10) setMaxPlayers(10)
+    } else {
+      if (maxPlayers > 8) setMaxPlayers(8)
+    }
+  }, [selectedGame])
 
   // Room/lobby state
   const [room, setRoom] = useState<Room | null>(null)
@@ -927,8 +937,10 @@ export default function MultiplayerPage() {
   const isHost = hostUserId === currentUserId
   const myPlayerInfo = players.find(p => p.userId === currentUserId)
   const myReady = myPlayerInfo?.status === 'READY'
-  const activePlayers = players.slice(0, 2)
-  const allPlayersReady = activePlayers.length >= 2 && activePlayers.every(p => p.status === 'READY')
+  const isLargeGame = (room?.gameSlug || selectedGame) === 'cricket' || (room?.gameSlug || selectedGame) === 'scribble' || (room?.gameSlug || selectedGame) === 'whos-spy'
+  const activePlayers = isLargeGame ? players : players.slice(0, 2)
+  const minPlayers = (room?.gameSlug || selectedGame) === 'whos-spy' ? 3 : 2
+  const allPlayersReady = activePlayers.length >= minPlayers && activePlayers.every(p => p.status === 'READY')
   const selectedGameInfo = SUPPORTED_MULTIPLAYER_GAMES.find(
     g => g.slug === (room?.gameSlug || selectedGame)
   )
@@ -1394,15 +1406,15 @@ export default function MultiplayerPage() {
               type="range"
               id="multiplayer-maxplayers-selector"
               name="maxPlayers"
-              min="2"
-              max="8"
+              min={selectedGame === 'whos-spy' ? "3" : "2"}
+              max={selectedGame === 'whos-spy' ? "10" : "8"}
               value={maxPlayers}
               onChange={e => setMaxPlayers(parseInt(e.target.value))}
               style={{ width: '100%', accentColor: 'hsl(var(--brand-primary))', cursor: 'pointer', height: 44 }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'hsl(var(--text-muted))', marginTop: '0.25rem' }}>
-              <span>2 Players</span>
-              <span>8 Players</span>
+              <span>{selectedGame === 'whos-spy' ? "3 Players" : "2 Players"}</span>
+              <span>{selectedGame === 'whos-spy' ? "10 Players" : "8 Players"}</span>
             </div>
           </div>
 

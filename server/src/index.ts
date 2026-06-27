@@ -40,6 +40,7 @@ import { processRpsMove, deleteRpsSession, getRpsSession, saveRpsSession, getMas
 import { processNumberGuessingMove, deleteNumberGuessingSession, getNumberGuessingSession, saveNumberGuessingSession, getMaskedNumberGuessingState } from './games/numberGuessing'
 import { processScribbleMove, deleteScribbleSession, getScribbleSession, saveScribbleSession, getScribbleMaskedState, endScribbleRound, setupNextScribbleTurn, clearScribbleInactivityCheck } from './games/scribble'
 import { processHangmanMove, deleteHangmanSession, getHangmanSession, saveHangmanSession, getMaskedHangmanState } from './games/hangman'
+import { processWhosSpyMove, deleteWhosSpySession, getWhosSpySession, saveWhosSpySession, getWhosSpyMaskedState, isWordBlocked, broadcastGameState, startWhosSpyRematch } from './games/whosSpy'
 import { INITIAL_STATES, handleMatchCompletion } from './games/framework'
 
 // Initialize Sentry SDK
@@ -883,6 +884,13 @@ io.on('connection', async (rawSocket) => {
         if (room.players.length < 2) {
           throw new Error('Scribble requires at least 2 players to start.')
         }
+      } else if (room.gameSlug === 'whos-spy') {
+        if (room.players.length < 3) {
+          throw new Error("Who's Spy requires at least 3 players to start.")
+        }
+        if (room.players.length > 10) {
+          throw new Error("Who's Spy only supports up to 10 players.")
+        }
       } else {
         activePlayers = activePlayers.slice(0, 2)
       }
@@ -896,6 +904,9 @@ io.on('connection', async (rawSocket) => {
         initialGameState = INITIAL_STATES['cricket'](activePlayers, room.hostUserId)
       } else if (room.gameSlug === 'scribble') {
         initialGameState = INITIAL_STATES['scribble'](activePlayers, room.hostUserId)
+      } else if (room.gameSlug === 'whos-spy') {
+        initialGameState = INITIAL_STATES['whos-spy'](activePlayers, room.hostUserId)
+        initialGameState.roomCode = room.roomCode
       } else if (room.gameSlug === 'dots-boxes') {
         initialGameState = INITIAL_STATES['dots-boxes'](activePlayers, room.hostUserId)
       } else if (room.gameSlug === 'tic-tac-toe') {
@@ -940,6 +951,8 @@ io.on('connection', async (rawSocket) => {
         await saveCricketSession(room.roomCode, initialGameState)
       } else if (room.gameSlug === 'scribble') {
         await saveScribbleSession(room.roomCode, initialGameState)
+      } else if (room.gameSlug === 'whos-spy') {
+        await saveWhosSpySession(room.roomCode, initialGameState)
       } else if (room.gameSlug === 'dots-boxes') {
         await saveDotsBoxesSession(room.roomCode, initialGameState)
       } else if (room.gameSlug === 'tic-tac-toe') {
@@ -1012,6 +1025,73 @@ io.on('connection', async (rawSocket) => {
     }
   })
 
+  socket.on('send-spy-chat', async (
+    { roomCode, message }: { roomCode: string; message: string },
+    callback?: any
+  ) => {
+    if (!(await checkRateLimit(socket, sendChatLimiter, 'send-chat', callback))) return
+
+    try {
+      const room = await prisma.multiplayerRoom.findUnique({
+        where: { roomCode },
+        include: { players: { include: { profile: true } } }
+      })
+      if (!room) throw new Error('Room not found')
+      
+      const session = await prisma.multiplayerGameSession.findUnique({
+        where: { roomId: room.id }
+      })
+      if (!session) throw new Error('Game session not found')
+      
+      const state = await getWhosSpySession(roomCode, room.id, prisma)
+      if (!state) throw new Error('Game state not found')
+      
+      if (state.stage !== 'DISCUSSION') {
+        throw new Error('Chat is only enabled during the Discussion Phase')
+      }
+      
+      state.cooldownUntil = state.cooldownUntil || {}
+      if (state.cooldownUntil[userId] && Date.now() < state.cooldownUntil[userId]) {
+        const secsLeft = Math.ceil((state.cooldownUntil[userId] - Date.now()) / 1000)
+        throw new Error(`⚠️ You are temporarily muted. Please wait ${secsLeft} seconds.`)
+      }
+      
+      if (isWordBlocked(message, state.word)) {
+        state.blockedAttempts = state.blockedAttempts || {}
+        state.blockedAttempts[userId] = (state.blockedAttempts[userId] || 0) + 1
+        
+        if (state.blockedAttempts[userId] >= 3) {
+          state.cooldownUntil[userId] = Date.now() + 10000 // 10s cooldown
+          state.blockedAttempts[userId] = 0 // reset attempts
+        }
+        
+        await saveWhosSpySession(roomCode, state)
+        throw new Error('⚠️ Your message reveals too much about the secret word. Try giving a subtler clue.')
+      }
+      
+      const sender = room.players.find(p => p.userId === userId)
+      const packet = {
+        id: `spy-chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        username: sender?.profile?.username || 'Player',
+        avatarUrl: sender?.profile?.avatarUrl || null,
+        message,
+        createdAt: new Date().toISOString()
+      }
+      
+      state.discussionMessages = state.discussionMessages || []
+      state.discussionMessages.push(packet)
+      
+      await saveWhosSpySession(roomCode, state)
+      
+      io.to(`game:${roomCode}`).emit('spy-chat-message', packet)
+      if (callback) callback({ success: true })
+    } catch (err: any) {
+      logError(err, { userId, roomCode })
+      if (callback) callback({ error: err.message })
+    }
+  })
+
   // ─── GAMEPLAY EVENTS ────────────────────────────────────────────────────────
 
   // Join Active Game
@@ -1051,6 +1131,8 @@ io.on('connection', async (rawSocket) => {
         gameState = await getCricketSession(normalizedCode, room.id, prisma).catch(() => null)
       } else if (room.gameSlug === 'scribble') {
         gameState = await getScribbleSession(normalizedCode, room.id, prisma).catch(() => null)
+      } else if (room.gameSlug === 'whos-spy') {
+        gameState = await getWhosSpySession(normalizedCode, room.id, prisma).catch(() => null)
       } else if (room.gameSlug === 'dots-boxes') {
         gameState = await getDotsBoxesSession(normalizedCode, room.id, prisma).catch(() => null)
       } else if (room.gameSlug === 'tic-tac-toe') {
@@ -1088,6 +1170,8 @@ io.on('connection', async (rawSocket) => {
         broadcastState = getMaskedHangmanState(broadcastState, userId)
       } else if (room.gameSlug === 'cricket' && broadcastState) {
         broadcastState = getMaskedCricketState(broadcastState, userId)
+      } else if (room.gameSlug === 'whos-spy' && broadcastState) {
+        broadcastState = getWhosSpyMaskedState(broadcastState, userId)
       }
 
       logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${broadcastState?.stage} gameSlug=${room.gameSlug}`)
@@ -1144,10 +1228,10 @@ io.on('connection', async (rawSocket) => {
         const isPlayer = room.players.some(p => p.userId === userId)
         if (!isPlayer) throw new Error('Unauthorized move submission')
 
-        // Slicing logic: do not slice for Cricket and Scribble
+        // Slicing logic: do not slice for Cricket, Scribble, and Whos Spy
         let activeRoomPlayers = room.players
           .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
-        if (room.gameSlug !== 'cricket' && room.gameSlug !== 'scribble') {
+        if (room.gameSlug !== 'cricket' && room.gameSlug !== 'scribble' && room.gameSlug !== 'whos-spy') {
           activeRoomPlayers = activeRoomPlayers.slice(0, 2)
         }
         const mappedPlayers = activeRoomPlayers.map(p => ({
@@ -1162,6 +1246,8 @@ io.on('connection', async (rawSocket) => {
           result = await processCricketMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
         } else if (room.gameSlug === 'scribble') {
           result = await processScribbleMove(roomCode, room.id, userId, move, mappedPlayers, prisma, io)
+        } else if (room.gameSlug === 'whos-spy') {
+          result = await processWhosSpyMove(roomCode, room.id, userId, move, room.players, prisma, io)
         } else if (room.gameSlug === 'dots-boxes') {
           result = await processDotsBoxesMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
         } else if (room.gameSlug === 'tic-tac-toe') {
@@ -1188,7 +1274,7 @@ io.on('connection', async (rawSocket) => {
           broadcastState = getMaskedNumberGuessingState(state)
         }
 
-        if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket') {
+        if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket' || room.gameSlug === 'whos-spy') {
           for (const player of room.players) {
             const pSocketId = userSockets.get(player.userId)
             const targetSocket = player.userId === userId ? socket : (pSocketId ? io.to(pSocketId) : null)
@@ -1200,6 +1286,8 @@ io.on('connection', async (rawSocket) => {
                 maskedState = getMaskedHangmanState(state, player.userId)
               } else if (room.gameSlug === 'cricket') {
                 maskedState = getMaskedCricketState(state, player.userId)
+              } else if (room.gameSlug === 'whos-spy') {
+                maskedState = getWhosSpyMaskedState(state, player.userId)
               }
               targetSocket.emit('game-update', {
                 gameState: maskedState,
@@ -1283,6 +1371,8 @@ io.on('connection', async (rawSocket) => {
           gameState = await getNumberGuessingSession(roomCode, room.id, prisma)
         } else if (room.gameSlug === 'scribble') {
           gameState = await getScribbleSession(roomCode, room.id, prisma)
+        } else if (room.gameSlug === 'whos-spy') {
+          gameState = await getWhosSpySession(roomCode, room.id, prisma)
         }
 
         if (!gameState) {
@@ -1297,11 +1387,12 @@ io.on('connection', async (rawSocket) => {
 
         const votesCount = Object.keys(gameState.replayVotes).filter(k => gameState.replayVotes[k] === true).length
 
-        // Determine the two active players (first two by join order)
+        // Determine the active players (do not slice if cricket, scribble, or whos-spy)
         const activePlayers = room.players
           .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
-          .slice(0, 2)
-        const activePlayerIds = activePlayers.map(p => p.userId)
+        const isMultiplayerLarge = room.gameSlug === 'cricket' || room.gameSlug === 'scribble' || room.gameSlug === 'whos-spy'
+        const finalActivePlayers = isMultiplayerLarge ? activePlayers : activePlayers.slice(0, 2)
+        const activePlayerIds = finalActivePlayers.map(p => p.userId)
 
         // Only count votes from active players (not spectators)
         const activeVoteCount = activePlayerIds.filter(id => gameState.replayVotes[id] === true).length
@@ -1313,44 +1404,47 @@ io.on('connection', async (rawSocket) => {
 
         logger.info(`[VOTE-REPLAY] room=${roomCode} voter=${userId} votesCount=${votesCount} activeVoteCount=${activeVoteCount} activePlayers=${activePlayerIds.join(',')}`)
 
-        if (activeVoteCount >= activePlayers.length) {
+        if (activeVoteCount >= finalActivePlayers.length) {
           updatedStatus = 'PLAYING'
           updatedWinnerId = null
 
           if (room.gameSlug === 'cricket') {
-            finalGameState = INITIAL_STATES['cricket'](activePlayers, room.hostUserId)
+            finalGameState = INITIAL_STATES['cricket'](finalActivePlayers, room.hostUserId)
             updatedTurn = null // Toss choice determines roles
             await saveCricketSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'dots-boxes') {
-            finalGameState = INITIAL_STATES['dots-boxes'](activePlayers, room.hostUserId)
+            finalGameState = INITIAL_STATES['dots-boxes'](finalActivePlayers, room.hostUserId)
             updatedTurn = finalGameState.currentTurn
             await saveDotsBoxesSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'tic-tac-toe') {
-            finalGameState = INITIAL_STATES['tic-tac-toe'](activePlayers, room.hostUserId)
+            finalGameState = INITIAL_STATES['tic-tac-toe'](finalActivePlayers, room.hostUserId)
             updatedTurn = finalGameState.currentTurn
             await saveTicTacToeSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'memory') {
-            finalGameState = INITIAL_STATES['memory'](activePlayers, room.hostUserId)
+            finalGameState = INITIAL_STATES['memory'](finalActivePlayers, room.hostUserId)
             updatedTurn = finalGameState.currentTurn
             await saveMemorySession(roomCode, finalGameState)
           } else if (room.gameSlug === 'rps') {
-            finalGameState = INITIAL_STATES['rps'](activePlayers, room.hostUserId)
+            finalGameState = INITIAL_STATES['rps'](finalActivePlayers, room.hostUserId)
             updatedTurn = null
             await saveRpsSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'number-guessing') {
-            finalGameState = INITIAL_STATES['number-guessing'](activePlayers, room.hostUserId)
+            finalGameState = INITIAL_STATES['number-guessing'](finalActivePlayers, room.hostUserId)
             updatedTurn = finalGameState.currentTurn
             await saveNumberGuessingSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'scribble') {
             await deleteScribbleSession(roomCode)
-            finalGameState = INITIAL_STATES['scribble'](activePlayers, room.hostUserId)
+            finalGameState = INITIAL_STATES['scribble'](finalActivePlayers, room.hostUserId)
             updatedTurn = null
             await saveScribbleSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'hangman') {
             await deleteHangmanSession(roomCode)
-            finalGameState = INITIAL_STATES['hangman'](activePlayers, room.hostUserId)
+            finalGameState = INITIAL_STATES['hangman'](finalActivePlayers, room.hostUserId)
             updatedTurn = finalGameState.currentTurn
             await saveHangmanSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'whos-spy') {
+            finalGameState = await startWhosSpyRematch(roomCode, room.hostUserId, finalActivePlayers, gameState)
+            updatedTurn = null
           }
 
           logger.info(`[VOTE-REPLAY] room=${roomCode} RESET → fresh board, nextTurn=${updatedTurn}`)
@@ -1378,6 +1472,8 @@ io.on('connection', async (rawSocket) => {
             await saveScribbleSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'hangman') {
             await saveHangmanSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'whos-spy') {
+            await saveWhosSpySession(roomCode, finalGameState)
           }
         }
 
@@ -1394,15 +1490,19 @@ io.on('connection', async (rawSocket) => {
           }
         })
 
-        io.to(`game:${roomCode}`).emit('game-update', {
-          gameState: finalGameState,
-          gameFinished: updatedStatus === 'FINISHED',
-          winnerId: updatedWinnerId,
-          lastMove: { userId, type: 'replay_vote' },
-          serverTime: Date.now()
-        })
+        if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket' || room.gameSlug === 'whos-spy') {
+          broadcastGameState(roomCode, finalGameState, room.players, io)
+        } else {
+          io.to(`game:${roomCode}`).emit('game-update', {
+            gameState: finalGameState,
+            gameFinished: updatedStatus === 'FINISHED',
+            winnerId: updatedWinnerId,
+            lastMove: { userId, type: 'replay_vote' },
+            serverTime: Date.now()
+          })
+        }
 
-        if (activeVoteCount >= activePlayers.length) {
+        if (activeVoteCount >= finalActivePlayers.length) {
           // Trigger client re-sync after replay reset
           io.to(`game:${roomCode}`).emit('game-started', { roomCode })
         }
@@ -1870,6 +1970,8 @@ function startReconciliationLoop() {
             gameState = await getRpsSession(room.roomCode, room.id, prisma)
           } else if (room.gameSlug === 'number-guessing') {
             gameState = await getNumberGuessingSession(room.roomCode, room.id, prisma)
+          } else if (room.gameSlug === 'whos-spy') {
+            gameState = await getWhosSpySession(room.roomCode, room.id, prisma)
           }
 
           if (gameState) {

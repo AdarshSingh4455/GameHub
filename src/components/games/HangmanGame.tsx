@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
-import { CATEGORIES } from '@/lib/wordWizardDictionary'
+import { useRouter } from 'next/navigation'
 import { validateAndSuggest } from '@/lib/wordValidation'
 import WordValidationModal from '@/components/shared/WordValidationModal'
-import { useRouter } from 'next/navigation'
+import { LOCAL_CATEGORIES, WORD_CATEGORIES } from '../../../server/src/games/words'
 
 type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -16,7 +16,7 @@ interface LocalStats {
   losses: number
   correctGuesses: number
   incorrectGuesses: number
-  fastestSolve: number | null // in seconds
+  fastestSolve: number | null
   currentStreak: number
   bestStreak: number
 }
@@ -32,14 +32,19 @@ const DEFAULT_STATS: LocalStats = {
   bestStreak: 0,
 }
 
+const KEYBOARD_ROWS = [
+  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+  ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
+]
+
 export default function HangmanGame() {
   const router = useRouter()
   const { user, submitGameResult } = useGameSession()
   const { addToast } = useToast()
 
-  // Game UI stages: 'LOBBY' | 'PLAYING' | 'GAMEOVER'
-  const [stage, setStage] = useState<'LOBBY' | 'PLAYING' | 'GAMEOVER'>('LOBBY')
-  const [activeMode, setActiveMode] = useState<'single' | 'multi'>('single')
+  // Game UI stages: 'LOBBY' | 'PLAYING'
+  const [stage, setStage] = useState<'LOBBY' | 'PLAYING'>('LOBBY')
   const [difficulty, setDifficulty] = useState<Difficulty>('medium')
 
   // Gameplay State
@@ -50,8 +55,11 @@ export default function HangmanGame() {
   const [lives, setLives] = useState(8)
   const [hintsLeft, setHintsLeft] = useState(1)
   const [startTime, setStartTime] = useState<number>(0)
-  const [endTime, setEndTime] = useState<number>(0)
   
+  // Category Selection Intro State
+  const [introStage, setIntroStage] = useState<'IDLE' | 'SELECTING' | 'REVEALING' | 'DONE'>('IDLE')
+  const [tickerCategory, setTickerCategory] = useState('Selecting Category...')
+
   // Full Guess State
   const [fullGuessInput, setFullGuessInput] = useState('')
   const [showGuessModal, setShowGuessModal] = useState(false)
@@ -60,10 +68,7 @@ export default function HangmanGame() {
 
   // Local Statistics
   const [stats, setStats] = useState<LocalStats>(DEFAULT_STATS)
-
-  // Multiplayer Lobby room state
-  const [joinCode, setJoinCode] = useState('')
-  const [lobbyLoading, setLobbyLoading] = useState(false)
+  const hasSubmittedResult = useRef(false)
 
   // Load local stats
   useEffect(() => {
@@ -77,38 +82,60 @@ export default function HangmanGame() {
     }
   }, [])
 
-  // Word selection based on difficulty
+  // Word selection based on difficulty & prevention of immediate repetition
   const selectRandomWord = (diff: Difficulty): { word: string; category: string } => {
-    const allCategories = Object.keys(CATEGORIES)
-    const randomCat = allCategories[Math.floor(Math.random() * allCategories.length)]
-    const words = CATEGORIES[randomCat]
+    // 1. Pick a random category
+    const randomCat = WORD_CATEGORIES[Math.floor(Math.random() * WORD_CATEGORIES.length)]
+    const words = LOCAL_CATEGORIES[randomCat] || []
 
-    // Filter words by length
-    let filtered = words
+    // 2. Fetch previously used words for this category from localStorage
+    const usedWordsKey = `gamehub_hangman_used_${randomCat.toLowerCase()}`
+    let usedWords: string[] = []
+    try {
+      usedWords = JSON.parse(localStorage.getItem(usedWordsKey) || '[]')
+    } catch {
+      usedWords = []
+    }
+
+    // 3. Filter words matching length / difficulty bounds
+    let lengthFiltered = words
     if (diff === 'easy') {
-      filtered = words.filter(w => w.length <= 5)
+      lengthFiltered = words.filter(w => w.length <= 5)
     } else if (diff === 'medium') {
-      filtered = words.filter(w => w.length >= 6 && w.length <= 7)
+      lengthFiltered = words.filter(w => w.length >= 6 && w.length <= 7)
     } else {
-      filtered = words.filter(w => w.length >= 8)
+      lengthFiltered = words.filter(w => w.length >= 8)
+    }
+    if (lengthFiltered.length === 0) lengthFiltered = words
+
+    // 4. Exclude previously used words
+    let availableWords = lengthFiltered.filter(w => !usedWords.includes(w.toLowerCase()))
+
+    // 5. If all words in category consumed, reset the history
+    if (availableWords.length === 0) {
+      usedWords = []
+      localStorage.removeItem(usedWordsKey)
+      availableWords = lengthFiltered
     }
 
-    // Fallback if no words match filter
-    if (filtered.length === 0) {
-      filtered = words
-    }
+    // 6. Select random word
+    const selected = availableWords[Math.floor(Math.random() * availableWords.length)].toUpperCase()
 
-    const selectedWord = filtered[Math.floor(Math.random() * filtered.length)].toUpperCase()
-    return { word: selectedWord, category: randomCat }
+    // 7. Update used list
+    usedWords.push(selected.toLowerCase())
+    localStorage.setItem(usedWordsKey, JSON.stringify(usedWords))
+
+    return { word: selected, category: randomCat }
   }
 
-  // Start a new game
-  const startGame = () => {
-    const { word: newWord, category: newCat } = selectRandomWord(difficulty)
-    setWord(newWord)
-    setCategory(newCat)
+  // Start a new game with selection intro sequence
+  const startNewGameFlow = () => {
+    hasSubmittedResult.current = false
     setGuessedLetters([])
-    
+    setFullGuessesLeft(2)
+    setFullGuessInput('')
+    setShowGuessModal(false)
+
     let initialLives = 8
     let initialHints = 1
     if (difficulty === 'easy') {
@@ -118,20 +145,50 @@ export default function HangmanGame() {
       initialLives = 6
       initialHints = 0
     }
-
     setMaxLives(initialLives)
     setLives(initialLives)
     setHintsLeft(initialHints)
-    setFullGuessesLeft(2)
-    setFullGuessInput('')
-    setShowGuessModal(false)
-    setStartTime(Date.now())
+
+    // Trigger Category Intro Ticker
     setStage('PLAYING')
+    setIntroStage('SELECTING')
+    setTickerCategory('🎲 Selecting Category...')
+
+    let tickerInterval: NodeJS.Timeout
+    let counter = 0
+    tickerInterval = setInterval(() => {
+      setTickerCategory(WORD_CATEGORIES[counter % WORD_CATEGORIES.length])
+      counter++
+    }, 100)
+
+    const { word: newWord, category: newCat } = selectRandomWord(difficulty)
+
+    setTimeout(() => {
+      clearInterval(tickerInterval)
+      setCategory(newCat)
+      setTickerCategory(`🐾 ${newCat}`)
+      setIntroStage('REVEALING')
+
+      setTimeout(() => {
+        setWord(newWord)
+        setIntroStage('DONE')
+        setStartTime(Date.now())
+      }, 900)
+    }, 700)
   }
+
+  // Listen to global replay triggers
+  useEffect(() => {
+    const handleReplay = () => {
+      startNewGameFlow()
+    }
+    window.addEventListener('gamehub_replay', handleReplay)
+    return () => window.removeEventListener('gamehub_replay', handleReplay)
+  }, [difficulty])
 
   // Guess Letter
   const handleLetterGuess = (letter: string) => {
-    if (guessedLetters.includes(letter) || stage !== 'PLAYING') return
+    if (guessedLetters.includes(letter) || stage !== 'PLAYING' || introStage !== 'DONE') return
 
     const newGuessed = [...guessedLetters, letter]
     setGuessedLetters(newGuessed)
@@ -166,7 +223,7 @@ export default function HangmanGame() {
 
   // Hint execution
   const triggerHint = () => {
-    if (hintsLeft <= 0 || stage !== 'PLAYING') return
+    if (hintsLeft <= 0 || stage !== 'PLAYING' || introStage !== 'DONE') return
 
     // Find letters in the word that haven't been guessed yet
     const unrevealed = word.split('').filter(char => !guessedLetters.includes(char))
@@ -179,16 +236,15 @@ export default function HangmanGame() {
     handleLetterGuess(randomLetter)
   }
 
-  // Guess Word Submission with optional corrected word
+  // Guess Word Submission
   const handleFullWordGuess = (overrideWord?: string) => {
     const raw = overrideWord || fullGuessInput
     const guess = raw.trim().toUpperCase()
     if (!guess) return
 
-    // Only validate if this is not an override (i.e., not coming from the suggestion modal)
+    // Only validate if this is not an override
     if (!overrideWord) {
       const suggestion = validateAndSuggest(guess)
-      // suggestion is a string (the corrected word) or null (valid / no suggestion)
       if (suggestion && suggestion.toUpperCase() !== guess) {
         setWordSuggestion({ original: guess, corrected: suggestion })
         return
@@ -214,11 +270,11 @@ export default function HangmanGame() {
 
   // Game End Logic
   const handleGameOver = (isWin: boolean) => {
-    const end = Date.now()
-    setEndTime(end)
-    setStage('GAMEOVER')
+    if (hasSubmittedResult.current) return
+    hasSubmittedResult.current = true
 
-    const timeTaken = Math.round((end - startTime) / 1000)
+    const endTime = Date.now()
+    const timeTaken = Math.round((endTime - startTime) / 1000)
 
     // Calculate update stats locally
     setStats(prev => {
@@ -239,31 +295,42 @@ export default function HangmanGame() {
     })
 
     // Submit Game results to server
-    if (user) {
-      const correctCount = word.split('').filter(c => guessedLetters.includes(c)).length
-      const incorrectCount = maxLives - lives
-      submitGameResult({
-        gameSlug: 'hangman',
-        result: isWin ? 'win' : 'loss',
-        metadata: {
+    const correctCount = word.split('').filter(c => guessedLetters.includes(c)).length
+    const incorrectCount = maxLives - lives
+    submitGameResult({
+      gameSlug: 'hangman',
+      result: isWin ? 'win' : 'loss',
+      metadata: {
+        score: isWin ? 100 : 0,
+        gameMetadata: {
           difficulty,
-          score: isWin ? 100 : 0,
-          timeTakenSecs: timeTaken,
+          level: stats.wordsSolved + 1,
+          timeSpent: timeTaken,
           incorrectGuesses: incorrectCount,
           correctGuesses: correctCount,
           isFullGuessWin: isWin && fullGuessesLeft < 2
         }
-      }).catch(err => console.error('Failed to submit Hangman SP results', err))
-    }
+      }
+    })
   }
 
-  // Rendering Hangman SVG illustration based on remaining lives
+  // Keyboard layout inputs
+  useEffect(() => {
+    const handlePhysicalKeyDown = (e: KeyboardEvent) => {
+      if (stage !== 'PLAYING' || introStage !== 'DONE' || showGuessModal) return
+      const key = e.key.toUpperCase()
+      if (/^[A-Z]$/.test(key)) {
+        handleLetterGuess(key)
+      }
+    }
+    window.addEventListener('keydown', handlePhysicalKeyDown)
+    return () => window.removeEventListener('keydown', handlePhysicalKeyDown)
+  }, [guessedLetters, word, stage, introStage, showGuessModal])
+
+  // Rendering Hangman SVG illustration with dynamic neon paths and animations
   const renderHangmanSVG = () => {
-    // We map out the maximum lines or segments of the drawing
     const errorCount = maxLives - lives
 
-    // Easy (10 lives), Medium (8 lives), Hard (6 lives)
-    // Draw base, vertical post, beam, and rope based on starting lives count
     const alwaysDrawBase = maxLives <= 8
     const alwaysDrawPost = maxLives <= 8
     const alwaysDrawBeam = maxLives <= 6
@@ -273,170 +340,201 @@ export default function HangmanGame() {
       <svg width="120" height="120" viewBox="0 0 100 100" style={{ margin: '0 auto', display: 'block' }}>
         {/* Base line */}
         {(alwaysDrawBase || errorCount >= 1) && (
-          <line x1="10" y1="90" x2="90" y2="90" stroke="white" strokeWidth="4" strokeLinecap="round" />
+          <line x1="10" y1="90" x2="90" y2="90" stroke="white" strokeWidth="4" strokeLinecap="round" className="hangman-part" />
         )}
         {/* Vertical post */}
         {(alwaysDrawPost || errorCount >= 2) && (
-          <line x1="30" y1="90" x2="30" y2="10" stroke="white" strokeWidth="4" strokeLinecap="round" />
+          <line x1="30" y1="90" x2="30" y2="10" stroke="white" strokeWidth="4" strokeLinecap="round" className="hangman-part" />
         )}
         {/* Horizontal beam */}
         {(alwaysDrawBeam || errorCount >= 3) && (
-          <line x1="30" y1="10" x2="70" y2="10" stroke="white" strokeWidth="4" strokeLinecap="round" />
+          <line x1="30" y1="10" x2="70" y2="10" stroke="white" strokeWidth="4" strokeLinecap="round" className="hangman-part" />
         )}
         {/* Rope */}
         {(alwaysDrawRope || errorCount >= 4) && (
-          <line x1="70" y1="10" x2="70" y2="25" stroke="white" strokeWidth="2" strokeLinecap="round" />
+          <line x1="70" y1="10" x2="70" y2="25" stroke="hsl(38, 95%, 55%)" strokeWidth="2.5" strokeLinecap="round" className="hangman-part" />
         )}
         {/* Head */}
         {((maxLives === 10 && errorCount >= 5) || (maxLives === 8 && errorCount >= 5) || (maxLives === 6 && errorCount >= 1)) && (
-          <circle cx="70" cy="33" r="8" stroke="white" strokeWidth="3" fill="none" />
+          <circle cx="70" cy="33" r="8" stroke="white" strokeWidth="3" fill="none" className="hangman-part" />
         )}
         {/* Torso */}
         {((maxLives === 10 && errorCount >= 6) || (maxLives === 8 && errorCount >= 6) || (maxLives === 6 && errorCount >= 2)) && (
-          <line x1="70" y1="41" x2="70" y2="60" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          <line x1="70" y1="41" x2="70" y2="60" stroke="white" strokeWidth="3" strokeLinecap="round" className="hangman-part" />
         )}
         {/* Left arm */}
         {((maxLives === 10 && errorCount >= 7) || (maxLives === 8 && errorCount >= 7) || (maxLives === 6 && errorCount >= 3)) && (
-          <line x1="70" y1="48" x2="58" y2="43" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          <line x1="70" y1="48" x2="58" y2="43" stroke="white" strokeWidth="3" strokeLinecap="round" className="hangman-part" />
         )}
         {/* Right arm */}
         {((maxLives === 10 && errorCount >= 8) || (maxLives === 8 && errorCount >= 8) || (maxLives === 6 && errorCount >= 4)) && (
-          <line x1="70" y1="48" x2="82" y2="43" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          <line x1="70" y1="48" x2="82" y2="43" stroke="white" strokeWidth="3" strokeLinecap="round" className="hangman-part" />
         )}
         {/* Left leg */}
         {((maxLives === 10 && errorCount >= 9) || (maxLives === 8 && errorCount >= 8) || (maxLives === 6 && errorCount >= 5)) && (
-          <line x1="70" y1="60" x2="58" y2="75" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          <line x1="70" y1="60" x2="58" y2="75" stroke="white" strokeWidth="3" strokeLinecap="round" className="hangman-part" />
         )}
         {/* Right leg */}
         {((maxLives === 10 && errorCount >= 10) || (maxLives === 8 && errorCount >= 8) || (maxLives === 6 && errorCount >= 6)) && (
-          <line x1="70" y1="60" x2="82" y2="75" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          <line x1="70" y1="60" x2="82" y2="75" stroke="white" strokeWidth="3" strokeLinecap="round" className="hangman-part" />
         )}
       </svg>
     )
   }
 
-  // Multiplayer Actions
-  const createOnlineRoom = () => {
-    setLobbyLoading(true)
-    router.push('/dashboard/multiplayer?action=create&game=hangman')
-  }
-
-  const joinOnlineRoom = () => {
-    if (!joinCode.trim()) {
-      addToast('warning', 'Missing Code', 'Please enter a room code.')
-      return
-    }
-    router.push(`/dashboard/multiplayer?action=join&game=hangman&code=${joinCode.trim().toUpperCase()}`)
-  }
-
-  // Accuracy Calculation helper
   const calcAccuracy = () => {
     const total = stats.correctGuesses + stats.incorrectGuesses
     if (total === 0) return 0
     return Math.round((stats.correctGuesses / total) * 100)
   }
 
+  const isGameOver = lives <= 0 || !!(word && word.split('').every(char => guessedLetters.includes(char)))
+
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0 1rem' }} className="animate-fadeIn">
-      {/* Mode Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', background: 'hsl(220 20% 7%)', padding: '0.25rem', borderRadius: 12, border: '1px solid hsl(220 15% 15%)' }}>
-        <button
-          onClick={() => setActiveMode('single')}
-          style={{
-            flex: 1, padding: '0.6rem', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
-            backgroundColor: activeMode === 'single' ? 'hsl(220 100% 60%)' : 'transparent',
-            color: activeMode === 'single' ? 'white' : 'hsl(220 10% 60%)',
-            transition: 'all 0.2s'
-          }}
-        >
-          Solo Practice
-        </button>
-        <button
-          onClick={() => setActiveMode('multi')}
-          style={{
-            flex: 1, padding: '0.6rem', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
-            backgroundColor: activeMode === 'multi' ? 'hsl(220 100% 60%)' : 'transparent',
-            color: activeMode === 'multi' ? 'white' : 'hsl(220 10% 60%)',
-            transition: 'all 0.2s'
-          }}
-        >
-          Multiplayer PvP
-        </button>
-      </div>
+      
+      {/* Styles Injection */}
+      <style>{`
+        @keyframes hangman-draw {
+          from { stroke-dashoffset: 120; }
+          to { stroke-dashoffset: 0; }
+        }
+        .hangman-part {
+          stroke-dasharray: 120;
+          stroke-dashoffset: 120;
+          animation: hangman-draw 0.5s ease-out forwards;
+          filter: drop-shadow(0 0 4px rgba(255,255,255,0.4));
+        }
+        .key-btn {
+          height: 44px;
+          border: 1px solid hsl(220 15% 18%);
+          border-radius: 10px;
+          font-size: 0.95rem;
+          font-weight: 800;
+          cursor: pointer;
+          background-color: hsl(220 20% 7%);
+          color: hsl(220 10% 75%);
+          transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+          touch-action: manipulation;
+        }
+        .key-btn:hover:not(:disabled) {
+          background-color: hsl(220 20% 12%);
+          border-color: hsl(220 10% 40%);
+          transform: translateY(-2px);
+        }
+        .key-btn:active:not(:disabled) {
+          transform: translateY(1px);
+        }
+        @keyframes shake-wrong {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-6px); }
+          40%, 80% { transform: translateX(6px); }
+        }
+        .wrong-shake {
+          animation: shake-wrong 0.4s ease;
+        }
+        @keyframes category-bounce {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.08); text-shadow: 0 0 15px hsl(270 80% 70% / 0.4); }
+        }
+        .cat-intro-text {
+          animation: category-bounce 1s ease-in-out infinite;
+        }
+      `}</style>
 
-      {activeMode === 'single' ? (
-        <>
-          {stage === 'LOBBY' && (
-            <div className="card glass text-center" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: 16 }}>
-              <div>
-                <span style={{ fontSize: '3rem', display: 'block', marginBottom: '0.5rem' }}>🪓</span>
-                <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Hangman Classic</h2>
-                <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                  Guess the hidden word before running out of attempts!
-                </p>
-              </div>
+      {stage === 'LOBBY' ? (
+        <div className="card glass text-center" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: 16 }}>
+          <div>
+            <span style={{ fontSize: '3rem', display: 'block', marginBottom: '0.5rem' }}>🪓</span>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Hangman Classic</h2>
+            <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+              Guess the hidden word before running out of attempts!
+            </p>
+          </div>
 
-              {/* Difficulty Selection */}
-              <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-                  Select Difficulty
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                  {(['easy', 'medium', 'hard'] as const).map(d => (
-                    <button
-                      key={d}
-                      onClick={() => setDifficulty(d)}
-                      style={{
-                        padding: '0.6rem', border: '1px solid', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, textTransform: 'capitalize', cursor: 'pointer',
-                        borderColor: difficulty === d ? 'hsl(220 100% 65%)' : 'hsl(220 15% 20%)',
-                        backgroundColor: difficulty === d ? 'hsl(220 100% 60% / 0.15)' : 'hsl(220 20% 8%)',
-                        color: difficulty === d ? 'white' : 'hsl(220 10% 60%)',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Stats Card */}
-              <div style={{ background: 'hsl(220 20% 7%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 12, padding: '1rem', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>{stats.wins}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)' }}>Wins</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>{stats.losses}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)' }}>Losses</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>{calcAccuracy()}%</div>
-                  <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)' }}>Accuracy</div>
-                </div>
-              </div>
-
-              <button onClick={startGame} className="btn btn-primary" style={{ width: '100%', padding: '0.8rem', borderRadius: 12, fontWeight: 700, fontSize: '1rem' }}>
-                Start Game 🚀
-              </button>
+          {/* Difficulty Selection */}
+          <div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+              Select Difficulty
             </div>
-          )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+              {(['easy', 'medium', 'hard'] as const).map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDifficulty(d)}
+                  style={{
+                    padding: '0.6rem', border: '1px solid', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, textTransform: 'capitalize', cursor: 'pointer',
+                    borderColor: difficulty === d ? 'hsl(220 100% 65%)' : 'hsl(220 15% 20%)',
+                    backgroundColor: difficulty === d ? 'hsl(220 100% 60% / 0.15)' : 'hsl(220 20% 8%)',
+                    color: difficulty === d ? 'white' : 'hsl(220 10% 60%)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {stage === 'PLAYING' && (
-            <div className="card glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', borderRadius: 16 }}>
+          {/* Stats Card */}
+          <div style={{ background: 'hsl(220 20% 7%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 12, padding: '1rem', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+            <div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>{stats.wins}</div>
+              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)' }}>Wins</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>{stats.losses}</div>
+              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)' }}>Losses</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>{calcAccuracy()}%</div>
+              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)' }}>Accuracy</div>
+            </div>
+          </div>
+
+          <button onClick={startNewGameFlow} className="btn btn-primary" style={{ width: '100%', padding: '0.8rem', borderRadius: 12, fontWeight: 700, fontSize: '1rem' }}>
+            Start Solo Game 🚀
+          </button>
+        </div>
+      ) : (
+        <div className="card glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', borderRadius: 16 }}>
+          
+          {introStage !== 'DONE' ? (
+            /* Cool category intro spinner/reveal */
+            <div style={{ padding: '4rem 1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+              <div style={{ fontSize: '3rem', animation: 'spin-slow 2s linear infinite' }}>🎲</div>
+              <div
+                className="cat-intro-text"
+                style={{
+                  fontSize: '1.8rem',
+                  fontWeight: 950,
+                  color: 'white',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {tickerCategory}
+              </div>
+              <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.85rem' }}>
+                {introStage === 'SELECTING' ? 'Selecting Category...' : 'Prepare to Guess!'}
+              </p>
+            </div>
+          ) : (
+            /* Active Gameplay Board */
+            <>
               {/* HUD / Indicators */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Category</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'capitalize', color: 'hsl(270 80% 75%)' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>🏷️ Category</span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 900, textTransform: 'uppercase', color: 'hsl(270 80% 75%)' }}>
                     {category}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <div style={{ padding: '0.4rem 0.75rem', background: 'hsl(220 20% 7%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 10, fontSize: '0.8rem' }}>
-                    ❤️ Lives: <strong style={{ color: 'hsl(350 90% 60%)' }}>{lives}</strong>
+                    ❤️ Lives: <strong style={{ color: lives <= 2 ? 'hsl(350 90% 60%)' : 'hsl(142 70% 50%)' }}>{lives}</strong>
                   </div>
-                  {difficulty !== 'hard' && (
+                  {difficulty !== 'hard' && !isGameOver && (
                     <button
                       onClick={triggerHint}
                       disabled={hintsLeft <= 0}
@@ -449,22 +547,25 @@ export default function HangmanGame() {
                 </div>
               </div>
 
-              {/* SVG drawing */}
-              <div style={{ padding: '1rem', background: 'hsl(220 20% 8%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 12 }}>
+              {/* Drawing Gallows */}
+              <div style={{ padding: '0.75rem', background: 'hsl(220 20% 8%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 12 }}>
                 {renderHangmanSVG()}
               </div>
 
-              {/* Secret Word board representation */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.35rem', flexWrap: 'wrap', margin: '0.5rem 0' }}>
+              {/* Word Display Board */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.35rem', flexWrap: 'wrap', margin: '0.4rem 0' }}>
                 {word.split('').map((char, index) => {
-                  const isRevealed = guessedLetters.includes(char)
+                  const isRevealed = guessedLetters.includes(char) || lives <= 0
+                  const isLostChar = !guessedLetters.includes(char) && lives <= 0
                   return (
                     <div
                       key={index}
                       style={{
-                        width: 32, height: 42, borderBottom: '3px solid', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '1.4rem', fontWeight: 800, color: 'white',
-                        borderColor: isRevealed ? 'hsl(220 100% 60%)' : 'hsl(220 15% 25%)',
+                        width: 30, height: 40, borderBottom: '3px solid', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '1.4rem', fontWeight: 900, 
+                        color: isLostChar ? 'hsl(350 90% 60%)' : 'white',
+                        borderColor: isRevealed ? (isLostChar ? 'hsl(350 90% 60%)' : 'hsl(220 100% 60%)') : 'hsl(220 15% 25%)',
+                        transition: 'color 0.3s ease, border-color 0.3s ease',
                       }}
                     >
                       {isRevealed ? char : ''}
@@ -473,146 +574,68 @@ export default function HangmanGame() {
                 })}
               </div>
 
-              {/* Options */}
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={() => setShowGuessModal(true)}
-                  className="btn btn-secondary"
-                  style={{ flex: 1, borderRadius: 10, fontSize: '0.82rem', padding: '0.5rem' }}
-                >
-                  💡 Guess Word ({fullGuessesLeft} left)
-                </button>
-                <button
-                  onClick={() => handleGameOver(false)}
-                  className="btn btn-ghost"
-                  style={{ flex: 1, borderRadius: 10, fontSize: '0.82rem', padding: '0.5rem', border: '1px solid hsl(220 15% 18%)' }}
-                >
-                  🏳️ Give Up
-                </button>
-              </div>
-
-              {/* Interactive Virtual Keyboard */}
-              <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.35rem' }}>
-                  {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => {
-                    const isGuessed = guessedLetters.includes(letter)
-                    const isCorrect = isGuessed && word.includes(letter)
-                    
-                    let bg = 'hsl(220 20% 9%)'
-                    let text = 'hsl(220 10% 70%)'
-                    if (isGuessed) {
-                      bg = isCorrect ? 'hsl(142 70% 45% / 0.15)' : 'hsl(350 90% 60% / 0.12)'
-                      text = isCorrect ? 'hsl(142 70% 55%)' : 'hsl(350 90% 65%)'
-                    }
-
-                    return (
-                      <button
-                        key={letter}
-                        onClick={() => handleLetterGuess(letter)}
-                        disabled={isGuessed}
-                        style={{
-                          height: 38, border: '1px solid hsl(220 15% 18%)', borderRadius: 8, fontSize: '0.9rem', fontWeight: 800, cursor: isGuessed ? 'default' : 'pointer',
-                          backgroundColor: bg,
-                          color: text,
-                          borderColor: isGuessed ? 'transparent' : 'hsl(220 15% 18%)',
-                          opacity: isGuessed ? 0.6 : 1,
-                          transition: 'all 0.15s'
-                        }}
-                      >
-                        {letter}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {stage === 'GAMEOVER' && (
-            <div className="card glass text-center" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: 16 }}>
-              {lives > 0 ? (
-                <div>
-                  <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '0.5rem' }}>🎉</span>
-                  <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'hsl(142 70% 50%)' }}>Word Solved!</h2>
-                  <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                    Congratulations! You correctly guessed the word.
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '0.5rem' }}>💀</span>
-                  <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'hsl(350 90% 55%)' }}>Defeated</h2>
-                  <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                    You ran out of lives! Better luck next time.
-                  </p>
+              {/* Options buttons */}
+              {!isGameOver && (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => setShowGuessModal(true)}
+                    className="btn btn-secondary"
+                    style={{ flex: 1, borderRadius: 10, fontSize: '0.82rem', padding: '0.5rem' }}
+                  >
+                    💡 Guess Word ({fullGuessesLeft} left)
+                  </button>
+                  <button
+                    onClick={() => handleGameOver(false)}
+                    className="btn btn-ghost"
+                    style={{ flex: 1, borderRadius: 10, fontSize: '0.82rem', padding: '0.5rem', border: '1px solid hsl(220 15% 18%)' }}
+                  >
+                    🏳️ Give Up
+                  </button>
                 </div>
               )}
 
-              <div style={{ background: 'hsl(220 20% 7%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 12, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'hsl(220 10% 55%)' }}>Correct Word:</span>
-                  <strong style={{ color: 'white', letterSpacing: '0.05em' }}>{word}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'hsl(220 10% 55%)' }}>Solve Time:</span>
-                  <strong style={{ color: 'white' }}>{Math.round((endTime - startTime) / 1000)}s</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'hsl(220 10% 55%)' }}>Streak:</span>
-                  <strong style={{ color: 'hsl(45 100% 55%)' }}>🔥 {stats.currentStreak}</strong>
-                </div>
-              </div>
+              {/* Keyboard Grid */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+                {KEYBOARD_ROWS.map((row, rIdx) => (
+                  <div key={rIdx} style={{ display: 'flex', justifyContent: 'center', gap: '0.3rem' }}>
+                    {row.map(letter => {
+                      const isGuessed = guessedLetters.includes(letter)
+                      const isCorrect = isGuessed && word.includes(letter)
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={startGame} className="btn btn-primary" style={{ flex: 2, padding: '0.75rem', borderRadius: 12, fontWeight: 700, fontSize: '0.95rem' }}>
-                  Play Again 🔄
-                </button>
-                <button onClick={() => setStage('LOBBY')} className="btn btn-secondary" style={{ flex: 1, padding: '0.75rem', borderRadius: 12, fontWeight: 700, fontSize: '0.95rem' }}>
-                  Lobby
-                </button>
+                      let bg = 'hsl(220 20% 7%)'
+                      let text = 'hsl(220 10% 75%)'
+                      let border = '1px solid hsl(220 15% 18%)'
+
+                      if (isGuessed) {
+                        bg = isCorrect ? 'hsl(142 70% 45% / 0.2)' : 'hsl(350 90% 60% / 0.15)'
+                        text = isCorrect ? 'hsl(142 70% 55%)' : 'hsl(350 90% 65%)'
+                        border = isCorrect ? '1px solid hsl(142 70% 45%)' : '1px solid hsl(350 90% 60%)'
+                      }
+
+                      return (
+                        <button
+                          key={letter}
+                          onClick={() => handleLetterGuess(letter)}
+                          disabled={isGuessed || isGameOver}
+                          className="key-btn"
+                          style={{
+                            width: 'calc(10% - 2.5px)',
+                            maxWidth: '46px',
+                            backgroundColor: bg,
+                            color: text,
+                            border: border,
+                            opacity: isGuessed ? 0.7 : 1,
+                          }}
+                        >
+                          {letter}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
-            </div>
+            </>
           )}
-        </>
-      ) : (
-        /* Multiplayer Setup View */
-        <div className="card glass text-center" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: 16 }}>
-          <div>
-            <span style={{ fontSize: '3rem', display: 'block', marginBottom: '0.5rem' }}>⚔️</span>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Hangman Showdown</h2>
-            <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-              Create a room, invite a friend, and take turns guessing each other&apos;s secret word!
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <button onClick={createOnlineRoom} disabled={lobbyLoading} className="btn btn-primary" style={{ width: '100%', padding: '0.8rem', borderRadius: 12, fontWeight: 700, fontSize: '0.95rem' }}>
-              {lobbyLoading ? 'Creating Room...' : 'Create Multiplayer Room 🔑'}
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.5rem 0' }}>
-              <div style={{ flex: 1, height: 1, backgroundColor: 'hsl(220 15% 15%)' }} />
-              <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 45%)', textTransform: 'uppercase', fontWeight: 700 }}>Or Join Code</span>
-              <div style={{ flex: 1, height: 1, backgroundColor: 'hsl(220 15% 15%)' }} />
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="ROOM CODE"
-                value={joinCode}
-                onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                style={{
-                  flex: 2, padding: '0.75rem', borderRadius: 12, backgroundColor: 'hsl(220 20% 7%)', border: '1px solid hsl(220 15% 18%)',
-                  color: 'white', fontWeight: 800, textAlign: 'center', letterSpacing: '0.1em', fontSize: '1.1rem', outline: 'none'
-                }}
-              />
-              <button onClick={joinOnlineRoom} className="btn btn-secondary" style={{ flex: 1, borderRadius: 12, fontWeight: 700, fontSize: '0.9rem' }}>
-                Join Game
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

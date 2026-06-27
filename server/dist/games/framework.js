@@ -9,6 +9,7 @@ exports.persistSnapshotAsync = persistSnapshotAsync;
 exports.handleMatchCompletion = handleMatchCompletion;
 const redis_1 = require("../utils/redis");
 const logger_1 = require("../utils/logger");
+const words_1 = require("./words");
 // Active Game Cache TTL: 2 hours
 const GAME_CACHE_TTL = 7200;
 /**
@@ -120,6 +121,17 @@ exports.INITIAL_STATES = {
             spectators: []
         };
     },
+    'four-in-a-row': (players, hostUserId) => {
+        const startTurn = players[Math.floor(Math.random() * players.length)].userId;
+        return {
+            board: Array(42).fill(null),
+            currentTurn: startTurn,
+            moveCount: 0,
+            replayVotes: {},
+            turnExpiration: null,
+            spectators: []
+        };
+    },
     'memory': (players, hostUserId) => {
         const startTurn = players[Math.floor(Math.random() * players.length)].userId;
         const EMOJIS = [
@@ -201,6 +213,34 @@ exports.INITIAL_STATES = {
             currentTurn: startTurn,
             winnerId: null,
             turnExpiration: null
+        };
+    },
+    'whos-spy': (players, hostUserId) => {
+        const spyPlayer = players[Math.floor(Math.random() * players.length)];
+        const spyId = spyPlayer.userId;
+        const category = words_1.WORD_CATEGORIES[Math.floor(Math.random() * words_1.WORD_CATEGORIES.length)];
+        const wordsList = words_1.LOCAL_CATEGORIES[category] || words_1.LOCAL_CATEGORIES.Animals;
+        const word = wordsList[Math.floor(Math.random() * wordsList.length)];
+        const clueOrder = players.map(p => p.userId).sort(() => Math.random() - 0.5);
+        return {
+            stage: 'REVEAL',
+            roomCode: null, // set by socket layer
+            hostUserId,
+            spyId,
+            category,
+            word,
+            usedWords: {
+                [category]: [word]
+            },
+            dismissedRole: {},
+            clues: {},
+            clueOrder,
+            currentTurnIndex: 0,
+            currentTurn: null,
+            discussionMessages: [],
+            votes: {},
+            winnerId: null,
+            replayVotes: {}
         };
     }
 };
@@ -299,6 +339,9 @@ function persistSnapshotAsync(roomId, state, status, winnerId, nextTurn, gameSlu
  */
 async function handleMatchCompletion(room, state, winnerId, prisma) {
     logger_1.logger.info(`[MATCH FINISHED] room=${room.roomCode} game=${room.gameSlug} winner=${winnerId || 'DRAW'}`);
+    if (room.gameSlug === 'whos-spy') {
+        return;
+    }
     // Complete room status in PostgreSQL
     await prisma.multiplayerRoom.update({
         where: { id: room.id },
@@ -351,8 +394,8 @@ async function handleMatchCompletion(room, state, winnerId, prisma) {
                     p1Score = state.playerScores?.[p1.userId] || 0;
                     p2Score = state.playerScores?.[p2.userId] || 0;
                 }
-                else if (room.gameSlug === 'tic-tac-toe') {
-                    // Tic tac toe final scores can be 1 for winner, 0 for loser, or 0-0 for draw
+                else if (room.gameSlug === 'tic-tac-toe' || room.gameSlug === 'four-in-a-row') {
+                    // Tic tac toe / Four in a row final scores can be 1 for winner, 0 for loser, or 0-0 for draw
                     p1Score = winnerId === p1.userId ? 1 : 0;
                     p2Score = winnerId === p2.userId ? 1 : 0;
                 }

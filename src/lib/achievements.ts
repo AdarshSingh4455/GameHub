@@ -95,6 +95,48 @@ export const ACHIEVEMENT_RULES: AchievementRule[] = [
     },
   },
   {
+    slug: 'four-in-a-row-first-win',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'four-in-a-row' || result !== 'win') return false
+      const count = await tx.matchRecord.count({
+        where: {
+          game: { slug: 'four-in-a-row' },
+          winnerId: profileId,
+        },
+      })
+      return count >= 1
+    },
+  },
+  {
+    slug: 'four-in-a-row-wins-10',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'four-in-a-row' || result !== 'win') return false
+      const count = await tx.matchRecord.count({
+        where: {
+          game: { slug: 'four-in-a-row' },
+          winnerId: profileId,
+        },
+      })
+      return count >= 10
+    },
+  },
+  {
+    slug: 'four-in-a-row-perfect',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'four-in-a-row' || result !== 'win') return false
+      const latestScore = await tx.score.findFirst({
+        where: {
+          profileId,
+          game: { slug: 'four-in-a-row' },
+        },
+        orderBy: { playedAt: 'desc' },
+      })
+      if (!latestScore) return false
+      const gameMeta = (latestScore.metadata as Record<string, any>) || {}
+      return gameMeta.mode === 'vs-ai' && gameMeta.difficulty === 'hard'
+    },
+  },
+  {
     slug: 'level-5',
     check: async ({ profileId, tx }) => {
       const profile = await tx.profile.findUnique({
@@ -1325,6 +1367,20 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         }
         current = totalRareWords
         target = 5
+        break
+      case 'four-in-a-row-first-win':
+        const fWins = lastMatches.filter((m) => m.game?.slug === 'four-in-a-row' && m.winnerId === profileId).length
+        current = fWins >= 1 ? 1 : 0
+        target = 1
+        break
+      case 'four-in-a-row-wins-10':
+        const fWins10 = lastMatches.filter((m) => m.game?.slug === 'four-in-a-row' && m.winnerId === profileId).length
+        current = fWins10
+        target = 10
+        break
+      case 'four-in-a-row-perfect':
+        current = isUnlocked ? 1 : 0
+        target = 1
         break
       case 'hangman-first-win':
         const hWins = lastMatches.filter((m) => m.game?.slug === 'hangman' && m.winnerId === profileId).length

@@ -8,6 +8,7 @@ import MultiplayerHandCricketGame from '@/components/games/MultiplayerHandCricke
 import MultiplayerScribbleGame from '@/components/games/MultiplayerScribbleGame'
 import MultiplayerDotsBoxesGame from '@/components/games/MultiplayerDotsBoxesGame'
 import MultiplayerTicTacToeGame from '@/components/games/MultiplayerTicTacToeGame'
+import MultiplayerFourInARowGame from '@/components/games/MultiplayerFourInARowGame'
 import MultiplayerMemoryMatchGame from '@/components/games/MultiplayerMemoryMatchGame'
 import MultiplayerRockPaperScissorsGame from '@/components/games/MultiplayerRockPaperScissorsGame'
 import MultiplayerNumberGuessingGame from '@/components/games/MultiplayerNumberGuessingGame'
@@ -581,6 +582,12 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
       {session?.gameSlug === 'tic-tac-toe' && (
         <div className="game-safe-bottom">
           <MultiplayerTicTacToeGame {...gameProps} />
+        </div>
+      )}
+
+      {session?.gameSlug === 'four-in-a-row' && (
+        <div className="game-safe-bottom">
+          <MultiplayerFourInARowGame {...gameProps} />
         </div>
       )}
 

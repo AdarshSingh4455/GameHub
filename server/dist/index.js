@@ -31,11 +31,13 @@ const rateLimit_1 = require("./middleware/rateLimit");
 const cricket_1 = require("./games/cricket");
 const dotsBoxes_1 = require("./games/dotsBoxes");
 const ticTacToe_1 = require("./games/ticTacToe");
+const fourInARow_1 = require("./games/fourInARow");
 const memory_1 = require("./games/memory");
 const rps_1 = require("./games/rps");
 const numberGuessing_1 = require("./games/numberGuessing");
 const scribble_1 = require("./games/scribble");
 const hangman_1 = require("./games/hangman");
+const whosSpy_1 = require("./games/whosSpy");
 const framework_1 = require("./games/framework");
 // Initialize Sentry SDK
 (0, logger_1.initSentry)();
@@ -359,9 +361,15 @@ io.on('connection', async (rawSocket) => {
     logger_1.logger.info(`[+] Connected: userId=${userId} socketId=${socket.id} (${username})`);
     // Register socket mappings
     exports.userSockets.set(userId, socket.id);
-    (0, presence_1.setUserPresence)(userId, 'ONLINE').catch(err => (0, logger_1.logError)(err, { userId }));
-    exports.presenceStore.set(userId, { status: 'ONLINE', lastSeenAt: new Date().toISOString() });
-    io.emit('presence-change', { userId, status: 'ONLINE', lastSeenAt: new Date().toISOString() });
+    const initialPresence = {
+        status: 'ONLINE',
+        activity: 'Browsing Games',
+        lastSeenAt: new Date().toISOString(),
+        username
+    };
+    (0, presence_1.setUserPresence)(userId, initialPresence).catch(err => (0, logger_1.logError)(err, { userId }));
+    exports.presenceStore.set(userId, initialPresence);
+    io.emit('presence-change', { userId, ...initialPresence });
     // Check if player is returning from a disconnect grace period
     if (disconnectTimers.has(userId)) {
         logger_1.logger.info(`[RECONNECT RECOVERY] User reconnected within grace period: ${username} (${userId})`);
@@ -432,8 +440,14 @@ io.on('connection', async (rawSocket) => {
     }
     // Heartbeat ping keepalive updates presence state in Redis
     socket.on('heartbeat', async () => {
-        await (0, presence_1.setUserPresence)(userId, 'ONLINE');
-        exports.presenceStore.set(userId, { status: 'ONLINE', lastSeenAt: new Date().toISOString() });
+        const current = exports.presenceStore.get(userId) || { status: 'ONLINE', activity: 'Browsing Games' };
+        const updated = {
+            ...current,
+            lastSeenAt: new Date().toISOString(),
+            username
+        };
+        await (0, presence_1.setUserPresence)(userId, updated);
+        exports.presenceStore.set(userId, updated);
         exports.prisma.profile.update({
             where: { userId },
             data: { lastSeenAt: new Date() }
@@ -445,13 +459,152 @@ io.on('connection', async (rawSocket) => {
     });
     // Manual status presence updates (ONLINE, AWAY, OFFLINE)
     socket.on('presence-update', async ({ status }) => {
-        await (0, presence_1.setUserPresence)(userId, status);
-        exports.presenceStore.set(userId, { status, lastSeenAt: new Date().toISOString() });
-        io.emit('presence-change', { userId, status, lastSeenAt: new Date().toISOString() });
+        const current = exports.presenceStore.get(userId) || { activity: 'Browsing Games' };
+        const updated = {
+            ...current,
+            status,
+            lastSeenAt: new Date().toISOString(),
+            username
+        };
+        await (0, presence_1.setUserPresence)(userId, updated);
+        exports.presenceStore.set(userId, updated);
+        io.emit('presence-change', { userId, ...updated });
         exports.prisma.profile.update({
             where: { userId },
             data: { lastSeenAt: new Date() }
         }).catch((err) => (0, logger_1.logError)(err, { userId }));
+    });
+    // Rich presence updates
+    socket.on('activity-update', async (data) => {
+        try {
+            const presenceInfo = {
+                status: data.status,
+                activity: data.activity || 'Browsing Games',
+                gameSlug: data.gameSlug,
+                gameMode: data.gameMode,
+                startedAt: data.startedAt,
+                lastSeenAt: new Date().toISOString(),
+                username
+            };
+            exports.presenceStore.set(userId, presenceInfo);
+            await (0, presence_1.setUserPresence)(userId, presenceInfo);
+            io.emit('presence-change', { userId, ...presenceInfo });
+        }
+        catch (err) {
+            (0, logger_1.logError)(err, { userId });
+        }
+    });
+    // Fetch current presence mapping for all online players
+    socket.on('get-presence-map', (callback) => {
+        try {
+            const mapObj = {};
+            exports.presenceStore.forEach((value, key) => {
+                mapObj[key] = value;
+            });
+            callback(mapObj);
+        }
+        catch (err) {
+            logger_1.logger.error({ err }, 'Failed to get presence map');
+            callback({});
+        }
+    });
+    // Invite friend to a lobby
+    socket.on('send-lobby-invite', async ({ targetUserId, gameSlug, roomCode }, callback) => {
+        try {
+            const targetSocketId = exports.userSockets.get(targetUserId);
+            const targetProfile = await exports.prisma.profile.findUnique({
+                where: { userId: targetUserId }
+            });
+            if (!targetProfile) {
+                return callback({ error: 'Target profile not found' });
+            }
+            // Create a DB notification
+            const notif = await exports.prisma.notification.create({
+                data: {
+                    profileId: targetProfile.id,
+                    type: 'ROOM_INVITE',
+                    title: 'Game Invitation 🎮',
+                    message: `${username} invited you to join a lobby for ${gameSlug.replace('-', ' ').toUpperCase()}!`,
+                    linkUrl: `/dashboard/multiplayer?action=join&code=${roomCode}`,
+                    meta: { roomCode, gameSlug, senderName: username, senderUserId: userId }
+                }
+            });
+            if (targetSocketId) {
+                io.to(targetSocketId).emit('lobby-invite-received', {
+                    id: notif.id,
+                    roomCode,
+                    gameSlug,
+                    senderName: username,
+                    senderUserId: userId
+                });
+            }
+            callback({ success: true });
+        }
+        catch (err) {
+            callback({ error: err.message || 'Failed to send invite' });
+        }
+    });
+    // Challenge a friend to a match
+    socket.on('send-challenge', async ({ targetUserId, gameSlug }, callback) => {
+        try {
+            const targetSocketId = exports.userSockets.get(targetUserId);
+            const targetProfile = await exports.prisma.profile.findUnique({
+                where: { userId: targetUserId }
+            });
+            if (!targetProfile) {
+                return callback({ error: 'Target profile not found' });
+            }
+            // Generate unique room code
+            let roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const existing = await exports.prisma.multiplayerRoom.findUnique({ where: { roomCode } });
+            if (existing) {
+                roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            }
+            // Create multiplayer room
+            const room = await exports.prisma.multiplayerRoom.create({
+                data: {
+                    roomCode,
+                    gameSlug,
+                    hostUserId: userId,
+                    status: 'WAITING',
+                    maxPlayers: 2
+                }
+            });
+            // Add challenger as host
+            await exports.prisma.multiplayerRoomPlayer.create({
+                data: {
+                    roomId: room.id,
+                    userId,
+                    status: 'NOT_READY',
+                    isHost: true
+                }
+            });
+            // Create DB notification
+            const notif = await exports.prisma.notification.create({
+                data: {
+                    profileId: targetProfile.id,
+                    type: 'ROOM_INVITE',
+                    title: 'Direct Challenge ⚔️',
+                    message: `${username} has challenged you to a duel of ${gameSlug.replace('-', ' ').toUpperCase()}!`,
+                    linkUrl: `/dashboard/multiplayer?action=join&code=${roomCode}`,
+                    meta: { roomCode, gameSlug, senderName: username, senderUserId: userId, isChallenge: true }
+                }
+            });
+            if (targetSocketId) {
+                io.to(targetSocketId).emit('challenge-received', {
+                    id: notif.id,
+                    roomCode,
+                    gameSlug,
+                    senderName: username,
+                    senderUserId: userId,
+                    expiresAt: Date.now() + 30000
+                });
+            }
+            callback({ success: true, roomCode });
+        }
+        catch (err) {
+            callback({ error: err.message || 'Failed to send challenge' });
+        }
     });
     // ─── LOBBY EVENTS ──────────────────────────────────────────────────────────
     // Create Room
@@ -822,6 +975,14 @@ io.on('connection', async (rawSocket) => {
                     throw new Error('Scribble requires at least 2 players to start.');
                 }
             }
+            else if (room.gameSlug === 'whos-spy') {
+                if (room.players.length < 3) {
+                    throw new Error("Who's Spy requires at least 3 players to start.");
+                }
+                if (room.players.length > 10) {
+                    throw new Error("Who's Spy only supports up to 10 players.");
+                }
+            }
             else {
                 activePlayers = activePlayers.slice(0, 2);
             }
@@ -835,6 +996,10 @@ io.on('connection', async (rawSocket) => {
             }
             else if (room.gameSlug === 'scribble') {
                 initialGameState = framework_1.INITIAL_STATES['scribble'](activePlayers, room.hostUserId);
+            }
+            else if (room.gameSlug === 'whos-spy') {
+                initialGameState = framework_1.INITIAL_STATES['whos-spy'](activePlayers, room.hostUserId);
+                initialGameState.roomCode = room.roomCode;
             }
             else if (room.gameSlug === 'dots-boxes') {
                 initialGameState = framework_1.INITIAL_STATES['dots-boxes'](activePlayers, room.hostUserId);
@@ -884,6 +1049,9 @@ io.on('connection', async (rawSocket) => {
             }
             else if (room.gameSlug === 'scribble') {
                 await (0, scribble_1.saveScribbleSession)(room.roomCode, initialGameState);
+            }
+            else if (room.gameSlug === 'whos-spy') {
+                await (0, whosSpy_1.saveWhosSpySession)(room.roomCode, initialGameState);
             }
             else if (room.gameSlug === 'dots-boxes') {
                 await (0, dotsBoxes_1.saveDotsBoxesSession)(room.roomCode, initialGameState);
@@ -958,6 +1126,64 @@ io.on('connection', async (rawSocket) => {
                 callback({ error: err.message });
         }
     });
+    socket.on('send-spy-chat', async ({ roomCode, message }, callback) => {
+        if (!(await (0, rateLimit_1.checkRateLimit)(socket, rateLimit_1.sendChatLimiter, 'send-chat', callback)))
+            return;
+        try {
+            const room = await exports.prisma.multiplayerRoom.findUnique({
+                where: { roomCode },
+                include: { players: { include: { profile: true } } }
+            });
+            if (!room)
+                throw new Error('Room not found');
+            const session = await exports.prisma.multiplayerGameSession.findUnique({
+                where: { roomId: room.id }
+            });
+            if (!session)
+                throw new Error('Game session not found');
+            const state = await (0, whosSpy_1.getWhosSpySession)(roomCode, room.id, exports.prisma);
+            if (!state)
+                throw new Error('Game state not found');
+            if (state.stage !== 'DISCUSSION') {
+                throw new Error('Chat is only enabled during the Discussion Phase');
+            }
+            state.cooldownUntil = state.cooldownUntil || {};
+            if (state.cooldownUntil[userId] && Date.now() < state.cooldownUntil[userId]) {
+                const secsLeft = Math.ceil((state.cooldownUntil[userId] - Date.now()) / 1000);
+                throw new Error(`⚠️ You are temporarily muted. Please wait ${secsLeft} seconds.`);
+            }
+            if ((0, whosSpy_1.isWordBlocked)(message, state.word)) {
+                state.blockedAttempts = state.blockedAttempts || {};
+                state.blockedAttempts[userId] = (state.blockedAttempts[userId] || 0) + 1;
+                if (state.blockedAttempts[userId] >= 3) {
+                    state.cooldownUntil[userId] = Date.now() + 10000; // 10s cooldown
+                    state.blockedAttempts[userId] = 0; // reset attempts
+                }
+                await (0, whosSpy_1.saveWhosSpySession)(roomCode, state);
+                throw new Error('⚠️ Your message reveals too much about the secret word. Try giving a subtler clue.');
+            }
+            const sender = room.players.find(p => p.userId === userId);
+            const packet = {
+                id: `spy-chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                userId,
+                username: sender?.profile?.username || 'Player',
+                avatarUrl: sender?.profile?.avatarUrl || null,
+                message,
+                createdAt: new Date().toISOString()
+            };
+            state.discussionMessages = state.discussionMessages || [];
+            state.discussionMessages.push(packet);
+            await (0, whosSpy_1.saveWhosSpySession)(roomCode, state);
+            io.to(`game:${roomCode}`).emit('spy-chat-message', packet);
+            if (callback)
+                callback({ success: true });
+        }
+        catch (err) {
+            (0, logger_1.logError)(err, { userId, roomCode });
+            if (callback)
+                callback({ error: err.message });
+        }
+    });
     // ─── GAMEPLAY EVENTS ────────────────────────────────────────────────────────
     // Join Active Game
     socket.on('join-game', async ({ roomCode }, callback) => {
@@ -993,11 +1219,17 @@ io.on('connection', async (rawSocket) => {
             else if (room.gameSlug === 'scribble') {
                 gameState = await (0, scribble_1.getScribbleSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
+            else if (room.gameSlug === 'whos-spy') {
+                gameState = await (0, whosSpy_1.getWhosSpySession)(normalizedCode, room.id, exports.prisma).catch(() => null);
+            }
             else if (room.gameSlug === 'dots-boxes') {
                 gameState = await (0, dotsBoxes_1.getDotsBoxesSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
             else if (room.gameSlug === 'tic-tac-toe') {
                 gameState = await (0, ticTacToe_1.getTicTacToeSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
+            }
+            else if (room.gameSlug === 'four-in-a-row') {
+                gameState = await (0, fourInARow_1.getFourInARowSession)(normalizedCode, room.id, exports.prisma).catch(() => null);
             }
             else if (room.gameSlug === 'memory') {
                 gameState = await (0, memory_1.getMemorySession)(normalizedCode, room.id, exports.prisma).catch(() => null);
@@ -1038,6 +1270,9 @@ io.on('connection', async (rawSocket) => {
             }
             else if (room.gameSlug === 'cricket' && broadcastState) {
                 broadcastState = (0, cricket_1.getMaskedCricketState)(broadcastState, userId);
+            }
+            else if (room.gameSlug === 'whos-spy' && broadcastState) {
+                broadcastState = (0, whosSpy_1.getWhosSpyMaskedState)(broadcastState, userId);
             }
             logger_1.logger.info(`[JOIN-GAME] Sending game-state to ${username}: stage=${broadcastState?.stage} gameSlug=${room.gameSlug}`);
             socket.emit('game-state', {
@@ -1088,10 +1323,10 @@ io.on('connection', async (rawSocket) => {
                 const isPlayer = room.players.some(p => p.userId === userId);
                 if (!isPlayer)
                     throw new Error('Unauthorized move submission');
-                // Slicing logic: do not slice for Cricket and Scribble
+                // Slicing logic: do not slice for Cricket, Scribble, and Whos Spy
                 let activeRoomPlayers = room.players
                     .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
-                if (room.gameSlug !== 'cricket' && room.gameSlug !== 'scribble') {
+                if (room.gameSlug !== 'cricket' && room.gameSlug !== 'scribble' && room.gameSlug !== 'whos-spy') {
                     activeRoomPlayers = activeRoomPlayers.slice(0, 2);
                 }
                 const mappedPlayers = activeRoomPlayers.map(p => ({
@@ -1106,11 +1341,17 @@ io.on('connection', async (rawSocket) => {
                 else if (room.gameSlug === 'scribble') {
                     result = await (0, scribble_1.processScribbleMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma, io);
                 }
+                else if (room.gameSlug === 'whos-spy') {
+                    result = await (0, whosSpy_1.processWhosSpyMove)(roomCode, room.id, userId, move, room.players, exports.prisma, io);
+                }
                 else if (room.gameSlug === 'dots-boxes') {
                     result = await (0, dotsBoxes_1.processDotsBoxesMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma);
                 }
                 else if (room.gameSlug === 'tic-tac-toe') {
                     result = await (0, ticTacToe_1.processTicTacToeMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma);
+                }
+                else if (room.gameSlug === 'four-in-a-row') {
+                    result = await (0, fourInARow_1.processFourInARowMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma);
                 }
                 else if (room.gameSlug === 'memory') {
                     result = await (0, memory_1.processMemoryMove)(roomCode, room.id, userId, move, mappedPlayers, exports.prisma, io);
@@ -1136,7 +1377,7 @@ io.on('connection', async (rawSocket) => {
                 else if (room.gameSlug === 'number-guessing') {
                     broadcastState = (0, numberGuessing_1.getMaskedNumberGuessingState)(state);
                 }
-                if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket') {
+                if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket' || room.gameSlug === 'whos-spy') {
                     for (const player of room.players) {
                         const pSocketId = exports.userSockets.get(player.userId);
                         const targetSocket = player.userId === userId ? socket : (pSocketId ? io.to(pSocketId) : null);
@@ -1150,6 +1391,9 @@ io.on('connection', async (rawSocket) => {
                             }
                             else if (room.gameSlug === 'cricket') {
                                 maskedState = (0, cricket_1.getMaskedCricketState)(state, player.userId);
+                            }
+                            else if (room.gameSlug === 'whos-spy') {
+                                maskedState = (0, whosSpy_1.getWhosSpyMaskedState)(state, player.userId);
                             }
                             targetSocket.emit('game-update', {
                                 gameState: maskedState,
@@ -1236,6 +1480,9 @@ io.on('connection', async (rawSocket) => {
                 else if (room.gameSlug === 'scribble') {
                     gameState = await (0, scribble_1.getScribbleSession)(roomCode, room.id, exports.prisma);
                 }
+                else if (room.gameSlug === 'whos-spy') {
+                    gameState = await (0, whosSpy_1.getWhosSpySession)(roomCode, room.id, exports.prisma);
+                }
                 if (!gameState) {
                     gameState = typeof session.gameState === 'string' ? JSON.parse(session.gameState) : session.gameState;
                 }
@@ -1244,11 +1491,12 @@ io.on('connection', async (rawSocket) => {
                 }
                 gameState.replayVotes[userId] = true;
                 const votesCount = Object.keys(gameState.replayVotes).filter(k => gameState.replayVotes[k] === true).length;
-                // Determine the two active players (first two by join order)
+                // Determine the active players (do not slice if cricket, scribble, or whos-spy)
                 const activePlayers = room.players
-                    .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
-                    .slice(0, 2);
-                const activePlayerIds = activePlayers.map(p => p.userId);
+                    .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+                const isMultiplayerLarge = room.gameSlug === 'cricket' || room.gameSlug === 'scribble' || room.gameSlug === 'whos-spy';
+                const finalActivePlayers = isMultiplayerLarge ? activePlayers : activePlayers.slice(0, 2);
+                const activePlayerIds = finalActivePlayers.map(p => p.userId);
                 // Only count votes from active players (not spectators)
                 const activeVoteCount = activePlayerIds.filter(id => gameState.replayVotes[id] === true).length;
                 let updatedStatus = session.status;
@@ -1256,50 +1504,59 @@ io.on('connection', async (rawSocket) => {
                 let updatedTurn = session.currentTurn;
                 let finalGameState = gameState;
                 logger_1.logger.info(`[VOTE-REPLAY] room=${roomCode} voter=${userId} votesCount=${votesCount} activeVoteCount=${activeVoteCount} activePlayers=${activePlayerIds.join(',')}`);
-                if (activeVoteCount >= activePlayers.length) {
+                if (activeVoteCount >= finalActivePlayers.length) {
                     updatedStatus = 'PLAYING';
                     updatedWinnerId = null;
                     if (room.gameSlug === 'cricket') {
-                        finalGameState = framework_1.INITIAL_STATES['cricket'](activePlayers, room.hostUserId);
+                        finalGameState = framework_1.INITIAL_STATES['cricket'](finalActivePlayers, room.hostUserId);
                         updatedTurn = null; // Toss choice determines roles
                         await (0, cricket_1.saveCricketSession)(roomCode, finalGameState);
                     }
                     else if (room.gameSlug === 'dots-boxes') {
-                        finalGameState = framework_1.INITIAL_STATES['dots-boxes'](activePlayers, room.hostUserId);
+                        finalGameState = framework_1.INITIAL_STATES['dots-boxes'](finalActivePlayers, room.hostUserId);
                         updatedTurn = finalGameState.currentTurn;
                         await (0, dotsBoxes_1.saveDotsBoxesSession)(roomCode, finalGameState);
                     }
                     else if (room.gameSlug === 'tic-tac-toe') {
-                        finalGameState = framework_1.INITIAL_STATES['tic-tac-toe'](activePlayers, room.hostUserId);
+                        finalGameState = framework_1.INITIAL_STATES['tic-tac-toe'](finalActivePlayers, room.hostUserId);
                         updatedTurn = finalGameState.currentTurn;
                         await (0, ticTacToe_1.saveTicTacToeSession)(roomCode, finalGameState);
                     }
+                    else if (room.gameSlug === 'four-in-a-row') {
+                        finalGameState = framework_1.INITIAL_STATES['four-in-a-row'](finalActivePlayers, room.hostUserId);
+                        updatedTurn = finalGameState.currentTurn;
+                        await (0, fourInARow_1.saveFourInARowSession)(roomCode, finalGameState);
+                    }
                     else if (room.gameSlug === 'memory') {
-                        finalGameState = framework_1.INITIAL_STATES['memory'](activePlayers, room.hostUserId);
+                        finalGameState = framework_1.INITIAL_STATES['memory'](finalActivePlayers, room.hostUserId);
                         updatedTurn = finalGameState.currentTurn;
                         await (0, memory_1.saveMemorySession)(roomCode, finalGameState);
                     }
                     else if (room.gameSlug === 'rps') {
-                        finalGameState = framework_1.INITIAL_STATES['rps'](activePlayers, room.hostUserId);
+                        finalGameState = framework_1.INITIAL_STATES['rps'](finalActivePlayers, room.hostUserId);
                         updatedTurn = null;
                         await (0, rps_1.saveRpsSession)(roomCode, finalGameState);
                     }
                     else if (room.gameSlug === 'number-guessing') {
-                        finalGameState = framework_1.INITIAL_STATES['number-guessing'](activePlayers, room.hostUserId);
+                        finalGameState = framework_1.INITIAL_STATES['number-guessing'](finalActivePlayers, room.hostUserId);
                         updatedTurn = finalGameState.currentTurn;
                         await (0, numberGuessing_1.saveNumberGuessingSession)(roomCode, finalGameState);
                     }
                     else if (room.gameSlug === 'scribble') {
                         await (0, scribble_1.deleteScribbleSession)(roomCode);
-                        finalGameState = framework_1.INITIAL_STATES['scribble'](activePlayers, room.hostUserId);
+                        finalGameState = framework_1.INITIAL_STATES['scribble'](finalActivePlayers, room.hostUserId);
                         updatedTurn = null;
                         await (0, scribble_1.saveScribbleSession)(roomCode, finalGameState);
                     }
                     else if (room.gameSlug === 'hangman') {
                         await (0, hangman_1.deleteHangmanSession)(roomCode);
-                        finalGameState = framework_1.INITIAL_STATES['hangman'](activePlayers, room.hostUserId);
+                        finalGameState = framework_1.INITIAL_STATES['hangman'](finalActivePlayers, room.hostUserId);
                         updatedTurn = finalGameState.currentTurn;
                         await (0, hangman_1.saveHangmanSession)(roomCode, finalGameState);
+                    }
+                    else if (room.gameSlug === 'whos-spy') {
+                        finalGameState = await (0, whosSpy_1.startWhosSpyRematch)(roomCode, room.hostUserId, finalActivePlayers, gameState);
+                        updatedTurn = null;
                     }
                     logger_1.logger.info(`[VOTE-REPLAY] room=${roomCode} RESET → fresh board, nextTurn=${updatedTurn}`);
                     // Update Room status to STARTING so it gets resolved properly
@@ -1319,6 +1576,9 @@ io.on('connection', async (rawSocket) => {
                     else if (room.gameSlug === 'tic-tac-toe') {
                         await (0, ticTacToe_1.saveTicTacToeSession)(roomCode, finalGameState);
                     }
+                    else if (room.gameSlug === 'four-in-a-row') {
+                        await (0, fourInARow_1.saveFourInARowSession)(roomCode, finalGameState);
+                    }
                     else if (room.gameSlug === 'memory') {
                         await (0, memory_1.saveMemorySession)(roomCode, finalGameState);
                     }
@@ -1334,6 +1594,9 @@ io.on('connection', async (rawSocket) => {
                     else if (room.gameSlug === 'hangman') {
                         await (0, hangman_1.saveHangmanSession)(roomCode, finalGameState);
                     }
+                    else if (room.gameSlug === 'whos-spy') {
+                        await (0, whosSpy_1.saveWhosSpySession)(roomCode, finalGameState);
+                    }
                 }
                 const now = new Date();
                 await exports.prisma.multiplayerGameSession.update({
@@ -1347,14 +1610,19 @@ io.on('connection', async (rawSocket) => {
                         updatedAt: now
                     }
                 });
-                io.to(`game:${roomCode}`).emit('game-update', {
-                    gameState: finalGameState,
-                    gameFinished: updatedStatus === 'FINISHED',
-                    winnerId: updatedWinnerId,
-                    lastMove: { userId, type: 'replay_vote' },
-                    serverTime: Date.now()
-                });
-                if (activeVoteCount >= activePlayers.length) {
+                if (room.gameSlug === 'scribble' || room.gameSlug === 'hangman' || room.gameSlug === 'cricket' || room.gameSlug === 'whos-spy') {
+                    (0, whosSpy_1.broadcastGameState)(roomCode, finalGameState, room.players, io);
+                }
+                else {
+                    io.to(`game:${roomCode}`).emit('game-update', {
+                        gameState: finalGameState,
+                        gameFinished: updatedStatus === 'FINISHED',
+                        winnerId: updatedWinnerId,
+                        lastMove: { userId, type: 'replay_vote' },
+                        serverTime: Date.now()
+                    });
+                }
+                if (activeVoteCount >= finalActivePlayers.length) {
                     // Trigger client re-sync after replay reset
                     io.to(`game:${roomCode}`).emit('game-started', { roomCode });
                 }
@@ -1396,8 +1664,8 @@ io.on('connection', async (rawSocket) => {
         logger_1.logger.info(`[-] Disconnected: userId=${userId} socketId=${socket.id}`);
         exports.userSockets.delete(userId);
         await (0, presence_1.setUserPresence)(userId, 'OFFLINE');
-        exports.presenceStore.set(userId, { status: 'OFFLINE', lastSeenAt: new Date().toISOString() });
-        io.emit('presence-change', { userId, status: 'OFFLINE', lastSeenAt: new Date().toISOString() });
+        exports.presenceStore.set(userId, { status: 'OFFLINE', lastSeenAt: new Date().toISOString(), username });
+        io.emit('presence-change', { userId, status: 'OFFLINE', lastSeenAt: new Date().toISOString(), username });
         // Cleanly leave party on disconnect
         const partyCode = exports.userParty.get(userId);
         if (partyCode) {
@@ -1793,6 +2061,9 @@ function startReconciliationLoop() {
                     }
                     else if (room.gameSlug === 'number-guessing') {
                         gameState = await (0, numberGuessing_1.getNumberGuessingSession)(room.roomCode, room.id, exports.prisma);
+                    }
+                    else if (room.gameSlug === 'whos-spy') {
+                        gameState = await (0, whosSpy_1.getWhosSpySession)(room.roomCode, room.id, exports.prisma);
                     }
                     if (gameState) {
                         const winnerId = gameState.winnerId || null;

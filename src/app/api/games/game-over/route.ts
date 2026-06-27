@@ -286,6 +286,19 @@ export async function POST(request: NextRequest) {
           target: 10,
           progress: Math.min(100, Math.round((currentStreak / 10) * 100)),
         }
+      } else if (gameSlug === 'four-in-a-row' && !unlockedSlugs.has('four-in-a-row-wins-10')) {
+        const count = await tx.matchRecord.count({
+          where: {
+            game: { slug: 'four-in-a-row' },
+            winnerId: profile.id,
+          },
+        })
+        nextAchievement = {
+          name: 'Disc Dropper (4 In A Row)',
+          current: count,
+          target: 10,
+          progress: Math.min(100, Math.round((count / 10) * 100)),
+        }
       } else if (!unlockedSlugs.has('first-win')) {
         const totalWins = await tx.matchRecord.count({ where: { winnerId: profile.id } })
         nextAchievement = {

@@ -83,6 +83,7 @@ const SUPPORTED_MULTIPLAYER_GAMES = [
   { slug: 'cricket', name: 'Hand Cricket', emoji: '🏏', desc: 'Strategic hand cricket duel with turns.' },
   { slug: 'dots-boxes', name: 'Dots & Boxes', emoji: '✏️', desc: 'Classic grid-based territory conquest.' },
   { slug: 'tic-tac-toe', name: 'Tic-Tac-Toe', emoji: '⭕', desc: 'Classic 3×3 noughts-and-crosses.' },
+  { slug: 'four-in-a-row', name: '4 In A Row', emoji: '🔴', desc: 'Connect four of your discs in a row.' },
   { slug: 'memory', name: 'Memory Match', emoji: '🃏', desc: 'Flip cards, find pairs. A timeless memory challenge.' },
   { slug: 'rps', name: 'Rock Paper Scissors', emoji: '✊', desc: 'Classic simultaneous choice duel.' },
   { slug: 'number-guessing', name: 'Number Guessing', emoji: '🔢', desc: 'Guess the secret number between 1–100. Hot and cold feedback.' },
@@ -1081,14 +1082,14 @@ export default function MultiplayerPage() {
               </div>
 
               {/* Game Cards — Compact grid: icon + name + Quick Join */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <h3 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                   Select Game
                 </h3>
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '0.65rem',
+                  gap: '0.8rem',
                 }}>
                   {SUPPORTED_MULTIPLAYER_GAMES.map(game => (
                     <div
@@ -1097,87 +1098,111 @@ export default function MultiplayerPage() {
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '0.4rem',
-                        padding: '0.8rem 0.4rem 0.75rem',
-                        borderRadius: 14,
+                        padding: '1.1rem 0.65rem 1rem',
+                        borderRadius: 16,
                         border: '1px solid hsl(var(--border-subtle))',
                         background: 'linear-gradient(135deg, hsl(222 20% 10%), hsl(222 18% 13%))',
                         cursor: 'pointer',
                         transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
                         position: 'relative',
                         overflow: 'hidden',
+                        minHeight: '200px',
+                        height: '100%',
                       }}
                       className="hover-lift"
                     >
-                      {/* Icon */}
+                      {/* Top content wrapper containing Icon and Name */}
                       <div style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 12,
-                        background: 'hsl(220 20% 15%)',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
+                        gap: '0.6rem',
+                        width: '100%',
+                        flex: 1,
                         justifyContent: 'center',
-                        flexShrink: 0,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        marginBottom: '0.75rem'
                       }}>
-                        <GameIcon slug={game.slug} size={28} />
+                        {/* Icon */}
+                        <div style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: 14,
+                          background: 'hsl(220 20% 15%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        }}>
+                          <GameIcon slug={game.slug} size={36} />
+                        </div>
+
+                        {/* Name */}
+                        <span style={{
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          color: 'hsl(220 15% 90%)',
+                          textAlign: 'center',
+                          lineHeight: 1.25,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}>
+                          {game.name}
+                        </span>
                       </div>
 
-                      {/* Name */}
-                      <span style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        color: 'hsl(220 15% 88%)',
-                        textAlign: 'center',
-                        lineHeight: 1.2,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
+                      {/* Bottom actions container */}
+                      <div style={{
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.4rem',
+                        marginTop: 'auto'
                       }}>
-                        {game.name}
-                      </span>
+                        {/* Quick Join button */}
+                        <button
+                          style={{
+                            width: '100%',
+                            padding: '0.4rem 0.3rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            background: 'linear-gradient(135deg, hsl(142 70% 38%), hsl(142 60% 30%))',
+                            border: 'none',
+                            borderRadius: 10,
+                            color: '#fff',
+                            cursor: 'pointer',
+                            letterSpacing: '0.02em',
+                          }}
+                          onClick={(e) => { e.stopPropagation(); handleQuickJoin(game.slug) }}
+                          disabled={isLoading}
+                          id={`quick-join-${game.slug}-btn`}
+                        >
+                          ⚡ Quick Join
+                        </button>
 
-                      {/* Quick Join button */}
-                      <button
-                        style={{
-                          width: '100%',
-                          padding: '0.3rem 0.25rem',
-                          fontSize: '0.62rem',
-                          fontWeight: 800,
-                          background: 'linear-gradient(135deg, hsl(142 70% 38%), hsl(142 60% 30%))',
-                          border: 'none',
-                          borderRadius: 8,
-                          color: '#fff',
-                          cursor: 'pointer',
-                          letterSpacing: '0.02em',
-                          marginTop: '0.15rem',
-                        }}
-                        onClick={(e) => { e.stopPropagation(); handleQuickJoin(game.slug) }}
-                        disabled={isLoading}
-                        id={`quick-join-${game.slug}-btn`}
-                      >
-                        ⚡ Quick Join
-                      </button>
-
-                      {/* Create link */}
-                      <button
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          fontSize: '0.6rem',
-                          color: 'hsl(220 100% 65%)',
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                          padding: '0.1rem 0',
-                        }}
-                        onClick={(e) => { e.stopPropagation(); setSelectedGame(game.slug); setScreen('CREATE') }}
-                        id={`create-room-${game.slug}-btn`}
-                      >
-                        + Create Room
-                      </button>
+                        {/* Create Room button */}
+                        <button
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '0.68rem',
+                            color: 'hsl(220 100% 65%)',
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                            padding: '0.2rem 0',
+                            textAlign: 'center',
+                            width: '100%'
+                          }}
+                          onClick={(e) => { e.stopPropagation(); setSelectedGame(game.slug); setScreen('CREATE') }}
+                          id={`create-room-${game.slug}-btn`}
+                        >
+                          + Create Room
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

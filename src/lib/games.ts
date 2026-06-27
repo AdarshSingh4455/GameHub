@@ -2,6 +2,8 @@ export interface GameInfo {
   slug: string
   name: string
   category: string
+  categories?: string[]
+  aliases?: string[]
   emoji: string
   description: string
   multiplayer: boolean
@@ -66,6 +68,19 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'Ranked',
     componentName: 'ttt',
+  },
+  {
+    slug: 'four-in-a-row',
+    name: '4 In A Row',
+    category: 'Dual Player',
+    categories: ['Board', 'Strategy', 'Dual Player'],
+    aliases: ['Four In A Row', 'Connect Four', 'Connect4', 'Four'],
+    emoji: '🔴',
+    description: 'Drop discs into the grid and be the first to connect four in a row horizontally, vertically, or diagonally.',
+    multiplayer: true,
+    type: 'internal',
+    badge: 'New',
+    componentName: 'fourinarow',
   },
   {
     slug: 'word-wizard',

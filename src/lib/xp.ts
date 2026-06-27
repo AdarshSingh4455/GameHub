@@ -14,6 +14,7 @@ export const XP_REWARDS = {
 export const GAME_XP_CONFIG: Record<string, { win: number; loss: number; draw: number }> = {
   'cricket':        { win: 100, loss: 25, draw: 50 },
   'tic-tac-toe':    { win: 100, loss: 25, draw: 50 },
+  'four-in-a-row':  { win: 100, loss: 25, draw: 50 },
   'scribble':       { win: 100, loss: 25, draw: 50 },
   'dumb-charades':  { win: 100, loss: 25, draw: 50 },
   'whos-spy':       { win: 100, loss: 25, draw: 50 },

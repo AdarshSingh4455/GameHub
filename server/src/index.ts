@@ -21,7 +21,7 @@ import { recordDisconnect, recordReconnectSuccess, startMetricsReporting } from 
 // Middleware & Utilities
 import { socketAuthMiddleware, AuthenticatedSocket } from './middleware/auth'
 import { connectRedis, redisClient } from './utils/redis'
-import { setUserPresence, UserPresenceState } from './utils/presence'
+import { setUserPresence, UserPresence } from './utils/presence'
 import { getRoomQueue, deleteRoomQueue } from './utils/queue'
 import {
   createRoomLimiter,
@@ -35,6 +35,7 @@ import {
 import { processCricketMove, deleteCricketSession, getCricketSession, saveCricketSession, getMaskedCricketState } from './games/cricket'
 import { processDotsBoxesMove, deleteDotsBoxesSession, getDotsBoxesSession, saveDotsBoxesSession, getRandomDotsBoxesMove } from './games/dotsBoxes'
 import { processTicTacToeMove, deleteTicTacToeSession, getTicTacToeSession, saveTicTacToeSession } from './games/ticTacToe'
+import { processFourInARowMove, deleteFourInARowSession, getFourInARowSession, saveFourInARowSession } from './games/fourInARow'
 import { processMemoryMove, deleteMemorySession, getMemorySession, saveMemorySession } from './games/memory'
 import { processRpsMove, deleteRpsSession, getRpsSession, saveRpsSession, getMaskedRpsState } from './games/rps'
 import { processNumberGuessingMove, deleteNumberGuessingSession, getNumberGuessingSession, saveNumberGuessingSession, getMaskedNumberGuessingState } from './games/numberGuessing'
@@ -95,7 +96,7 @@ export interface PartyState {
 }
 export const parties = new Map<string, PartyState>() // partyCode -> PartyState
 export const userParty = new Map<string, string>() // userId -> partyCode
-export const presenceStore = new Map<string, { status: string; lastSeenAt: string }>()
+export const presenceStore = new Map<string, any>()
 
 export function clearTurnTimer(roomCode: string) {
   const timeout = roomTurnTimeouts.get(roomCode)
@@ -397,12 +398,12 @@ io.on('connection', async (rawSocket) => {
   // Register socket mappings
   userSockets.set(userId, socket.id)
   const initialPresence = {
-    status: 'ONLINE',
+    status: 'ONLINE' as const,
     activity: 'Browsing Games',
     lastSeenAt: new Date().toISOString(),
     username
   }
-  setUserPresence(userId, initialPresence).catch(err => logError(err, { userId }))
+  setUserPresence(userId, initialPresence as any).catch(err => logError(err as any, { userId }))
   presenceStore.set(userId, initialPresence)
   io.emit('presence-change', { userId, ...initialPresence })
 
@@ -491,7 +492,7 @@ io.on('connection', async (rawSocket) => {
       lastSeenAt: new Date().toISOString(),
       username
     }
-    await setUserPresence(userId, updated)
+    await setUserPresence(userId, updated as any)
     presenceStore.set(userId, updated)
     prisma.profile.update({
       where: { userId },
@@ -540,10 +541,10 @@ io.on('connection', async (rawSocket) => {
         username
       }
       presenceStore.set(userId, presenceInfo)
-      await setUserPresence(userId, presenceInfo)
+      await setUserPresence(userId, presenceInfo as any)
       io.emit('presence-change', { userId, ...presenceInfo })
     } catch (err) {
-      logError(err, { userId })
+      logError(err as any, { userId })
     }
   })
 
@@ -556,7 +557,7 @@ io.on('connection', async (rawSocket) => {
       })
       callback(mapObj)
     } catch (err) {
-      logger.error('Failed to get presence map:', err)
+      logger.error({ err }, 'Failed to get presence map')
       callback({})
     }
   })
@@ -1311,6 +1312,8 @@ io.on('connection', async (rawSocket) => {
         gameState = await getDotsBoxesSession(normalizedCode, room.id, prisma).catch(() => null)
       } else if (room.gameSlug === 'tic-tac-toe') {
         gameState = await getTicTacToeSession(normalizedCode, room.id, prisma).catch(() => null)
+      } else if (room.gameSlug === 'four-in-a-row') {
+        gameState = await getFourInARowSession(normalizedCode, room.id, prisma).catch(() => null)
       } else if (room.gameSlug === 'memory') {
         gameState = await getMemorySession(normalizedCode, room.id, prisma).catch(() => null)
       } else if (room.gameSlug === 'rps') {
@@ -1426,6 +1429,8 @@ io.on('connection', async (rawSocket) => {
           result = await processDotsBoxesMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
         } else if (room.gameSlug === 'tic-tac-toe') {
           result = await processTicTacToeMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
+        } else if (room.gameSlug === 'four-in-a-row') {
+          result = await processFourInARowMove(roomCode, room.id, userId, move, mappedPlayers, prisma)
         } else if (room.gameSlug === 'memory') {
           result = await processMemoryMove(roomCode, room.id, userId, move, mappedPlayers, prisma, io)
         } else if (room.gameSlug === 'rps') {
@@ -1594,6 +1599,10 @@ io.on('connection', async (rawSocket) => {
             finalGameState = INITIAL_STATES['tic-tac-toe'](finalActivePlayers, room.hostUserId)
             updatedTurn = finalGameState.currentTurn
             await saveTicTacToeSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'four-in-a-row') {
+            finalGameState = INITIAL_STATES['four-in-a-row'](finalActivePlayers, room.hostUserId)
+            updatedTurn = finalGameState.currentTurn
+            await saveFourInARowSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'memory') {
             finalGameState = INITIAL_STATES['memory'](finalActivePlayers, room.hostUserId)
             updatedTurn = finalGameState.currentTurn
@@ -1636,6 +1645,8 @@ io.on('connection', async (rawSocket) => {
             await saveDotsBoxesSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'tic-tac-toe') {
             await saveTicTacToeSession(roomCode, finalGameState)
+          } else if (room.gameSlug === 'four-in-a-row') {
+            await saveFourInARowSession(roomCode, finalGameState)
           } else if (room.gameSlug === 'memory') {
             await saveMemorySession(roomCode, finalGameState)
           } else if (room.gameSlug === 'rps') {

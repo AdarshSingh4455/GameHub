@@ -113,6 +113,17 @@ export const INITIAL_STATES: Record<string, (players: any[], hostUserId: string)
       spectators: []
     }
   },
+  'four-in-a-row': (players, hostUserId) => {
+    const startTurn = players[Math.floor(Math.random() * players.length)].userId
+    return {
+      board: Array(42).fill(null),
+      currentTurn: startTurn,
+      moveCount: 0,
+      replayVotes: {},
+      turnExpiration: null,
+      spectators: []
+    }
+  },
   'memory': (players, hostUserId) => {
     const startTurn = players[Math.floor(Math.random() * players.length)].userId
     const EMOJIS = [
@@ -408,8 +419,8 @@ export async function handleMatchCompletion(
         if (room.gameSlug === 'dots-boxes') {
           p1Score = state.playerScores?.[p1.userId] || 0
           p2Score = state.playerScores?.[p2.userId] || 0
-        } else if (room.gameSlug === 'tic-tac-toe') {
-          // Tic tac toe final scores can be 1 for winner, 0 for loser, or 0-0 for draw
+        } else if (room.gameSlug === 'tic-tac-toe' || room.gameSlug === 'four-in-a-row') {
+          // Tic tac toe / Four in a row final scores can be 1 for winner, 0 for loser, or 0-0 for draw
           p1Score = winnerId === p1.userId ? 1 : 0
           p2Score = winnerId === p2.userId ? 1 : 0
         } else if (room.gameSlug === 'cricket') {

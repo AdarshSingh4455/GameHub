@@ -8,16 +8,27 @@ const PRESENCE_TTL = 60; // 60 seconds TTL for heartbeat updates
 /**
  * Sets user presence state in Redis
  */
-async function setUserPresence(userId, state) {
+async function setUserPresence(userId, presence) {
     if (!redis_1.redisClient.isReady)
         return;
     const key = `presence:user:${userId}`;
     try {
-        if (state === 'OFFLINE') {
+        if (presence === 'OFFLINE') {
             await redis_1.redisClient.del(key);
         }
         else {
-            await redis_1.redisClient.set(key, state, { EX: PRESENCE_TTL });
+            let data;
+            if (typeof presence === 'string') {
+                data = {
+                    status: presence,
+                    activity: presence === 'IN_GAME' ? 'Playing' : 'Browsing Games',
+                    lastSeenAt: new Date().toISOString()
+                };
+            }
+            else {
+                data = presence;
+            }
+            await redis_1.redisClient.set(key, JSON.stringify(data), { EX: PRESENCE_TTL });
         }
     }
     catch (err) {
@@ -31,8 +42,19 @@ async function getUserPresence(userId) {
     if (!redis_1.redisClient.isReady)
         return 'OFFLINE';
     try {
-        const state = await redis_1.redisClient.get(`presence:user:${userId}`);
-        return state || 'OFFLINE';
+        const val = await redis_1.redisClient.get(`presence:user:${userId}`);
+        if (!val)
+            return 'OFFLINE';
+        try {
+            return JSON.parse(val);
+        }
+        catch {
+            return {
+                status: val,
+                activity: 'Idle',
+                lastSeenAt: new Date().toISOString()
+            };
+        }
     }
     catch (err) {
         console.error(`Failed to get presence for user ${userId}:`, err);
@@ -48,7 +70,7 @@ async function keepPresenceAlive(userId) {
     const key = `presence:user:${userId}`;
     try {
         const currentPresence = await redis_1.redisClient.get(key);
-        if (currentPresence && currentPresence !== 'OFFLINE') {
+        if (currentPresence) {
             await redis_1.redisClient.expire(key, PRESENCE_TTL);
         }
     }

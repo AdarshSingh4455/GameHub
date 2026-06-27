@@ -6,7 +6,7 @@ import { GAMES_REGISTRY } from '@/lib/games'
 import { prefetchProfileDetails } from '@/lib/prefetch'
 import GameIcon from '@/components/games/GameIcon'
 
-const CATEGORIES = ['All', 'Social', 'Dual Player', 'Strategy', 'Puzzle', 'Arcade', 'Match-3']
+const CATEGORIES = ['All', 'Social', 'Dual Player', 'Board', 'Strategy', 'Multiplayer', 'Puzzle', 'Arcade', 'Match-3']
 
 export default function GamesDirectoryPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -19,11 +19,14 @@ export default function GamesDirectoryPage() {
   const filteredGames = GAMES_REGISTRY.filter((game) => {
     const matchesCategory =
       selectedCategory === 'All' ||
-      game.category.toLowerCase() === selectedCategory.toLowerCase()
+      game.category.toLowerCase() === selectedCategory.toLowerCase() ||
+      (selectedCategory.toLowerCase() === 'multiplayer' && game.multiplayer) ||
+      (game.categories && game.categories.some(c => c.toLowerCase() === selectedCategory.toLowerCase()))
 
     const matchesSearch =
       game.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      game.description.toLowerCase().includes(searchQuery.toLowerCase())
+      game.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (game.aliases && game.aliases.some(a => a.toLowerCase().includes(searchQuery.toLowerCase())))
 
     return matchesCategory && matchesSearch
   })
@@ -113,23 +116,29 @@ export default function GamesDirectoryPage() {
               className="games-compact-card animate-slideUp"
               id={`game-card-${game.slug}`}
             >
-              {/* Badge overlay */}
-              {game.badge && (
-                <span className="games-compact-badge">{game.badge}</span>
-              )}
-
-              {/* Icon */}
-              <div className="games-compact-icon">
-                <GameIcon slug={game.slug} size={40} />
+              {/* Top Section: Badge */}
+              <div className="card-top-section">
+                <span className={`premium-badge ${game.badge ? `badge-${game.badge.toLowerCase()}` : `cat-${game.category.toLowerCase().replace(' ', '-')}`}`}>
+                  {game.badge || game.category}
+                </span>
               </div>
 
-              {/* Name */}
-              <span className="games-compact-name">{game.name}</span>
+              {/* Middle Section: Dedicated Premium Icon Container */}
+              <div className="card-middle-section">
+                <div className="games-premium-icon-container">
+                  <GameIcon slug={game.slug} size={64} />
+                </div>
+              </div>
 
-              {/* Multiplayer dot */}
-              {game.multiplayer && (
-                <div className="games-compact-mp-dot" title="Multiplayer available" />
-              )}
+              {/* Bottom Section: Name & Multiplayer Indicator */}
+              <div className="card-bottom-section">
+                <span className="games-compact-name">{game.name}</span>
+                {game.multiplayer ? (
+                  <span className="games-mp-indicator">👥 Dual Mode</span>
+                ) : (
+                  <span className="games-solo-indicator">👤 Solo Practice</span>
+                )}
+              </div>
             </Link>
           ))}
         </div>
@@ -146,27 +155,8 @@ export default function GamesDirectoryPage() {
       <style jsx>{`
         .games-compact-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-          gap: 0.85rem;
-        }
-
-        @media (min-width: 480px) {
-          .games-compact-grid {
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-          }
-        }
-
-        @media (min-width: 768px) {
-          .games-compact-grid {
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 1rem;
-          }
-        }
-
-        @media (min-width: 1100px) {
-          .games-compact-grid {
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-          }
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 1.25rem;
         }
 
         .games-compact-card {
@@ -174,46 +164,111 @@ export default function GamesDirectoryPage() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          gap: 0.55rem;
-          padding: 1rem 0.5rem 0.9rem;
-          border-radius: 16px;
-          border: 1px solid hsl(220 20% 18%);
-          background: linear-gradient(135deg, hsl(222 20% 10%), hsl(222 18% 13%));
+          justify-content: space-between;
+          padding: 1.5rem 1rem 1.25rem;
+          border-radius: 20px;
+          border: 1px solid hsl(220 20% 16%);
+          background: linear-gradient(135deg, hsl(222 22% 9% / 0.8), hsl(222 18% 12% / 0.8));
+          backdrop-filter: blur(8px);
           text-decoration: none;
           cursor: pointer;
-          transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-          aspect-ratio: 1 / 1.05;
+          transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s, box-shadow 0.2s, background 0.2s;
+          min-height: 240px;
+          height: 100%;
           overflow: hidden;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
 
         .games-compact-card:hover {
-          transform: translateY(-4px) scale(1.03);
-          border-color: hsl(220 100% 60% / 0.5);
-          box-shadow: 0 8px 24px hsl(220 100% 60% / 0.12), 0 2px 8px rgba(0,0,0,0.3);
-          background: linear-gradient(135deg, hsl(222 22% 12%), hsl(222 20% 16%));
+          transform: translateY(-6px) scale(1.03);
+          border-color: hsl(220 100% 65% / 0.4);
+          box-shadow: 0 12px 30px hsl(220 100% 60% / 0.15), 0 4px 12px rgba(0,0,0,0.5);
+          background: linear-gradient(135deg, hsl(222 22% 11% / 0.9), hsl(222 20% 14% / 0.9));
         }
 
         .games-compact-card:active {
-          transform: scale(0.97);
+          transform: translateY(-2px) scale(0.98);
         }
 
-        .games-compact-icon {
+        .card-top-section {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          margin-bottom: 0.5rem;
+        }
+
+        .premium-badge {
+          font-size: 0.62rem;
+          font-weight: 800;
+          padding: 0.2rem 0.65rem;
+          border-radius: 99px;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          background: hsl(220 20% 16%);
+          border: 1px solid hsl(220 15% 22%);
+          color: hsl(220 10% 70%);
+          white-space: nowrap;
+        }
+
+        .premium-badge.badge-live {
+          background: linear-gradient(135deg, hsl(355 85% 55%), hsl(355 75% 45%)) !important;
+          color: white !important;
+          border: none !important;
+          box-shadow: 0 2px 8px hsl(355 85% 55% / 0.2);
+        }
+
+        .premium-badge.badge-hot {
+          background: linear-gradient(135deg, hsl(38 95% 55%), hsl(22 90% 50%)) !important;
+          color: white !important;
+          border: none !important;
+          box-shadow: 0 2px 8px hsl(38 95% 55% / 0.2);
+        }
+
+        .premium-badge.badge-new {
+          background: linear-gradient(135deg, hsl(142 70% 45%), hsl(142 60% 35%)) !important;
+          color: white !important;
+          border: none !important;
+          box-shadow: 0 2px 8px hsl(142 70% 45% / 0.2);
+        }
+
+        .card-middle-section {
+          flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 52px;
-          height: 52px;
-          border-radius: 14px;
-          background: hsl(220 20% 15%);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          flex-shrink: 0;
+          margin: 0.75rem 0;
+        }
+
+        .games-premium-icon-container {
+          width: 80px;
+          height: 80px;
+          border-radius: 18px;
+          background: linear-gradient(135deg, hsl(222 20% 14%), hsl(222 20% 10%));
+          border: 1px solid hsl(220 15% 20%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: inset 0 2px 4px rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.3);
+          transition: transform 0.2s ease;
+        }
+
+        .games-compact-card:hover .games-premium-icon-container {
+          transform: scale(1.08);
+          border-color: hsl(220 100% 65% / 0.3);
+        }
+
+        .card-bottom-section {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.25rem;
         }
 
         .games-compact-name {
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: hsl(220 15% 88%);
+          font-size: 0.88rem;
+          font-weight: 800;
+          color: white;
           text-align: center;
           line-height: 1.25;
           max-width: 100%;
@@ -223,48 +278,30 @@ export default function GamesDirectoryPage() {
           -webkit-box-orient: vertical;
         }
 
-        .games-compact-badge {
-          position: absolute;
-          top: 6px;
-          right: 6px;
-          font-size: 0.55rem;
-          font-weight: 800;
-          padding: 0.15rem 0.4rem;
-          border-radius: 99px;
-          background: linear-gradient(135deg, hsl(220 100% 55%), hsl(270 80% 60%));
-          color: white;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-          white-space: nowrap;
+        .games-mp-indicator {
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: hsl(142 70% 55%);
         }
 
-        .games-compact-mp-dot {
-          position: absolute;
-          bottom: 7px;
-          right: 8px;
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background: hsl(142 70% 55%);
-          box-shadow: 0 0 6px hsl(142 70% 55% / 0.6);
+        .games-solo-indicator {
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: hsl(220 10% 55%);
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 767px) {
           .games-compact-grid {
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 0.6rem !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.75rem !important;
           }
           .games-compact-card {
-            padding: 0.8rem 0.35rem 0.75rem;
-            border-radius: 12px;
+            padding: 1.25rem 0.75rem 1rem;
+            min-height: 220px;
           }
-          .games-compact-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-          }
-          .games-compact-name {
-            font-size: 0.68rem;
+          .games-premium-icon-container {
+            width: 72px;
+            height: 72px;
           }
         }
       `}</style>

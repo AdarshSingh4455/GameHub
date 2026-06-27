@@ -261,18 +261,24 @@ export function GameSessionProvider({
 
   // Countdown timer for Ads
   React.useEffect(() => {
-    if (postGameStage !== 'AD_SHOWING' || !adToShow) return
+    if (postGameStage !== 'AD_SHOWING' || !adToShow || adTimeLeft <= 0) return
 
     const timer = setInterval(() => {
       setAdTimeLeft((prev) => {
-        if (prev <= 1) {
+        if (prev <= 0) {
           clearInterval(timer)
-          setAdToShow(null)
-          setPostGameStage(adCompleteCallback ? 'IDLE' : 'XP_MODAL_SHOWING')
-          if (adCompleteCallback) {
-            adCompleteCallback()
-            setAdCompleteCallback(null)
-          }
+          return 0
+        }
+        if (prev === 1) {
+          clearInterval(timer)
+          setTimeout(() => {
+            setAdToShow(null)
+            setPostGameStage(adCompleteCallback ? 'IDLE' : 'XP_MODAL_SHOWING')
+            if (adCompleteCallback) {
+              adCompleteCallback()
+              setAdCompleteCallback(null)
+            }
+          }, 0)
           return 0
         }
         return prev - 1
@@ -280,7 +286,7 @@ export function GameSessionProvider({
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [postGameStage, adToShow, adCompleteCallback])
+  }, [postGameStage, adToShow, adCompleteCallback, adTimeLeft === 0])
 
   // Handles recording click & navigating
   const handleAdClick = async () => {
@@ -342,7 +348,7 @@ export function GameSessionProvider({
         const orientation = activeAd._imageWidth >= activeAd._imageHeight ? 'landscape' : 'portrait'
         setAdOrientation(orientation)
         setAdToShow(activeAd)
-        setAdTimeLeft(activeAd.duration_seconds ?? activeAd.durationSecs ?? 5)
+        setAdTimeLeft(0) // Start with 0, count down only after loaded in DOM
         setPostGameStage('AD_SHOWING')
       } else {
         // SLOW PATH: image not yet cached — wait with a 500ms timeout failsafe
@@ -363,13 +369,14 @@ export function GameSessionProvider({
           const orientation = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait'
           setAdOrientation(orientation)
           setAdToShow(activeAd!)
-          setAdTimeLeft(activeAd!.duration_seconds ?? activeAd!.durationSecs ?? 5)
+          setAdTimeLeft(0) // Start with 0, count down only after loaded in DOM
           setPostGameStage('AD_SHOWING')
         }
         img.onerror = () => {
           if (resolved) return
           clearTimeout(timeoutId)
           resolved = true
+          console.warn('[AD FAIL-SAFE] Single-player ad load error, skipping.')
           setPostGameStage('XP_MODAL_SHOWING')
         }
         img.src = activeAd.imageUrl
@@ -416,7 +423,7 @@ export function GameSessionProvider({
         const orientation = img.width >= img.height ? 'landscape' : 'portrait'
         setAdOrientation(orientation)
         setAdToShow(ad)
-        setAdTimeLeft(ad.duration_seconds ?? ad.durationSecs ?? 5)
+        setAdTimeLeft(0) // Start with 0, count down only after loaded in DOM
         setAdCompleteCallback(() => complete)
         setPostGameStage('AD_SHOWING')
       }
@@ -893,9 +900,31 @@ export function GameSessionProvider({
                     height: '100%',
                     objectFit: 'cover',
                   }}
+                  onLoad={() => {
+                    console.log('[AD RENDER] Image loaded successfully, starting countdown.')
+                    setAdTimeLeft(adToShow.duration_seconds ?? adToShow.durationSecs ?? 5)
+                  }}
+                  onError={() => {
+                    console.error('[AD RENDER ERROR] Image failed to render, skipping ad.')
+                    setAdToShow(null)
+                    setPostGameStage(adCompleteCallback ? 'IDLE' : 'XP_MODAL_SHOWING')
+                    if (adCompleteCallback) {
+                      adCompleteCallback()
+                      setAdCompleteCallback(null)
+                    }
+                  }}
                 />
               ) : (
-                <div style={{ color: 'hsl(220 10% 50%)', fontSize: '0.85rem' }}>Click to visit sponsor</div>
+                <div 
+                  style={{ color: 'hsl(220 10% 50%)', fontSize: '0.85rem' }}
+                  ref={(el) => {
+                    if (el && adTimeLeft === 0) {
+                      setAdTimeLeft(adToShow.duration_seconds ?? adToShow.durationSecs ?? 5)
+                    }
+                  }}
+                >
+                  Click to visit sponsor
+                </div>
               )}
               
               <div

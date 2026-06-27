@@ -74,6 +74,36 @@ export const GameIcon: React.FC<GameIconProps> = ({ slug, size = 40, className }
     )
   }
 
+  if (slug === 'four-in-a-row') {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 40 40"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={className}
+        style={{ display: 'inline-block', verticalAlign: 'middle' }}
+      >
+        <rect width="40" height="40" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        <rect x="6" y="8" width="28" height="24" rx="4" fill="hsl(220 70% 35%)" stroke="hsl(220 70% 50%)" strokeWidth="1.5" />
+        <circle cx="11" cy="14" r="2.5" fill="hsl(355 85% 55%)" />
+        <circle cx="11" cy="20" r="2.5" fill="rgba(255,255,255,0.15)" />
+        <circle cx="11" cy="26" r="2.5" fill="rgba(255,255,255,0.15)" />
+        <circle cx="17" cy="14" r="2.5" fill="hsl(45 95% 50%)" />
+        <circle cx="17" cy="20" r="2.5" fill="hsl(355 85% 55%)" />
+        <circle cx="17" cy="26" r="2.5" fill="rgba(255,255,255,0.15)" />
+        <circle cx="23" cy="14" r="2.5" fill="hsl(45 95% 50%)" />
+        <circle cx="23" cy="20" r="2.5" fill="hsl(45 95% 50%)" />
+        <circle cx="23" cy="26" r="2.5" fill="hsl(355 85% 55%)" />
+        <circle cx="29" cy="14" r="2.5" fill="rgba(255,255,255,0.15)" />
+        <circle cx="29" cy="20" r="2.5" fill="hsl(45 95% 50%)" />
+        <circle cx="29" cy="26" r="2.5" fill="hsl(355 85% 55%)" />
+        <line x1="11" y1="14" x2="29" y2="26" stroke="#ffffff" strokeWidth="1" strokeDasharray="1.5 1.5" opacity="0.8" />
+      </svg>
+    )
+  }
+
   // 1. Hand Cricket Icon
   if (slug === 'cricket') {
     return (

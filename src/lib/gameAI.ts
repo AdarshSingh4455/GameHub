@@ -236,3 +236,230 @@ export function getMemoryMatchMoves(
 
   return [firstChoice, secondChoice]
 }
+
+
+// ==========================================
+// 5. CONNECT FOUR (4 IN A ROW) AI
+// ==========================================
+type FourCell = 'X' | 'O' | null // X is player, O is CPU
+
+function getLowestRow(board: FourCell[], col: number): number {
+  for (let r = 5; r >= 0; r--) {
+    if (board[r * 7 + col] === null) return r
+  }
+  return -1
+}
+
+function checkFourWinner(board: FourCell[]): 'X' | 'O' | 'draw' | null {
+  // Horizontal
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 4; c++) {
+      const i = r * 7 + c
+      if (board[i] && board[i] === board[i+1] && board[i] === board[i+2] && board[i] === board[i+3]) {
+        return board[i] as 'X' | 'O'
+      }
+    }
+  }
+  // Vertical
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 7; c++) {
+      const i = r * 7 + c
+      if (board[i] && board[i] === board[i+7] && board[i] === board[i+14] && board[i] === board[i+21]) {
+        return board[i] as 'X' | 'O'
+      }
+    }
+  }
+  // Diagonal Down-Right
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 4; c++) {
+      const i = r * 7 + c
+      if (board[i] && board[i] === board[i+8] && board[i] === board[i+16] && board[i] === board[i+24]) {
+        return board[i] as 'X' | 'O'
+      }
+    }
+  }
+  // Diagonal Up-Right
+  for (let r = 3; r < 6; r++) {
+    for (let c = 0; c < 4; c++) {
+      const i = r * 7 + c
+      if (board[i] && board[i] === board[i-6] && board[i] === board[i-12] && board[i] === board[i-18]) {
+        return board[i] as 'X' | 'O'
+      }
+    }
+  }
+  if (board.every(cell => cell !== null)) return 'draw'
+  return null
+}
+
+function evaluateWindow(window: FourCell[], cpuSymbol: 'X' | 'O'): number {
+  let score = 0
+  const oppSymbol = cpuSymbol === 'O' ? 'X' : 'O'
+
+  let cpuCount = 0
+  let oppCount = 0
+  let emptyCount = 0
+
+  for (const cell of window) {
+    if (cell === cpuSymbol) cpuCount++
+    else if (cell === oppSymbol) oppCount++
+    else emptyCount++
+  }
+
+  if (cpuCount === 4) {
+    score += 1000
+  } else if (cpuCount === 3 && emptyCount === 1) {
+    score += 50
+  } else if (cpuCount === 2 && emptyCount === 2) {
+    score += 10
+  }
+
+  if (oppCount === 3 && emptyCount === 1) {
+    score -= 80
+  } else if (oppCount === 2 && emptyCount === 2) {
+    score -= 8
+  }
+
+  return score
+}
+
+function scoreBoard(board: FourCell[], cpuSymbol: 'X' | 'O'): number {
+  let score = 0
+
+  // 1. Center column preference
+  const centerCol = 3
+  for (let r = 0; r < 6; r++) {
+    if (board[r * 7 + centerCol] === cpuSymbol) {
+      score += 4
+    }
+  }
+
+  // 2. Horizontal windows
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 4; c++) {
+      const i = r * 7 + c
+      score += evaluateWindow([board[i], board[i+1], board[i+2], board[i+3]], cpuSymbol)
+    }
+  }
+
+  // 3. Vertical windows
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 7; c++) {
+      const i = r * 7 + c
+      score += evaluateWindow([board[i], board[i+7], board[i+14], board[i+21]], cpuSymbol)
+    }
+  }
+
+  // 4. Diagonal Down-Right windows
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 4; c++) {
+      const i = r * 7 + c
+      score += evaluateWindow([board[i], board[i+8], board[i+16], board[i+24]], cpuSymbol)
+    }
+  }
+
+  // 5. Diagonal Up-Right windows
+  for (let r = 3; r < 6; r++) {
+    for (let c = 0; c < 4; c++) {
+      const i = r * 7 + c
+      score += evaluateWindow([board[i], board[i-6], board[i-12], board[i-18]], cpuSymbol)
+    }
+  }
+
+  return score
+}
+
+function minimaxConnectFour(
+  board: FourCell[],
+  depth: number,
+  alpha: number,
+  beta: number,
+  isMaximizing: boolean,
+  cpuSymbol: 'X' | 'O'
+): number {
+  const winner = checkFourWinner(board)
+  const oppSymbol = cpuSymbol === 'O' ? 'X' : 'O'
+  
+  if (winner === cpuSymbol) return 10000 - depth
+  if (winner === oppSymbol) return depth - 10000
+  if (winner === 'draw') return 0
+  if (depth >= 4) return scoreBoard(board, cpuSymbol)
+
+  if (isMaximizing) {
+    let maxEval = -Infinity
+    for (let c = 0; c < 7; c++) {
+      const r = getLowestRow(board, c)
+      if (r !== -1) {
+        const i = r * 7 + c
+        board[i] = cpuSymbol
+        const score = minimaxConnectFour(board, depth + 1, alpha, beta, false, cpuSymbol)
+        board[i] = null
+        maxEval = Math.max(maxEval, score)
+        alpha = Math.max(alpha, score)
+        if (beta <= alpha) break
+      }
+    }
+    return maxEval
+  } else {
+    let minEval = Infinity
+    for (let c = 0; c < 7; c++) {
+      const r = getLowestRow(board, c)
+      if (r !== -1) {
+        const i = r * 7 + c
+        board[i] = oppSymbol
+        const score = minimaxConnectFour(board, depth + 1, alpha, beta, true, cpuSymbol)
+        board[i] = null
+        minEval = Math.min(minEval, score)
+        beta = Math.min(beta, score)
+        if (beta <= alpha) break
+      }
+    }
+    return minEval
+  }
+}
+
+export function getFourInARowMove(
+  board: FourCell[],
+  difficulty: 'easy' | 'moderate' | 'hard',
+  cpuSymbol: 'X' | 'O' = 'O'
+): number {
+  const validCols: number[] = []
+  for (let c = 0; c < 7; c++) {
+    if (getLowestRow(board, c) !== -1) validCols.push(c)
+  }
+
+  if (validCols.length === 0) return -1
+
+  // Easy AI: 90% random moves
+  if (difficulty === 'easy') {
+    if (Math.random() < 0.9) {
+      return validCols[Math.floor(Math.random() * validCols.length)]
+    }
+  }
+
+  // Moderate AI: 40% random, 60% minimax search at depth 3
+  if (difficulty === 'moderate') {
+    if (Math.random() < 0.4) {
+      return validCols[Math.floor(Math.random() * validCols.length)]
+    }
+  }
+
+  // Find best move using minimax with alpha-beta pruning
+  let bestVal = -Infinity
+  let bestCol = validCols[0]
+
+  for (const col of validCols) {
+    const row = getLowestRow(board, col)
+    const idx = row * 7 + col
+    board[idx] = cpuSymbol
+    const depthLimit = difficulty === 'moderate' ? 2 : 4
+    const val = minimaxConnectFour(board, 0, -Infinity, Infinity, false, cpuSymbol)
+    board[idx] = null
+
+    if (val > bestVal) {
+      bestVal = val
+      bestCol = col
+    }
+  }
+
+  return bestCol
+}

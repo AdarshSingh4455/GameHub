@@ -16,7 +16,6 @@ export default function GamesDirectoryPage() {
     prefetchProfileDetails()
   }, [])
 
-  // Filter games based on search query and category
   const filteredGames = GAMES_REGISTRY.filter((game) => {
     const matchesCategory =
       selectedCategory === 'All' ||
@@ -30,10 +29,10 @@ export default function GamesDirectoryPage() {
   })
 
   return (
-    <div style={{ maxWidth: 1100, marginInline: 'auto', width: '100%' }} className="animate-fadeIn mobile-centered-wrapper">
+    <div style={{ maxWidth: 1200, marginInline: 'auto', width: '100%' }} className="animate-fadeIn mobile-centered-wrapper">
       {/* Header section */}
-      <div style={{ marginBottom: '2rem' }} className="page-header">
-        <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.2rem)', fontWeight: 800, marginBottom: '0.5rem' }}>
+      <div style={{ marginBottom: '1.75rem' }} className="page-header">
+        <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.2rem)', fontWeight: 800, marginBottom: '0.4rem' }}>
           Games Library 🎮
         </h1>
         <p style={{ color: 'hsl(220 10% 55%)' }} className="page-description">
@@ -46,10 +45,10 @@ export default function GamesDirectoryPage() {
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          gap: '1rem',
+          gap: '0.75rem',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '2rem',
+          marginBottom: '1.5rem',
         }}
       >
         {/* Category Tabs */}
@@ -61,9 +60,7 @@ export default function GamesDirectoryPage() {
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
                 className={`category-chip ${isActive ? 'active' : ''}`}
-                style={{
-                  cursor: 'pointer',
-                }}
+                style={{ cursor: 'pointer' }}
               >
                 {cat}
               </button>
@@ -72,7 +69,7 @@ export default function GamesDirectoryPage() {
         </div>
 
         {/* Search Input */}
-        <div style={{ position: 'relative', width: '100%', maxWidth: '320px' }}>
+        <div style={{ position: 'relative', width: '100%', maxWidth: '280px' }}>
           <input
             type="text"
             placeholder="Search games..."
@@ -80,8 +77,8 @@ export default function GamesDirectoryPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               width: '100%',
-              padding: '0.5rem 1rem 0.5rem 2.25rem',
-              fontSize: '0.875rem',
+              padding: '0.45rem 1rem 0.45rem 2.1rem',
+              fontSize: '0.85rem',
               borderRadius: '8px',
               border: '1px solid hsl(220 20% 20%)',
               background: 'hsl(220 20% 8%)',
@@ -93,12 +90,12 @@ export default function GamesDirectoryPage() {
           <span
             style={{
               position: 'absolute',
-              left: '0.75rem',
+              left: '0.7rem',
               top: '50%',
               transform: 'translateY(-50%)',
               color: 'hsl(220 10% 45%)',
               pointerEvents: 'none',
-              fontSize: '0.9rem',
+              fontSize: '0.85rem',
             }}
           >
             🔍
@@ -106,76 +103,33 @@ export default function GamesDirectoryPage() {
         </div>
       </div>
 
-      {/* Grid listing */}
+      {/* Games Grid - Compact cards: logo + name only */}
       {filteredGames.length > 0 ? (
-        <div className="dashboard-games-grid stagger">
+        <div className="games-compact-grid stagger">
           {filteredGames.map((game) => (
             <Link
               key={game.slug}
               href={`/dashboard/games/${game.slug}`}
-              className="card card-hover dashboard-game-card animate-slideUp"
+              className="games-compact-card animate-slideUp"
               id={`game-card-${game.slug}`}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+              {/* Badge overlay */}
+              {game.badge && (
+                <span className="games-compact-badge">{game.badge}</span>
+              )}
+
+              {/* Icon */}
+              <div className="games-compact-icon">
                 <GameIcon slug={game.slug} size={40} />
-                <div style={{ textAlign: 'right' }}>
-                  {game.badge && (
-                    <span
-                      style={{
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '99px',
-                        background: 'hsl(220 20% 18%)',
-                        color: 'hsl(220 10% 70%)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                      }}
-                    >
-                      {game.badge}
-                    </span>
-                  )}
-                  {game.multiplayer && (
-                    <div style={{ fontSize: '0.6rem', color: 'hsl(142 70% 55%)', marginTop: '0.35rem', fontWeight: 600 }}>
-                      ● Multiplayer
-                    </div>
-                  )}
-                </div>
               </div>
 
-              <div>
-                <h3
-                  style={{
-                    fontWeight: 800,
-                    fontSize: '1.05rem',
-                    marginBottom: '0.35rem',
-                    color: 'hsl(220 15% 92%)',
-                  }}
-                >
-                  {game.name}
-                </h3>
-                <p style={{ fontSize: '0.825rem', color: 'hsl(220 10% 50%)', lineHeight: 1.5 }}>
-                  {game.description}
-                </p>
-              </div>
+              {/* Name */}
+              <span className="games-compact-name">{game.name}</span>
 
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem' }}>
-                <span
-                  style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    padding: '0.15rem 0.5rem',
-                    borderRadius: '99px',
-                    background: 'hsl(220 20% 22%)',
-                    color: 'hsl(220 10% 55%)',
-                  }}
-                >
-                  {game.category}
-                </span>
-                <span style={{ fontSize: '0.85rem', color: 'hsl(220 100% 65%)', fontWeight: 700 }}>
-                  Play Now →
-                </span>
-              </div>
+              {/* Multiplayer dot */}
+              {game.multiplayer && (
+                <div className="games-compact-mp-dot" title="Multiplayer available" />
+              )}
             </Link>
           ))}
         </div>
@@ -188,6 +142,132 @@ export default function GamesDirectoryPage() {
           </p>
         </div>
       )}
+
+      <style jsx>{`
+        .games-compact-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+          gap: 0.85rem;
+        }
+
+        @media (min-width: 480px) {
+          .games-compact-grid {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+          }
+        }
+
+        @media (min-width: 768px) {
+          .games-compact-grid {
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 1rem;
+          }
+        }
+
+        @media (min-width: 1100px) {
+          .games-compact-grid {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          }
+        }
+
+        .games-compact-card {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 0.55rem;
+          padding: 1rem 0.5rem 0.9rem;
+          border-radius: 16px;
+          border: 1px solid hsl(220 20% 18%);
+          background: linear-gradient(135deg, hsl(222 20% 10%), hsl(222 18% 13%));
+          text-decoration: none;
+          cursor: pointer;
+          transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+          aspect-ratio: 1 / 1.05;
+          overflow: hidden;
+        }
+
+        .games-compact-card:hover {
+          transform: translateY(-4px) scale(1.03);
+          border-color: hsl(220 100% 60% / 0.5);
+          box-shadow: 0 8px 24px hsl(220 100% 60% / 0.12), 0 2px 8px rgba(0,0,0,0.3);
+          background: linear-gradient(135deg, hsl(222 22% 12%), hsl(222 20% 16%));
+        }
+
+        .games-compact-card:active {
+          transform: scale(0.97);
+        }
+
+        .games-compact-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 52px;
+          height: 52px;
+          border-radius: 14px;
+          background: hsl(220 20% 15%);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          flex-shrink: 0;
+        }
+
+        .games-compact-name {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: hsl(220 15% 88%);
+          text-align: center;
+          line-height: 1.25;
+          max-width: 100%;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+
+        .games-compact-badge {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          font-size: 0.55rem;
+          font-weight: 800;
+          padding: 0.15rem 0.4rem;
+          border-radius: 99px;
+          background: linear-gradient(135deg, hsl(220 100% 55%), hsl(270 80% 60%));
+          color: white;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          white-space: nowrap;
+        }
+
+        .games-compact-mp-dot {
+          position: absolute;
+          bottom: 7px;
+          right: 8px;
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: hsl(142 70% 55%);
+          box-shadow: 0 0 6px hsl(142 70% 55% / 0.6);
+        }
+
+        @media (max-width: 480px) {
+          .games-compact-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 0.6rem !important;
+          }
+          .games-compact-card {
+            padding: 0.8rem 0.35rem 0.75rem;
+            border-radius: 12px;
+          }
+          .games-compact-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+          }
+          .games-compact-name {
+            font-size: 0.68rem;
+          }
+        }
+      `}</style>
     </div>
   )
 }

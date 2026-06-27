@@ -139,6 +139,19 @@ export default function TournamentsPage() {
   const { user } = useGameSession()
   const { addToast } = useToast()
 
+  // Admin access control
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null) // null = loading
+
+  useEffect(() => {
+    fetch('/api/profile/details')
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        const role = data?.profile?.role
+        setIsAdmin(role === 'SUPER_ADMIN' || role === 'ADMIN')
+      })
+      .catch(() => setIsAdmin(false))
+  }, [])
+
   // Tab selections
   const [activeDashboardSection, setActiveDashboardSection] = useState<'registrationOpen' | 'upcoming' | 'live' | 'myTournaments' | 'completed'>('registrationOpen')
   const [activeDetailsTab, setActiveDetailsTab] = useState<'overview' | 'schedule' | 'bracket' | 'players' | 'results' | 'rules'>('overview')
@@ -874,6 +887,141 @@ export default function TournamentsPage() {
           })}
         </div>
       </div>
+    )
+  }
+
+  // ── Admin Gate ──
+  // While role is being resolved, show a subtle spinner
+  if (isAdmin === null) {
+    return (
+      <PageWrapper className="animate-fadeIn" style={{ maxWidth: 1100, marginInline: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40vh' }}>
+          <div style={{ textAlign: 'center', color: 'hsl(220 10% 50%)' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</div>
+            <p style={{ fontSize: '0.9rem' }}>Loading...</p>
+          </div>
+        </div>
+      </PageWrapper>
+    )
+  }
+
+  // Non-admins see a Coming Soon lock screen
+  if (!isAdmin) {
+    return (
+      <PageWrapper className="animate-fadeIn" style={{ maxWidth: 900, marginInline: 'auto' }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '60vh',
+          textAlign: 'center',
+          gap: '1.5rem',
+          padding: '2rem 1rem',
+        }}>
+          {/* Trophy icon with glow */}
+          <div style={{
+            position: 'relative',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <div style={{
+              position: 'absolute',
+              inset: '-20px',
+              background: 'radial-gradient(circle, hsl(38 95% 55% / 0.15) 0%, transparent 70%)',
+              borderRadius: '50%',
+              animation: 'pulse 2s ease-in-out infinite',
+            }} />
+            <div style={{
+              fontSize: '5rem',
+              lineHeight: 1,
+              filter: 'drop-shadow(0 0 20px hsl(38 95% 55% / 0.4))',
+            }}>
+              🏆
+            </div>
+          </div>
+
+          {/* Lock badge */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.12em',
+            padding: '0.3rem 0.8rem',
+            borderRadius: 99,
+            background: 'hsl(220 100% 60% / 0.12)',
+            border: '1px solid hsl(220 100% 60% / 0.3)',
+            color: 'hsl(220 100% 70%)',
+          }}>
+            🔒 Coming Soon
+          </div>
+
+          <div>
+            <h1 style={{
+              fontSize: 'clamp(1.8rem, 5vw, 2.5rem)',
+              fontWeight: 900,
+              letterSpacing: '-0.03em',
+              marginBottom: '0.5rem',
+              background: 'linear-gradient(135deg, hsl(38 95% 60%), hsl(45 100% 65%))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              Tournaments
+            </h1>
+            <p style={{
+              fontSize: '1rem',
+              color: 'hsl(220 10% 55%)',
+              maxWidth: 480,
+              lineHeight: 1.6,
+              margin: '0 auto',
+            }}>
+              Competitive tournaments are in development and will be available to all players soon. Stay tuned for epic bracket battles, seasonal competitions, and exclusive rewards!
+            </p>
+          </div>
+
+          {/* Feature teaser pills */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.6rem',
+            justifyContent: 'center',
+            marginTop: '0.5rem',
+          }}>
+            {['🏅 Exclusive Rewards', '📊 Bracket System', '🌍 Global Rankings', '⚔️ 1v1 Duels', '🎖️ Season Passes'].map(feat => (
+              <span key={feat} style={{
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                padding: '0.3rem 0.75rem',
+                borderRadius: 99,
+                background: 'hsl(220 20% 13%)',
+                border: '1px solid hsl(220 20% 20%)',
+                color: 'hsl(220 10% 65%)',
+              }}>
+                {feat}
+              </span>
+            ))}
+          </div>
+
+          <p style={{ fontSize: '0.8rem', color: 'hsl(220 10% 40%)', marginTop: '0.5rem' }}>
+            Keep playing to be ready when the arena opens!
+          </p>
+        </div>
+
+        <style jsx>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </PageWrapper>
     )
   }
 

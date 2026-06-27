@@ -82,6 +82,10 @@ export interface Ad {
   allGames: boolean
   games: string[]
   active: boolean
+  // Internal: set to true once the image has fully loaded into browser cache
+  _imageReady?: boolean
+  _imageWidth?: number
+  _imageHeight?: number
 }
 
 export function GameSessionProvider({
@@ -149,13 +153,41 @@ export function GameSessionProvider({
       if (adRes.ok) {
         const adData = await adRes.json()
         if (adData.ads && adData.ads.length > 0) {
-          setAdsBuffer(adData.ads)
-          // Pre-cache/preload the image of the first ad so it can display instantly!
-          const firstAd = adData.ads[0]
-          if (firstAd && firstAd.imageUrl) {
+          const ads: Ad[] = adData.ads
+          // Eagerly preload every ad image into browser cache and mark when ready
+          const preloadedAds = ads.map(ad => ({ ...ad, _imageReady: false }))
+          setAdsBuffer(preloadedAds)
+
+          preloadedAds.forEach((ad) => {
+            if (!ad.imageUrl) return
             const img = new Image()
-            img.src = firstAd.imageUrl
-          }
+            img.onload = () => {
+              // Mutate the buffer entry in place to mark image as ready + cache dimensions
+              setAdsBuffer(prev => {
+                const next = [...prev]
+                const target = next.findIndex(a => a.id === ad.id)
+                if (target !== -1) {
+                  next[target] = {
+                    ...next[target],
+                    _imageReady: true,
+                    _imageWidth: img.naturalWidth,
+                    _imageHeight: img.naturalHeight
+                  }
+                }
+                return next
+              })
+            }
+            img.onerror = () => {
+              // Mark as ready anyway so we don't wait forever — will fail gracefully
+              setAdsBuffer(prev => {
+                const next = [...prev]
+                const target = next.findIndex(a => a.id === ad.id)
+                if (target !== -1) next[target] = { ...next[target], _imageReady: true }
+                return next
+              })
+            }
+            img.src = ad.imageUrl
+          })
         }
       }
     } catch (err) {
@@ -291,7 +323,7 @@ export function GameSessionProvider({
     }
 
     // Determine ad status strictly from cached preloaded buffer. No extra network calls.
-    let activeAd: any = null
+    let activeAd: Ad | null = null
     if (adsBuffer.length > 0) {
       activeAd = adsBuffer[0]
       setAdsBuffer((prev) => [...prev.slice(1), prev[0]]) // cycle buffer
@@ -305,35 +337,43 @@ export function GameSessionProvider({
         body: JSON.stringify({ action: 'impression', adId: activeAd.id })
       }).catch(err => console.error('Failed to record ad impression:', err))
 
-      let resolved = false
-      // Set strict 500ms timeout limit
-      const timeoutId = setTimeout(() => {
-        if (!resolved) {
-          resolved = true
-          console.warn('[AD FAIL-SAFE] Single-player ad load timeout, skipping.')
-          setPostGameStage('XP_MODAL_SHOWING')
-        }
-      }, 500)
-
-      // Detect orientation and show immediately if loaded
-      const img = new Image()
-      img.onload = () => {
-        if (resolved) return
-        clearTimeout(timeoutId)
-        resolved = true
-        const orientation = img.width >= img.height ? 'landscape' : 'portrait'
+      // FAST PATH: image was already preloaded — show immediately with no roundtrip
+      if (activeAd._imageReady && activeAd._imageWidth !== undefined && activeAd._imageHeight !== undefined) {
+        const orientation = activeAd._imageWidth >= activeAd._imageHeight ? 'landscape' : 'portrait'
         setAdOrientation(orientation)
         setAdToShow(activeAd)
         setAdTimeLeft(activeAd.duration_seconds ?? activeAd.durationSecs ?? 5)
         setPostGameStage('AD_SHOWING')
+      } else {
+        // SLOW PATH: image not yet cached — wait with a 500ms timeout failsafe
+        let resolved = false
+        const timeoutId = setTimeout(() => {
+          if (!resolved) {
+            resolved = true
+            console.warn('[AD FAIL-SAFE] Single-player ad load timeout, skipping.')
+            setPostGameStage('XP_MODAL_SHOWING')
+          }
+        }, 500)
+
+        const img = new Image()
+        img.onload = () => {
+          if (resolved) return
+          clearTimeout(timeoutId)
+          resolved = true
+          const orientation = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait'
+          setAdOrientation(orientation)
+          setAdToShow(activeAd!)
+          setAdTimeLeft(activeAd!.duration_seconds ?? activeAd!.durationSecs ?? 5)
+          setPostGameStage('AD_SHOWING')
+        }
+        img.onerror = () => {
+          if (resolved) return
+          clearTimeout(timeoutId)
+          resolved = true
+          setPostGameStage('XP_MODAL_SHOWING')
+        }
+        img.src = activeAd.imageUrl
       }
-      img.onerror = () => {
-        if (resolved) return
-        clearTimeout(timeoutId)
-        resolved = true
-        setPostGameStage('XP_MODAL_SHOWING')
-      }
-      img.src = activeAd.imageUrl
     } else {
       setPostGameStage('XP_MODAL_SHOWING')
     }

@@ -1080,73 +1080,107 @@ export default function MultiplayerPage() {
                 </button>
               </div>
 
-              {/* Game Cards list */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Select Game to Play
+              {/* Game Cards — Compact grid: icon + name + Quick Join */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <h3 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'hsl(var(--text-secondary))', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                  Select Game
                 </h3>
-                {SUPPORTED_MULTIPLAYER_GAMES.map(game => (
-                  <div
-                    key={game.slug}
-                    className="card glass hover-lift"
-                    style={{
-                      padding: '1.25rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.75rem',
-                      border: '1px solid hsl(var(--border-subtle))',
-                      borderRadius: 16,
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      <GameIcon slug={game.slug} size={36} />
-                      <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>{game.name}</h4>
-                    </div>
-                    <p style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', margin: 0, lineHeight: 1.4 }}>{game.desc}</p>
-                    <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.25rem' }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '0.65rem',
+                }}>
+                  {SUPPORTED_MULTIPLAYER_GAMES.map(game => (
+                    <div
+                      key={game.slug}
+                      id={`mp-game-card-${game.slug}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.8rem 0.4rem 0.75rem',
+                        borderRadius: 14,
+                        border: '1px solid hsl(var(--border-subtle))',
+                        background: 'linear-gradient(135deg, hsl(222 20% 10%), hsl(222 18% 13%))',
+                        cursor: 'pointer',
+                        transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                      className="hover-lift"
+                    >
+                      {/* Icon */}
+                      <div style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 12,
+                        background: 'hsl(220 20% 15%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      }}>
+                        <GameIcon slug={game.slug} size={28} />
+                      </div>
+
+                      {/* Name */}
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        color: 'hsl(220 15% 88%)',
+                        textAlign: 'center',
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}>
+                        {game.name}
+                      </span>
+
+                      {/* Quick Join button */}
                       <button
-                        className="btn"
                         style={{
-                          flex: 1,
-                          padding: '0.5rem 1rem',
-                          fontSize: '0.8rem',
-                          backgroundColor: 'hsl(var(--success) / 0.12)',
-                          border: '1px solid hsl(var(--success) / 0.25)',
-                          color: 'hsl(var(--success))',
-                          fontWeight: 700,
-                          borderRadius: 10,
-                          minHeight: 38,
-                          cursor: 'pointer'
+                          width: '100%',
+                          padding: '0.3rem 0.25rem',
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          background: 'linear-gradient(135deg, hsl(142 70% 38%), hsl(142 60% 30%))',
+                          border: 'none',
+                          borderRadius: 8,
+                          color: '#fff',
+                          cursor: 'pointer',
+                          letterSpacing: '0.02em',
+                          marginTop: '0.15rem',
                         }}
-                        onClick={() => handleQuickJoin(game.slug)}
+                        onClick={(e) => { e.stopPropagation(); handleQuickJoin(game.slug) }}
                         disabled={isLoading}
+                        id={`quick-join-${game.slug}-btn`}
                       >
                         ⚡ Quick Join
                       </button>
+
+                      {/* Create link */}
                       <button
-                        className="btn"
                         style={{
-                          flex: 1,
-                          padding: '0.5rem 1rem',
-                          fontSize: '0.8rem',
-                          backgroundColor: 'hsl(var(--bg-elevated))',
-                          border: '1px solid hsl(var(--border-subtle))',
-                          fontWeight: 700,
-                          borderRadius: 10,
-                          minHeight: 38,
-                          cursor: 'pointer'
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '0.6rem',
+                          color: 'hsl(220 100% 65%)',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          padding: '0.1rem 0',
                         }}
-                        onClick={() => {
-                          setSelectedGame(game.slug)
-                          setScreen('CREATE')
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setSelectedGame(game.slug); setScreen('CREATE') }}
+                        id={`create-room-${game.slug}-btn`}
                       >
-                        Create
+                        + Create Room
                       </button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 

@@ -25,6 +25,7 @@ export const GAME_XP_CONFIG: Record<string, { win: number; loss: number; draw: n
   'fighter':        { win: 50,  loss: 10, draw: 25 },
   'ludo':           { win: 100, loss: 25, draw: 50 },
   'memory':         { win: 50,  loss: 10, draw: 25 },
+  'snake-arena':    { win: 100, loss: 25, draw: 50 },
 }
 
 export function getGameXP(gameSlug: string, result: 'win' | 'loss' | 'draw'): number {

@@ -124,6 +124,74 @@ export const INITIAL_STATES: Record<string, (players: any[], hostUserId: string)
       spectators: []
     }
   },
+  'snake-arena': (players, hostUserId) => {
+    const cols = 60
+    const rows = 40
+    const colors = [
+      '#ef4444', // red
+      '#3b82f6', // blue
+      '#10b981', // green
+      '#f59e0b', // yellow
+      '#8b5cf6', // purple
+      '#ec4899', // pink
+      '#14b8a6', // teal
+      '#f97316'  // orange
+    ]
+    const snakes: Record<string, any> = {}
+    players.forEach((p, idx) => {
+      const angle = (idx / players.length) * 2 * Math.PI
+      const startX = Math.floor(cols / 2 + Math.cos(angle) * (cols / 4))
+      const startY = Math.floor(rows / 2 + Math.sin(angle) * (rows / 4))
+      
+      const dirX = startX < cols / 2 ? 1 : -1
+      const dirY = 0
+      
+      snakes[p.userId] = {
+        userId: p.userId,
+        username: p.username || 'Player',
+        body: [
+          { x: startX, y: startY },
+          { x: startX - dirX, y: startY - dirY },
+          { x: startX - 2 * dirX, y: startY - 2 * dirY }
+        ],
+        direction: { x: dirX, y: dirY },
+        length: 3,
+        score: 0,
+        eliminations: 0,
+        survivalTime: 0,
+        status: 'ACTIVE',
+        color: colors[idx % colors.length],
+        spawnProtectedUntil: Date.now() + 2000,
+        activePowerups: []
+      }
+    })
+
+    const foods: any[] = []
+    for (let i = 0; i < 5; i++) {
+      foods.push({
+        id: `food-${Math.random().toString(36).substring(2, 9)}`,
+        x: Math.floor(Math.random() * (cols - 4) + 2),
+        y: Math.floor(Math.random() * (rows - 4) + 2),
+        type: 'normal',
+        value: 10
+      })
+    }
+
+    return {
+      cols,
+      rows,
+      snakes,
+      foods,
+      powerups: [],
+      tickCount: 0,
+      status: 'PLAYING',
+      winnerId: null,
+      replayVotes: {},
+      spectators: [],
+      startTime: Date.now(),
+      mapTheme: 'classic'
+    }
+  },
   'memory': (players, hostUserId) => {
     const startTurn = players[Math.floor(Math.random() * players.length)].userId
     const EMOJIS = [
@@ -356,6 +424,93 @@ export async function handleMatchCompletion(
   logger.info(`[MATCH FINISHED] room=${room.roomCode} game=${room.gameSlug} winner=${winnerId || 'DRAW'}`)
 
   if (room.gameSlug === 'whos-spy') {
+    return
+  }
+
+  if (room.gameSlug === 'snake-arena') {
+    await prisma.multiplayerRoom.update({
+      where: { id: room.id },
+      data: { status: 'FINISHED' }
+    })
+    try {
+      const game = await prisma.game.findUnique({ where: { slug: 'snake-arena' } })
+      if (!game) return
+      
+      const snakes = state.snakes || {}
+      
+      for (const p of room.players) {
+        if (!p.profile) continue
+        const s = snakes[p.userId] || { score: 0, eliminations: 0, length: 3, survivalTime: 0 }
+        
+        const isWinner = winnerId === p.userId
+        const baseXP = isWinner ? 100 : 25
+        const baseCoins = isWinner ? 20 : 5
+        
+        const foodsEaten = Math.max(0, Math.floor((s.score || 0) / 10))
+        const bonusXP = Math.floor(foodsEaten * 2 + (s.eliminations || 0) * 10)
+        const bonusCoins = Math.floor(foodsEaten * 1 + (s.eliminations || 0) * 5)
+        
+        const totalXP = baseXP + bonusXP
+        const totalCoins = baseCoins + bonusCoins
+        
+        await prisma.profile.update({
+          where: { id: p.profile.id },
+          data: {
+            xp: { increment: totalXP },
+            coins: { increment: totalCoins }
+          }
+        })
+        
+        await prisma.score.create({
+          data: {
+            profileId: p.profile.id,
+            gameId: game.id,
+            score: s.score || 0,
+            metadata: {
+              mode: 'multiplayer',
+              foodsCollected: foodsEaten,
+              longestLength: s.length || 3,
+              eliminations: s.eliminations || 0,
+              survivalTime: s.survivalTime || 0
+            }
+          }
+        })
+        
+        await prisma.xPEvent.create({
+          data: {
+            profileId: p.profile.id,
+            type: isWinner ? 'MATCH_WIN' : 'MATCH_LOSS',
+            amount: totalXP,
+            meta: { gameSlug: 'snake-arena', roomCode: room.roomCode }
+          }
+        })
+      }
+      
+      const host = room.players.find((p: any) => p.userId === room.hostUserId)
+      const topOpponent = room.players.find((p: any) => p.userId !== room.hostUserId)
+      
+      if (host && host.profile) {
+        const hostProfile = host.profile
+        const oppProfile = topOpponent?.profile || hostProfile
+        
+        await prisma.matchRecord.create({
+          data: {
+            roomCode: room.roomCode,
+            gameId: game.id,
+            player1Id: hostProfile.id,
+            player2Id: oppProfile.id,
+            player1Score: snakes[host.userId]?.score ?? 0,
+            player2Score: topOpponent ? (snakes[topOpponent.userId]?.score ?? 0) : 0,
+            winnerId: winnerId ? room.players.find((p: any) => p.userId === winnerId)?.profile?.id || null : null,
+            xpEarned: winnerId === host.userId ? 100 : 25,
+            coinsEarned: winnerId === host.userId ? 20 : 5
+          }
+        })
+      }
+      logger.info(`[MATCH RECORD SUCCESS] Snake Arena match results saved for room=${room.roomCode}`)
+    } catch (err: any) {
+      logError(err, { roomCode: room.roomCode, context: 'persist-snake-arena-match' })
+    }
     return
   }
 

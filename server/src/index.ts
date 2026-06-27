@@ -42,6 +42,7 @@ import { processNumberGuessingMove, deleteNumberGuessingSession, getNumberGuessi
 import { processScribbleMove, deleteScribbleSession, getScribbleSession, saveScribbleSession, getScribbleMaskedState, endScribbleRound, setupNextScribbleTurn, clearScribbleInactivityCheck } from './games/scribble'
 import { processHangmanMove, deleteHangmanSession, getHangmanSession, saveHangmanSession, getMaskedHangmanState } from './games/hangman'
 import { processWhosSpyMove, deleteWhosSpySession, getWhosSpySession, saveWhosSpySession, getWhosSpyMaskedState, isWordBlocked, broadcastGameState, startWhosSpyRematch } from './games/whosSpy'
+import { saveSnakeArenaSession, getSnakeArenaSession, startSnakeArenaTick, stopSnakeArenaTick, processSnakeDirectionChange, processSnakeBoost } from './games/snakeArena'
 import { INITIAL_STATES, handleMatchCompletion } from './games/framework'
 
 // Initialize Sentry SDK
@@ -104,6 +105,7 @@ export function clearTurnTimer(roomCode: string) {
     clearTimeout(timeout)
     roomTurnTimeouts.delete(roomCode)
   }
+  stopSnakeArenaTick(roomCode)
 }
 
 function startTurnTimer(roomCode: string) {
@@ -1140,6 +1142,8 @@ io.on('connection', async (rawSocket) => {
         await saveNumberGuessingSession(room.roomCode, initialGameState)
       } else if (room.gameSlug === 'hangman') {
         await saveHangmanSession(room.roomCode, initialGameState)
+      } else if (room.gameSlug === 'snake-arena') {
+        await saveSnakeArenaSession(room.roomCode, initialGameState)
       }
 
       await broadcastRoomUpdate(room.roomCode)
@@ -1147,6 +1151,8 @@ io.on('connection', async (rawSocket) => {
       
       if (room.gameSlug === 'dots-boxes' || room.gameSlug === 'memory' || room.gameSlug === 'rps' || room.gameSlug === 'number-guessing') {
         startTurnTimer(room.roomCode)
+      } else if (room.gameSlug === 'snake-arena') {
+        startSnakeArenaTick(room.roomCode, io, prisma)
       }
       
       logger.info(`[GAME STARTING] room=${room.roomCode} game=${room.gameSlug}`)
@@ -1509,6 +1515,41 @@ io.on('connection', async (rawSocket) => {
     }).catch(err => {
       if (callback) callback({ error: err.message })
     })
+  })
+
+  // Snake Arena Steering Inputs
+  socket.on('snake-steer', async ({ roomCode, direction }: { roomCode: string; direction: { x: number; y: number } }) => {
+    try {
+      const room = await prisma.multiplayerRoom.findUnique({
+        where: { roomCode }
+      })
+      if (!room || room.status !== 'PLAYING') return
+
+      const state = await getSnakeArenaSession(roomCode, room.id, prisma)
+      if (!state || state.status !== 'PLAYING') return
+
+      const nextState = processSnakeDirectionChange(state, userId, direction)
+      await saveSnakeArenaSession(roomCode, nextState)
+    } catch (err) {
+      logger.error(`Error processing snake-steer for user=${userId} room=${roomCode}:`, err)
+    }
+  })
+
+  socket.on('snake-boost', async ({ roomCode, isBoosting }: { roomCode: string; isBoosting: boolean }) => {
+    try {
+      const room = await prisma.multiplayerRoom.findUnique({
+        where: { roomCode }
+      })
+      if (!room || room.status !== 'PLAYING') return
+
+      const state = await getSnakeArenaSession(roomCode, room.id, prisma)
+      if (!state || state.status !== 'PLAYING') return
+
+      const nextState = processSnakeBoost(state, userId, isBoosting)
+      await saveSnakeArenaSession(roomCode, nextState)
+    } catch (err) {
+      logger.error(`Error processing snake-boost for user=${userId} room=${roomCode}:`, err)
+    }
   })
 
   // Vote Replay

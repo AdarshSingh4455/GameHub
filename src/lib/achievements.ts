@@ -137,6 +137,55 @@ export const ACHIEVEMENT_RULES: AchievementRule[] = [
     },
   },
   {
+    slug: 'snake-first-bite',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'snake-arena') return false
+      const latestScore = await tx.score.findFirst({
+        where: { profileId, game: { slug: 'snake-arena' } },
+        orderBy: { playedAt: 'desc' },
+      })
+      if (!latestScore) return false
+      const gameMeta = (latestScore.metadata as Record<string, any>) || {}
+      return (gameMeta.foodsCollected || 0) >= 1
+    },
+  },
+  {
+    slug: 'snake-wins-10',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'snake-arena' || result !== 'win') return false
+      const count = await tx.matchRecord.count({
+        where: { game: { slug: 'snake-arena' }, winnerId: profileId },
+      })
+      return count >= 10
+    },
+  },
+  {
+    slug: 'snake-nightmare-conqueror',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'snake-arena' || result !== 'win') return false
+      const latestScore = await tx.score.findFirst({
+        where: { profileId, game: { slug: 'snake-arena' } },
+        orderBy: { playedAt: 'desc' },
+      })
+      if (!latestScore) return false
+      const gameMeta = (latestScore.metadata as Record<string, any>) || {}
+      return gameMeta.mode === 'vs-ai' && gameMeta.difficulty === 'nightmare'
+    },
+  },
+  {
+    slug: 'snake-longest',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'snake-arena') return false
+      const latestScore = await tx.score.findFirst({
+        where: { profileId, game: { slug: 'snake-arena' } },
+        orderBy: { playedAt: 'desc' },
+      })
+      if (!latestScore) return false
+      const gameMeta = (latestScore.metadata as Record<string, any>) || {}
+      return (gameMeta.longestLength || 0) >= 50
+    },
+  },
+  {
     slug: 'level-5',
     check: async ({ profileId, tx }) => {
       const profile = await tx.profile.findUnique({
@@ -1414,6 +1463,36 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
           }
         }
         current = totalHCorrect
+        target = 50
+        break
+      case 'snake-first-bite':
+        let eatenFood = 0
+        for (const s of (scoresByGame['snake-arena'] || [])) {
+          const meta = s.metadata as Record<string, any> | null
+          if (meta && typeof meta.foodsCollected === 'number') {
+            eatenFood = Math.max(eatenFood, meta.foodsCollected)
+          }
+        }
+        current = eatenFood >= 1 ? 1 : 0
+        target = 1
+        break
+      case 'snake-wins-10':
+        current = lastMatches.filter((m) => m.game?.slug === 'snake-arena' && m.winnerId === profileId).length
+        target = 10
+        break
+      case 'snake-nightmare-conqueror':
+        current = isUnlocked ? 1 : 0
+        target = 1
+        break
+      case 'snake-longest':
+        let maxLength = 0
+        for (const s of (scoresByGame['snake-arena'] || [])) {
+          const meta = s.metadata as Record<string, any> | null
+          if (meta && typeof meta.longestLength === 'number') {
+            maxLength = Math.max(maxLength, meta.longestLength)
+          }
+        }
+        current = maxLength
         target = 50
         break
       default:

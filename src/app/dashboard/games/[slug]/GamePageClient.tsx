@@ -21,6 +21,7 @@ import WordWizardGame from '@/components/games/WordWizardGame'
 import CandyBlastGame from '@/components/games/CandyBlastGame'
 import HangmanGame from '@/components/games/HangmanGame'
 import FourInARowGame from '@/components/games/FourInARowGame'
+import SnakeArenaGame from '@/components/games/SnakeArenaGame'
 
 import GameChromeWrapper from '@/components/games/GameChromeWrapper'
 import type { GameInfo } from '@/lib/games'
@@ -63,6 +64,7 @@ export default function GamePageClient({ game, username, slug }: Props) {
             {game.componentName === 'candycrush' && <CandyBlastGame />}
             {game.componentName === 'hangman' && <HangmanGame />}
             {game.componentName === 'fourinarow' && <FourInARowGame />}
+            {game.componentName === 'snakearena' && <SnakeArenaGame />}
 
             {/* Legacy Iframe Games */}
             {game.componentName === 'iframe'     && (
@@ -76,7 +78,7 @@ export default function GamePageClient({ game, username, slug }: Props) {
             )}
 
             {/* Placeholder for games not yet implemented */}
-            {!['cricket', 'scribble', 'ttt', 'memory', 'fighter', '2048', 'iframe', 'rps', 'numguess', 'arrowpuzzle', 'colorsort', 'unblocktraffic', 'waterconnect', 'dotsboxes', 'blockblast', 'neontetris', 'wordwizard', 'candycrush', 'hangman', 'fourinarow'].includes(game.componentName) && (
+            {!['cricket', 'scribble', 'ttt', 'memory', 'fighter', '2048', 'iframe', 'rps', 'numguess', 'arrowpuzzle', 'colorsort', 'unblocktraffic', 'waterconnect', 'dotsboxes', 'blockblast', 'neontetris', 'wordwizard', 'candycrush', 'hangman', 'fourinarow', 'snakearena'].includes(game.componentName) && (
               <div className="card" style={{ padding: '3rem', textAlign: 'center', width: '100%' }}>
                 <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>{game.emoji}</div>
                 <h2 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Coming Soon</h2>

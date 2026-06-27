@@ -259,6 +259,19 @@ export const GAMES_REGISTRY: GameInfo[] = [
     badge: 'New',
     componentName: 'hangman',
   },
+  {
+    slug: 'snake-arena',
+    name: 'Snake Arena',
+    category: 'Strategy',
+    categories: ['Arcade', 'Strategy', 'Multiplayer'],
+    aliases: ['Snake', 'Arena', 'Snake Game', 'SnakeArena'],
+    emoji: '🐍',
+    description: 'Control your snake, eat food, use powerups, grow, and outlast other players in a real-time multiplayer arena!',
+    multiplayer: true,
+    type: 'internal',
+    badge: 'New',
+    componentName: 'snakearena',
+  },
 ]
 
 export function getGameBySlug(slug: string): GameInfo | undefined {

@@ -124,6 +124,11 @@ export async function POST(request: NextRequest) {
           5,
           Math.floor(score / 100) + maxCombo * 2
         )
+      } else if (gameSlug === 'snake-arena') {
+        const gameMeta = metadata?.gameMetadata ?? {}
+        const foods = gameMeta.foodsCollected ?? 0
+        const elims = gameMeta.eliminations ?? 0
+        baseCoins = Math.max(5, foods * 2 + elims * 10)
       }
 
       // Record match history

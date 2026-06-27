@@ -14,6 +14,7 @@ import MultiplayerRockPaperScissorsGame from '@/components/games/MultiplayerRock
 import MultiplayerNumberGuessingGame from '@/components/games/MultiplayerNumberGuessingGame'
 import MultiplayerHangmanGame from '@/components/games/MultiplayerHangmanGame'
 import MultiplayerWhosSpyGame from '@/components/games/MultiplayerWhosSpyGame'
+import MultiplayerSnakeArenaGame from '@/components/games/MultiplayerSnakeArenaGame'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import SocketDiagnostics from '@/components/layout/SocketDiagnostics'
 
@@ -627,7 +628,13 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
         </div>
       )}
 
-      {session && !['cricket','dots-boxes','tic-tac-toe','memory','rps','number-guessing','scribble','hangman','whos-spy'].includes(session.gameSlug) && (
+      {session?.gameSlug === 'snake-arena' && (
+        <div className="game-safe-bottom">
+          <MultiplayerSnakeArenaGame {...gameProps} />
+        </div>
+      )}
+
+      {session && !['cricket','dots-boxes','tic-tac-toe','memory','rps','number-guessing','scribble','hangman','whos-spy','four-in-a-row','snake-arena'].includes(session.gameSlug) && (
         <div className="card glass text-center" style={{ maxWidth: 500, margin: '4rem auto', padding: '2.5rem' }}>
           <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '1rem' }}>❓</span>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>Unknown Game Mode</h2>

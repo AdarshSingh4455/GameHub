@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import GameIcon from '@/components/games/GameIcon'
 
 export const metadata: Metadata = {
   title: 'GameHub — Play Together, Compete, Win',
@@ -105,7 +106,19 @@ export default function HomePage() {
                 style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', textDecoration: 'none' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '2.5rem' }}>{game.emoji}</span>
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, hsl(222 20% 14%), hsl(222 20% 10%))',
+                    border: '1px solid hsl(220 15% 20%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.3)'
+                  }}>
+                    <GameIcon slug={game.slug} size={44} />
+                  </div>
                   <span className="badge badge-blue">{game.badge}</span>
                 </div>
                 <div>

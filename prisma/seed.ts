@@ -51,6 +51,7 @@ const games = [
   { slug: 'ai-infinite-candy-crush', name: 'Candy Blast Infinity', description: 'Procedurally generated match-3 puzzle game. Match delicious candies and juicy fruits, trigger cascading combos, and clear challenging objectives!', type: 'REWRITTEN', isMultiplay: false, category: 'match-3' },
   { slug: 'hangman',         name: 'Hangman',             description: 'Guess the hidden word letter by letter. Play solo or challenge opponents online!', type: 'REWRITTEN', isMultiplay: true,  category: 'social' },
   { slug: 'four-in-a-row',   name: '4 In A Row',          description: 'Drop discs into the grid and be the first to connect four in a row horizontally, vertically, or diagonally.', type: 'REWRITTEN', isMultiplay: true,  category: 'dual-player' },
+  { slug: 'snake-arena',     name: 'Snake Arena',         description: 'Control your snake, eat food, use powerups, grow, and outlast other players in a real-time multiplayer arena!', type: 'REWRITTEN', isMultiplay: true,  category: 'strategy' },
 ]
 
 const achievements = [
@@ -149,6 +150,10 @@ const achievements = [
   { slug: 'four-in-a-row-first-win', name: 'First Connection', description: 'Win your first 4 In A Row match.', xpReward: 100, coinReward: 25, category: 'wins', gameSlug: 'four-in-a-row' },
   { slug: 'four-in-a-row-wins-10', name: 'Connect Four Expert', description: 'Win 10 4 In A Row matches.', xpReward: 200, coinReward: 50, category: 'wins', gameSlug: 'four-in-a-row' },
   { slug: 'four-in-a-row-perfect', name: 'Perfect Drop', description: 'Win vs CPU on Hard difficulty.', xpReward: 200, coinReward: 50, category: 'special', gameSlug: 'four-in-a-row' },
+  { slug: 'snake-first-bite', name: 'First Bite', description: 'Eat your first piece of food in Snake Arena.', xpReward: 50, coinReward: 10, category: 'gameplay', gameSlug: 'snake-arena' },
+  { slug: 'snake-wins-10', name: 'King Cobra', description: 'Win 10 Snake Arena matches.', xpReward: 200, coinReward: 50, category: 'wins', gameSlug: 'snake-arena' },
+  { slug: 'snake-nightmare-conqueror', name: 'Nightmare Conqueror', description: 'Conquer the Nightmare AI in Solo Mode.', xpReward: 250, coinReward: 100, category: 'special', gameSlug: 'snake-arena' },
+  { slug: 'snake-longest', name: 'Longest Snake', description: 'Reach a length of 50 or more in a match.', xpReward: 200, coinReward: 50, category: 'gameplay', gameSlug: 'snake-arena' },
 ]
 
 async function main() {

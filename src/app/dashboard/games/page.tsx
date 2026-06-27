@@ -116,11 +116,15 @@ export default function GamesDirectoryPage() {
               className="games-compact-card animate-slideUp"
               id={`game-card-${game.slug}`}
             >
-              {/* Top Section: Badge */}
+              {/* Top Section: Status Badge (if exists) */}
               <div className="card-top-section">
-                <span className={`premium-badge ${game.badge ? `badge-${game.badge.toLowerCase()}` : `cat-${game.category.toLowerCase().replace(' ', '-')}`}`}>
-                  {game.badge || game.category}
-                </span>
+                {game.badge ? (
+                  <span className={`premium-badge badge-${game.badge.toLowerCase()}`}>
+                    {game.badge}
+                  </span>
+                ) : (
+                  <span className="premium-badge-empty" />
+                )}
               </div>
 
               {/* Middle Section: Dedicated Premium Icon Container */}
@@ -130,7 +134,7 @@ export default function GamesDirectoryPage() {
                 </div>
               </div>
 
-              {/* Bottom Section: Name & Multiplayer Indicator */}
+              {/* Bottom Section: Name, Multiplayer Indicator & Category Badge */}
               <div className="card-bottom-section">
                 <span className="games-compact-name">{game.name}</span>
                 {game.multiplayer ? (
@@ -138,6 +142,7 @@ export default function GamesDirectoryPage() {
                 ) : (
                   <span className="games-solo-indicator">👤 Solo Practice</span>
                 )}
+                <span className="games-category-badge">{game.category}</span>
               </div>
             </Link>
           ))}
@@ -165,25 +170,25 @@ export default function GamesDirectoryPage() {
           flex-direction: column;
           align-items: center;
           justify-content: space-between;
-          padding: 1.5rem 1rem 1.25rem;
+          padding: 1.75rem 1.25rem 1.5rem;
           border-radius: 20px;
-          border: 1px solid hsl(220 20% 16%);
-          background: linear-gradient(135deg, hsl(222 22% 9% / 0.8), hsl(222 18% 12% / 0.8));
+          border: 2px solid hsl(220 20% 18%);
+          background: linear-gradient(135deg, hsl(222 20% 13%), hsl(222 20% 9%));
           backdrop-filter: blur(8px);
           text-decoration: none;
           cursor: pointer;
           transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s, box-shadow 0.2s, background 0.2s;
-          min-height: 240px;
+          min-height: 270px;
           height: 100%;
           overflow: hidden;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+          box-shadow: 0 8px 30px rgba(0,0,0,0.5);
         }
 
         .games-compact-card:hover {
-          transform: translateY(-6px) scale(1.03);
-          border-color: hsl(220 100% 65% / 0.4);
-          box-shadow: 0 12px 30px hsl(220 100% 60% / 0.15), 0 4px 12px rgba(0,0,0,0.5);
-          background: linear-gradient(135deg, hsl(222 22% 11% / 0.9), hsl(222 20% 14% / 0.9));
+          transform: translateY(-6px) scale(1.02);
+          border-color: hsl(220 100% 65% / 0.5);
+          box-shadow: 0 12px 30px hsl(220 100% 60% / 0.2), 0 8px 24px rgba(0,0,0,0.6);
+          background: linear-gradient(135deg, hsl(222 20% 15%), hsl(222 20% 11%));
         }
 
         .games-compact-card:active {
@@ -195,6 +200,12 @@ export default function GamesDirectoryPage() {
           display: flex;
           justify-content: center;
           margin-bottom: 0.5rem;
+          min-height: 1.25rem;
+        }
+
+        .premium-badge-empty {
+          display: block;
+          height: 1.25rem;
         }
 
         .premium-badge {
@@ -290,14 +301,27 @@ export default function GamesDirectoryPage() {
           color: hsl(220 10% 55%);
         }
 
+        .games-category-badge {
+          font-size: 0.65rem;
+          font-weight: 800;
+          padding: 0.15rem 0.5rem;
+          border-radius: 6px;
+          background: hsl(220 20% 15%);
+          border: 1px solid hsl(220 15% 22%);
+          color: hsl(220 10% 65%);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-top: 0.4rem;
+        }
+
         @media (max-width: 767px) {
           .games-compact-grid {
             grid-template-columns: repeat(2, 1fr) !important;
-            gap: 0.75rem !important;
+            gap: 0.85rem !important;
           }
           .games-compact-card {
-            padding: 1.25rem 0.75rem 1rem;
-            min-height: 220px;
+            padding: 1.5rem 0.75rem 1.25rem;
+            min-height: 245px;
           }
           .games-premium-icon-container {
             width: 72px;

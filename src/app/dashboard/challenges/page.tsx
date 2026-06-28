@@ -6,6 +6,7 @@ import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getStoredDailyChallenges, DailyChallenge } from '@/lib/dailyChallenges'
 import PageWrapper from '@/components/layout/PageWrapper'
 import Card from '@/components/layout/Card'
+import { Star, Zap, Swords, CheckCircle, Check, Award, Flame, Gift } from 'lucide-react'
 
 interface EnrichedChallenge {
   id: string
@@ -237,12 +238,12 @@ export default function ChallengesPage() {
       const oldLvl = parseInt(localStorage.getItem('gamehub_guest_level') || '1', 10)
       if (newLvl > oldLvl) {
         localStorage.setItem('gamehub_guest_level', newLvl.toString())
-        addToast('level_up', 'Level Up! ⭐', `Congratulations! You reached Level ${newLvl}!`)
+        addToast('level_up', 'Level Up!', `Congratulations! You reached Level ${newLvl}!`)
       }
 
       addToast(
         'achievement_unlocked',
-        'Challenge Claimed! 🎯',
+        'Challenge Claimed!',
         `Earned +${ch.xpReward} XP and +${ch.coinReward} Coins!`
       )
       window.dispatchEvent(new Event('gamehub_xp_update'))
@@ -268,8 +269,8 @@ export default function ChallengesPage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', justifyContent: 'space-between', alignItems: 'flex-start' }} className="md:flex-row md:items-center animate-fadeIn">
           <div>
-            <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 900, marginBottom: '0.4rem', color: 'white', letterSpacing: '-0.02em' }}>
-              ⚡ Challenges Hub
+            <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 900, marginBottom: '0.4rem', color: 'white', letterSpacing: '-0.02em', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Zap size={28} style={{ color: 'hsl(45 100% 60%)' }} /> Challenges Hub
             </h1>
             <p style={{ color: 'hsl(220 10% 55%)', maxWidth: '500px', fontSize: '0.875rem', margin: 0, lineHeight: 1.4 }}>
               Complete tasks daily and weekly to earn XP, Coins, and level up your Profile! This is your single source of truth for all challenges.
@@ -285,12 +286,12 @@ export default function ChallengesPage() {
             <div style={{ width: '1px', height: '30px', background: 'rgba(255,255,255,0.08)' }} />
             <div style={{ textAlign: 'center', minWidth: '60px' }}>
               <span style={{ display: 'block', fontSize: '0.62rem', color: 'hsl(220 10% 50%)', fontWeight: 800, textTransform: 'uppercase' }}>Coins</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(45 100% 60%)' }}>🪙 {coins}</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(45 100% 60%)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Award size={14} style={{ color: 'hsl(45 100% 60%)' }} /> {coins}</span>
             </div>
             <div style={{ width: '1px', height: '30px', background: 'rgba(255,255,255,0.08)' }} />
             <div style={{ textAlign: 'center', minWidth: '60px' }}>
               <span style={{ display: 'block', fontSize: '0.62rem', color: 'hsl(220 10% 50%)', fontWeight: 800, textTransform: 'uppercase' }}>Streak</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(20 90% 60%)' }}>🔥 {streak}d</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(20 90% 60%)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Flame size={14} style={{ color: 'hsl(20 90% 60%)' }} /> {streak}d</span>
             </div>
           </div>
         </div>
@@ -313,10 +314,10 @@ export default function ChallengesPage() {
       >
         {(['DAILY', 'WEEKLY', 'COMPLETED', 'HISTORY'] as const).map((tab) => {
           const isActive = activeTab === tab
-          let label = '📅 Daily'
-          if (tab === 'WEEKLY') label = '⚔️ Weekly'
-          if (tab === 'COMPLETED') label = '✅ Completed'
-          if (tab === 'HISTORY') label = '📜 History'
+          let label: React.ReactNode = <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Star size={14} /> Daily</span>
+          if (tab === 'WEEKLY') label = <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Swords size={14} /> Weekly</span>
+          if (tab === 'COMPLETED') label = <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><CheckCircle size={14} /> Completed</span>
+          if (tab === 'HISTORY') label = <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><CheckCircle size={14} /> History</span>
 
           return (
             <button
@@ -423,11 +424,11 @@ export default function ChallengesPage() {
                       {ch.title}
                     </h3>
                     <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
-                      <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'hsl(45 100% 65%)', background: 'rgba(255,183,3,0.08)', padding: '0.1rem 0.4rem', borderRadius: 99 }}>
-                        🪙 {ch.coinReward}
+                      <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'hsl(45 100% 65%)', background: 'rgba(255,183,3,0.08)', padding: '0.1rem 0.4rem', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                        <Award size={10} /> {ch.coinReward}
                       </span>
-                      <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'hsl(270 80% 70%)', background: 'rgba(157,78,221,0.08)', padding: '0.1rem 0.4rem', borderRadius: 99 }}>
-                        ⚡ {ch.xpReward} XP
+                      <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'hsl(270 80% 70%)', background: 'rgba(157,78,221,0.08)', padding: '0.1rem 0.4rem', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                        <Zap size={10} /> {ch.xpReward} XP
                       </span>
                     </div>
                   </div>
@@ -462,18 +463,18 @@ export default function ChallengesPage() {
                   {ch.claimed ? (
                     <button
                       disabled
-                      style={{ padding: '0.35rem 1rem', fontSize: '0.72rem', fontWeight: 750, color: 'hsl(142 70% 45%)', border: '1px solid rgba(16,185,129,0.15)', background: 'rgba(16,185,129,0.04)', borderRadius: '10px', cursor: 'not-allowed' }}
+                      style={{ padding: '0.35rem 1rem', fontSize: '0.72rem', fontWeight: 750, color: 'hsl(142 70% 45%)', border: '1px solid rgba(16,185,129,0.15)', background: 'rgba(16,185,129,0.04)', borderRadius: '10px', cursor: 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
                     >
-                      ✓ Claimed
+                      <Check size={10} /> Claimed
                     </button>
                   ) : ch.completed ? (
                     <button
                       onClick={() => handleClaim(ch.id)}
                       disabled={claimingId === ch.id}
                       className="btn btn-primary"
-                      style={{ padding: '0.45rem 1.25rem', fontSize: '0.75rem', fontWeight: 800, borderRadius: '10px' }}
+                      style={{ padding: '0.45rem 1.25rem', fontSize: '0.75rem', fontWeight: 800, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                     >
-                      {claimingId === ch.id ? 'Claiming...' : '🎁 Claim Reward'}
+                      {claimingId === ch.id ? 'Claiming...' : <><Gift size={12} /> Claim Reward</>}
                     </button>
                   ) : (
                     <button

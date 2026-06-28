@@ -11,6 +11,7 @@ import Card from '@/components/layout/Card'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import { useRouter } from 'next/navigation'
 import { GAMES_REGISTRY } from '@/lib/games'
+import { Circle, Swords, AlertTriangle, Check, X, UserMinus, Plus, Gamepad2 } from 'lucide-react'
 
 interface ProfileSummary {
   id: string
@@ -226,25 +227,25 @@ export default function FriendsPage() {
   const getOnlinePresence = (friendId: string, lastSeenAt?: string | null) => {
     const live = presenceMap[friendId]
     if (live) {
-      if (live.status === 'ONLINE') return { label: 'Online', emoji: '🟢', color: 'hsl(142 70% 55%)', dot: 'hsl(142 70% 50%)', activity: live.activity }
-      if (live.status === 'IN_GAME') return { label: 'In Game', emoji: '🎮', color: 'hsl(270 80% 65%)', dot: 'hsl(270 80% 60%)', activity: live.activity, gameSlug: live.gameSlug, gameMode: live.gameMode, startedAt: live.startedAt }
-      if (live.status === 'IN_LOBBY') return { label: 'In Lobby', emoji: '🏠', color: 'hsl(220 100% 65%)', dot: 'hsl(220 100% 60%)', activity: live.activity }
-      if (live.status === 'IN_CHAT') return { label: 'In Chat', emoji: '💬', color: 'hsl(180 80% 55%)', dot: 'hsl(180 80% 50%)', activity: live.activity }
-      if (live.status === 'AWAY') return { label: 'Away', emoji: '🌙', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)', activity: live.activity }
-      if (live.status === 'OFFLINE') return { label: 'Offline', emoji: '⚫', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)', activity: 'Offline' }
+      if (live.status === 'ONLINE') return { label: 'Online', emoji: '', color: 'hsl(142 70% 55%)', dot: 'hsl(142 70% 50%)', activity: live.activity }
+      if (live.status === 'IN_GAME') return { label: 'In Game', emoji: '', color: 'hsl(270 80% 65%)', dot: 'hsl(270 80% 60%)', activity: live.activity, gameSlug: live.gameSlug, gameMode: live.gameMode, startedAt: live.startedAt }
+      if (live.status === 'IN_LOBBY') return { label: 'In Lobby', emoji: '', color: 'hsl(220 100% 65%)', dot: 'hsl(220 100% 60%)', activity: live.activity }
+      if (live.status === 'IN_CHAT') return { label: 'In Chat', emoji: '', color: 'hsl(180 80% 55%)', dot: 'hsl(180 80% 50%)', activity: live.activity }
+      if (live.status === 'AWAY') return { label: 'Away', emoji: '', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)', activity: live.activity }
+      if (live.status === 'OFFLINE') return { label: 'Offline', emoji: '', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)', activity: 'Offline' }
     }
 
-    if (!lastSeenAt) return { label: 'Offline', emoji: '⚫', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)', activity: 'Offline' }
+    if (!lastSeenAt) return { label: 'Offline', emoji: '', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)', activity: 'Offline' }
     
     const diffMs = Date.now() - new Date(lastSeenAt).getTime()
     const diffSecs = diffMs / 1000
 
     if (diffSecs < 60) {
-      return { label: 'Online', emoji: '🟢', color: 'hsl(142 70% 55%)', dot: 'hsl(142 70% 50%)', activity: 'Browsing Games' }
+      return { label: 'Online', emoji: '', color: 'hsl(142 70% 55%)', dot: 'hsl(142 70% 50%)', activity: 'Browsing Games' }
     } else if (diffSecs < 300) {
-      return { label: 'Away', emoji: '🌙', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)', activity: 'Idle' }
+      return { label: 'Away', emoji: '', color: 'hsl(38 95% 60%)', dot: 'hsl(38 95% 55%)', activity: 'Idle' }
     }
-    return { label: 'Offline', emoji: '⚫', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)', activity: 'Offline' }
+    return { label: 'Offline', emoji: '', color: 'hsl(220 10% 45%)', dot: 'hsl(220 10% 40%)', activity: 'Offline' }
   }
 
   const formatElapsedTime = (startedAt: number) => {
@@ -545,7 +546,7 @@ export default function FriendsPage() {
                                   </span>
                                 )}
                                 <span style={{ fontSize: '0.65rem', fontWeight: 700, color: presence.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                  {presence.emoji} {presence.label}
+                                  {presence.label}
                                 </span>
                               </div>
                               <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)', marginTop: '1px' }}>
@@ -574,23 +575,23 @@ export default function FriendsPage() {
                               <>
                                 <button
                                   className="btn btn-primary btn-sm"
-                                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem' }}
+                                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
                                   onClick={() => {
                                     setSelectedFriendForInvite(friend)
                                     setInviteModalOpen(true)
                                   }}
                                 >
-                                  🎮 Invite
+                                  <Gamepad2 size={12} /> Invite
                                 </button>
                                 <button
                                   className="btn btn-secondary btn-sm"
-                                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', color: 'hsl(38 95% 60%)', borderColor: 'hsl(38 95% 40% / 0.3)' }}
+                                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', color: 'hsl(38 95% 60%)', borderColor: 'hsl(38 95% 40% / 0.3)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
                                   onClick={() => {
                                     setSelectedFriendForChallenge(friend)
                                     setChallengeModalOpen(true)
                                   }}
                                 >
-                                  ⚔️ Challenge
+                                  <Swords size={12} /> Challenge
                                 </button>
                               </>
                             )}
@@ -776,8 +777,8 @@ export default function FriendsPage() {
                             
                             {/* Actions mapping */}
                             {p.friendshipStatus === 'friends' && (
-                              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(142 70% 55%)', background: 'hsl(142 70% 50% / 0.12)', padding: '0.35rem 0.65rem', borderRadius: 8 }}>
-                                ✓ Friends
+                              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(142 70% 55%)', background: 'hsl(142 70% 50% / 0.12)', padding: '0.35rem 0.65rem', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Check size={12} /> Friends
                               </span>
                             )}
                             {p.friendshipStatus === 'sent-pending' && (
@@ -995,7 +996,7 @@ export default function FriendsPage() {
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>⚔️</span>
+              <Swords size={24} style={{ color: 'hsl(38 95% 60%)' }} />
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'white' }}>
                   Challenge {selectedFriendForChallenge.displayName || selectedFriendForChallenge.username}
@@ -1006,8 +1007,8 @@ export default function FriendsPage() {
               </div>
               <button
                 onClick={() => setChallengeModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'hsl(220 10% 45%)', fontSize: '1rem', cursor: 'pointer' }}
-              >✕</button>
+                style={{ background: 'transparent', border: 'none', color: 'hsl(220 10% 45%)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              ><X size={18} /></button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', maxHeight: '320px', overflowY: 'auto', paddingRight: '0.2rem' }}>

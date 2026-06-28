@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { AlertTriangle, Plus, LogIn, Zap, Smartphone, Share2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
@@ -1039,7 +1040,7 @@ export default function MultiplayerPage() {
                 onClick={handleEmergencyClearData}
                 id="emergency-clear-match-btn"
               >
-                ⚠️ Clear Stuck Match Data
+                <AlertTriangle size={14} /> Clear Stuck Match Data
               </button>
             )}
           </div>
@@ -1061,7 +1062,7 @@ export default function MultiplayerPage() {
                   }}
                   onClick={() => setScreen('CREATE')}
                 >
-                  ➕ Create Room
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', justifyContent: 'center' }}><Plus size={16} /> Create Room</span>
                 </button>
                 <button
                   id="multiplayer-join-room-btn"
@@ -1077,7 +1078,7 @@ export default function MultiplayerPage() {
                   }}
                   onClick={() => setScreen('JOIN')}
                 >
-                  🚪 Enter Code
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', justifyContent: 'center' }}><LogIn size={16} /> Enter Code</span>
                 </button>
               </div>
 
@@ -1176,12 +1177,16 @@ export default function MultiplayerPage() {
                             color: '#fff',
                             cursor: 'pointer',
                             letterSpacing: '0.02em',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.2rem'
                           }}
                           onClick={(e) => { e.stopPropagation(); handleQuickJoin(game.slug) }}
                           disabled={isLoading}
                           id={`quick-join-${game.slug}-btn`}
                         >
-                          ⚡ Quick Join
+                          <Zap size={10} /> Quick Join
                         </button>
 
                         {/* Create Room button */}
@@ -1642,25 +1647,25 @@ export default function MultiplayerPage() {
                 <button
                   className="btn"
                   onClick={handleCopyDeepLink}
-                  style={{ padding: '0.5rem 0.75rem', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-subtle))', fontSize: '1.1rem', minHeight: 44 }}
+                  style={{ padding: '0.5rem 0.75rem', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-subtle))', fontSize: '1.1rem', minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   title="Copy Mobile Deep Link"
                 >
-                  📱
+                  <Smartphone size={18} />
                 </button>
                 <button
                   className="btn"
                   onClick={handleShareAppInvite}
-                  style={{ padding: '0.5rem 0.75rem', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-subtle))', fontSize: '1.1rem', minHeight: 44 }}
+                  style={{ padding: '0.5rem 0.75rem', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-subtle))', fontSize: '1.1rem', minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   title="Share App Invite"
                 >
-                  📤
+                  <Share2 size={18} />
                 </button>
                 <button
                   className="btn"
                   onClick={() => setShowInviteModal(true)}
-                  style={{ padding: '0.5rem 1rem', backgroundColor: 'hsl(var(--brand-primary) / 0.1)', border: '1px solid hsl(var(--brand-primary) / 0.3)', color: 'hsl(var(--brand-primary))', fontSize: '0.85rem', fontWeight: 700, minHeight: 44 }}
+                  style={{ padding: '0.5rem 1rem', backgroundColor: 'hsl(var(--brand-primary) / 0.1)', border: '1px solid hsl(var(--brand-primary) / 0.3)', color: 'hsl(var(--brand-primary))', fontSize: '0.85rem', fontWeight: 700, minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
                 >
-                  ➕ Invite Friends
+                  <Plus size={14} /> Invite Friends
                 </button>
               </div>
             </div>

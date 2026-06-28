@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import type { User } from '@supabase/supabase-js'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import DailyRewardModal from './DailyRewardModal'
 import { getUtcDaysElapsed } from '@/lib/dailyRewards'
@@ -11,43 +11,89 @@ import type { AchievementProgressInfo } from '@/lib/achievements'
 import { getLevelProgress } from '@/lib/xpUtils'
 import Avatar from '@/components/shared/Avatar'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
+import {
+  Home,
+  Gamepad2,
+  Zap,
+  Coins,
+  Trophy,
+  Globe,
+  BarChart3,
+  Target,
+  Users,
+  Bell,
+  User,
+  Info,
+  Settings,
+  Wrench,
+  Download,
+  Lock,
+  LogOut,
+  WifiOff,
+  Flame,
+  Gift,
+  Menu,
+  X,
+  Check
+} from 'lucide-react'
 
 interface NavLink {
   href: string
   label: string
-  emoji: string
+  icon: string
   authRequired?: boolean
 }
 
+const renderNavIcon = (iconName: string, size = 18) => {
+  switch (iconName) {
+    case 'home': return <Home size={size} />
+    case 'games': return <Gamepad2 size={size} />
+    case 'challenges': return <Zap size={size} />
+    case 'store': return <Coins size={size} />
+    case 'tournaments': return <Trophy size={size} />
+    case 'multiplayer': return <Globe size={size} />
+    case 'leaderboard': return <BarChart3 size={size} />
+    case 'rewards': return <Target size={size} />
+    case 'friends': return <Users size={size} />
+    case 'notifications': return <Bell size={size} />
+    case 'profile': return <User size={size} />
+    case 'about': return <Info size={size} />
+    case 'settings': return <Settings size={size} />
+    case 'admin': return <Wrench size={size} />
+    case 'install': return <Download size={size} />
+    default: return null
+  }
+}
+
 const NAV_LINKS: NavLink[] = [
-  { href: '/dashboard',             label: 'Home',          emoji: '🏠' },
-  { href: '/dashboard/games',       label: 'All Games',     emoji: '🎮' },
-  { href: '/dashboard/challenges',  label: 'Challenges',   emoji: '⚡' },
-  { href: '/dashboard/store',       label: 'Store',        emoji: '🪙' },
-  { href: '/dashboard/tournaments', label: 'Tournaments',   emoji: '🏆', authRequired: true },
-  { href: '/dashboard/multiplayer', label: 'Multiplayer',   emoji: '🌐', authRequired: true },
-  { href: '/dashboard/leaderboard', label: 'Leaderboard',   emoji: '📊', authRequired: true },
-  { href: '/dashboard/rewards',     label: 'Rewards',       emoji: '🎯' },
-  { href: '/dashboard/friends',     label: 'Friends',       emoji: '👥', authRequired: true },
-  { href: '/dashboard/notifications', label: 'Notifications', emoji: '🔔', authRequired: true },
-  { href: '/dashboard/profile',     label: 'Profile',       emoji: '👤' },
-  { href: '/dashboard/about',       label: 'About', emoji: 'ℹ️' },
-  { href: '/dashboard/settings',    label: 'Settings',      emoji: '⚙️',  authRequired: true },
+  { href: '/dashboard',             label: 'Home',          icon: 'home' },
+  { href: '/dashboard/games',       label: 'All Games',     icon: 'games' },
+  { href: '/dashboard/challenges',  label: 'Challenges',   icon: 'challenges' },
+  { href: '/dashboard/store',       label: 'Store',        icon: 'store' },
+  { href: '/dashboard/tournaments', label: 'Tournaments',   icon: 'tournaments', authRequired: true },
+  { href: '/dashboard/multiplayer', label: 'Multiplayer',   icon: 'multiplayer', authRequired: true },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard',   icon: 'leaderboard', authRequired: true },
+  { href: '/dashboard/rewards',     label: 'Rewards',       icon: 'rewards' },
+  { href: '/dashboard/friends',     label: 'Friends',       icon: 'friends', authRequired: true },
+  { href: '/dashboard/notifications', label: 'Notifications', icon: 'notifications', authRequired: true },
+  { href: '/dashboard/profile',     label: 'Profile',       icon: 'profile' },
+  { href: '/dashboard/about',       label: 'About',         icon: 'about' },
+  { href: '/dashboard/settings',    label: 'Settings',      icon: 'settings',  authRequired: true },
 ]
 
 const BOTTOM_NAV_LINKS: NavLink[] = [
-  { href: '/dashboard',             label: 'Home',         emoji: '🏠' },
-  { href: '/dashboard/games',       label: 'Games',        emoji: '🎮' },
-  { href: '/dashboard/challenges',  label: 'Challenges',   emoji: '⚡' },
-  { href: '/dashboard/store',       label: 'Store',        emoji: '🪙' },
-  { href: '/dashboard/profile',     label: 'Profile',      emoji: '👤' },
+  { href: '/dashboard',             label: 'Home',         icon: 'home' },
+  { href: '/dashboard/games',       label: 'Games',        icon: 'games' },
+  { href: '/dashboard/challenges',  label: 'Challenges',   icon: 'challenges' },
+  { href: '/dashboard/store',       label: 'Store',        icon: 'store' },
+  { href: '/dashboard/profile',     label: 'Profile',      icon: 'profile' },
 ]
 
 interface Props {
-  user: User | null
+  user: SupabaseUser | null
 }
 
-export default function DashboardNav({ user }: { user: User | null }) {
+export default function DashboardNav({ user }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const { isOnline } = useGameSession()
@@ -266,10 +312,10 @@ export default function DashboardNav({ user }: { user: User | null }) {
             }}
             aria-label="Toggle Navigation Menu"
           >
-            ☰
+            <Menu size={20} />
           </button>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <span style={{ fontWeight: 800, fontSize: '1.2rem' }} className="gradient-text">🎮 GameHub</span>
+          <Link href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontWeight: 800, fontSize: '1.2rem' }} className="gradient-text">GameHub</span>
             {!isOnline && <span style={{ fontSize: '0.65rem', background: 'hsl(0 80% 55%)', color: 'white', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', verticalAlign: 'middle', fontWeight: 700 }}>OFFLINE</span>}
           </Link>
           <Link
@@ -327,8 +373,8 @@ export default function DashboardNav({ user }: { user: User | null }) {
             alignItems: 'center',
           }}
         >
-          <Link href="/" style={{ textDecoration: 'none' }} onClick={() => setDrawerOpen(false)}>
-            <span style={{ fontWeight: 800, fontSize: '1.25rem' }} className="gradient-text">🎮 GameHub</span>
+          <Link href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => setDrawerOpen(false)}>
+            <span style={{ fontWeight: 800, fontSize: '1.25rem' }} className="gradient-text">GameHub</span>
           </Link>
           <button
             onClick={() => setDrawerOpen(false)}
@@ -341,7 +387,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
             }}
             className="md:hidden"
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
 
@@ -360,7 +406,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
             color: 'hsl(0 80% 85%)',
             fontWeight: 600,
           }}>
-            <span>🔌</span>
+            <WifiOff size={14} style={{ color: 'hsl(0 80% 70%)' }} />
             <span>Offline Mode Active</span>
           </div>
         )}
@@ -381,8 +427,8 @@ export default function DashboardNav({ user }: { user: User | null }) {
                     {userStats.displayName || (userStats.username ? (userStats.username.includes('@') ? userStats.username.split('@')[0] : userStats.username) : '') || (user?.email ? (user.email.includes('@') ? user.email.split('@')[0] : user.email) : 'Player')}
                   </div>
                   {userStats.selectedTitle && (
-                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(45 100% 60%)', textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: '1px' }}>
-                      🏆 {userStats.selectedTitle}
+                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'hsl(45 100% 60%)', textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: '1px', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Trophy size={10} style={{ color: 'hsl(45 100% 60%)' }} /> {userStats.selectedTitle}
                     </div>
                   )}
                   <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', marginTop: '2px' }}>
@@ -410,7 +456,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
                 {/* Streak and Daily Claim Status */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem', padding: '0.4rem 0.5rem', borderRadius: 8, background: 'hsl(220 20% 7%)', border: '1px solid hsl(220 20% 14%)' }}>
                   <span style={{ fontSize: '0.72rem', color: 'hsl(220 10% 70%)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                    🔥 <strong>{userStats.streak}</strong> Day Streak
+                    <Flame size={12} style={{ color: 'hsl(38 95% 60%)' }} /> <strong>{userStats.streak}</strong> Day Streak
                   </span>
 
                   {dailyClaimable ? (
@@ -425,15 +471,18 @@ export default function DashboardNav({ user }: { user: User | null }) {
                         fontWeight: 700,
                         borderRadius: 6,
                         cursor: 'pointer',
-                        boxShadow: '0 0 10px -2px hsl(220 100% 65% / 0.4)'
+                        boxShadow: '0 0 10px -2px hsl(220 100% 65% / 0.4)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
                       }}
                       id="sidebar-claim-reward"
                     >
-                      🎁 Claim!
+                      <Gift size={10} /> Claim!
                     </button>
                   ) : (
-                    <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, background: 'hsl(142 70% 50% / 0.15)', color: 'hsl(142 70% 55%)', fontWeight: 700 }}>
-                      Claimed ✓
+                    <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, background: 'hsl(142 70% 50% / 0.15)', color: 'hsl(142 70% 55%)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Check size={10} /> Claimed
                     </span>
                   )}
                 </div>
@@ -484,7 +533,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
               {/* Guest Streak Widget */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0.5rem', borderRadius: 8, background: 'hsl(220 20% 7%)', border: '1px solid hsl(220 20% 14%)', marginTop: '0.2rem' }}>
                 <span style={{ fontSize: '0.72rem', color: 'hsl(220 10% 70%)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                  🔥 <strong>{userStats.streak}</strong> Day Streak
+                  <Flame size={12} style={{ color: 'hsl(38 95% 60%)' }} /> <strong>{userStats.streak}</strong> Day Streak
                 </span>
 
                 {dailyClaimable ? (
@@ -499,15 +548,18 @@ export default function DashboardNav({ user }: { user: User | null }) {
                       fontWeight: 700,
                       borderRadius: 6,
                       cursor: 'pointer',
-                      boxShadow: '0 0 10px -2px hsl(220 100% 65% / 0.4)'
+                      boxShadow: '0 0 10px -2px hsl(220 100% 65% / 0.4)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
                     }}
                     id="sidebar-claim-reward-guest"
                   >
-                    🎁 Claim!
+                    <Gift size={10} /> Claim!
                   </button>
                 ) : (
-                  <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, background: 'hsl(142 70% 50% / 0.15)', color: 'hsl(142 70% 55%)', fontWeight: 700 }}>
-                    Claimed ✓
+                  <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, background: 'hsl(142 70% 50% / 0.15)', color: 'hsl(142 70% 55%)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Check size={10} /> Claimed
                   </span>
                 )}
               </div>
@@ -538,10 +590,11 @@ export default function DashboardNav({ user }: { user: User | null }) {
             const dynamicNavLinks = [...NAV_LINKS]
             // Insert Admin if SUPER_ADMIN
             if (userStats.role === 'SUPER_ADMIN') {
-              dynamicNavLinks.splice(6, 0, { href: '/dashboard/admin', label: 'Admin Panel', emoji: '🛠️', authRequired: true })
+              dynamicNavLinks.splice(6, 0, { href: '/dashboard/admin', label: 'Admin Panel', icon: 'admin', authRequired: true })
             }
+
             if (pwaInstallable) {
-              dynamicNavLinks.push({ href: '#install', label: 'Install App', emoji: '📥' })
+              dynamicNavLinks.push({ href: '#install', label: 'Install App', icon: 'install' })
             }
 
             return dynamicNavLinks.map((link) => {
@@ -577,7 +630,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
                     cursor: 'pointer',
                   }}
                 >
-                  <span style={{ fontSize: '1.1rem' }}>{link.emoji}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{renderNavIcon(link.icon)}</span>
                   {link.label}
                 </button>
               )
@@ -605,7 +658,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
                 }}
                 title={locked ? 'Sign in to access' : undefined}
               >
-                <span style={{ fontSize: '1.1rem' }}>{link.emoji}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{renderNavIcon(link.icon)}</span>
                 {link.label}
                 {link.label === 'Notifications' && unreadNotificationsCount > 0 && (
                   <span style={{
@@ -620,7 +673,7 @@ export default function DashboardNav({ user }: { user: User | null }) {
                     {unreadNotificationsCount}
                   </span>
                 )}
-                {locked && <span style={{ marginLeft: 'auto', fontSize: '0.7rem' }}>🔒</span>}
+                {locked && <Lock size={12} style={{ marginLeft: 'auto', color: 'hsl(220 10% 40%)' }} />}
               </Link>
             )
           })
@@ -636,10 +689,10 @@ export default function DashboardNav({ user }: { user: User | null }) {
                 handleSignOut()
               }}
               className="btn btn-ghost btn-sm"
-              style={{ width: '100%', justifyContent: 'flex-start', color: 'hsl(0 80% 60%)' }}
+              style={{ width: '100%', justifyContent: 'flex-start', color: 'hsl(0 80% 60%)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
               id="signout-btn"
             >
-              🚪 Sign Out
+              <LogOut size={14} /> Sign Out
             </button>
           ) : (
             <p style={{ fontSize: '0.72rem', color: 'hsl(220 10% 35%)', textAlign: 'center' }}>
@@ -666,8 +719,8 @@ export default function DashboardNav({ user }: { user: User | null }) {
                 className={`bottom-nav-item ${active ? 'active' : ''}`}
                 title={locked ? 'Sign in to access' : undefined}
               >
-                <div className="bottom-nav-icon-container">
-                  <span className="bottom-nav-emoji">{link.emoji}</span>
+                <div className="bottom-nav-icon-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  {renderNavIcon(link.icon, 20)}
                   {active && <span className="bottom-nav-active-dot" />}
                 </div>
                 <span className="bottom-nav-label">{link.label}</span>

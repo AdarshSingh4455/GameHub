@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/lib/contexts/ToastContext'
+import { Check, X, AlertTriangle, CheckCircle } from 'lucide-react'
 
 interface UsernameFormProps {
   initialUsername: string
@@ -262,10 +263,10 @@ export default function UsernameForm({ initialUsername, initialDisplayName, init
             alignItems: 'center',
             gap: '0.25rem',
           }}>
-            {usernameAvailable === 'checking' && <span style={{ color: 'hsl(220 10% 50%)' }}>⏳ Checking...</span>}
-            {usernameAvailable === 'available' && <span style={{ color: 'hsl(142 70% 55%)' }}>✓ Available</span>}
-            {usernameAvailable === 'taken' && <span style={{ color: 'hsl(0 80% 65%)' }}>❌ Taken</span>}
-            {usernameAvailable === 'invalid' && username.length > 0 && <span style={{ color: 'hsl(0 80% 65%)' }}>❌ Invalid</span>}
+             {usernameAvailable === 'checking' && <span style={{ color: 'hsl(220 10% 50%)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>Checking...</span>}
+             {usernameAvailable === 'available' && <span style={{ color: 'hsl(142 70% 55%)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><Check size={12} /> Available</span>}
+             {usernameAvailable === 'taken' && <span style={{ color: 'hsl(0 80% 65%)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><X size={12} /> Taken</span>}
+             {usernameAvailable === 'invalid' && username.length > 0 && <span style={{ color: 'hsl(0 80% 65%)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><X size={12} /> Invalid</span>}
           </div>
         </div>
         <p style={{ fontSize: '0.72rem', color: 'hsl(220 10% 40%)', marginTop: '0.35rem' }}>
@@ -304,7 +305,7 @@ export default function UsernameForm({ initialUsername, initialDisplayName, init
             fontSize: '0.85rem'
           }}
         >
-          ⚠️ {error}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><AlertTriangle size={14} /> {error}</span>
         </div>
       )}
 
@@ -319,7 +320,7 @@ export default function UsernameForm({ initialUsername, initialDisplayName, init
             fontSize: '0.85rem'
           }}
         >
-          ✅ {success}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><CheckCircle size={14} /> {success}</span>
         </div>
       )}
 

@@ -7,6 +7,7 @@ import { getLevelProgress } from '@/lib/xpUtils'
 import Avatar from '@/components/shared/Avatar'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import { useRouter } from 'next/navigation'
+import { X, Trophy, Swords, Circle, Gamepad2 } from 'lucide-react'
 
 interface ProfileData {
   profile: {
@@ -349,7 +350,7 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
           }}
           className="hidden sm:flex"
         >
-          ✕
+          <X size={14} />
         </button>
 
         {loading || !data ? (
@@ -436,8 +437,8 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
                     @{data.profile.username}
                   </div>
                   {data.profile.selectedTitle && (
-                    <div style={{ fontSize: '0.72rem', color: 'hsl(45 100% 60%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '0.08rem' }}>
-                      ⚡ {data.profile.selectedTitle}
+                    <div style={{ fontSize: '0.72rem', color: 'hsl(45 100% 60%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '0.08rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <Trophy size={10} style={{ color: 'hsl(45 100% 60%)' }} /> {data.profile.selectedTitle}
                     </div>
                   )}
                   <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', marginTop: '0.15rem' }}>
@@ -446,8 +447,8 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
                   {(() => {
                     const live = presenceMap[data.profile.userId];
                     const getPresenceText = () => {
-                      if (!live || live.status === 'OFFLINE') return '⚫ Offline'
-                      if (live.status === 'ONLINE') return '🟢 Online'
+                      if (!live || live.status === 'OFFLINE') return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Circle size={8} fill="hsl(220 10% 45%)" color="hsl(220 10% 45%)" /> Offline</span>
+                      if (live.status === 'ONLINE') return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Circle size={8} fill="hsl(142 70% 55%)" color="hsl(142 70% 55%)" /> Online</span>
                       if (live.status === 'IN_GAME') return `🎮 Playing ${live.activity || 'Game'}`
                       if (live.status === 'IN_LOBBY') return '🏠 In Lobby'
                       if (live.status === 'IN_CHAT') return '💬 In Chat'
@@ -481,7 +482,7 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
                             setShowChallengeMenu(false)
                           }}
                         >
-                          🎮 Invite
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}><Gamepad2 size={12} /> Invite</span>
                         </button>
                         <button
                           className="btn btn-secondary btn-sm"
@@ -491,7 +492,7 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
                             setShowInviteMenu(false)
                           }}
                         >
-                          ⚔️ Challenge
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}><Swords size={12} /> Challenge</span>
                         </button>
                       </>
                     );

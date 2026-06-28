@@ -7,6 +7,7 @@ import RankBadge from '@/components/layout/RankBadge'
 import { getRankDetails } from '@/lib/rankedUtils'
 import Avatar from '@/components/shared/Avatar'
 import { GAMES_REGISTRY } from '@/lib/games'
+import { Swords, Lock, Trophy, Zap, AlertTriangle, Users, Gift, Image, Tag, Target } from 'lucide-react'
 
 export interface DivisionRange {
   current: string
@@ -136,25 +137,45 @@ const TIMEFRAMES = [
   { value: 'weekly', label: 'Weekly' },
 ]
 
-const GAMES = [
-  { value: 'all', label: 'All Games' },
-  { value: 'cricket', label: 'Hand Cricket' },
-  { value: 'tic-tac-toe', label: 'Tic-Tac-Toe' },
-  { value: 'memory', label: 'Memory Match' },
-  { value: '2048', label: '2048' },
-  { value: 'fighter', label: 'Fighter Jet' },
-  { value: 'block-blast-classic', label: 'Block Blast (Classic)' },
-  { value: 'block-blast-daily', label: 'Block Blast (Daily)' },
-  { value: 'neon-tetris-classic', label: 'Neon Tetris (Classic)' },
-  { value: 'neon-tetris-daily', label: 'Neon Tetris (Daily)' },
-  { value: 'word-wizard-classic', label: 'Word Wizard (Classic)' },
-  { value: 'word-wizard-daily', label: 'Word Wizard (Daily)' },
-  { value: 'hangman-classic', label: 'Hangman Classic' },
-  { value: 'hangman-multiplayer', label: 'Hangman Multiplayer' },
-]
-
 export default function LeaderboardClient() {
   const { user } = useGameSession()
+
+  // Dynamically map from GAMES_REGISTRY
+  const gameOptions = React.useMemo(() => {
+    const options: { value: string; label: string; group?: string }[] = [
+      { value: 'all', label: 'All Games' }
+    ]
+    for (const game of GAMES_REGISTRY) {
+      if (game.supportsLeaderboard) {
+        if (game.leaderboardModes) {
+          for (const m of game.leaderboardModes) {
+            options.push({ value: m.value, label: m.label, group: game.name })
+          }
+        } else {
+          options.push({ value: game.slug, label: game.name })
+        }
+      }
+    }
+    return options
+  }, [])
+
+  // Group options to render optgroups
+  const groupedOptions = React.useMemo(() => {
+    const groups: { label: string; value?: string; options?: { value: string; label: string }[] }[] = []
+    for (const opt of gameOptions) {
+      if (opt.group) {
+        let group = groups.find(g => g.label === opt.group)
+        if (!group) {
+          group = { label: opt.group, options: [] }
+          groups.push(group)
+        }
+        group.options?.push({ value: opt.value, label: opt.label })
+      } else {
+        groups.push({ label: opt.label, value: opt.value })
+      }
+    }
+    return groups
+  }, [gameOptions])
   
   // Tabs: 'casual' | 'ranked' | 'hallOfFame'
   const [activeTab, setActiveTab] = useState<'casual' | 'ranked' | 'hallOfFame'>('casual')
@@ -516,28 +537,20 @@ export default function LeaderboardClient() {
                   minHeight: 38
                 }}
               >
-                <option value="all">All Games</option>
-                <option value="cricket">Hand Cricket</option>
-                <option value="tic-tac-toe">Tic-Tac-Toe</option>
-                <option value="memory">Memory Match</option>
-                <option value="2048">2048</option>
-                <option value="fighter">Fighter Jet</option>
-                <optgroup label="Block Blast">
-                  <option value="block-blast-classic">Block Blast (Classic)</option>
-                  <option value="block-blast-daily">Block Blast (Daily)</option>
-                </optgroup>
-                <optgroup label="Neon Tetris">
-                  <option value="neon-tetris-classic">Neon Tetris (Classic)</option>
-                  <option value="neon-tetris-daily">Neon Tetris (Daily)</option>
-                </optgroup>
-                <optgroup label="Word Wizard">
-                  <option value="word-wizard-classic">Word Wizard (Classic)</option>
-                  <option value="word-wizard-daily">Word Wizard (Daily)</option>
-                </optgroup>
-                <optgroup label="Hangman">
-                  <option value="hangman-classic">Hangman Classic</option>
-                  <option value="hangman-multiplayer">Hangman Multiplayer</option>
-                </optgroup>
+                {groupedOptions.map((item, idx) => {
+                  if (item.options) {
+                    return (
+                      <optgroup key={idx} label={item.label}>
+                        {item.options.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </optgroup>
+                    )
+                  }
+                  return (
+                    <option key={item.value} value={item.value}>{item.label}</option>
+                  )
+                })}
               </select>
             </div>
           </div>
@@ -719,7 +732,7 @@ export default function LeaderboardClient() {
                       transition: 'transform 0.15s ease'
                     }}
                   >
-                    ⚔️ Find Ranked Match
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Swords size={14} /> Find Ranked Match</span>
                   </button>
                 </div>
               </div>
@@ -739,7 +752,7 @@ export default function LeaderboardClient() {
             }}>
               <div>
                 <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: 'white', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  🎁 Seasonal Rewards & Placements
+                  <Gift size={16} /> Seasonal Rewards & Placements
                 </h4>
                 <p style={{ fontSize: '0.76rem', color: 'hsl(220 10% 55%)', margin: '0.5rem 0 1rem', lineHeight: 1.4 }}>
                   Complete placement matches to qualify for exclusive seasonal frame rewards and titles.
@@ -758,15 +771,15 @@ export default function LeaderboardClient() {
 
                 {/* Future Ready avatar frames and titles grid preview */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                  <div style={{ border: '1px solid hsl(220 15% 15%)', borderRadius: 10, padding: '0.45rem', backgroundColor: 'rgba(255,255,255,0.01)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <span style={{ fontSize: '1.2rem', opacity: 0.5 }}>🖼️</span>
+                  <div style={{ border: '1px solid hsl(220 15% 15%)', borderRadius: 10, padding: '0.45rem', backgroundColor: 'rgba(255,255,255,0.01)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Image size={18} style={{ opacity: 0.5, color: 'hsl(220 10% 70%)' }} />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'hsl(220 10% 50%)' }}>Avatar Frames</span>
                       <span style={{ fontSize: '0.58rem', color: 'hsl(220 10% 60%)' }}>Locked (Bronze+)</span>
                     </div>
                   </div>
-                  <div style={{ border: '1px solid hsl(220 15% 15%)', borderRadius: 10, padding: '0.45rem', backgroundColor: 'rgba(255,255,255,0.01)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <span style={{ fontSize: '1.2rem', opacity: 0.5 }}>🏷️</span>
+                  <div style={{ border: '1px solid hsl(220 15% 15%)', borderRadius: 10, padding: '0.45rem', backgroundColor: 'rgba(255,255,255,0.01)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Tag size={18} style={{ opacity: 0.5, color: 'hsl(220 10% 70%)' }} />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'hsl(220 10% 50%)' }}>Season Titles</span>
                       <span style={{ fontSize: '0.58rem', color: 'hsl(220 10% 60%)' }}>Locked (Gold+)</span>
@@ -778,20 +791,20 @@ export default function LeaderboardClient() {
               {/* Regional Rankings placeholder */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '0.75rem', marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>
                 <span>Regional Server: <strong>North America</strong></span>
-                <span style={{ color: 'hsl(45 100% 60%)', fontWeight: 700 }}>★ Friends Leaderboard locked</span>
+                <span style={{ color: 'hsl(45 100% 60%)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Lock size={12} /> Friends Leaderboard locked</span>
               </div>
             </div>
           </div>
 
           {/* Match History Section */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0, color: 'hsl(220 10% 55%)' }}>
-              ⚔️ Recent Ranked Matches
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0, color: 'hsl(220 10% 55%)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Swords size={16} /> Recent Ranked Matches
             </h3>
             <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid hsl(220 20% 16%)' }}>
               {(!rankedStats?.recentMatches || rankedStats.recentMatches.length === 0) ? (
-                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'hsl(220 10% 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '2.2rem' }}>⚔️</span>
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'hsl(220 10% 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                  <Swords size={32} style={{ color: 'hsl(220 10% 30%)' }} />
                   <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>No ranked matches played yet</div>
                   <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)', margin: 0 }}>Join the Ranked Queue above to play your placement matches!</p>
                 </div>
@@ -970,8 +983,8 @@ export default function LeaderboardClient() {
                 <div style={{ margin: '0 auto 1.5rem', position: 'relative', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {/* Glowing rings */}
                   <div style={{ position: 'absolute', inset: 0, border: '2px solid #e11d48', borderRadius: '50%', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', opacity: 0.75 }} />
-                  <div style={{ position: 'absolute', inset: '10px', backgroundColor: 'hsl(222 20% 12%)', border: '1px solid hsl(220 20% 18%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem', boxShadow: 'inset 0 0 20px rgba(225,29,72,0.15)' }}>
-                    ⚔️
+                  <div style={{ position: 'absolute', inset: '10px', backgroundColor: 'hsl(222 20% 12%)', border: '1px solid hsl(220 20% 18%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'inset 0 0 20px rgba(225,29,72,0.15)' }}>
+                    <Swords size={32} style={{ color: '#e11d48' }} />
                   </div>
                 </div>
                 <h3 style={{ fontSize: '1.3rem', fontWeight: 900, marginBottom: '0.5rem', color: 'white' }}>Finding Ranked Match</h3>
@@ -991,7 +1004,9 @@ export default function LeaderboardClient() {
               </>
             ) : (
               <>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem', animation: 'bounce 1s infinite' }}>🎯</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', animation: 'bounce 1s infinite' }}>
+                  <Target size={48} style={{ color: 'hsl(142 70% 50%)' }} />
+                </div>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'hsl(142 70% 50%)', marginBottom: '0.25rem' }}>Match Found!</h3>
                 <p style={{ fontSize: '0.82rem', color: 'hsl(220 10% 60%)', marginBottom: '1.5rem' }}>
                   Accept to enter the ranked match for <strong style={{ color: 'white' }}>{GAMES_REGISTRY.find(g => g.slug === selectedRankedGame)?.name || 'Snake Arena'}</strong>.

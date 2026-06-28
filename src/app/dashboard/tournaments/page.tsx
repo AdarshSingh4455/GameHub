@@ -51,7 +51,14 @@ import {
   X,
   FileText,
   User,
-  Plus
+  Plus,
+  Swords,
+  BarChart3,
+  Globe,
+  Zap,
+  Check,
+  Gamepad2,
+  Gift
 } from 'lucide-react'
 
 interface Participant {
@@ -339,7 +346,7 @@ export default function TournamentsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to start tournament')
-      addToast('success', 'Tournament Started! ⚔', 'Playable brackets have been generated!')
+      addToast('success', 'Tournament Started!', 'Playable brackets have been generated!')
       await fetchTournaments(tId)
     } catch (err: any) {
       addToast('error', 'Error', err.message)
@@ -363,7 +370,7 @@ export default function TournamentsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Ready check failed')
-      addToast('success', 'Marked Ready! ⚔️', 'Waiting for opponent to ready up.')
+      addToast('success', 'Marked Ready!', 'Waiting for opponent to ready up.')
       
       // Update activeMatch local state
       setActiveMatch(data.match)
@@ -467,7 +474,7 @@ export default function TournamentsPage() {
                         setSimulatedScoreP1(0)
                         setSimulatedScoreP2(0)
                         setTimerCount(15)
-                        addToast('success', 'Match Started! ⚔️', 'Let the battle begin!')
+                        addToast('success', 'Match Started!', 'Let the battle begin!')
                       } else if (['WALK_OVER', 'DISQUALIFIED', 'COMPLETED'].includes(freshMatch.status)) {
                         // Match resolved externally (e.g. timeout walkover)
                         setPlayPanelOpen(false)
@@ -811,8 +818,8 @@ export default function TournamentsPage() {
                                   ? '#4b5563' 
                                   : '#fff'
                           }}>
-                            {isP1User ? '⭐ You' : (match.p1Name || 'TBD')}
-                            {match.p1Id === sub.winnerId && sub.winnerId && ' 👑'}
+                            {isP1User ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><User size={12} /> You</span> : (match.p1Name || 'TBD')}
+                            {match.p1Id === sub.winnerId && sub.winnerId && <Trophy size={10} style={{ color: 'hsl(45 100% 60%)', display: 'inline', marginLeft: '4px' }} />}
                           </span>
                           <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f3f4f6' }}>
                             {match.p1Score !== null ? match.p1Score : ''}
@@ -835,8 +842,8 @@ export default function TournamentsPage() {
                                   ? '#4b5563' 
                                   : '#fff'
                           }}>
-                            {isP2User ? '⭐ You' : (match.p2Name || 'TBD')}
-                            {match.p2Id === sub.winnerId && sub.winnerId && ' 👑'}
+                            {isP2User ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><User size={12} /> You</span> : (match.p2Name || 'TBD')}
+                            {match.p2Id === sub.winnerId && sub.winnerId && <Trophy size={10} style={{ color: 'hsl(45 100% 60%)', display: 'inline', marginLeft: '4px' }} />}
                           </span>
                           <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f3f4f6' }}>
                             {match.p2Score !== null ? match.p2Score : ''}
@@ -991,8 +998,14 @@ export default function TournamentsPage() {
             justifyContent: 'center',
             marginTop: '0.5rem',
           }}>
-            {['🏅 Exclusive Rewards', '📊 Bracket System', '🌍 Global Rankings', '⚔️ 1v1 Duels', '🎖️ Season Passes'].map(feat => (
-              <span key={feat} style={{
+            {[
+              { label: 'Exclusive Rewards', icon: <Award size={12} style={{ color: 'hsl(45 100% 60%)' }} /> },
+              { label: 'Bracket System', icon: <BarChart3 size={12} /> },
+              { label: 'Global Rankings', icon: <Globe size={12} /> },
+              { label: '1v1 Duels', icon: <Swords size={12} /> },
+              { label: 'Season Passes', icon: <Trophy size={12} /> }
+            ].map(feat => (
+              <span key={feat.label} style={{
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 padding: '0.3rem 0.75rem',
@@ -1000,8 +1013,12 @@ export default function TournamentsPage() {
                 background: 'hsl(220 20% 13%)',
                 border: '1px solid hsl(220 20% 20%)',
                 color: 'hsl(220 10% 65%)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
               }}>
-                {feat}
+                {feat.icon}
+                {feat.label}
               </span>
             ))}
           </div>
@@ -1407,7 +1424,7 @@ export default function TournamentsPage() {
                       disabled={actionLoading || selectedTournament.registeredPlayers < 4}
                       style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
                     >
-                      {actionLoading ? 'Initializing...' : '⚡ Close Reg & Start'}
+                      {actionLoading ? 'Initializing...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Zap size={12} /> Close Reg & Start</span>}
                     </button>
                   )}
 
@@ -1419,13 +1436,13 @@ export default function TournamentsPage() {
                       disabled={actionLoading}
                       style={{ background: 'linear-gradient(135deg, #fbbf24, #d97706)', border: 'none', color: '#000', fontWeight: 900 }}
                     >
-                      🎁 Claim Rewards
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Gift size={12} /> Claim Rewards</span>
                     </button>
                   )}
 
                   {selectedTournament.status === 'CLAIMED' && (
-                    <span style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 800 }}>
-                      ✓ Rewards Claimed
+                    <span style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Check size={12} /> Rewards Claimed
                     </span>
                   )}
                 </div>
@@ -1600,8 +1617,9 @@ export default function TournamentsPage() {
                           <button 
                             className="btn btn-primary animate-pulse-glow"
                             onClick={() => handleJoinMatch(myMatch)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
                           >
-                            ⚔ Play Now
+                            <Swords size={12} /> Play Now
                           </button>
                         ) : (
                           <div style={{ textAlign: 'right' }}>
@@ -1888,7 +1906,7 @@ export default function TournamentsPage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                ⚔️ {activeMatch.roundName}: Active Match Lobby
+                <Swords size={18} /> {activeMatch.roundName}: Active Match Lobby
               </h3>
               <button 
                 onClick={() => {
@@ -1904,8 +1922,8 @@ export default function TournamentsPage() {
             {/* Ready state checks or waiting overlay */}
             {activeMatch.status === 'PENDING' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', background: '#090b14', padding: '0.5rem', borderRadius: 8 }}>
-                  ⏱️ Join window closes at: {formatIST(activeMatch.joinWindowEnd, 'time')}
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', background: '#090b14', padding: '0.5rem', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                  <Clock size={12} /> Join window closes at: {formatIST(activeMatch.joinWindowEnd, 'time')}
                 </div>
                 
                 {/* Player Cards Row */}
@@ -1924,7 +1942,7 @@ export default function TournamentsPage() {
                     gap: '0.5rem',
                     justifyContent: 'center'
                   }}>
-                    <div style={{ fontSize: '1.6rem' }}>🎮</div>
+                    <Gamepad2 size={24} style={{ color: 'hsl(220 100% 65%)' }} />
                     <div style={{ fontWeight: 800, color: 'white', fontSize: '0.82rem', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {activeMatch.p1Name || 'Player 1'}
                     </div>
@@ -1934,9 +1952,12 @@ export default function TournamentsPage() {
                       color: activeMatch.p1Ready ? '#10b981' : activeMatch.p1Joined ? '#3b82f6' : '#64748b',
                       background: activeMatch.p1Ready ? 'rgba(16,185,129,0.12)' : activeMatch.p1Joined ? 'rgba(59,130,246,0.12)' : 'rgba(100,116,139,0.12)',
                       padding: '0.2rem 0.5rem',
-                      borderRadius: 6
+                      borderRadius: 6,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.2rem'
                     }}>
-                      {activeMatch.p1Ready ? '✅ READY' : activeMatch.p1Joined ? 'Joined' : 'Connecting...'}
+                      {activeMatch.p1Ready ? <><Check size={10} /> READY</> : activeMatch.p1Joined ? 'Joined' : 'Connecting...'}
                     </span>
                   </div>
 
@@ -1957,7 +1978,7 @@ export default function TournamentsPage() {
                     gap: '0.5rem',
                     justifyContent: 'center'
                   }}>
-                    <div style={{ fontSize: '1.6rem' }}>🤖</div>
+                    <User size={24} style={{ color: 'hsl(270 80% 65%)' }} />
                     <div style={{ fontWeight: 800, color: 'white', fontSize: '0.82rem', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {activeMatch.p2Name || 'Player 2'}
                     </div>
@@ -1967,9 +1988,12 @@ export default function TournamentsPage() {
                       color: activeMatch.p2Ready ? '#10b981' : activeMatch.p2Joined ? '#3b82f6' : '#64748b',
                       background: activeMatch.p2Ready ? 'rgba(16,185,129,0.12)' : activeMatch.p2Joined ? 'rgba(59,130,246,0.12)' : 'rgba(100,116,139,0.12)',
                       padding: '0.2rem 0.5rem',
-                      borderRadius: 6
+                      borderRadius: 6,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.2rem'
                     }}>
-                      {activeMatch.p2Ready ? '✅ READY' : activeMatch.p2Joined ? 'Joined' : 'Connecting...'}
+                      {activeMatch.p2Ready ? <><Check size={10} /> READY</> : activeMatch.p2Joined ? 'Joined' : 'Connecting...'}
                     </span>
                   </div>
                 </div>
@@ -1981,8 +2005,8 @@ export default function TournamentsPage() {
                   
                   if (userReady) {
                     return (
-                      <div style={{ textAlign: 'center', padding: '1rem', color: '#818cf8', fontWeight: 800, fontSize: '0.85rem', border: '1px dashed #312e81', borderRadius: 12 }}>
-                        ⏳ Waiting for opponent to ready up...
+                      <div style={{ textAlign: 'center', padding: '1rem', color: '#818cf8', fontWeight: 800, fontSize: '0.85rem', border: '1px dashed #312e81', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                        <Clock size={12} className="animate-spin" /> Waiting for opponent to ready up...
                       </div>
                     )
                   } else {
@@ -1991,9 +2015,9 @@ export default function TournamentsPage() {
                         className="btn btn-primary"
                         onClick={() => handleReadyMatch(activeMatch.id)}
                         disabled={actionLoading}
-                        style={{ width: '100%', fontWeight: 900, padding: '0.75rem', background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                        style={{ width: '100%', fontWeight: 900, padding: '0.75rem', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
                       >
-                        {actionLoading ? 'Loading...' : '⚡ I AM READY'}
+                        {actionLoading ? 'Loading...' : <><Zap size={14} /> I AM READY</>}
                       </button>
                     )
                   }

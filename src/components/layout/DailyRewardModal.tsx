@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
+import { Check, X, Gift, Flame } from 'lucide-react'
 
 interface Props {
   user: unknown // supabase user
@@ -243,15 +244,17 @@ export default function DailyRewardModal({ user, isOpen, onClose, onClaimSuccess
             background: 'transparent',
             border: 'none',
             color: 'hsl(220 10% 50%)',
-            fontSize: '1.25rem',
             cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          ✕
+          <X size={18} />
         </button>
 
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🎁</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><Gift size={48} style={{ color: 'hsl(220 100% 65%)' }} /></div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'hsl(220 15% 92%)', margin: 0 }}>
             Daily Login Rewards
           </h2>
@@ -339,7 +342,7 @@ export default function DailyRewardModal({ user, isOpen, onClose, onClaimSuccess
                           boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
                         }}
                       >
-                        ✓
+                        <Check size={10} />
                       </span>
                     )}
                   </div>
@@ -362,8 +365,8 @@ export default function DailyRewardModal({ user, isOpen, onClose, onClaimSuccess
                   <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 600 }}>
                     Active Streak
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'hsl(38 95% 60%)', marginTop: '0.2rem' }}>
-                    🔥 {claimData.currentStreak} Days
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'hsl(38 95% 60%)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
+                    <Flame size={20} style={{ color: 'hsl(38 95% 60%)' }} /> {claimData.currentStreak} Days
                   </div>
                 </div>
                 <div style={{ width: '1px', background: 'hsl(220 20% 16%)' }} />
@@ -379,7 +382,11 @@ export default function DailyRewardModal({ user, isOpen, onClose, onClaimSuccess
                       marginTop: '0.5rem',
                     }}
                   >
-                    {claimData.canClaim ? '🎁 Ready to Claim!' : '✅ Claimed Today'}
+                    {claimData.canClaim ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Gift size={14} /> Ready to Claim!</span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Check size={14} /> Claimed Today</span>
+                    )}
                   </div>
                 </div>
               </div>

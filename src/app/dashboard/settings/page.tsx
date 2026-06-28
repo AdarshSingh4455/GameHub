@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import UsernameForm from './UsernameForm'
 import PageWrapper from '@/components/layout/PageWrapper'
 import Card from '@/components/layout/Card'
+import { Settings } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Settings' }
 
@@ -25,7 +26,7 @@ export default async function SettingsPage() {
   return (
     <PageWrapper className="animate-fadeIn safe-bottom-padding" style={{ maxWidth: 620, marginInline: 'auto' }}>
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}>⚙️ Settings</h1>
+        <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Settings size={22} /> Settings</h1>
         <p style={{ color: 'hsl(220 10% 55%)' }}>Manage your account preferences.</p>
       </div>
 

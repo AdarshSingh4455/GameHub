@@ -12,6 +12,8 @@ export interface GameInfo {
   iframeSrc?: string
   componentName: string
   supportsRanked?: boolean
+  supportsLeaderboard?: boolean
+  leaderboardModes?: { value: string; label: string }[]
 }
 
 export const GAMES_REGISTRY: GameInfo[] = [
@@ -25,6 +27,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'Live',
     componentName: 'cricket',
+    supportsLeaderboard: true,
   },
   {
     slug: 'scribble',
@@ -70,6 +73,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     badge: 'Ranked',
     componentName: 'ttt',
     supportsRanked: true,
+    supportsLeaderboard: true,
   },
   {
     slug: 'four-in-a-row',
@@ -95,6 +99,11 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'Smart',
     componentName: 'wordwizard',
+    supportsLeaderboard: true,
+    leaderboardModes: [
+      { value: 'word-wizard-classic', label: 'Word Wizard (Classic)' },
+      { value: 'word-wizard-daily', label: 'Word Wizard (Daily)' }
+    ],
   },
   {
     slug: 'rps',
@@ -128,6 +137,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'native',
     badge: 'Puzzle',
     componentName: '2048',
+    supportsLeaderboard: true,
   },
   {
     slug: 'fighter',
@@ -139,6 +149,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'native',
     badge: 'Arcade',
     componentName: 'fighter',
+    supportsLeaderboard: true,
   },
   {
     slug: 'ludo',
@@ -162,6 +173,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'Memory',
     componentName: 'memory',
+    supportsLeaderboard: true,
   },
   {
     slug: 'arrow-puzzle',
@@ -228,6 +240,11 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'New',
     componentName: 'blockblast',
+    supportsLeaderboard: true,
+    leaderboardModes: [
+      { value: 'block-blast-classic', label: 'Block Blast (Classic)' },
+      { value: 'block-blast-daily', label: 'Block Blast (Daily)' }
+    ],
   },
   {
     slug: 'neon-tetris',
@@ -239,6 +256,11 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'New',
     componentName: 'neontetris',
+    supportsLeaderboard: true,
+    leaderboardModes: [
+      { value: 'neon-tetris-classic', label: 'Neon Tetris (Classic)' },
+      { value: 'neon-tetris-daily', label: 'Neon Tetris (Daily)' }
+    ],
   },
   {
     slug: 'ai-infinite-candy-crush',
@@ -261,6 +283,11 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'New',
     componentName: 'hangman',
+    supportsLeaderboard: true,
+    leaderboardModes: [
+      { value: 'hangman-classic', label: 'Hangman Classic' },
+      { value: 'hangman-multiplayer', label: 'Hangman Multiplayer' }
+    ],
   },
   {
     slug: 'snake-arena',

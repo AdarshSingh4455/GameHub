@@ -9,6 +9,7 @@ import { prefetchProfileDetails } from '@/lib/prefetch'
 import { RankBadge } from '@/components/layout/RankBadge'
 import { getRankDetails } from '@/lib/rankedUtils'
 import Avatar from '@/components/shared/Avatar'
+import { Trophy, BookOpen, ArrowRight, Star, CheckCircle, Zap, Sparkles, Gamepad2, Flame, Award } from 'lucide-react'
 
 interface DBProfile {
   id: string
@@ -885,7 +886,7 @@ export default function ProfilePage() {
               <div style={{ padding: '1rem', background: 'hsl(222 20% 7% / 0.4)', border: '1px solid hsl(220 15% 12%)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Highest Matchmaking Rank</span>
                 <span style={{ fontSize: '1.2rem', fontWeight: 900, color: getRankDetails(rankedStats?.mmr || 1000).badgeColor, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  ⚡ {rankedStats?.peakRank || 'Bronze'}
+                  <Zap size={16} /> {rankedStats?.peakRank || 'Bronze'}
                 </span>
                 <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>Current MMR: {rankedStats?.mmr || 1000}</span>
               </div>
@@ -936,8 +937,8 @@ export default function ProfilePage() {
                 className="about-shortcut-card"
               >
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(270 100% 75%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>GameHub Showcase</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  📖 Platform Details ➔
+                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <BookOpen size={16} /> Platform Details <ArrowRight size={14} />
                 </span>
                 <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 60%)' }}>Founder story, roadmap & stats</span>
               </Link>
@@ -1052,14 +1053,14 @@ export default function ProfilePage() {
           {/* Summary stats row */}
           <div className="profile-stats-summary-grid">
             {[
-              { label: 'Games Played', val: totalGames, color: 'white', icon: '🎮' },
-              { label: 'Total Wins', val: totalWins, color: 'hsl(142 70% 55%)', icon: '🏆' },
-              { label: 'Total Losses', val: totalLosses, color: 'hsl(0 80% 60%)', icon: '💀' },
-              { label: 'XP Streak', val: `${profile.currentStreak} Days`, color: 'hsl(38 95% 60%)', icon: '🔥' },
-              { label: 'Favorite Game', val: favoriteGameLabel, color: 'hsl(220 100% 70%)', icon: '⭐' }
+              { label: 'Games Played', val: totalGames, color: 'white', icon: <Gamepad2 size={24} style={{ color: 'hsl(220 100% 65%)' }} /> },
+              { label: 'Total Wins', val: totalWins, color: 'hsl(142 70% 55%)', icon: <Trophy size={24} style={{ color: 'hsl(45 100% 60%)' }} /> },
+              { label: 'Total Losses', val: totalLosses, color: 'hsl(0 80% 60%)', icon: <Award size={24} style={{ color: 'hsl(0 80% 60%)' }} /> },
+              { label: 'XP Streak', val: `${profile.currentStreak} Days`, color: 'hsl(38 95% 60%)', icon: <Flame size={24} style={{ color: 'hsl(38 95% 60%)' }} /> },
+              { label: 'Favorite Game', val: favoriteGameLabel, color: 'hsl(220 100% 70%)', icon: <Star size={24} style={{ color: 'hsl(220 100% 70%)' }} /> }
             ].map((s, idx) => (
               <div key={idx} className="card glass" style={{ padding: '1.1rem 1.25rem', borderRadius: 16, display: 'flex', alignItems: 'center', gap: '1rem', height: '100%', boxSizing: 'border-box' }}>
-                <span style={{ fontSize: '1.75rem', flexShrink: 0 }}>{s.icon}</span>
+                <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</span>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
                   <div style={{ fontSize: '1.15rem', fontWeight: 850, color: s.color, marginTop: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.val}</div>
@@ -1199,20 +1200,20 @@ export default function ProfilePage() {
           {/* Hangman Performance Stats Card */}
           {hangmanStats.wins + hangmanStats.losses > 0 && (
             <div className="card glass animate-fadeIn" style={{ padding: '1.5rem', borderRadius: 20, background: 'linear-gradient(135deg, hsl(222 20% 10% / 0.95), hsl(222 20% 7% / 0.95))', border: '1px solid hsl(220 15% 18%)' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1.25rem', letterSpacing: '0.05em' }}>
-                🔤 Hangman Performance
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1.25rem', letterSpacing: '0.05em', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                <BookOpen size={16} /> Hangman Performance
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                 {[
-                  { icon: '✅', label: 'Words Solved', val: hangmanStats.wordsSolved, color: 'hsl(142 70% 55%)' },
-                  { icon: '🏆', label: 'Wins', val: hangmanStats.wins, color: 'hsl(45 100% 60%)' },
-                  { icon: '💀', label: 'Losses', val: hangmanStats.losses, color: 'hsl(0 80% 60%)' },
-                  { icon: '🎯', label: 'Accuracy', val: hangmanStats.correctGuesses + hangmanStats.incorrectGuesses > 0 ? `${Math.round((hangmanStats.correctGuesses / (hangmanStats.correctGuesses + hangmanStats.incorrectGuesses)) * 100)}%` : '—', color: 'hsl(220 100% 70%)' },
-                  { icon: '⚡', label: 'Fastest Solve', val: hangmanStats.fastestSolve !== null ? `${hangmanStats.fastestSolve}s` : '—', color: 'hsl(270 80% 65%)' },
-                  { icon: '🔥', label: 'Best Streak', val: hangmanStats.bestStreak, color: 'hsl(38 95% 60%)' },
+                  { icon: <CheckCircle size={24} style={{ color: 'hsl(142 70% 55%)' }} />, label: 'Words Solved', val: hangmanStats.wordsSolved, color: 'hsl(142 70% 55%)' },
+                  { icon: <Trophy size={24} style={{ color: 'hsl(45 100% 60%)' }} />, label: 'Wins', val: hangmanStats.wins, color: 'hsl(45 100% 60%)' },
+                  { icon: <Award size={24} style={{ color: 'hsl(0 80% 60%)' }} />, label: 'Losses', val: hangmanStats.losses, color: 'hsl(0 80% 60%)' },
+                  { icon: <Star size={24} style={{ color: 'hsl(220 100% 70%)' }} />, label: 'Accuracy', val: hangmanStats.correctGuesses + hangmanStats.incorrectGuesses > 0 ? `${Math.round((hangmanStats.correctGuesses / (hangmanStats.correctGuesses + hangmanStats.incorrectGuesses)) * 100)}%` : '—', color: 'hsl(220 100% 70%)' },
+                  { icon: <Zap size={24} style={{ color: 'hsl(270 80% 65%)' }} />, label: 'Fastest Solve', val: hangmanStats.fastestSolve !== null ? `${hangmanStats.fastestSolve}s` : '—', color: 'hsl(270 80% 65%)' },
+                  { icon: <Flame size={24} style={{ color: 'hsl(38 95% 60%)' }} />, label: 'Best Streak', val: hangmanStats.bestStreak, color: 'hsl(38 95% 60%)' },
                 ].map((s, i) => (
                   <div key={i} style={{ background: 'hsl(222 20% 8% / 0.8)', border: '1px solid hsl(220 15% 15%)', padding: '1rem 0.75rem', borderRadius: 16, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>{s.icon}</div>
+                    <div style={{ marginBottom: '0.4rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
                     <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)' }}>{s.label}</div>
                     <div style={{ fontSize: '1.25rem', fontWeight: 900, color: s.color, marginTop: '0.2rem' }}>{s.val}</div>
                   </div>
@@ -1499,13 +1500,17 @@ export default function ProfilePage() {
                   <div style={{ background: 'hsl(222 20% 6% / 0.6)', border: '1px solid hsl(220 15% 13%)', padding: '1rem', borderRadius: 16 }}>
                     <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)' }}>Peak Rank</div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={rankedStats.peakRank}>
-                      ⚡ {rankedStats.peakRank}
+                      <Zap size={14} /> {rankedStats.peakRank}
                     </div>
                   </div>
                   <div style={{ background: 'hsl(222 20% 6% / 0.6)', border: '1px solid hsl(220 15% 13%)', padding: '1rem', borderRadius: 16 }}>
                     <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)' }}>Streak</div>
                     <div style={{ fontSize: '1.2rem', fontWeight: 900, color: rankedStats.streak >= 0 ? 'hsl(142 70% 55%)' : 'hsl(0 80% 60%)', marginTop: '0.25rem' }}>
-                      {rankedStats.streak >= 0 ? `🔥 +${rankedStats.streak}` : `💀 ${rankedStats.streak}`}
+                      {rankedStats.streak >= 0 ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2', justifyContent: 'center' }}><Flame size={16} /> +{rankedStats.streak}</span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2', justifyContent: 'center', color: 'hsl(0 80% 60%)' }}><Award size={16} /> {rankedStats.streak}</span>
+                      )}
                     </div>
                   </div>
                   <div style={{ background: 'hsl(222 20% 6% / 0.6)', border: '1px solid hsl(220 15% 13%)', padding: '1rem', borderRadius: 16 }}>

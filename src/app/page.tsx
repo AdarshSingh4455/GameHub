@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import GameIcon from '@/components/games/GameIcon'
+import { Gamepad2, Sparkles, Rocket, Trophy, Target, Users, Heart } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'GameHub — Play Together, Compete, Win',
@@ -35,8 +36,8 @@ export default function HomePage() {
         backdropFilter: 'blur(12px)',
         borderBottom: '1px solid hsl(220 15% 20%)',
       }}>
-        <span style={{ fontWeight: 800, fontSize: '1.3rem', background: 'linear-gradient(135deg,hsl(220 100% 70%),hsl(270 80% 70%))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-          🎮 GameHub
+        <span style={{ fontWeight: 800, fontSize: '1.3rem', background: 'linear-gradient(135deg,hsl(220 100% 70%),hsl(270 80% 70%))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Gamepad2 size={20} style={{ color: 'hsl(220 100% 70%)' }} /> GameHub
         </span>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <Link href="/login"    className="btn btn-ghost btn-sm">Sign in</Link>
@@ -52,8 +53,8 @@ export default function HomePage() {
 
         <div className="container animate-slideUp">
           <div style={{ marginBottom: '1rem' }}>
-            <span className="badge badge-blue" style={{ fontSize: '0.8rem', padding: '0.3rem 0.9rem' }}>
-              ✨ Free to play · No download required
+            <span className="badge badge-blue" style={{ fontSize: '0.8rem', padding: '0.3rem 0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Sparkles size={14} /> Free to play · No download required
             </span>
           </div>
 
@@ -67,8 +68,8 @@ export default function HomePage() {
           </p>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/dashboard" className="btn btn-primary btn-lg">
-              🚀 Play Now — It&apos;s Free
+            <Link href="/dashboard" className="btn btn-primary btn-lg" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Rocket size={20} /> Play Now — It&apos;s Free
             </Link>
             <Link href="/register" className="btn btn-secondary btn-lg">
               Create Account
@@ -144,12 +145,12 @@ export default function HomePage() {
       <section style={{ paddingBlock: '5rem', background: 'hsl(222 18% 13%)' }}>
         <div className="container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
           {[
-            { icon: '🏆', title: 'Climb the Leaderboard', desc: 'Every win earns XP. Level up and dominate the global leaderboard.' },
-            { icon: '🎯', title: 'Unlock Achievements', desc: 'Complete challenges and earn badges that show off your skills.' },
-            { icon: '👥', title: 'Play With Friends', desc: 'Create a room, share the code, and let the battle begin.' },
-          ].map((item) => (
-            <div key={item.title} className="card animate-slideUp" style={{ padding: '2rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{item.icon}</div>
+            { icon: <Trophy size={36} style={{ color: 'hsl(45 100% 60%)', margin: '0 auto' }} />, title: 'Climb the Leaderboard', desc: 'Every win earns XP. Level up and dominate the global leaderboard.' },
+            { icon: <Target size={36} style={{ color: 'hsl(340 85% 60%)', margin: '0 auto' }} />, title: 'Unlock Achievements', desc: 'Complete challenges and earn badges that show off your skills.' },
+            { icon: <Users size={36} style={{ color: 'hsl(220 100% 65%)', margin: '0 auto' }} />, title: 'Play With Friends', desc: 'Create a room, share the code, and let the battle begin.' },
+          ].map((item, idx) => (
+            <div key={item.title} className="card animate-slideUp" style={{ padding: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center', justifyContent: 'center' }}>
+              <div>{item.icon}</div>
               <h3 style={{ fontWeight: 700, fontSize: '1.15rem', marginBottom: '0.5rem' }}>{item.title}</h3>
               <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.9rem', lineHeight: 1.6 }}>{item.desc}</p>
             </div>
@@ -162,15 +163,15 @@ export default function HomePage() {
         <div className="container animate-slideUp">
           <h2 className="text-hero gradient-text" style={{ marginBottom: '1rem' }}>Ready to play?</h2>
           <p style={{ color: 'hsl(220 10% 55%)', marginBottom: '2rem' }}>No sign-up required. Jump straight into the action.</p>
-          <Link href="/dashboard" className="btn btn-primary btn-lg animate-pulse-glow">
-            🎮 Enter GameHub
+          <Link href="/dashboard" className="btn btn-primary btn-lg animate-pulse-glow" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+            <Gamepad2 size={20} /> Enter GameHub
           </Link>
         </div>
       </section>
 
       {/* ── Footer ── */}
       <footer style={{ borderTop: '1px solid hsl(220 15% 18%)', padding: '1.5rem', textAlign: 'center', color: 'hsl(220 10% 40%)', fontSize: '0.8rem' }}>
-        © 2025 GameHub · Made with ❤️ · Free to play forever
+        © 2025 GameHub · Made with <Heart size={12} fill="currentColor" style={{ display: 'inline', color: 'hsl(350 80% 55%)', margin: '0 2px', verticalAlign: 'middle' }} /> · Free to play forever
       </footer>
     </main>
   )

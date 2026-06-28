@@ -7,6 +7,7 @@ import { prefetchProfileDetails } from '@/lib/prefetch'
 import Avatar from '@/components/shared/Avatar'
 import PageWrapper from '@/components/layout/PageWrapper'
 import Card from '@/components/layout/Card'
+import { Sparkles, Zap, Award, Target, Trophy, Gift, Archive, Crown, Heart, ShoppingBag, Eye, HelpCircle, Coins, Shield, MessageSquare } from 'lucide-react'
 
 interface StoreItem {
   id: string
@@ -18,14 +19,27 @@ interface StoreItem {
 }
 
 const CATEGORIES = [
-  { id: 'SCRATCHER', label: 'Scratchers', emoji: '🃏' },
-  { id: 'CRATES', label: 'Mystery Crates', emoji: '🎁' },
-  { id: 'TITLE', label: 'Titles', emoji: '⚡' },
-  { id: 'EFFECT', label: 'Effects', emoji: '✨' },
-  { id: 'AVATAR_FRAME', label: 'Frames', emoji: '🖼️' },
-  { id: 'CHAT_PACK', label: 'Chat Packs', emoji: '💬' },
-  { id: 'PERK', label: 'Lobby Perks', emoji: '🛡️' }
+  { id: 'SCRATCHER', label: 'Scratchers', icon: 'scratcher' },
+  { id: 'CRATES', label: 'Mystery Crates', icon: 'crates' },
+  { id: 'TITLE', label: 'Titles', icon: 'title' },
+  { id: 'EFFECT', label: 'Effects', icon: 'effect' },
+  { id: 'AVATAR_FRAME', label: 'Frames', icon: 'frame' },
+  { id: 'CHAT_PACK', label: 'Chat Packs', icon: 'chat' },
+  { id: 'PERK', label: 'Lobby Perks', icon: 'perk' }
 ]
+
+const renderCategoryIcon = (iconName: string, size = 16) => {
+  switch (iconName) {
+    case 'scratcher': return <Award size={size} />
+    case 'crates': return <Gift size={size} />
+    case 'title': return <Trophy size={size} />
+    case 'effect': return <Sparkles size={size} />
+    case 'frame': return <Eye size={size} />
+    case 'chat': return <MessageSquare size={size} />
+    case 'perk': return <Shield size={size} />
+    default: return null
+  }
+}
 
 const LOCKED_PREVIEWS: Record<string, Array<{
   name: string
@@ -580,11 +594,11 @@ export default function StorePage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}>🪙 Coin Store</h1>
+          <h1 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Coins size={22} style={{ color: 'hsl(45 100% 60%)' }} /> Coin Store</h1>
           <p style={{ color: 'hsl(220 10% 55%)', margin: 0, fontSize: '0.85rem' }}>Purchase cosmetics with your hard-earned coins. No real money required.</p>
         </div>
         <div style={{ background: 'hsl(45 100% 50% / 0.12)', border: '1px solid hsl(45 100% 50% / 0.25)', padding: '0.45rem 1rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-          <span style={{ fontSize: '1.2rem' }}>💰</span>
+          <Coins size={18} style={{ color: 'hsl(45 100% 60%)' }} />
           <span style={{ fontSize: '1rem', fontWeight: 900, color: 'hsl(45 100% 60%)' }} id="store-user-coins">{coins.toLocaleString()} Coins</span>
         </div>
       </div>
@@ -668,7 +682,7 @@ export default function StorePage() {
               className={`category-chip ${isActive ? 'active' : ''}`}
               id={`store-category-${cat.id}`}
             >
-              <span>{cat.emoji}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{renderCategoryIcon(cat.icon)}</span>
               <span>{cat.label}</span>
             </button>
           )

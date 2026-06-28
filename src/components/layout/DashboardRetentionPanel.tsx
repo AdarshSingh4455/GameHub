@@ -6,6 +6,7 @@ import type { AchievementProgressInfo } from '@/lib/achievements'
 import { DAILY_REWARD_TABLE, getUtcDaysElapsed } from '@/lib/dailyRewards'
 import DailyRewardModal from './DailyRewardModal'
 import { getLevelProgress } from '@/lib/xpUtils'
+import { Flame, Star, Award, Target, Trophy, Gift, Archive, Crown } from 'lucide-react'
 
 
 
@@ -196,7 +197,7 @@ export default function DashboardRetentionPanel({ user }: Props) {
             Retention Summary
           </h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
-            <span style={{ fontSize: '2.5rem' }}>🔥</span>
+            <Flame size={40} style={{ color: 'hsl(38 95% 60%)' }} />
             <div>
               <div style={{ fontSize: '1.6rem', fontWeight: 850, color: 'hsl(38 95% 60%)', lineHeight: 1.1 }}>
                 {stats.streak} Days
@@ -212,7 +213,7 @@ export default function DashboardRetentionPanel({ user }: Props) {
         <div style={{ paddingTop: '0.5rem', borderTop: '1px solid hsl(220 20% 14%)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: '0.75rem', color: 'hsl(220 10% 60%)', marginBottom: '0.25rem' }}>
             <span style={{ fontWeight: 600, color: 'hsl(220 15% 90%)' }}>Level {stats.level}</span>
-            <span style={{ fontSize: '0.7rem' }}>⭐ {stats.xp} XP</span>
+            <span style={{ fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><Star size={10} style={{ color: 'hsl(45 100% 60%)' }} /> {stats.xp} XP</span>
           </div>
           {/* Block Progress Bar */}
           <div style={{ fontFamily: 'monospace', fontSize: '0.92rem', color: 'hsl(220 100% 70%)', letterSpacing: '0.04em', margin: '0.25rem 0' }}>
@@ -236,9 +237,9 @@ export default function DashboardRetentionPanel({ user }: Props) {
           <div style={{ marginTop: '0.55rem', fontSize: '0.68rem', color: 'hsl(220 10% 55%)', background: 'hsl(220 20% 8% / 0.8)', padding: '0.45rem 0.65rem', borderRadius: '8px', border: '1px dashed hsl(220 20% 14%)' }}>
             <strong style={{ color: 'hsl(270 80% 65%)' }}>Next Level Unlocks:</strong>
             <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.15rem', color: 'hsl(220 10% 65%)' }}>
-              <span>🪙 Coins</span>
-              <span>🎖️ Badge</span>
-              <span>🎯 Progress</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><Award size={10} /> Coins</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><Award size={10} /> Badge</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><Target size={10} /> Progress</span>
             </div>
           </div>
         </div>
@@ -246,7 +247,7 @@ export default function DashboardRetentionPanel({ user }: Props) {
         {/* Near completion flag */}
         {user && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'hsl(38 95% 60%)', background: 'hsl(38 95% 60% / 0.08)', border: '1px solid hsl(38 95% 60% / 0.15)', padding: '0.5rem 0.75rem', borderRadius: '10px' }}>
-            <span>🎯</span>
+            <Target size={14} />
             <span>
               <strong>{nearCompletionCount}</strong> achievements near completion
             </span>
@@ -306,8 +307,14 @@ export default function DashboardRetentionPanel({ user }: Props) {
                 }}
               >
                 D{reward.day}
-                <div style={{ fontSize: '0.7rem', marginTop: '0.1rem' }}>
-                  {reward.day === 7 ? '👑' : isClaimed ? '📦' : '🎁'}
+                <div style={{ fontSize: '0.7rem', marginTop: '0.1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  {reward.day === 7 ? (
+                    <Crown size={12} style={{ color: 'hsl(45 100% 60%)' }} />
+                  ) : isClaimed ? (
+                    <Archive size={12} style={{ color: 'hsl(220 10% 50%)' }} />
+                  ) : (
+                    <Gift size={12} style={{ color: 'hsl(270 80% 65%)' }} />
+                  )}
                 </div>
               </div>
             )
@@ -321,7 +328,7 @@ export default function DashboardRetentionPanel({ user }: Props) {
             style={{ width: '100%', borderRadius: '10px', padding: '0.5rem' }}
             id="dashboard-claim-cta"
           >
-            🎁 Claim Daily Reward
+            <Gift size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} /> Claim Daily Reward
           </button>
         ) : (
           <div
@@ -380,8 +387,8 @@ export default function DashboardRetentionPanel({ user }: Props) {
                 </div>
               ))
             ) : (
-              <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', fontStyle: 'italic' }}>
-                All achievements unlocked! 🏆
+              <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                All achievements unlocked! <Trophy size={12} style={{ color: 'hsl(45 100% 60%)' }} />
               </div>
             )}
           </div>

@@ -1388,6 +1388,55 @@ export default function SnakeArenaGame() {
             cursor: pointer;
           }
         }
+
+        @media (max-width: 767px) and (orientation: portrait) {
+          .snake-arena-container {
+            padding: 0.15rem !important;
+          }
+          .arena-layout {
+            gap: 0.5rem !important;
+          }
+          .arena-grid-wrapper {
+            width: 100% !important;
+            gap: 0.4rem !important;
+          }
+          .hud-status-bar {
+            padding: 0.4rem 0.6rem !important;
+            gap: 0.5rem !important;
+            margin-bottom: 0.4rem !important;
+          }
+          .canvas-container {
+            height: 55vh !important;
+            min-height: 350px !important;
+            max-height: 500px !important;
+            width: 100% !important;
+          }
+          .canvas-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+            aspect-ratio: auto !important;
+          }
+        }
+
+        @media (max-width: 950px) and (orientation: landscape) {
+          .canvas-container {
+            height: 62vh !important;
+            width: auto !important;
+            margin: 0 auto !important;
+            display: flex !important;
+            justify-content: center !important;
+          }
+          .canvas-container canvas {
+            height: 100% !important;
+            width: auto !important;
+            aspect-ratio: 960 / 640 !important;
+          }
+          .hud-status-bar {
+            padding: 0.4rem 0.6rem !important;
+            gap: 0.8rem !important;
+            margin-bottom: 0.4rem !important;
+          }
+        }
       `}</style>
     </div>
   )

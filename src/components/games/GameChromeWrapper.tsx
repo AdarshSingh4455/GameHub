@@ -146,8 +146,10 @@ export default function GameChromeWrapper({ slug, name, emoji, description, chil
     // Rich Presence update: status IN_GAME, activity "Playing Hangman", elapsed time tracking
     const mode = slug.startsWith('multiplayer') || slug.includes('-multi') ? 'Multiplayer' : 'Solo Practice'
     updateActivity('IN_GAME', `Playing ${name}`, slug, mode, Date.now())
+    window.dispatchEvent(new CustomEvent('gamehub_gameplay', { detail: { active: true } }))
     return () => {
       updateActivity('ONLINE', 'Browsing Games')
+      window.dispatchEvent(new CustomEvent('gamehub_gameplay', { detail: { active: false } }))
     }
   }, [slug, name, updateActivity])
 
@@ -573,6 +575,19 @@ export default function GameChromeWrapper({ slug, name, emoji, description, chil
         @keyframes scaleIn {
           from { transform: scale(0.95); opacity: 0; }
           to { transform: scale(1); opacity: 1; }
+        }
+        @media (max-width: 767px) {
+          .game-hud-bar {
+            padding: 0.4rem 0.6rem !important;
+            gap: 0.5rem !important;
+          }
+          .hud-stats-strip {
+            padding: 0.3rem 0.6rem !important;
+            margin-bottom: 0.4rem !important;
+          }
+          .game-wrapper-container {
+            padding: 0 !important;
+          }
         }
       `}</style>
     </div>

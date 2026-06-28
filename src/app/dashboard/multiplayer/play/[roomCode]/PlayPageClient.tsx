@@ -73,10 +73,15 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
     } else {
       updateActivity('IN_GAME', 'Playing Multiplayer Match', undefined, 'Multiplayer Match', Date.now())
     }
-    return () => {
-      updateActivity('ONLINE', 'Browsing Games')
-    }
   }, [room?.gameSlug, updateActivity])
+
+  useEffect(() => {
+    const isActive = session?.status === 'IN_PROGRESS'
+    window.dispatchEvent(new CustomEvent('gamehub_gameplay', { detail: { active: isActive } }))
+    return () => {
+      window.dispatchEvent(new CustomEvent('gamehub_gameplay', { detail: { active: false } }))
+    }
+  }, [session?.status])
 
   const playersRef = useRef<any[]>([])
   playersRef.current = players

@@ -14,11 +14,12 @@ import Card from '@/components/layout/Card'
 interface Props {
   user: User | null
   username: string
+  isGamesLibrary?: boolean
 }
 
 const CATEGORIES = ['All', 'Dual Player', 'Social', 'Puzzle', 'Arcade', 'Strategy', 'Match-3']
 
-export default function DashboardClient({ user, username }: Props) {
+export default function DashboardClient({ user, username, isGamesLibrary = false }: Props) {
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState('All')
 
@@ -64,68 +65,70 @@ export default function DashboardClient({ user, username }: Props) {
       </div>
 
       {/* Spotlight Featured Game Card */}
-      <div 
-        className="animate-pulse-glow" 
-        style={{
-          background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.15), hsl(270 80% 60% / 0.15))',
-          border: '1px solid hsl(220 100% 60% / 0.4)',
-          borderRadius: '24px',
-          padding: '2.5rem 2.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '2rem',
-          boxShadow: 'var(--shadow-glow-primary)',
-          position: 'relative',
-          overflow: 'hidden',
-          minHeight: '220px',
-          width: '100%',
-          boxSizing: 'border-box'
-        }} 
-        id="dashboard-spotlight-card"
-      >
-        <div style={{
-          position: 'absolute',
-          top: '-50%',
-          right: '-10%',
-          width: '350px',
-          height: '350px',
-          background: 'radial-gradient(circle, hsl(220 100% 60% / 0.12) 0%, transparent 70%)',
-          pointerEvents: 'none',
-          filter: 'blur(35px)'
-        }} />
-
-        <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '0.8rem', position: 'relative', zIndex: 2 }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 65%)', textTransform: 'uppercase', letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span>🔥</span> Featured Spotlight
-          </div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.75rem', letterSpacing: '-0.02em', margin: 0 }}>
-            <span style={{ fontSize: '2.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '3.2rem', height: '3.2rem', background: 'hsl(220 100% 60% / 0.1)', borderRadius: '14px', border: '1px solid hsl(220 100% 60% / 0.2)' }}>{featuredGame.emoji}</span>
-            <span>{featuredGame.name}</span>
-          </h2>
-          <p style={{ color: 'hsl(220 10% 75%)', fontSize: '0.88rem', margin: 0, lineHeight: 1.6, maxWidth: '600px' }}>
-            {featuredGame.description}
-          </p>
-        </div>
-
-        <Link 
-          href={`/dashboard/games/${featuredGame.slug}`} 
-          className="btn btn-primary" 
-          style={{ 
-            borderRadius: 14, 
-            padding: '0.65rem 1.6rem', 
-            fontSize: '0.85rem', 
-            flexShrink: 0, 
-            position: 'relative', 
-            zIndex: 2,
-            boxShadow: '0 4px 14px hsl(220 100% 60% / 0.25)' 
+      {!isGamesLibrary && (
+        <div 
+          className="animate-pulse-glow" 
+          style={{
+            background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.15), hsl(270 80% 60% / 0.15))',
+            border: '1px solid hsl(220 100% 60% / 0.4)',
+            borderRadius: '24px',
+            padding: '2.5rem 2.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '2rem',
+            boxShadow: 'var(--shadow-glow-primary)',
+            position: 'relative',
+            overflow: 'hidden',
+            minHeight: '220px',
+            width: '100%',
+            boxSizing: 'border-box'
           }} 
-          id="spotlight-play-btn"
+          id="dashboard-spotlight-card"
         >
-          🚀 Play Spotlight
-        </Link>
-      </div>
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            right: '-10%',
+            width: '350px',
+            height: '350px',
+            background: 'radial-gradient(circle, hsl(220 100% 60% / 0.12) 0%, transparent 70%)',
+            pointerEvents: 'none',
+            filter: 'blur(35px)'
+          }} />
+
+          <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '0.8rem', position: 'relative', zIndex: 2 }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 65%)', textTransform: 'uppercase', letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span>🔥</span> Featured Spotlight
+            </div>
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.75rem', letterSpacing: '-0.02em', margin: 0 }}>
+              <span style={{ fontSize: '2.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '3.2rem', height: '3.2rem', background: 'hsl(220 100% 60% / 0.1)', borderRadius: '14px', border: '1px solid hsl(220 100% 60% / 0.2)' }}>{featuredGame.emoji}</span>
+              <span>{featuredGame.name}</span>
+            </h2>
+            <p style={{ color: 'hsl(220 10% 75%)', fontSize: '0.88rem', margin: 0, lineHeight: 1.6, maxWidth: '600px' }}>
+              {featuredGame.description}
+            </p>
+          </div>
+
+          <Link 
+            href={`/dashboard/games/${featuredGame.slug}`} 
+            className="btn btn-primary" 
+            style={{ 
+              borderRadius: 14, 
+              padding: '0.65rem 1.6rem', 
+              fontSize: '0.85rem', 
+              flexShrink: 0, 
+              position: 'relative', 
+              zIndex: 2,
+              boxShadow: '0 4px 14px hsl(220 100% 60% / 0.25)' 
+            }} 
+            id="spotlight-play-btn"
+          >
+            🚀 Play Spotlight
+          </Link>
+        </div>
+      )}
 
       {/* Engagement & Daily claim widgets */}
       <DashboardRetentionPanel user={user} />
@@ -171,7 +174,9 @@ export default function DashboardClient({ user, username }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ fontWeight: 900, fontSize: '1.05rem', color: 'white', letterSpacing: '-0.01em', margin: 0 }}>🎮 All Games</h2>
-            <Link href="/dashboard/games" style={{ fontSize: '0.75rem', color: 'hsl(220 100% 65%)', textDecoration: 'none', fontWeight: 700 }}>View catalog →</Link>
+            {!isGamesLibrary && (
+              <Link href="/dashboard/games" style={{ fontSize: '0.75rem', color: 'hsl(220 100% 65%)', textDecoration: 'none', fontWeight: 700 }}>View catalog →</Link>
+            )}
           </div>
 
           {/* Swipeable Category Chips container */}
@@ -234,9 +239,11 @@ export default function DashboardClient({ user, username }: Props) {
               
               <div style={{ margin: '0.4rem 0' }}>
                 <div style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.2rem', color: 'white' }}>{game.name}</div>
-                <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', lineHeight: 1.3, height: '2.6em', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                  {game.description}
-                </div>
+                {!isGamesLibrary && (
+                  <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', lineHeight: 1.3, height: '2.6em', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {game.description}
+                  </div>
+                )}
               </div>
 
               <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid hsl(220 15% 15%)', paddingTop: '0.4rem' }}>

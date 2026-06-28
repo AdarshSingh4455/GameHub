@@ -6,6 +6,7 @@ import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useRouter } from 'next/navigation'
 import Avatar from '@/components/shared/Avatar'
 import { GAMES_REGISTRY } from '@/lib/games'
+import { Users, X } from 'lucide-react'
 
 interface FriendEntry {
   id: string
@@ -81,11 +82,8 @@ export default function FriendsActivityDrawer() {
 
   // Close on outside click
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (isOpen && drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
-    }
+    if (!isOpen) return
+    const handler = () => setIsOpen(false)
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [isOpen])
@@ -169,7 +167,11 @@ export default function FriendsActivityDrawer() {
     <>
       {/* ── Floating Toggle Button ── */}
       <button
-        onClick={() => setIsOpen(o => !o)}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsOpen(o => !o)
+        }}
         id="friends-activity-toggle"
         aria-label="Friends Activity"
         style={{
@@ -184,7 +186,6 @@ export default function FriendsActivityDrawer() {
             : 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))',
           border: '1px solid hsl(220 15% 24%)',
           color: 'white',
-          fontSize: '1.2rem',
           cursor: 'pointer',
           zIndex: 900,
           display: 'flex',
@@ -194,7 +195,7 @@ export default function FriendsActivityDrawer() {
           transition: 'all 0.2s ease',
         }}
       >
-        {isOpen ? '✕' : '👥'}
+        {isOpen ? <X size={20} /> : <Users size={20} />}
         {!isOpen && onlineCount > 0 && (
           <span style={{
             position: 'absolute',
@@ -221,6 +222,8 @@ export default function FriendsActivityDrawer() {
       {isOpen && (
         <div
           ref={drawerRef}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           style={{
             position: 'fixed',
             bottom: 'calc(var(--bottom-nav-height, 68px) + env(safe-area-inset-bottom, 0px) + 4.25rem)',

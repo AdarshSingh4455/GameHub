@@ -6,6 +6,7 @@ import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import RankBadge from '@/components/layout/RankBadge'
 import { getRankDetails } from '@/lib/rankedUtils'
 import Avatar from '@/components/shared/Avatar'
+import { GAMES_REGISTRY } from '@/lib/games'
 
 export interface DivisionRange {
   current: string
@@ -186,6 +187,7 @@ export default function LeaderboardClient() {
   const [acceptTimer, setAcceptTimer] = useState(10)
   const [opponentInfo, setOpponentInfo] = useState<any>(null)
   const [myProfile, setMyProfile] = useState<any>(null)
+  const [selectedRankedGame, setSelectedRankedGame] = useState('snake-arena')
 
   useEffect(() => {
     fetch('/api/profile/details')
@@ -238,6 +240,38 @@ export default function LeaderboardClient() {
   }, [isSearchingRanked, matchState])
 
   const handleStartMatchmaking = () => {
+    // Derive compatible games from registry metadata
+    const COMPATIBLE_GAMES = GAMES_REGISTRY.filter(g => g.supportsRanked).map(g => g.slug)
+    const gamesList = COMPATIBLE_GAMES.length > 0 ? COMPATIBLE_GAMES : ['snake-arena']
+
+    // Rotation logic using localStorage history
+    let history: string[] = []
+    try {
+      const stored = localStorage.getItem('gamehub_ranked_history')
+      if (stored) {
+        history = JSON.parse(stored)
+      }
+    } catch (e) {
+      history = []
+    }
+
+    // Filter out games that have been played recently to rotate fairly
+    let candidates = gamesList.filter(g => !history.includes(g))
+    if (candidates.length === 0) {
+      candidates = gamesList
+      history = []
+    }
+
+    const chosenGame = candidates[Math.floor(Math.random() * candidates.length)]
+
+    // Save chosen game to history
+    history.push(chosenGame)
+    if (history.length > gamesList.length) {
+      history.shift()
+    }
+    localStorage.setItem('gamehub_ranked_history', JSON.stringify(history))
+
+    setSelectedRankedGame(chosenGame)
     setIsSearchingRanked(true)
     setMatchState('searching')
     setSearchTimer(0)
@@ -252,7 +286,7 @@ export default function LeaderboardClient() {
 
   const handleAcceptMatch = () => {
     setIsSearchingRanked(false)
-    window.location.href = '/dashboard/games/snake-arena?mode=ranked'
+    window.location.href = `/dashboard/games/${selectedRankedGame}?mode=ranked&opponent=${opponentInfo?.username || 'ApexBot'}`
   }
 
   const formatSearchTime = (totalSeconds: number) => {
@@ -960,7 +994,7 @@ export default function LeaderboardClient() {
                 <div style={{ fontSize: '3rem', marginBottom: '1rem', animation: 'bounce 1s infinite' }}>🎯</div>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'hsl(142 70% 50%)', marginBottom: '0.25rem' }}>Match Found!</h3>
                 <p style={{ fontSize: '0.82rem', color: 'hsl(220 10% 60%)', marginBottom: '1.5rem' }}>
-                  Accept the challenge to enter the arena.
+                  Accept to enter the ranked match for <strong style={{ color: 'white' }}>{GAMES_REGISTRY.find(g => g.slug === selectedRankedGame)?.name || 'Snake Arena'}</strong>.
                 </p>
                 
                 {/* Opponent Card Preview */}

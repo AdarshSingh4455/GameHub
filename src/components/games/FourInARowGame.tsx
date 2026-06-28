@@ -145,6 +145,23 @@ export default function FourInARowGame() {
   const [lastMoveIndex, setLastMoveIndex] = useState<number | null>(null)
   const [hoverCol, setHoverCol] = useState<number | null>(null)
 
+  const [isRanked, setIsRanked] = useState(false)
+  const [opponentName, setOpponentName] = useState('ApexBot')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('mode') === 'ranked') {
+        setIsRanked(true)
+        setMode('vs-ai')
+        setDifficulty('hard')
+        if (params.get('opponent')) {
+          setOpponentName(params.get('opponent')!)
+        }
+      }
+    }
+  }, [])
+
   // Track match start time for duration analytics
   const startTimeRef = useRef<number>(Date.now())
 
@@ -262,13 +279,24 @@ export default function FourInARowGame() {
         opponentScore: resultOutcome === 'loss' ? 100 : resultOutcome === 'draw' ? 50 : 10,
         durationSecs: duration,
         gameMetadata: {
-          mode,
+          mode: isRanked ? 'ranked' : mode,
           difficulty: mode === 'vs-ai' ? difficulty : 'local',
           board: finalBoard,
           duration,
         }
       }
     })
+
+    if (isRanked) {
+      fetch('/api/ranked/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: resultOutcome,
+          opponentName: opponentName
+        })
+      }).catch(err => console.error('Failed to submit ranked stats:', err))
+    }
   }
 
   // Get line SVG coords for the winning overlay
@@ -297,18 +325,39 @@ export default function FourInARowGame() {
       {/* Game Mode Setup Selector */}
       {board.every(cell => cell === null) && !winnerInfo && (
         <div className="card glass text-center" style={{ padding: '0.75rem 1rem', borderRadius: 16 }}>
+          {isRanked && (
+            <div style={{
+              background: 'linear-gradient(90deg, #e11d48, #9f1239)',
+              border: '1px solid #f43f5e',
+              color: 'white',
+              padding: '0.45rem',
+              borderRadius: '8px',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              textAlign: 'center',
+              marginBottom: '0.75rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              animation: 'pulse 1.5s infinite'
+            }}>
+              ⚔️ Competitive Ranked Session
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', justifyContent: 'center' }}>
             <button
               onClick={() => { playSynthSound('click'); setMode('vs-ai') }}
               className={`btn btn-sm ${mode === 'vs-ai' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ borderRadius: 10, flex: 1 }}
+              style={{ borderRadius: 10, flex: 1, cursor: isRanked ? 'not-allowed' : 'pointer' }}
+              disabled={isRanked}
             >
               🤖 VS AI
             </button>
             <button
               onClick={() => { playSynthSound('click'); setMode('local-pvp') }}
               className={`btn btn-sm ${mode === 'local-pvp' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ borderRadius: 10, flex: 1 }}
+              style={{ borderRadius: 10, flex: 1, cursor: isRanked ? 'not-allowed' : 'pointer' }}
+              disabled={isRanked}
             >
               👥 Local PVP
             </button>
@@ -322,6 +371,7 @@ export default function FourInARowGame() {
                   key={d}
                   onClick={() => { playSynthSound('click'); setDifficulty(d) }}
                   className={`btn btn-sm`}
+                  disabled={isRanked}
                   style={{
                     borderRadius: 8,
                     padding: '0.15rem 0.5rem',
@@ -331,7 +381,8 @@ export default function FourInARowGame() {
                     border: '1px solid',
                     borderColor: difficulty === d ? 'hsl(var(--primary))' : 'transparent',
                     backgroundColor: difficulty === d ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-                    color: difficulty === d ? 'hsl(var(--primary))' : 'hsl(var(--text-secondary))'
+                    color: difficulty === d ? 'hsl(var(--primary))' : 'hsl(var(--text-secondary))',
+                    cursor: isRanked ? 'not-allowed' : 'pointer'
                   }}
                 >
                   {d}

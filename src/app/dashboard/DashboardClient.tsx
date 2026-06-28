@@ -19,12 +19,29 @@ interface Props {
 
 const CATEGORIES = ['All', 'Dual Player', 'Social', 'Puzzle', 'Arcade', 'Strategy', 'Match-3']
 
+const formatPlayCount = (num: number): string => {
+  if (num >= 1000) {
+    const formatted = (num / 1000).toFixed(1)
+    return `${formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted}K Plays`
+  }
+  return `${num} Plays`
+}
+
 export default function DashboardClient({ user, username, isGamesLibrary = false }: Props) {
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [playCounts, setPlayCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     prefetchProfileDetails()
+    fetch('/api/platform/stats')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.success && data.stats && data.stats.playCounts) {
+          setPlayCounts(data.stats.playCounts)
+        }
+      })
+      .catch(err => console.error('Failed to fetch platform stats:', err))
   }, [])
 
   // Featured Game selection based on day of the year (daily deterministic "random")
@@ -131,7 +148,7 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
       )}
 
       {/* Engagement & Daily claim widgets */}
-      <DashboardRetentionPanel user={user} />
+      {!isGamesLibrary && <DashboardRetentionPanel user={user} />}
 
       {/* Quick Play Row (Horizontal scroll swipe) */}
       <div>
@@ -224,7 +241,7 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
               style={{ display: 'flex', flexDirection: 'column' }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <GameIcon slug={game.slug} size={30} />
+                <GameIcon slug={game.slug} size={42} />
                 <div style={{ textAlign: 'right' }}>
                   {game.badge && (
                     <span style={{ fontSize: '0.6rem', padding: '0.15rem 0.45rem', borderRadius: '99px', background: 'hsl(220 20% 20%)', color: 'hsl(220 10% 65%)', fontWeight: 800, textTransform: 'uppercase' }}>
@@ -232,7 +249,12 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
                     </span>
                   )}
                   {game.multiplayer && (
-                    <div style={{ fontSize: '0.55rem', color: 'hsl(142 70% 55%)', marginTop: '0.2rem', fontWeight: 700 }}>● Dual Mode</div>
+                    <div style={{ fontSize: '0.55rem', color: 'hsl(142 70% 55%)', marginTop: '0.2rem', fontWeight: 700 }}>
+                      ● {(() => {
+                        const playCount = playCounts[game.slug] ?? 0;
+                        return playCount > 0 ? formatPlayCount(playCount) : 'New';
+                      })()}
+                    </div>
                   )}
                 </div>
               </div>

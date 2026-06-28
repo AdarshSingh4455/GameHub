@@ -9,7 +9,8 @@ export async function GET() {
       totalGames,
       totalAchievements,
       totalCosmetics,
-      totalFriendships
+      totalFriendships,
+      allGameStats
     ] = await Promise.all([
       prisma.profile.count(),
       prisma.matchRecord.count({
@@ -26,8 +27,19 @@ export async function GET() {
         where: {
           status: 'ACCEPTED'
         }
+      }),
+      prisma.profileGameStats.findMany({
+        select: {
+          gameSlug: true,
+          playCount: true
+        }
       })
     ])
+
+    const playCounts: Record<string, number> = {}
+    for (const stat of allGameStats) {
+      playCounts[stat.gameSlug] = (playCounts[stat.gameSlug] || 0) + stat.playCount
+    }
 
     return NextResponse.json({
       success: true,
@@ -37,7 +49,8 @@ export async function GET() {
         totalGames,
         totalAchievements,
         totalCosmetics,
-        totalFriendConnections: totalFriendships
+        totalFriendConnections: totalFriendships,
+        playCounts
       }
     }, {
       headers: {

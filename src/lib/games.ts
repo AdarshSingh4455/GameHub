@@ -11,6 +11,7 @@ export interface GameInfo {
   badge?: string
   iframeSrc?: string
   componentName: string
+  supportsRanked?: boolean
 }
 
 export const GAMES_REGISTRY: GameInfo[] = [
@@ -68,6 +69,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'Ranked',
     componentName: 'ttt',
+    supportsRanked: true,
   },
   {
     slug: 'four-in-a-row',
@@ -81,6 +83,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'New',
     componentName: 'fourinarow',
+    supportsRanked: true,
   },
   {
     slug: 'word-wizard',
@@ -271,6 +274,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'New',
     componentName: 'snakearena',
+    supportsRanked: true,
   },
 ]
 

@@ -32,6 +32,24 @@ export default function TicTacToeGame() {
   const [inGame, setInGame] = useState(false)
   const [gameMode, setGameMode] = useState<GameMode>('vs-ai')
   const [difficulty, setDifficulty] = useState<Difficulty>('moderate')
+
+  const [isRanked, setIsRanked] = useState(false)
+  const [opponentName, setOpponentName] = useState('ApexBot')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('mode') === 'ranked') {
+        setIsRanked(true)
+        setGameMode('vs-ai')
+        setDifficulty('hard')
+        setInGame(true)
+        if (params.get('opponent')) {
+          setOpponentName(params.get('opponent')!)
+        }
+      }
+    }
+  }, [])
   
   // Game Play State
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(null))
@@ -78,13 +96,24 @@ export default function TicTacToeGame() {
         score: resultPayload === 'win' ? 100 : resultPayload === 'draw' ? 50 : 10,
         opponentScore: resultPayload === 'loss' ? 100 : resultPayload === 'draw' ? 50 : 10,
         gameMetadata: {
-          mode: gameMode,
+          mode: isRanked ? 'ranked' : gameMode,
           difficulty: gameMode === 'vs-ai' ? difficulty : undefined,
           winner,
         },
       },
     })
-  }, [winner, gameMode, difficulty, submitGameResult])
+
+    if (isRanked) {
+      fetch('/api/ranked/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: resultPayload,
+          opponentName: opponentName
+        })
+      }).catch(err => console.error('Failed to submit ranked stats:', err))
+    }
+  }, [winner, gameMode, difficulty, submitGameResult, isRanked, opponentName])
 
   const startNewGame = (mode: GameMode) => {
     hasSubmittedResult.current = false
@@ -517,6 +546,26 @@ export default function TicTacToeGame() {
       }}
       id="ttt-active-game"
     >
+      {isRanked && (
+        <div style={{
+          background: 'linear-gradient(90deg, #e11d48, #9f1239)',
+          border: '1px solid #f43f5e',
+          color: 'white',
+          padding: '0.45rem',
+          borderRadius: '8px',
+          fontSize: '0.75rem',
+          fontWeight: 800,
+          textAlign: 'center',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          animation: 'pulse 1.5s infinite',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          ⚔️ Competitive Ranked Session
+        </div>
+      )}
+
       {/* scoreboard */}
       <GameHUD id="ttt-scoreboard-hud" style={{ justifyContent: 'space-around' }}>
         <div>

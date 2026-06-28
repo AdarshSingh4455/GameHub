@@ -472,9 +472,49 @@ export function GameSessionProvider({
   }) {
     setIsLoading(true)
 
-    // Bypasses saves completely when offline
-    if (!navigator.onLine) {
-      setTimeout(async () => {
+    // Automatically exit fullscreen before showing result modal
+    if (typeof document !== 'undefined') {
+      const doc = document as VendorDocument
+      if (doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement) {
+        doc.exitFullscreen().catch(() => {});
+      }
+      const fullFallbacks = document.querySelectorAll('.fullscreen-mobile-fallback');
+      fullFallbacks.forEach(el => el.classList.remove('fullscreen-mobile-fallback'));
+    }
+
+    const prelimPayload: GameResultPayload = {
+      gameSlug,
+      result,
+      xpGained: 0,
+      coinsGained: 0,
+      oldXP: user ? parseInt(localStorage.getItem('gamehub_user_xp') || '0', 10) : parseInt(localStorage.getItem(GUEST_XP_KEY) || '0', 10),
+      newXP: user ? parseInt(localStorage.getItem('gamehub_user_xp') || '0', 10) : parseInt(localStorage.getItem(GUEST_XP_KEY) || '0', 10),
+      oldLevel: user ? parseInt(localStorage.getItem('gamehub_user_level') || '1', 10) : parseInt(localStorage.getItem(GUEST_LEVEL_KEY) || '1', 10),
+      newLevel: user ? parseInt(localStorage.getItem('gamehub_user_level') || '1', 10) : parseInt(localStorage.getItem(GUEST_LEVEL_KEY) || '1', 10),
+      leveledUp: false,
+      currentStreak: 0,
+      unlockedAchievements: [],
+      nextAchievement: {
+        name: 'Calculating...',
+        current: 0,
+        target: 1,
+        progress: 0,
+      },
+      isGuest: !user,
+      highScore: (metadata?.score as number) ?? 0,
+      metadata: {
+        ...metadata,
+        loading: true // Show spinner
+      }
+    }
+
+    setModalData(prelimPayload)
+    setPostGameStage('XP_MODAL_SHOWING')
+
+    // Asynchronous backend and simulation processing
+    const runAsyncSubmission = async () => {
+      // Bypasses saves completely when offline
+      if (!navigator.onLine) {
         let baseXP = gameSlug === '2048' || gameSlug === 'fighter' || gameSlug === 'memory'
           ? (result === 'win' ? 50 : result === 'loss' ? 10 : 25)
           : (result === 'win' ? 100 : result === 'loss' ? 25 : 50)
@@ -524,15 +564,6 @@ export function GameSessionProvider({
           ? 1
           : parseInt(localStorage.getItem(GUEST_LEVEL_KEY) || '1', 10)
 
-        if (typeof document !== 'undefined') {
-          const doc = document as VendorDocument
-          if (doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement) {
-            doc.exitFullscreen().catch(() => {});
-          }
-          const fullFallbacks = document.querySelectorAll('.fullscreen-mobile-fallback');
-          fullFallbacks.forEach(el => el.classList.remove('fullscreen-mobile-fallback'));
-        }
-
         const payload: GameResultPayload = {
           gameSlug,
           result,
@@ -555,20 +586,18 @@ export function GameSessionProvider({
           highScore: (metadata?.score as number) ?? 0,
           metadata: {
             ...metadata,
-            offline: true
+            offline: true,
+            loading: false
           }
         }
 
         setModalData(payload)
-        setPostGameStage('XP_MODAL_SHOWING')
         setIsLoading(false)
-      }, 50)
-      return
-    }
+        return
+      }
 
-    // A. Guest Mode (Never write to DB)
-    if (!user) {
-      setTimeout(async () => {
+      // A. Guest Mode (Never write to DB)
+      if (!user) {
         // Load simulated values from local storage
         const oldXP = parseInt(localStorage.getItem(GUEST_XP_KEY) || '0', 10)
         const oldLevel = parseInt(localStorage.getItem(GUEST_LEVEL_KEY) || '1', 10)
@@ -665,16 +694,6 @@ export function GameSessionProvider({
           }
         }
 
-        // Automatically exit fullscreen before showing result modal
-        if (typeof document !== 'undefined') {
-          const doc = document as VendorDocument
-          if (doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement) {
-            doc.exitFullscreen().catch(() => {});
-          }
-          const fullFallbacks = document.querySelectorAll('.fullscreen-mobile-fallback');
-          fullFallbacks.forEach(el => el.classList.remove('fullscreen-mobile-fallback'));
-        }
-
         const payload: GameResultPayload = {
           gameSlug,
           result,
@@ -685,12 +704,15 @@ export function GameSessionProvider({
           oldLevel,
           newLevel: finalLevel,
           leveledUp,
-          currentStreak: 0, // Guest has no daily streaks
+          currentStreak: 0,
           unlockedAchievements: newlyUnlocked,
           nextAchievement,
           isGuest: true,
           highScore: newHighScore,
-          metadata,
+          metadata: {
+            ...metadata,
+            loading: false
+          }
         }
 
         // Store guest match history
@@ -718,57 +740,75 @@ export function GameSessionProvider({
         // Update daily challenges progress for guest
         await updateDailyChallengesForMatch(gameSlug, result, totalXPGained, metadata, null)
 
-        await triggerPostGameFlow(payload)
+        setModalData(payload)
         setIsLoading(false)
-      }, 50) // Small delay for UX simulation
-      return
-    }
-
-    // B. Authenticated User (Write to DB)
-    try {
-      const res = await fetch('/api/games/game-over', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameSlug, result, metadata }),
-      })
-
-      if (!res.ok) {
-        const errStatus = res.status;
-        const errStatusText = res.statusText;
-        const errText = await res.text();
-        console.error(`[API SUBMIT ERROR] Status: ${errStatus}, Text: ${errStatusText}, Body:`, errText);
-        throw new Error(`Failed to submit game result: ${errStatus} ${errStatusText} - ${errText}`);
+        return
       }
 
-      const data = await res.json()
-      
-      // Automatically exit fullscreen before showing result modal
-      if (typeof document !== 'undefined') {
-        const doc = document as VendorDocument
-        if (doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement) {
-          doc.exitFullscreen().catch(() => {});
+      // B. Authenticated User (Write to DB)
+      try {
+        const res = await fetch('/api/games/game-over', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameSlug, result, metadata }),
+        })
+
+        if (!res.ok) {
+          const errStatus = res.status;
+          const errStatusText = res.statusText;
+          const errText = await res.text();
+          console.error(`[API SUBMIT ERROR] Status: ${errStatus}, Text: ${errStatusText}, Body:`, errText);
+          throw new Error(`Failed to submit game result: ${errStatus} ${errStatusText} - ${errText}`);
         }
-        const fullFallbacks = document.querySelectorAll('.fullscreen-mobile-fallback');
-        fullFallbacks.forEach(el => el.classList.remove('fullscreen-mobile-fallback'));
+
+        const data = await res.json()
+
+        if (data.newXP !== undefined) {
+          localStorage.setItem('gamehub_user_xp', data.newXP.toString())
+        }
+        if (data.newLevel !== undefined) {
+          localStorage.setItem('gamehub_user_level', data.newLevel.toString())
+        }
+
+        const payload: GameResultPayload = {
+          ...data,
+          isGuest: false,
+          metadata: {
+            ...metadata,
+            loading: false
+          }
+        }
+
+        // Trigger toast notifications for unlocked badges/achievements on successful response
+        if (data.unlockedAchievements && data.unlockedAchievements.length > 0) {
+          data.unlockedAchievements.forEach((ach: any) => {
+            window.dispatchEvent(
+              new CustomEvent('gamehub_toast', {
+                detail: {
+                  type: 'new_badge',
+                  title: '🏅 Badge Unlocked!',
+                  message: `${ach.name}\n${ach.description}`
+                }
+              })
+            )
+          })
+        }
+
+        // Update daily challenges progress for authenticated user
+        await updateDailyChallengesForMatch(gameSlug, result, data.xpGained, metadata, user)
+
+        setModalData(payload)
+      } catch (err) {
+        console.error('Error submitting game result:', err)
+      } finally {
+        setIsLoading(false)
       }
-
-      const payload: GameResultPayload = {
-        ...data,
-        isGuest: false,
-      }
-
-      // Update daily challenges progress for authenticated user
-      await updateDailyChallengesForMatch(gameSlug, result, data.xpGained, metadata, user)
-
-      await triggerPostGameFlow(payload)
-    } catch (err) {
-      console.error('Error submitting game result:', err)
-    } finally {
-      setIsLoading(false)
     }
+
+    runAsyncSubmission()
   }
 
-  function closeModal(action?: 'replay' | 'next') {
+  function closeModal(action?: 'replay' | 'next' | 'lobby') {
     setPostGameStage('IDLE')
     setModalData(null)
     if (action === 'replay' || action === 'next') {
@@ -778,7 +818,7 @@ export function GameSessionProvider({
     }
     if (action === 'next') {
       window.dispatchEvent(new Event('gamehub_next_level'))
-    } else {
+    } else if (action === 'replay') {
       window.dispatchEvent(new Event('gamehub_replay'))
     }
   }

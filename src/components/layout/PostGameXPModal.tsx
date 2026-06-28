@@ -15,7 +15,7 @@ function getBlockProgressBar(percent: number, size: number = 10): string {
 
 interface Props {
   data: GameResultPayload
-  onClose: (action?: 'replay' | 'next') => void
+  onClose: (action?: 'replay' | 'next' | 'lobby') => void
 }
 
 export default function PostGameXPModal({ data, onClose }: Props) {
@@ -262,7 +262,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
   }
 
   function handleBackToLobby() {
-    onClose()
+    onClose('lobby')
     window.dispatchEvent(new Event('gamehub_snake_lobby'))
   }
 
@@ -606,29 +606,55 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             position: 'relative',
             zIndex: 1,
             gap: '0.5rem',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '80px',
           }}
         >
-          <div style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
-              +{xpDisplay}
-            </div>
-            <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
-          </div>
-          {coinsGained > 0 && (
-            <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
-                +{coinsDisplay}
+          {metadata?.loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{
+                  width: '18px',
+                  height: '18px',
+                  border: '2px solid hsl(220 100% 65% / 0.2)',
+                  borderTopColor: 'hsl(220 100% 65%)',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite'
+                }} />
+                <span style={{ fontSize: '0.82rem', color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Calculating rewards...</span>
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Coins Won</div>
+              <style jsx global>{`
+                @keyframes spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
             </div>
-          )}
-          {currentStreak > 0 && (
-            <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(38 95% 60%)' }}>
-                🔥 {currentStreak}
+          ) : (
+            <>
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
+                  +{xpDisplay}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Streak</div>
-            </div>
+              {coinsGained > 0 && (
+                <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
+                    +{coinsDisplay}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Coins Won</div>
+                </div>
+              )}
+              {currentStreak > 0 && (
+                <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(38 95% 60%)' }}>
+                    🔥 {currentStreak}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Streak</div>
+                </div>
+              )}
+            </>
           )}
         </div>
 

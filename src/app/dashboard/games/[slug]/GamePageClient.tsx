@@ -34,7 +34,15 @@ interface Props {
 
 export default function GamePageClient({ game, username, slug }: Props) {
   return (
-    <div className="animate-fadeIn" style={{ maxWidth: 900, margin: '0 auto', width: '100%' }}>
+    <div
+      className="animate-fadeIn"
+      style={{
+        maxWidth: game.componentName === 'snakearena' ? '100%' : 900,
+        margin: '0 auto',
+        width: '100%',
+        padding: game.componentName === 'snakearena' ? '0 0.5rem' : '0 1rem'
+      }}
+    >
       <GameChromeWrapper
         slug={slug}
         name={game.name}

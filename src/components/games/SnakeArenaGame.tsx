@@ -889,7 +889,11 @@ export default function SnakeArenaGame() {
     : []
 
   return (
-    <div className="snake-arena-container">
+    <div
+      className="snake-arena-container"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* 1. Lobby Setup Screen */}
       {playingState === 'lobby' && (
         <div className="setup-panel animate-scaleUp">
@@ -981,11 +985,7 @@ export default function SnakeArenaGame() {
               </div>
             </div>
 
-            <div
-              className="canvas-container"
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-            >
+            <div className="canvas-container">
               <canvas
                 ref={canvasRef}
                 width={720}
@@ -1114,7 +1114,7 @@ export default function SnakeArenaGame() {
           grid-template-columns: 1fr 280px;
           gap: 1.5rem;
           width: 100%;
-          max-width: 1200px;
+          max-width: 100%;
           align-items: start;
         }
 
@@ -1334,8 +1334,12 @@ export default function SnakeArenaGame() {
         }
 
         @media (max-width: 1024px) {
+          .snake-arena-container {
+            padding: 0.25rem;
+          }
           .arena-layout {
             grid-template-columns: 1fr;
+            gap: 1rem;
           }
           .mobile-controls-tip {
             display: block;

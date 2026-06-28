@@ -465,7 +465,11 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
   }
 
   return (
-    <div className="snake-arena-container">
+    <div
+      className="snake-arena-container"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {session.status === 'PLAYING' && (
         <div className="arena-layout">
           {/* Core Arena canvas */}
@@ -528,11 +532,7 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
               </div>
             )}
 
-            <div
-              className="canvas-container"
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-            >
+            <div className="canvas-container">
               <canvas
                 ref={canvasRef}
                 width={720}
@@ -659,7 +659,7 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
           grid-template-columns: 1fr 280px;
           gap: 1.5rem;
           width: 100%;
-          max-width: 1200px;
+          max-width: 100%;
           align-items: start;
         }
 
@@ -900,8 +900,12 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
         }
 
         @media (max-width: 1024px) {
+          .snake-arena-container {
+            padding: 0.25rem;
+          }
           .arena-layout {
             grid-template-columns: 1fr;
+            gap: 1rem;
           }
           .mobile-controls-tip {
             display: block;

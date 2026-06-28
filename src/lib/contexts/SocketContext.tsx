@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useGameSession } from './GameSessionContext'
 import { createClient } from '@/lib/supabase/client'
@@ -17,12 +17,25 @@ export interface UserPresence {
   username?: string
 }
 
+export interface ChallengeState {
+  id: string
+  roomCode: string
+  gameSlug: string
+  senderName: string
+  senderUserId: string
+  expiresAt: number
+  status: 'pending' | 'accepted' | 'rejected' | 'later' | 'expired'
+}
+
 interface SocketContextType {
   socket: Socket | null
   isConnected: boolean
   reconnectCount: number
   pingLatency: number
   presenceMap: Record<string, UserPresence>
+  friendUserIds: Set<string>
+  incomingChallenge: ChallengeState | null
+  clearIncomingChallenge: () => void
   updateActivity: (
     status: UserPresence['status'],
     activity: string,
@@ -38,6 +51,9 @@ const SocketContext = createContext<SocketContextType>({
   reconnectCount: 0,
   pingLatency: 0,
   presenceMap: {},
+  friendUserIds: new Set(),
+  incomingChallenge: null,
+  clearIncomingChallenge: () => {},
   updateActivity: () => {}
 })
 
@@ -45,37 +61,47 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { user } = useGameSession()
   const { addToast } = useToast()
   const router = useRouter()
+
   const [socket, setSocket] = useState<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [reconnectCount, setReconnectCount] = useState(0)
   const [pingLatency, setPingLatency] = useState(0)
   const [presenceMap, setPresenceMap] = useState<Record<string, UserPresence>>({})
   const [friendUserIds, setFriendUserIds] = useState<Set<string>>(new Set())
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [incomingChallenge, setIncomingChallenge] = useState<ChallengeState | null>(null)
 
-  // Keep a mutable ref of presenceMap and connection duration to prevent toaster spam during page load/sync
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const presenceMapRef = useRef<Record<string, UserPresence>>({})
   const connectedAtRef = useRef<number>(0)
 
-  // Fetch friends list once connected to identify friend IDs for toaster alerts
+  // ── Batched "friend online" notifications ────────────────────────────────────
+  // Collect names for 3 seconds then fire a single grouped toast
+  const pendingOnlineRef = useRef<string[]>([])
+  const onlineBatchTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Per-friend: last game slug shown in a toast (to avoid re-toasting same game)
+  const lastGameToastRef = useRef<Record<string, string>>({})
+
+  const clearIncomingChallenge = useCallback(() => setIncomingChallenge(null), [])
+
+  // Fetch friend IDs so we can identify friend presence events
   useEffect(() => {
-    if (user) {
-      const loadFriends = () => {
-        fetch('/api/friends')
-          .then(res => res.json())
-          .then(data => {
-            const ids = new Set<string>((data.friends || []).map((f: any) => f.userId || f.id))
-            setFriendUserIds(ids)
-          })
-          .catch(() => {})
-      }
-      loadFriends()
-      window.addEventListener('gamehub_friends_update', loadFriends)
-      return () => window.removeEventListener('gamehub_friends_update', loadFriends)
+    if (!user) return
+    const loadFriends = () => {
+      fetch('/api/friends')
+        .then(res => res.json())
+        .then(data => {
+          const ids = new Set<string>((data.friends || []).map((f: { userId?: string; id: string }) => f.userId || f.id))
+          setFriendUserIds(ids)
+        })
+        .catch(() => {})
     }
+    loadFriends()
+    window.addEventListener('gamehub_friends_update', loadFriends)
+    return () => window.removeEventListener('gamehub_friends_update', loadFriends)
   }, [user])
 
-  const updateActivity = (
+  const updateActivity = useCallback((
     status: UserPresence['status'],
     activity: string,
     gameSlug?: string,
@@ -85,7 +111,27 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     if (socket && socket.connected) {
       socket.emit('activity-update', { status, activity, gameSlug, gameMode, startedAt })
     }
-  }
+  }, [socket])
+
+  // Fire the batched "friend online" toast
+  const flushOnlineBatch = useCallback(() => {
+    const names = pendingOnlineRef.current
+    if (names.length === 0) return
+    pendingOnlineRef.current = []
+    onlineBatchTimerRef.current = null
+
+    if (names.length === 1) {
+      addToast('success', 'Friend Online 🟢', `${names[0]} came online`, undefined, undefined, {
+        dedupeKey: 'friend-online-batch'
+      })
+    } else {
+      const first = names[0]
+      const rest = names.length - 1
+      addToast('success', 'Friends Online 🟢', `${first} and ${rest} other${rest > 1 ? 's' : ''} came online`, undefined, undefined, {
+        dedupeKey: 'friend-online-batch'
+      })
+    }
+  }, [addToast])
 
   useEffect(() => {
     if (!user) {
@@ -102,7 +148,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     let pingInterval: NodeJS.Timeout
 
     const initSocket = async () => {
-      let authPayload: Record<string, any> = {}
+      let authPayload: Record<string, string> = {}
 
       const cookies = typeof document !== 'undefined' ? Object.fromEntries(
         document.cookie.split(';').map(c => {
@@ -122,9 +168,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       } else {
         const supabase = createClient()
         const { data: { session } } = await supabase.auth.getSession()
-        authPayload = {
-          token: session?.access_token
-        }
+        authPayload = { token: session?.access_token ?? '' }
       }
 
       socketInstance = io(socketUrl, {
@@ -135,55 +179,41 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         reconnectionDelay: 2000
       })
 
+      // ── Connected ──────────────────────────────────────────────────────────
       socketInstance.on('connect', () => {
         setIsConnected(true)
         setReconnectCount(0)
         connectedAtRef.current = Date.now()
         console.log('🔌 Connected to GameHub real-time socket server')
-        
-        // Fetch current presence mapping for all active users
+
         socketInstance.emit('get-presence-map', (data: Record<string, UserPresence>) => {
           setPresenceMap(data || {})
           presenceMapRef.current = data || {}
         })
 
-        // Heartbeat keepalive every 10 seconds
         if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
         heartbeatIntervalRef.current = setInterval(() => {
           socketInstance.emit('heartbeat')
         }, 10000)
 
-        // Latency checker every 3 seconds
         if (pingInterval) clearInterval(pingInterval)
         pingInterval = setInterval(() => {
           const start = Date.now()
-          socketInstance.emit('ping-latency', () => {
-            setPingLatency(Date.now() - start)
-          })
+          socketInstance.emit('ping-latency', () => { setPingLatency(Date.now() - start) })
         }, 3000)
       })
 
       socketInstance.on('disconnect', () => {
         setIsConnected(false)
         console.log('❌ Disconnected from real-time socket server')
-        if (heartbeatIntervalRef.current) {
-          clearInterval(heartbeatIntervalRef.current)
-          heartbeatIntervalRef.current = null
-        }
-        if (pingInterval) {
-          clearInterval(pingInterval)
-        }
+        if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null }
+        if (pingInterval) clearInterval(pingInterval)
       })
 
-      socketInstance.io.on('reconnect_attempt', (attempt) => {
-        setReconnectCount(attempt)
-      })
+      socketInstance.io.on('reconnect_attempt', (attempt) => setReconnectCount(attempt))
+      socketInstance.io.on('reconnect', () => setReconnectCount(0))
 
-      socketInstance.io.on('reconnect', () => {
-        setReconnectCount(0)
-      })
-
-      // Presence change listener
+      // ── Presence Change ────────────────────────────────────────────────────
       socketInstance.on('presence-change', (data: { userId: string } & UserPresence) => {
         setPresenceMap(prev => {
           const updated = {
@@ -198,20 +228,37 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
               username: data.username
             }
           }
-          
-          // Toast alert for friends presence updates (throttle on initial connection)
+
           const isFriend = friendUserIds.has(data.userId)
           const isPostLoad = Date.now() - connectedAtRef.current > 5000
           const prevStatus = presenceMapRef.current[data.userId]
 
           if (isFriend && isPostLoad) {
             const friendName = data.username || 'A friend'
-            if (!prevStatus || prevStatus.status === 'OFFLINE' || prevStatus.status === undefined) {
-              if (data.status === 'ONLINE') {
-                addToast('success', 'Friend Online 🟢', `${friendName} came online`)
-              }
-            } else if (data.status === 'IN_GAME' && prevStatus.status !== 'IN_GAME' && data.activity) {
-              addToast('info', 'Friend In Game 🎮', `${friendName} started playing ${data.activity}`)
+
+            // ── Friend came online: batch into grouped toast ────────────────
+            if (data.status === 'ONLINE' && (!prevStatus || prevStatus.status === 'OFFLINE')) {
+              pendingOnlineRef.current.push(friendName)
+              if (onlineBatchTimerRef.current) clearTimeout(onlineBatchTimerRef.current)
+              onlineBatchTimerRef.current = setTimeout(flushOnlineBatch, 3000)
+            }
+
+            // ── Friend started playing a NEW game: only once per game slug ──
+            if (
+              data.status === 'IN_GAME' &&
+              data.gameSlug &&
+              lastGameToastRef.current[data.userId] !== data.gameSlug
+            ) {
+              lastGameToastRef.current[data.userId] = data.gameSlug
+              const gameName = data.activity || data.gameSlug
+              addToast('info', 'Friend In Game 🎮', `${friendName} is playing ${gameName}`, undefined, undefined, {
+                dedupeKey: `friend-game-${data.userId}`
+              })
+            }
+
+            // ── Friend went offline: clear their game toast key ────────────
+            if (data.status === 'OFFLINE') {
+              delete lastGameToastRef.current[data.userId]
             }
           }
 
@@ -220,19 +267,15 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         })
       })
 
-      // Lobby Invite socket event listener
+      // ── Lobby Invite ───────────────────────────────────────────────────────
       socketInstance.on('lobby-invite-received', (data: {
-        id: string
-        roomCode: string
-        gameSlug: string
-        senderName: string
-        senderUserId: string
+        id: string; roomCode: string; gameSlug: string; senderName: string; senderUserId: string
       }) => {
-        const gameLabel = data.gameSlug.replace('-', ' ').toUpperCase()
+        const gameLabel = data.gameSlug.replace(/-/g, ' ')
         addToast(
           'info',
           'Lobby Invitation ✉️',
-          `${data.senderName} invited you to play a match of ${gameLabel}!`,
+          `${data.senderName} invited you to play ${gameLabel}`,
           undefined,
           {
             label: 'Accept & Join',
@@ -240,65 +283,112 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
               router.push(`/dashboard/multiplayer?action=join&code=${data.roomCode}`)
               window.dispatchEvent(new Event('gamehub_notifications_update'))
             }
-          }
+          },
+          { dedupeKey: `lobby-invite-${data.roomCode}` }
         )
         window.dispatchEvent(new Event('gamehub_notifications_update'))
       })
 
-      // Direct Challenge socket event listener
+      // ── Challenge Received ─────────────────────────────────────────────────
       socketInstance.on('challenge-received', (data: {
-        id: string
-        roomCode: string
-        gameSlug: string
-        senderName: string
-        senderUserId: string
-        expiresAt: number
+        id: string; roomCode: string; gameSlug: string; senderName: string; senderUserId: string; expiresAt: number
       }) => {
-        const gameLabel = data.gameSlug.replace('-', ' ').toUpperCase()
+        const gameLabel = data.gameSlug.replace(/-/g, ' ')
+
+        // Store challenge state for UI access
+        setIncomingChallenge({
+          ...data,
+          status: 'pending'
+        })
+
         addToast(
           'warning',
-          'Direct Challenge ⚔️',
-          `${data.senderName} has challenged you to a duel of ${gameLabel}!`,
+          '⚔️ Challenge Received!',
+          `${data.senderName} challenged you to ${gameLabel}`,
+          undefined,
           undefined,
           {
-            label: 'Accept Duel',
-            onClick: () => {
-              router.push(`/dashboard/multiplayer?action=join&code=${data.roomCode}`)
-              window.dispatchEvent(new Event('gamehub_notifications_update'))
-            }
+            dedupeKey: `challenge-${data.id}`,
+            actions: [
+              {
+                label: '✓ Accept',
+                style: 'primary',
+                onClick: () => {
+                  socketInstance.emit('challenge-response', { challengeId: data.id, action: 'accept', roomCode: data.roomCode })
+                  setIncomingChallenge(prev => prev?.id === data.id ? { ...prev, status: 'accepted' } : prev)
+                  router.push(`/dashboard/multiplayer?action=join&code=${data.roomCode}`)
+                  window.dispatchEvent(new Event('gamehub_notifications_update'))
+                }
+              },
+              {
+                label: '🕐 Later',
+                style: 'secondary',
+                onClick: () => {
+                  socketInstance.emit('challenge-response', { challengeId: data.id, action: 'later', roomCode: data.roomCode })
+                  setIncomingChallenge(prev => prev?.id === data.id ? { ...prev, status: 'later' } : prev)
+                }
+              },
+              {
+                label: '✕ Reject',
+                style: 'danger',
+                onClick: () => {
+                  socketInstance.emit('challenge-response', { challengeId: data.id, action: 'reject', roomCode: data.roomCode })
+                  setIncomingChallenge(prev => prev?.id === data.id ? { ...prev, status: 'rejected' } : prev)
+                }
+              }
+            ]
           }
         )
         window.dispatchEvent(new Event('gamehub_notifications_update'))
       })
 
-      // visibility change events
+      // ── Challenge Outcome (challenger receives response) ──────────────────
+      socketInstance.on('challenge-outcome', (data: {
+        action: 'accepted' | 'rejected' | 'later'; responderName: string; roomCode?: string
+      }) => {
+        if (data.action === 'accepted') {
+          addToast('success', 'Challenge Accepted! ⚔️', `${data.responderName} accepted your challenge! Joining room...`, undefined,
+            data.roomCode ? {
+              label: 'Join Room',
+              onClick: () => router.push(`/dashboard/multiplayer?action=join&code=${data.roomCode}`)
+            } : undefined,
+            { dedupeKey: `challenge-outcome-${data.responderName}` }
+          )
+          if (data.roomCode) {
+            setTimeout(() => router.push(`/dashboard/multiplayer?action=join&code=${data.roomCode}`), 1500)
+          }
+        } else if (data.action === 'rejected') {
+          addToast('error', 'Challenge Declined', `${data.responderName} declined your challenge.`, undefined, undefined, {
+            dedupeKey: `challenge-outcome-${data.responderName}`
+          })
+        } else if (data.action === 'later') {
+          addToast('info', 'Challenge: Later', `${data.responderName} will play later.`, undefined, undefined, {
+            dedupeKey: `challenge-outcome-${data.responderName}`
+          })
+        }
+      })
+
+      // ── Visibility / App Resume ────────────────────────────────────────────
       const handleAppResume = () => {
         if (socketInstance) {
-          if (!socketInstance.connected) {
-            socketInstance.connect()
-          } else {
-            socketInstance.emit('heartbeat')
-          }
+          if (!socketInstance.connected) socketInstance.connect()
+          else socketInstance.emit('heartbeat')
         }
       }
 
       const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') {
-          handleAppResume()
-        }
+        if (document.visibilityState === 'visible') handleAppResume()
       }
 
       document.addEventListener('visibilitychange', handleVisibilityChange)
 
-      const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor
-      let appStateListener: any = null
+      const isCapacitor = typeof window !== 'undefined' && (window as unknown as { Capacitor?: unknown }).Capacitor
+      let appStateListener: { remove: () => void } | null = null
       if (isCapacitor) {
         import('@capacitor/app').then(({ App }) => {
-          App.addListener('appStateChange', (state: any) => {
-            if (state.isActive) {
-              handleAppResume()
-            }
-          }).then(listener => {
+          App.addListener('appStateChange', (state: { isActive: boolean }) => {
+            if (state.isActive) handleAppResume()
+          }).then((listener: { remove: () => void }) => {
             appStateListener = listener
           })
         }).catch(err => {
@@ -309,19 +399,12 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setSocket(socketInstance)
 
       return () => {
-        if (socketInstance) {
-          socketInstance.disconnect()
-        }
-        if (heartbeatIntervalRef.current) {
-          clearInterval(heartbeatIntervalRef.current)
-        }
-        if (pingInterval) {
-          clearInterval(pingInterval)
-        }
+        if (socketInstance) socketInstance.disconnect()
+        if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
+        if (pingInterval) clearInterval(pingInterval)
+        if (onlineBatchTimerRef.current) clearTimeout(onlineBatchTimerRef.current)
         document.removeEventListener('visibilitychange', handleVisibilityChange)
-        if (appStateListener) {
-          appStateListener.remove()
-        }
+        if (appStateListener) appStateListener.remove()
       }
     }
 
@@ -330,7 +413,17 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }, [user, friendUserIds])
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected, reconnectCount, pingLatency, presenceMap, updateActivity }}>
+    <SocketContext.Provider value={{
+      socket,
+      isConnected,
+      reconnectCount,
+      pingLatency,
+      presenceMap,
+      friendUserIds,
+      incomingChallenge,
+      clearIncomingChallenge,
+      updateActivity
+    }}>
       {children}
     </SocketContext.Provider>
   )

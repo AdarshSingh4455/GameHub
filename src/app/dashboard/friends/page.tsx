@@ -10,6 +10,7 @@ import PageWrapper from '@/components/layout/PageWrapper'
 import Card from '@/components/layout/Card'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import { useRouter } from 'next/navigation'
+import { GAMES_REGISTRY } from '@/lib/games'
 
 interface ProfileSummary {
   id: string
@@ -26,18 +27,9 @@ interface ProfileSummary {
   selectedTitle?: string | null
 }
 
-const MULTIPLAYER_GAMES = [
-  { slug: 'cricket', name: 'Hand Cricket' },
-  { slug: 'dots-boxes', name: 'Dots & Boxes' },
-  { slug: 'tic-tac-toe', name: 'Tic-Tac-Toe' },
-  { slug: 'memory', name: 'Memory Match' },
-  { slug: 'rps', name: 'Rock Paper Scissors' },
-  { slug: 'number-guessing', name: 'Number Guessing' },
-  { slug: 'scribble', name: 'Scribble' },
-  { slug: 'hangman', name: 'Hangman' },
-  { slug: 'dumb-charades', name: 'Dumb Charades' },
-  { slug: 'whos-spy', name: "Who's Spy" }
-]
+
+const MULTIPLAYER_GAMES = GAMES_REGISTRY.filter(g => g.multiplayer)
+
 
 export default function FriendsPage() {
   const { user } = useGameSession()
@@ -316,13 +308,16 @@ export default function FriendsPage() {
     socket.emit('send-challenge', {
       targetUserId: selectedFriendForChallenge.userId || selectedFriendForChallenge.id,
       gameSlug
-    }, (response: any) => {
+    }, (response: { error?: string; roomCode?: string }) => {
       if (response && response.error) {
         addToast('error', 'Challenge Failed', response.error)
       } else if (response && response.roomCode) {
-        addToast('success', 'Challenge Issued ⚔️', `Challenged ${selectedFriendForChallenge.username} to a match! Redirecting...`)
+        addToast('success', 'Challenge Issued ⚔️', `Challenged ${selectedFriendForChallenge.username}! Setting up the match...`)
         setChallengeModalOpen(false)
-        router.push(`/dashboard/multiplayer/play/${response.roomCode}`)
+        setTimeout(() => router.push(`/dashboard/multiplayer?action=join&code=${response.roomCode}`), 800)
+      } else {
+        addToast('success', 'Challenge Sent ⚔️', `Challenge sent to ${selectedFriendForChallenge.username}!`)
+        setChallengeModalOpen(false)
       }
     })
   }
@@ -983,56 +978,83 @@ export default function FriendsPage() {
           }}
           onClick={() => setChallengeModalOpen(false)}
         >
-          <Card
-            variant="glass"
+          <div
             style={{
               width: '100%',
-              maxWidth: 380,
-              background: 'linear-gradient(135deg, hsl(222 20% 10%), hsl(222 18% 13%))',
+              maxWidth: 480,
+              background: 'hsl(222 22% 10%)',
+              border: '1px solid hsl(220 15% 20%)',
+              borderRadius: '20px',
+              padding: '1.75rem',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+              animation: 'slideUp 0.25s ease',
               display: 'flex',
               flexDirection: 'column',
               gap: '1.25rem',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.55)',
             }}
             onClick={e => e.stopPropagation()}
           >
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 850, color: 'white' }}>
-                ⚔️ Challenge {selectedFriendForChallenge.username}
-              </h3>
-              <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'hsl(220 10% 55%)' }}>
-                Select a game to start a direct duel match!
-              </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>⚔️</span>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'white' }}>
+                  Challenge {selectedFriendForChallenge.displayName || selectedFriendForChallenge.username}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'hsl(220 10% 55%)' }}>
+                  Select a game to start a direct duel!
+                </p>
+              </div>
+              <button
+                onClick={() => setChallengeModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'hsl(220 10% 45%)', fontSize: '1rem', cursor: 'pointer' }}
+              >✕</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', maxHeight: '320px', overflowY: 'auto', paddingRight: '0.2rem' }}>
               {MULTIPLAYER_GAMES.map(game => (
                 <button
                   key={game.slug}
-                  className="btn btn-primary"
-                  style={{
-                    justifyContent: 'flex-start',
-                    textAlign: 'left',
-                    borderRadius: 12,
-                    fontSize: '0.88rem',
-                    padding: '0.75rem 1rem',
-                    fontWeight: 600
-                  }}
                   onClick={() => handleChallengePlayer(game.slug)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    padding: '0.65rem 0.8rem',
+                    borderRadius: '12px',
+                    border: '1px solid hsl(220 15% 18%)',
+                    background: 'hsl(222 20% 8%)',
+                    color: 'hsl(220 10% 80%)',
+                    fontFamily: 'inherit',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'hsl(220 100% 60%)'
+                    e.currentTarget.style.background = 'hsl(220 100% 60% / 0.1)'
+                    e.currentTarget.style.color = 'hsl(220 100% 78%)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'hsl(220 15% 18%)'
+                    e.currentTarget.style.background = 'hsl(222 20% 8%)'
+                    e.currentTarget.style.color = 'hsl(220 10% 80%)'
+                  }}
                 >
-                  ⚔️ Duel on {game.name}
+                  <span style={{ fontSize: '1.1rem' }}>{game.emoji}</span>
+                  <span style={{ lineHeight: 1.2 }}>{game.name}</span>
                 </button>
               ))}
             </div>
 
             <button
-              className="btn btn-ghost"
-              style={{ width: '100%', borderRadius: 10, fontSize: '0.82rem', padding: '0.4rem', color: 'hsl(220 10% 50%)' }}
               onClick={() => setChallengeModalOpen(false)}
+              style={{ padding: '0.6rem', borderRadius: '12px', border: '1px solid hsl(220 15% 20%)', background: 'transparent', color: 'hsl(220 10% 50%)', fontFamily: 'inherit', fontSize: '0.85rem', cursor: 'pointer' }}
             >
               Cancel
             </button>
-          </Card>
+          </div>
         </div>
       )}
 

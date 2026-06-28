@@ -266,12 +266,26 @@ code, pre, .mono {
   50%       { transform: translateY(-6px); }
 }
 @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes shimmer {
+  0%   { background-position: -500px 0; }
+  100% { background-position:  500px 0; }
+}
 
-.animate-fadeIn   { animation: fadeIn   0.3s ease both; }
-.animate-slideUp  { animation: slideUp  0.4s ease both; }
-.animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
-.animate-float    { animation: float 3s ease-in-out infinite; }
-.animate-spin-slow { animation: spin-slow 8s linear infinite; }
+.animate-fadeIn      { animation: fadeIn      0.3s ease both; }
+.animate-slideUp     { animation: slideUp     0.4s ease both; }
+.animate-slideInRight{ animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2) both; }
+.animate-pulse-glow  { animation: pulse-glow  2.5s ease-in-out infinite; }
+.animate-float       { animation: float       3s ease-in-out infinite; }
+.animate-spin-slow   { animation: spin-slow   8s linear infinite; }
+
+/* Shimmer skeleton */
+.skeleton {
+  background: linear-gradient(90deg, hsl(222 18% 12%) 25%, hsl(222 18% 17%) 50%, hsl(222 18% 12%) 75%);
+  background-size: 500px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}
 
 /* ─── Divider ────────────────────────────────────────────────────────────── */
 .divider {

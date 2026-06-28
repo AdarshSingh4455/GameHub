@@ -110,6 +110,22 @@ export default function SnakeArenaGame() {
   const [foodsCollected, setFoodsCollected] = useState<number>(0)
   const [eliminations, setEliminations] = useState<number>(0)
 
+  // Listen to Universal Result Modal actions
+  useEffect(() => {
+    const handleReplay = () => {
+      startGame()
+    }
+    const handleLobby = () => {
+      setPlayingState('lobby')
+    }
+    window.addEventListener('gamehub_replay', handleReplay)
+    window.addEventListener('gamehub_snake_lobby', handleLobby)
+    return () => {
+      window.removeEventListener('gamehub_replay', handleReplay)
+      window.removeEventListener('gamehub_snake_lobby', handleLobby)
+    }
+  }, [])
+
   // References for tick loops
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef<SnakeArenaState | null>(null)
@@ -680,21 +696,21 @@ export default function SnakeArenaGame() {
       for (const food of gameState.foods) {
         ctx.beginPath()
         let pulse = 1 + Math.sin(Date.now() / 150) * 0.15
-        let radius = (cellWidth / 2.2) * pulse
+        let radius = (cellWidth / 1.8) * pulse // Increased food size
         let color = '#10b981' // Green normal
 
         if (food.type === 'golden') {
           color = '#fbbf24' // Yellow gold
-          ctx.shadowBlur = 15
+          ctx.shadowBlur = 18 // Increased glow
           ctx.shadowColor = '#fbbf24'
         } else if (food.type === 'giant') {
           color = '#f97316' // Orange giant
-          radius = (cellWidth / 1.5) * pulse
-          ctx.shadowBlur = 12
+          radius = (cellWidth / 1.25) * pulse // Increased food size
+          ctx.shadowBlur = 15 // Increased glow
           ctx.shadowColor = '#f97316'
         } else if (food.type === 'dead') {
           color = '#ef4444' // Dotted red scattered
-          radius = cellWidth / 3.5
+          radius = cellWidth / 3.0
         }
 
         ctx.fillStyle = color
@@ -742,12 +758,12 @@ export default function SnakeArenaGame() {
         // Spawn protection visual flashing
         if (isProtected && Math.floor(Date.now() / 100) % 2 === 0) continue
 
-        ctx.lineWidth = cellWidth * 0.8
+        ctx.lineWidth = cellWidth * 0.95 // Increased snake thickness slightly
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         ctx.strokeStyle = snake.color
         
-        ctx.shadowBlur = 8
+        ctx.shadowBlur = 16 // Increased glow visibility
         ctx.shadowColor = snake.color
 
         // Draw body segments
@@ -794,6 +810,33 @@ export default function SnakeArenaGame() {
           ctx.arc(headX, headY, cellWidth * 1.5, 0, 2 * Math.PI)
           ctx.stroke()
         }
+
+        // Draw subtle radial glow behind local player's snake head
+        if (sId === 'player-human') {
+          ctx.save()
+          ctx.beginPath()
+          const glowGrad = ctx.createRadialGradient(headX, headY, cellWidth * 0.2, headX, headY, cellWidth * 1.1)
+          glowGrad.addColorStop(0, `${snake.color}66`) // semi-transparent snake color
+          glowGrad.addColorStop(1, `${snake.color}00`) // transparent
+          ctx.fillStyle = glowGrad
+          ctx.arc(headX, headY, cellWidth * 1.1, 0, 2 * Math.PI)
+          ctx.fill()
+          ctx.restore()
+        }
+
+        // Draw floating player identifier above head
+        ctx.fillStyle = sId === 'player-human' ? '#fbbf24' : '#ffffff'
+        ctx.font = `bold ${cellHeight * 0.55}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        
+        // Text outline/shadow for readability
+        ctx.shadowBlur = 4
+        ctx.shadowColor = 'rgba(0,0,0,0.85)'
+        
+        const labelText = sId === 'player-human' ? 'YOU' : snake.username
+        ctx.fillText(labelText, headX, headY - cellHeight * 0.75)
+        ctx.shadowBlur = 0 // reset shadow
       }
 
       animFrame = requestAnimationFrame(render)
@@ -904,53 +947,40 @@ export default function SnakeArenaGame() {
       {/* 3. Gameplay arena */}
       {(playingState === 'playing' || playingState === 'finished') && gameState && (
         <div className="arena-layout">
-          {/* HUD Statistics Dashboard */}
-          <div className="hud-panel">
-            <div className="hud-metric">
-              <span className="metric-label">Rank</span>
-              <span className="metric-value">#{leaderboard.findIndex(s => s.userId === 'player-human') + 1}</span>
-            </div>
-            <div className="hud-metric">
-              <span className="metric-label">Length</span>
-              <span className="metric-value">{longestLength}</span>
-            </div>
-            <div className="hud-metric">
-              <span className="metric-label">Score</span>
-              <span className="metric-value">{humanSnake?.score || 0}</span>
-            </div>
-            <div className="hud-metric">
-              <span className="metric-label">Eliminations</span>
-              <span className="metric-value" style={{ color: 'hsl(355 85% 65%)' }}>{eliminations}</span>
-            </div>
-            <div className="hud-metric">
-              <span className="metric-label">Active Powerups</span>
-              <div className="powerup-timers">
-                {myActivePowerups.length === 0 ? (
-                  <span className="metric-value" style={{ fontSize: '0.85rem', color: 'hsl(220 10% 45%)' }}>None</span>
-                ) : (
-                  myActivePowerups.map(p => {
-                    const timeLeft = Math.max(0, Math.round((p.expiresAt - Date.now()) / 1000))
-                    return (
-                      <div key={p.type} className="powerup-bar-item">
-                        <span className="powerup-label">{p.type.toUpperCase()} ({timeLeft}s)</span>
-                        <div className="progress-track">
-                          <div
-                            className="progress-fill"
-                            style={{
-                              width: `${(timeLeft / 8) * 100}%`,
-                              background: p.type === 'speed' ? '#10b981' : p.type === 'shield' ? '#3b82f6' : '#8b5cf6'
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
+          <div className="arena-grid-wrapper">
+            {/* Compact Horizontal Scoreboard Status Bar */}
+            <div className="hud-status-bar">
+              <div className="hud-status-item">
+                <span className="hud-status-label">Score:</span>
+                <span className="hud-status-value">{humanSnake?.score || 0}</span>
+              </div>
+              <div className="hud-status-item">
+                <span className="hud-status-label">Kills:</span>
+                <span className="hud-status-value text-red">{eliminations}</span>
+              </div>
+              <div className="hud-status-item">
+                <span className="hud-status-label">Rank:</span>
+                <span className="hud-status-value">#{leaderboard.findIndex(s => s.userId === 'player-human') + 1}</span>
+              </div>
+              <div className="hud-status-item flex-grow-right" style={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <span className="hud-status-label" style={{ marginRight: '0.5rem' }}>Power:</span>
+                <div className="hud-status-powerups">
+                  {myActivePowerups.length === 0 ? (
+                    <span className="hud-status-value-muted">None</span>
+                  ) : (
+                    myActivePowerups.map(p => {
+                      const timeLeft = Math.max(0, Math.round((p.expiresAt - Date.now()) / 1000))
+                      return (
+                        <span key={p.type} className={`powerup-pill badge-${p.type}`}>
+                          {p.type.toUpperCase()} ({timeLeft}s)
+                        </span>
+                      )
+                    })
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="arena-grid-wrapper">
             <div
               className="canvas-container"
               onTouchStart={handleTouchStart}
@@ -989,46 +1019,19 @@ export default function SnakeArenaGame() {
                     style={{ borderLeft: `4px solid ${s.color}` }}
                   >
                     <span className="player-rank">#{idx + 1}</span>
-                    <span className="player-name">{s.username}</span>
+                    <span className="player-name">
+                      {s.userId === 'player-human' ? (
+                        <strong style={{ color: '#fbbf24' }}>YOU</strong>
+                      ) : (
+                        s.username
+                      )}
+                    </span>
                     <span className="player-score">{s.score} pts</span>
                     {s.status === 'ELIMINATED' && <span className="dead-tag">DEAD</span>}
                   </div>
                 ))}
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* 4. Finished Play Again buttons */}
-      {playingState === 'finished' && (
-        <div className="lobby-actions-overlay">
-          <div className="actions-card animate-scaleUp">
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', marginBottom: '1rem' }}>
-              {gameState?.winnerId === 'player-human' ? '🏆 Victory!' : '💀 Eliminated!'}
-            </h3>
-            <div className="summary-grid">
-              <div>
-                <span className="summary-label">Final Score</span>
-                <span className="summary-val">{humanSnake?.score || 0}</span>
-              </div>
-              <div>
-                <span className="summary-label">Max Length</span>
-                <span className="summary-val">{longestLength}</span>
-              </div>
-              <div>
-                <span className="summary-label">Eliminations</span>
-                <span className="summary-val">{eliminations}</span>
-              </div>
-            </div>
-            <div className="action-buttons" style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-              <button className="btn btn-secondary" onClick={() => setPlayingState('lobby')}>
-                Lobby
-              </button>
-              <button className="btn btn-primary" onClick={startGame}>
-                Play Again
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -1108,74 +1111,106 @@ export default function SnakeArenaGame() {
 
         .arena-layout {
           display: grid;
-          grid-template-columns: 240px 1fr 280px;
+          grid-template-columns: 1fr 280px;
           gap: 1.5rem;
           width: 100%;
-          max-width: 1300px;
+          max-width: 1200px;
           align-items: start;
         }
 
-        .hud-panel {
+        .hud-status-bar {
+          display: flex;
+          align-items: center;
+          width: 100%;
           background: linear-gradient(135deg, hsl(222 22% 8% / 0.7), hsl(222 18% 10% / 0.7));
           border: 1px solid hsl(220 20% 15%);
-          border-radius: 16px;
-          padding: 1.5rem 1rem;
-          display: flex;
-          flex-direction: column;
-          gap: 1.25rem;
+          border-radius: 12px;
+          padding: 0.6rem 1rem;
+          gap: 1.5rem;
           box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+          flex-wrap: wrap;
+          margin-bottom: 0.75rem;
         }
 
-        .hud-metric {
+        .hud-status-item {
           display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
+          align-items: center;
+          gap: 0.4rem;
         }
 
-        .metric-label {
-          font-size: 0.7rem;
+        .hud-status-label {
+          font-size: 0.72rem;
           font-weight: 700;
           color: hsl(220 10% 50%);
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
 
-        .metric-value {
-          font-size: 1.5rem;
+        .hud-status-value {
+          font-size: 0.95rem;
           font-weight: 800;
           color: #ffffff;
         }
 
-        .powerup-timers {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
+        .hud-status-value.text-red {
+          color: hsl(355 85% 65%);
         }
 
-        .powerup-bar-item {
-          display: flex;
-          flex-direction: column;
-          gap: 0.15rem;
+        .hud-status-value-muted {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: hsl(220 10% 40%);
         }
 
-        .powerup-label {
+        .hud-status-powerups {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+
+        .powerup-pill {
           font-size: 0.65rem;
-          font-weight: 700;
-          color: hsl(220 10% 70%);
+          font-weight: 800;
+          padding: 0.15rem 0.5rem;
+          border-radius: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
         }
 
-        .progress-track {
-          width: 100%;
-          height: 5px;
-          background: rgba(255,255,255,0.06);
-          border-radius: 99px;
-          overflow: hidden;
+        .powerup-pill.badge-speed {
+          background: hsl(142 70% 45% / 0.15);
+          border: 1px solid hsl(142 70% 45% / 0.4);
+          color: hsl(142 70% 55%);
         }
 
-        .progress-fill {
-          height: 100%;
-          border-radius: 99px;
-          transition: width 0.2s linear;
+        .powerup-pill.badge-shield {
+          background: hsl(217 91% 60% / 0.15);
+          border: 1px solid hsl(217 91% 60% / 0.4);
+          color: hsl(217 91% 70%);
+        }
+
+        .powerup-pill.badge-ghost {
+          background: hsl(271 91% 65% / 0.15);
+          border: 1px solid hsl(271 91% 65% / 0.4);
+          color: hsl(271 91% 75%);
+        }
+
+        .powerup-pill.badge-magnet {
+          background: hsl(45 93% 47% / 0.15);
+          border: 1px solid hsl(45 93% 47% / 0.4);
+          color: hsl(45 93% 57%);
+        }
+
+        .powerup-pill.badge-freeze {
+          background: hsl(190 90% 50% / 0.15);
+          border: 1px solid hsl(190 90% 50% / 0.4);
+          color: hsl(190 90% 60%);
+        }
+
+        .powerup-pill.badge-double {
+          background: hsl(320 90% 50% / 0.15);
+          border: 1px solid hsl(320 90% 50% / 0.4);
+          color: hsl(320 90% 60%);
         }
 
         .arena-grid-wrapper {

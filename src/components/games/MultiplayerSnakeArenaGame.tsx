@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import MatchReactions from './MatchReactions'
@@ -101,6 +102,13 @@ function playSynthSound(type: 'countdown' | 'food' | 'golden' | 'powerup' | 'dea
 export default function MultiplayerSnakeArenaGame({ session, players, currentUserId }: MultiplayerSnakeArenaGameProps) {
   const { socket } = useSocket()
   const { addToast } = useToast()
+  const router = useRouter()
+
+  const formatSurvivalTime = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0')
+    const s = (secs % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
+  }
 
   const roomCode = session.roomCode
   const gameState = session.gameState || {}
@@ -245,25 +253,25 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
         ctx.translate(camX, camY)
       }
 
-      // 1. Draw Food
+      // 1. Draw Food Items
       for (const food of foods) {
         ctx.beginPath()
         let pulse = 1 + Math.sin(Date.now() / 150) * 0.15
-        let radius = (cellWidth / 2.2) * pulse
+        let radius = (cellWidth / 1.8) * pulse // Increased food size
         let color = '#10b981'
 
         if (food.type === 'golden') {
           color = '#fbbf24'
-          ctx.shadowBlur = 15
+          ctx.shadowBlur = 18 // Increased glow
           ctx.shadowColor = '#fbbf24'
         } else if (food.type === 'giant') {
           color = '#f97316'
-          radius = (cellWidth / 1.5) * pulse
-          ctx.shadowBlur = 12
+          radius = (cellWidth / 1.25) * pulse // Increased food size
+          ctx.shadowBlur = 15 // Increased glow
           ctx.shadowColor = '#f97316'
         } else if (food.type === 'dead') {
           color = '#ef4444'
-          radius = cellWidth / 3.5
+          radius = cellWidth / 3.0
         }
 
         ctx.fillStyle = color
@@ -307,12 +315,12 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
         const isProtected = snake.spawnProtectedUntil > Date.now()
         if (isProtected && Math.floor(Date.now() / 100) % 2 === 0) continue
 
-        ctx.lineWidth = cellWidth * 0.8
+        ctx.lineWidth = cellWidth * 0.95 // Increased snake thickness slightly
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         ctx.strokeStyle = snake.color
         
-        ctx.shadowBlur = 8
+        ctx.shadowBlur = 16 // Increased glow visibility
         ctx.shadowColor = snake.color
 
         ctx.beginPath()
@@ -351,6 +359,33 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
           ctx.arc(headX, headY, cellWidth * 1.5, 0, 2 * Math.PI)
           ctx.stroke()
         }
+
+        // Draw subtle radial glow behind local player's snake head
+        if (sId === currentUserId) {
+          ctx.save()
+          ctx.beginPath()
+          const glowGrad = ctx.createRadialGradient(headX, headY, cellWidth * 0.2, headX, headY, cellWidth * 1.1)
+          glowGrad.addColorStop(0, `${snake.color}66`) // semi-transparent snake color
+          glowGrad.addColorStop(1, `${snake.color}00`) // transparent
+          ctx.fillStyle = glowGrad
+          ctx.arc(headX, headY, cellWidth * 1.1, 0, 2 * Math.PI)
+          ctx.fill()
+          ctx.restore()
+        }
+
+        // Draw floating player identifier above head
+        ctx.fillStyle = sId === currentUserId ? '#fbbf24' : '#ffffff'
+        ctx.font = `bold ${cellHeight * 0.55}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        
+        // Text outline/shadow for readability
+        ctx.shadowBlur = 4
+        ctx.shadowColor = 'rgba(0,0,0,0.85)'
+        
+        const labelText = sId === currentUserId ? 'YOU' : snake.username
+        ctx.fillText(labelText, headX, headY - cellHeight * 0.75)
+        ctx.shadowBlur = 0 // reset shadow
       }
 
       ctx.restore()
@@ -433,43 +468,66 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
     <div className="snake-arena-container">
       {session.status === 'PLAYING' && (
         <div className="arena-layout">
-          {/* HUD Metric Dashboard */}
-          <div className="hud-panel">
-            <div className="hud-metric">
-              <span className="metric-label">Status</span>
-              <span className={`metric-value ${isSpectating ? 'text-red' : 'text-green'}`}>
-                {isSpectating ? '👀 SPECTATING' : '🎮 ALIVE'}
-              </span>
-            </div>
-            <div className="hud-metric">
-              <span className="metric-label">Rank</span>
-              <span className="metric-value">#{leaderboard.findIndex(s => s.userId === currentUserId) + 1}</span>
-            </div>
-            <div className="hud-metric">
-              <span className="metric-label">Score</span>
-              <span className="metric-value">{mySnake?.score || 0}</span>
-            </div>
-            <div className="hud-metric">
-              <span className="metric-label">Remaining Players</span>
-              <span className="metric-value">{survivors.length} / {leaderboard.length}</span>
-            </div>
-            
-            {isSpectating && (
-              <div className="hud-metric" style={{ marginTop: '1rem' }}>
-                <span className="metric-label">Spectating</span>
-                <span className="metric-value" style={{ fontSize: '1rem' }}>
-                  {snakes[spectateTargetId || '']?.username || 'None'}
+          {/* Core Arena canvas */}
+          <div className="arena-grid-wrapper">
+            {/* Compact Horizontal Scoreboard Status Bar */}
+            <div className="hud-status-bar">
+              <div className="hud-status-item">
+                <span className="hud-status-label">Status:</span>
+                <span className={`hud-status-value ${isSpectating ? 'text-red' : 'text-green'}`}>
+                  {isSpectating ? 'SPECTATING' : 'ALIVE'}
                 </span>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  <button className="btn-diff" onClick={() => cycleSpectatorTarget('prev')} style={{ padding: '0.4rem' }}>◀ Prev</button>
-                  <button className="btn-diff" onClick={() => cycleSpectatorTarget('next')} style={{ padding: '0.4rem' }}>Next ▶</button>
+              </div>
+              <div className="hud-status-item">
+                <span className="hud-status-label">Score:</span>
+                <span className="hud-status-value">{mySnake?.score || 0}</span>
+              </div>
+              <div className="hud-status-item">
+                <span className="hud-status-label">Kills:</span>
+                <span className="hud-status-value text-red">{mySnake?.eliminations || 0}</span>
+              </div>
+              <div className="hud-status-item">
+                <span className="hud-status-label">Rank:</span>
+                <span className="hud-status-value">#{leaderboard.findIndex(s => s.userId === currentUserId) + 1}</span>
+              </div>
+              <div className="hud-status-item">
+                <span className="hud-status-label">Players:</span>
+                <span className="hud-status-value">{survivors.length} / {leaderboard.length}</span>
+              </div>
+              <div className="hud-status-item flex-grow-right" style={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <span className="hud-status-label" style={{ marginRight: '0.5rem' }}>Power:</span>
+                <div className="hud-status-powerups">
+                  {(!mySnake?.activePowerups || mySnake.activePowerups.length === 0) ? (
+                    <span className="hud-status-value-muted">None</span>
+                  ) : (
+                    mySnake.activePowerups.map(p => {
+                      const timeLeft = Math.max(0, Math.round((p.expiresAt - Date.now()) / 1000))
+                      return (
+                        <span key={p.type} className={`powerup-pill badge-${p.type}`}>
+                          {p.type.toUpperCase()} ({timeLeft}s)
+                        </span>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {isSpectating && (
+              <div className="hud-status-bar" style={{ marginTop: '-0.25rem', marginBottom: '0.75rem', justifyContent: 'space-between' }}>
+                <div className="hud-status-item">
+                  <span className="hud-status-label">Spectating:</span>
+                  <span className="hud-status-value" style={{ color: '#fbbf24' }}>
+                    {snakes[spectateTargetId || '']?.username || 'None'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn-diff" onClick={() => cycleSpectatorTarget('prev')} style={{ padding: '0.2rem 0.5rem', height: 'auto', minHeight: 'unset' }}>◀ Prev</button>
+                  <button className="btn-diff" onClick={() => cycleSpectatorTarget('next')} style={{ padding: '0.2rem 0.5rem', height: 'auto', minHeight: 'unset' }}>Next ▶</button>
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Core Arena canvas */}
-          <div className="arena-grid-wrapper">
             <div
               className="canvas-container"
               onTouchStart={handleTouchStart}
@@ -514,7 +572,13 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
                     style={{ borderLeft: `4px solid ${s.color}` }}
                   >
                     <span className="player-rank">#{idx + 1}</span>
-                    <span className="player-name">{s.username}</span>
+                    <span className="player-name">
+                      {s.userId === currentUserId ? (
+                        <strong style={{ color: '#fbbf24' }}>YOU</strong>
+                      ) : (
+                        s.username
+                      )}
+                    </span>
                     <span className="player-score">{s.score} pts</span>
                     {s.status === 'ELIMINATED' && <span className="dead-tag">DEAD</span>}
                   </div>
@@ -527,37 +591,55 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
 
       {session.status === 'FINISHED' && (
         <div className="lobby-actions-overlay">
-          <div className="actions-card animate-scaleUp">
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', marginBottom: '1rem' }}>
-              {session.winnerId === currentUserId ? '🏆 Victory!' : '💀 Match Over'}
+          <div className="actions-card animate-scaleUp" style={{ border: '1px solid hsl(142 80% 55% / 0.35)', background: 'linear-gradient(135deg, hsl(142 80% 6% / 0.96), hsl(222 20% 9% / 0.96))', boxShadow: '0 20px 50px rgba(0,0,0,0.8), 0 0 40px hsl(142 80% 55% / 0.15)' }}>
+            <h3 style={{ fontSize: '1.75rem', fontWeight: 950, color: 'hsl(142 80% 65%)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <span>🐍</span>
+              <span>{session.winnerId === currentUserId ? 'Match Complete' : 'Game Over'}</span>
             </h3>
-            <div className="summary-grid">
-              <div>
-                <span className="summary-label">Your Score</span>
-                <span className="summary-val">{mySnake?.score || 0}</span>
+            
+            <div className="summary-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', background: 'hsl(222 20% 7% / 0.8)', border: '1.5px solid hsl(220 15% 20%)', borderRadius: '16px', padding: '1.25rem' }}>
+              <div style={{ textAlign: 'left' }}>
+                <span className="summary-label" style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Final Score</span>
+                <span className="summary-val" style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fbbf24', marginTop: '2px' }}>{mySnake?.score || 0}</span>
               </div>
-              <div>
-                <span className="summary-label">Longest Length</span>
-                <span className="summary-val">{mySnake?.length || 3}</span>
+              <div style={{ textAlign: 'left' }}>
+                <span className="summary-label" style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Eliminations</span>
+                <span className="summary-val" style={{ fontSize: '1.4rem', fontWeight: 900, color: 'hsl(355 85% 65%)', marginTop: '2px' }}>{mySnake?.eliminations || 0}</span>
               </div>
-              <div>
-                <span className="summary-label">Eliminations</span>
-                <span className="summary-val">{mySnake?.eliminations || 0}</span>
+              <div style={{ textAlign: 'left' }}>
+                <span className="summary-label" style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Longest Length</span>
+                <span className="summary-val" style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginTop: '2px' }}>{mySnake?.length || 3}</span>
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <span className="summary-label" style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Survival Time</span>
+                <span className="summary-val" style={{ fontSize: '1.4rem', fontWeight: 900, color: '#38bdf8', marginTop: '2px' }}>{formatSurvivalTime(mySnake?.survivalTime || 0)}</span>
               </div>
             </div>
 
-            <div className="rematch-votes" style={{ marginTop: '1.5rem', color: 'hsl(220 10% 60%)', fontSize: '0.85rem' }}>
+            <div className="rematch-votes" style={{ marginTop: '1.5rem', color: 'hsl(220 10% 70%)', fontSize: '0.9rem', fontWeight: 600 }}>
               Replay votes: {Object.keys(session.gameState?.replayVotes || {}).length} / {players.length}
             </div>
 
-            <button
-              className="btn btn-primary"
-              style={{ width: '100%', marginTop: '2rem' }}
-              onClick={handlePlayAgain}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Submitting...' : 'Vote Rematch'}
-            </button>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1.3, borderRadius: 12 }}
+                onClick={handlePlayAgain}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Submitting...' : 'Play Again'}
+              </button>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1, borderRadius: 12 }}
+                onClick={() => {
+                  localStorage.removeItem(`gamehub_room_recovery_${roomCode}`)
+                  router.push('/dashboard/multiplayer')
+                }}
+              >
+                Back to Lobby
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -574,50 +656,110 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
 
         .arena-layout {
           display: grid;
-          grid-template-columns: 240px 1fr 280px;
+          grid-template-columns: 1fr 280px;
           gap: 1.5rem;
           width: 100%;
-          max-width: 1300px;
+          max-width: 1200px;
           align-items: start;
         }
 
-        .hud-panel {
+        .hud-status-bar {
+          display: flex;
+          align-items: center;
+          width: 100%;
           background: linear-gradient(135deg, hsl(222 22% 8% / 0.7), hsl(222 18% 10% / 0.7));
           border: 1px solid hsl(220 20% 15%);
-          border-radius: 16px;
-          padding: 1.5rem 1rem;
-          display: flex;
-          flex-direction: column;
-          gap: 1.25rem;
+          border-radius: 12px;
+          padding: 0.6rem 1rem;
+          gap: 1.5rem;
           box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+          flex-wrap: wrap;
+          margin-bottom: 0.75rem;
         }
 
-        .hud-metric {
+        .hud-status-item {
           display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
+          align-items: center;
+          gap: 0.4rem;
         }
 
-        .metric-label {
-          font-size: 0.7rem;
+        .hud-status-label {
+          font-size: 0.72rem;
           font-weight: 700;
           color: hsl(220 10% 50%);
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
 
-        .metric-value {
-          font-size: 1.5rem;
+        .hud-status-value {
+          font-size: 0.95rem;
           font-weight: 800;
           color: #ffffff;
         }
 
-        .metric-value.text-green {
+        .hud-status-value.text-green {
           color: #10b981;
         }
 
-        .metric-value.text-red {
-          color: #ef4444;
+        .hud-status-value.text-red {
+          color: hsl(355 85% 65%);
+        }
+
+        .hud-status-value-muted {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: hsl(220 10% 40%);
+        }
+
+        .hud-status-powerups {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+
+        .powerup-pill {
+          font-size: 0.65rem;
+          font-weight: 800;
+          padding: 0.15rem 0.5rem;
+          border-radius: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .powerup-pill.badge-speed {
+          background: hsl(142 70% 45% / 0.15);
+          border: 1px solid hsl(142 70% 45% / 0.4);
+          color: hsl(142 70% 55%);
+        }
+
+        .powerup-pill.badge-shield {
+          background: hsl(217 91% 60% / 0.15);
+          border: 1px solid hsl(217 91% 60% / 0.4);
+          color: hsl(217 91% 70%);
+        }
+
+        .powerup-pill.badge-ghost {
+          background: hsl(271 91% 65% / 0.15);
+          border: 1px solid hsl(271 91% 65% / 0.4);
+          color: hsl(271 91% 75%);
+        }
+
+        .powerup-pill.badge-magnet {
+          background: hsl(45 93% 47% / 0.15);
+          border: 1px solid hsl(45 93% 47% / 0.4);
+          color: hsl(45 93% 57%);
+        }
+
+        .powerup-pill.badge-freeze {
+          background: hsl(190 90% 50% / 0.15);
+          border: 1px solid hsl(190 90% 50% / 0.4);
+          color: hsl(190 90% 60%);
+        }
+
+        .powerup-pill.badge-double {
+          background: hsl(320 90% 50% / 0.15);
+          border: 1px solid hsl(320 90% 50% / 0.4);
+          color: hsl(320 90% 60%);
         }
 
         .arena-grid-wrapper {

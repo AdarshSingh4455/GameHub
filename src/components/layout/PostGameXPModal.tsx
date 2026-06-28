@@ -213,28 +213,28 @@ export default function PostGameXPModal({ data, onClose }: Props) {
     layoutType = 'multiplayer'
   } else if (['arrow-puzzle', 'color-sort', 'water-sort', 'unblock-traffic', 'unblock-me', 'water-connect', 'candy-blast', 'ai-infinite-candy-crush', 'pipe-connect'].includes(gameSlug)) {
     layoutType = 'level'
-  } else if (['2048', 'snake', 'fighter-jet', 'fighter', 'neontetris', 'blockblast'].includes(gameSlug)) {
+  } else if (['2048', 'snake', 'fighter-jet', 'fighter', 'neontetris', 'blockblast', 'snake-arena'].includes(gameSlug)) {
     layoutType = 'endless'
   }
 
   const outcomeConfigs = {
     win: {
-      bg: 'linear-gradient(135deg, hsl(45 100% 6% / 0.96), hsl(222 20% 9% / 0.96))',
-      border: '1px solid hsl(45 100% 55% / 0.35)',
-      text: 'hsl(45 100% 65%)',
-      emoji: '🏆',
+      bg: gameSlug === 'snake-arena' ? 'linear-gradient(135deg, hsl(142 80% 6% / 0.96), hsl(222 20% 9% / 0.96))' : 'linear-gradient(135deg, hsl(45 100% 6% / 0.96), hsl(222 20% 9% / 0.96))',
+      border: gameSlug === 'snake-arena' ? '1px solid hsl(142 80% 55% / 0.35)' : '1px solid hsl(45 100% 55% / 0.35)',
+      text: gameSlug === 'snake-arena' ? 'hsl(142 80% 65%)' : 'hsl(45 100% 65%)',
+      emoji: gameSlug === 'snake-arena' ? '🐍' : '🏆',
       emojiClass: 'trophy-bounce-animation',
-      title: layoutType === 'level' ? 'Level Cleared!' : 'Victory!',
-      glow: '0 0 40px hsl(45 100% 55% / 0.15)',
+      title: gameSlug === 'snake-arena' ? 'Match Complete' : (layoutType === 'level' ? 'Level Cleared!' : 'Victory!'),
+      glow: gameSlug === 'snake-arena' ? '0 0 40px hsl(142 80% 55% / 0.15)' : '0 0 40px hsl(45 100% 55% / 0.15)',
     },
     loss: {
-      bg: 'linear-gradient(135deg, hsl(0 80% 6% / 0.96), hsl(222 20% 9% / 0.96))',
-      border: '1px solid hsl(0 80% 55% / 0.35)',
-      text: 'hsl(0 80% 65%)',
-      emoji: '💀',
+      bg: gameSlug === 'snake-arena' ? 'linear-gradient(135deg, hsl(142 80% 6% / 0.96), hsl(222 20% 9% / 0.96))' : 'linear-gradient(135deg, hsl(0 80% 6% / 0.96), hsl(222 20% 9% / 0.96))',
+      border: gameSlug === 'snake-arena' ? '1px solid hsl(142 80% 55% / 0.35)' : '1px solid hsl(0 80% 55% / 0.35)',
+      text: gameSlug === 'snake-arena' ? 'hsl(142 80% 65%)' : 'hsl(0 80% 65%)',
+      emoji: gameSlug === 'snake-arena' ? '🐍' : '💀',
       emojiClass: 'skull-shake-animation',
-      title: layoutType === 'level' ? 'Level Failed' : 'Defeat',
-      glow: '0 0 40px hsl(0 80% 55% / 0.15)',
+      title: gameSlug === 'snake-arena' ? 'Game Over' : (layoutType === 'level' ? 'Level Failed' : 'Defeat'),
+      glow: gameSlug === 'snake-arena' ? '0 0 40px hsl(142 80% 55% / 0.15)' : '0 0 40px hsl(0 80% 55% / 0.15)',
     },
     draw: {
       bg: 'linear-gradient(135deg, hsl(222 20% 9% / 0.96), hsl(222 18% 13% / 0.96))',
@@ -259,6 +259,17 @@ export default function PostGameXPModal({ data, onClose }: Props) {
   function handleBackToDashboard() {
     onClose()
     router.push('/dashboard')
+  }
+
+  function handleBackToLobby() {
+    onClose()
+    window.dispatchEvent(new Event('gamehub_snake_lobby'))
+  }
+
+  const formatSurvivalTime = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0')
+    const s = (secs % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
   }
 
   return createPortal(
@@ -439,7 +450,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
         )}
 
         {/* Game Stats Information Layout */}
-        {(layoutType === 'level' || layoutType === 'endless') && (
+        {gameSlug === 'snake-arena' ? (
           <div
             style={{
               background: 'hsl(222 20% 7% / 0.8)',
@@ -448,91 +459,140 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               padding: '1.25rem',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px',
+              gap: '12px',
               position: 'relative',
               zIndex: 1,
               boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
             }}
           >
-            {/* Score row */}
-            {score > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Score</span>
-                <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
-                  {score.toLocaleString()}
-                </span>
-              </div>
-            )}
+            {/* Final Score Row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Final Score</span>
+              <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
+                {score.toLocaleString()}
+              </span>
+            </div>
 
-            {/* Dynamic statistics details */}
+            {/* Snake Stats Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 16px', paddingTop: '4px', textAlign: 'left' }}>
-              {/* High Score (Endless) */}
-              {layoutType === 'endless' && (
-                <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>High Score</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
-                    {Math.max(highScore, score).toLocaleString()}
-                  </div>
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Eliminations</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'hsl(355 85% 65%)', fontFamily: 'monospace', marginTop: '2px' }}>
+                  {gameMetadata.eliminations ?? 0}
                 </div>
-              )}
+              </div>
 
-              {/* Moves (Level) */}
-              {layoutType === 'level' && moves > 0 && (
-                <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Moves</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
-                    {moves}
-                  </div>
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Longest Length</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                  {gameMetadata.longestLength ?? 3}
                 </div>
-              )}
+              </div>
 
-              {/* Time taken */}
-              {timeSecs > 0 && (
-                <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Time</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
-                    {timeSecs}s
-                  </div>
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Survival Time</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
+                  {formatSurvivalTime(timeSecs || gameMetadata.survivalTime || 0)}
                 </div>
-              )}
-
-              {/* Personal best level time */}
-              {layoutType === 'level' && result === 'win' && personalBest !== null && (
-                <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Best Time</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace', marginTop: '2px' }}>
-                    {personalBest}s
-                  </div>
-                </div>
-              )}
-
-              {/* Game Specific Stats (Block Blast / Neon Tetris / Word Wizard) */}
-              {gameMetadata.linesCleared !== undefined && (
-                <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Lines Cleared</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
-                    {gameMetadata.linesCleared}
-                  </div>
-                </div>
-              )}
-              {gameMetadata.wordsFound !== undefined && (
-                <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Words Found</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
-                    {gameMetadata.wordsFound}
-                  </div>
-                </div>
-              )}
-              {gameMetadata.maxCombo !== undefined && (
-                <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Max Combo</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ec4899', fontFamily: 'monospace', marginTop: '2px' }}>
-                    x{gameMetadata.maxCombo}
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
+        ) : (
+          (layoutType === 'level' || layoutType === 'endless') && (
+            <div
+              style={{
+                background: 'hsl(222 20% 7% / 0.8)',
+                border: '1.5px solid hsl(220 15% 20%)',
+                borderRadius: 20,
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                position: 'relative',
+                zIndex: 1,
+                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
+              }}
+            >
+              {/* Score row */}
+              {score > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Score</span>
+                  <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
+                    {score.toLocaleString()}
+                  </span>
+                </div>
+              )}
+
+              {/* Dynamic statistics details */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 16px', paddingTop: '4px', textAlign: 'left' }}>
+                {/* High Score (Endless) */}
+                {layoutType === 'endless' && (
+                  <div>
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>High Score</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
+                      {Math.max(highScore, score).toLocaleString()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Moves (Level) */}
+                {layoutType === 'level' && moves > 0 && (
+                  <div>
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Moves</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                      {moves}
+                    </div>
+                  </div>
+                )}
+
+                {/* Time taken */}
+                {timeSecs > 0 && (
+                  <div>
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Time</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                      {timeSecs}s
+                    </div>
+                  </div>
+                )}
+
+                {/* Personal best level time */}
+                {layoutType === 'level' && result === 'win' && personalBest !== null && (
+                  <div>
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Best Time</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace', marginTop: '2px' }}>
+                      {personalBest}s
+                    </div>
+                  </div>
+                )}
+
+                {/* Game Specific Stats (Block Blast / Neon Tetris / Word Wizard) */}
+                {gameMetadata.linesCleared !== undefined && (
+                  <div>
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Lines Cleared</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                      {gameMetadata.linesCleared}
+                    </div>
+                  </div>
+                )}
+                {gameMetadata.wordsFound !== undefined && (
+                  <div>
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Words Found</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                      {gameMetadata.wordsFound}
+                    </div>
+                  </div>
+                )}
+                {gameMetadata.maxCombo !== undefined && (
+                  <div>
+                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Max Combo</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ec4899', fontFamily: 'monospace', marginTop: '2px' }}>
+                      x{gameMetadata.maxCombo}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
         )}
 
         {/* Rewards Summary Strip */}
@@ -747,48 +807,71 @@ export default function PostGameXPModal({ data, onClose }: Props) {
         {/* Actions Footer */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            {/* Primary Action Button (Level vs Endless vs Puzzle) */}
-            {layoutType === 'level' && result === 'win' ? (
-              <button
-                className="btn btn-primary"
-                onClick={() => onClose('next')}
-                style={{ flex: 1.3, borderRadius: 12 }}
-                id="modal-next-btn"
-              >
-                ➡️ Next Level
-              </button>
+            {gameSlug === 'snake-arena' ? (
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => onClose('replay')}
+                  style={{ flex: 1.3, borderRadius: 12 }}
+                  id="modal-replay-btn"
+                >
+                  🔄 Play Again
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleBackToLobby}
+                  style={{ flex: 1, borderRadius: 12 }}
+                  id="modal-lobby-btn"
+                >
+                  Back to Lobby
+                </button>
+              </>
             ) : (
-              <button
-                className="btn btn-primary"
-                onClick={() => onClose('replay')}
-                style={{ flex: 1.3, borderRadius: 12 }}
-                id="modal-replay-btn"
-              >
-                🔄 Play Again
-              </button>
-            )}
+              <>
+                {/* Primary Action Button (Level vs Endless vs Puzzle) */}
+                {layoutType === 'level' && result === 'win' ? (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => onClose('next')}
+                    style={{ flex: 1.3, borderRadius: 12 }}
+                    id="modal-next-btn"
+                  >
+                    ➡️ Next Level
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => onClose('replay')}
+                    style={{ flex: 1.3, borderRadius: 12 }}
+                    id="modal-replay-btn"
+                  >
+                    🔄 Play Again
+                  </button>
+                )}
 
-            {/* Replay option for level games if won */}
-            {layoutType === 'level' && result === 'win' && (
-              <button
-                className="btn btn-secondary"
-                onClick={() => onClose('replay')}
-                style={{ flex: 1, borderRadius: 12 }}
-                id="modal-replay-btn-level-win"
-              >
-                🔄 Replay
-              </button>
-            )}
+                {/* Replay option for level games if won */}
+                {layoutType === 'level' && result === 'win' && (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => onClose('replay')}
+                    style={{ flex: 1, borderRadius: 12 }}
+                    id="modal-replay-btn-level-win"
+                  >
+                    🔄 Replay
+                  </button>
+                )}
 
-            {/* Dashboard fallback */}
-            <button
-              className="btn btn-secondary"
-              onClick={handleBackToDashboard}
-              style={{ flex: 1, borderRadius: 12 }}
-              id="modal-dashboard-btn"
-            >
-              Dashboard
-            </button>
+                {/* Dashboard fallback */}
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleBackToDashboard}
+                  style={{ flex: 1, borderRadius: 12 }}
+                  id="modal-dashboard-btn"
+                >
+                  Dashboard
+                </button>
+              </>
+            )}
           </div>
 
           {/* Multiplayer buttons compatibility */}
@@ -810,7 +893,8 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             </button>
           )}
 
-          {layoutType !== 'multiplayer' && (
+          {/* layoutType !== 'multiplayer' and not snake-arena */}
+          {layoutType !== 'multiplayer' && gameSlug !== 'snake-arena' && (
             <button
               className="btn btn-secondary"
               onClick={() => {

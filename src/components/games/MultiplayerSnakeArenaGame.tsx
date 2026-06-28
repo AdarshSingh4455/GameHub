@@ -128,6 +128,34 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
   // Touch swipe helper refs
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
+  // Disable pull-to-refresh, overscroll, and body scrolling during active gameplay
+  useEffect(() => {
+    const isActiveGameplay = session.status === 'PLAYING';
+
+    if (isActiveGameplay) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.overscrollBehavior = 'none';
+
+      const preventDefaultTouch = (e: TouchEvent) => {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      };
+      
+      window.addEventListener('touchmove', preventDefaultTouch, { passive: false });
+
+      return () => {
+        document.body.style.overflow = '';
+        document.body.style.overscrollBehavior = '';
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.overscrollBehavior = '';
+        window.removeEventListener('touchmove', preventDefaultTouch);
+      };
+    }
+  }, [session.status]);
+
   // Check state update differences to play audio effects
   useEffect(() => {
     if (!gameState) return
@@ -535,8 +563,8 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
             <div className="canvas-container">
               <canvas
                 ref={canvasRef}
-                width={720}
-                height={480}
+                width={960}
+                height={640}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -554,37 +582,6 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
               currentUserId={currentUserId}
               players={players}
             />
-          </div>
-
-          {/* Collapsible live leaderboard */}
-          <div className="leaderboard-panel">
-            <div className="leaderboard-header" onClick={() => setShowLeaderboard(!showLeaderboard)}>
-              <h3>🏆 Standings</h3>
-              <span className="collapsible-arrow">{showLeaderboard ? '▼' : '▲'}</span>
-            </div>
-
-            {showLeaderboard && (
-              <div className="leaderboard-list">
-                {leaderboard.map((s, idx) => (
-                  <div
-                    key={s.userId}
-                    className={`leaderboard-item ${s.userId === currentUserId ? 'highlight' : ''}`}
-                    style={{ borderLeft: `4px solid ${s.color}` }}
-                  >
-                    <span className="player-rank">#{idx + 1}</span>
-                    <span className="player-name">
-                      {s.userId === currentUserId ? (
-                        <strong style={{ color: '#fbbf24' }}>YOU</strong>
-                      ) : (
-                        s.username
-                      )}
-                    </span>
-                    <span className="player-score">{s.score} pts</span>
-                    {s.status === 'ELIMINATED' && <span className="dead-tag">DEAD</span>}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -655,12 +652,11 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
         }
 
         .arena-layout {
-          display: grid;
-          grid-template-columns: 1fr 280px;
-          gap: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
           width: 100%;
           max-width: 100%;
-          align-items: start;
         }
 
         .hud-status-bar {
@@ -904,7 +900,7 @@ export default function MultiplayerSnakeArenaGame({ session, players, currentUse
             padding: 0.25rem;
           }
           .arena-layout {
-            grid-template-columns: 1fr;
+            width: 100%;
             gap: 1rem;
           }
           .mobile-controls-tip {

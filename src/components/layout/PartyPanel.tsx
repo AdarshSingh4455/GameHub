@@ -209,30 +209,63 @@ export default function PartyPanel() {
           <p style={{ margin: 0, fontSize: '0.78rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4 }}>
             Form a party lobby to chat in real-time, invite online friends, and join multiplayer matches together.
           </p>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+              <input
+                type="text"
+                placeholder="Enter Code..."
+                className="input"
+                value={joinCode}
+                onChange={e => setJoinCode(e.target.value)}
+                style={{
+                  padding: '0.55rem 0.75rem',
+                  fontSize: '0.82rem',
+                  borderRadius: 10,
+                  backgroundColor: 'hsl(var(--bg-elevated))',
+                  border: '1px solid hsl(var(--border-default))',
+                  color: 'hsl(var(--text-primary))',
+                  flex: 3,
+                  minWidth: 0,
+                  outline: 'none'
+                }}
+              />
+              <button
+                onClick={handleJoinParty}
+                className="btn btn-secondary"
+                style={{
+                  fontSize: '0.82rem',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: 10,
+                  flex: 1.2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700
+                }}
+              >
+                Join
+              </button>
+            </div>
+            
             <button
               onClick={handleCreateParty}
               className="btn btn-primary"
-              style={{ flex: 1, fontSize: '0.8rem', padding: '0.45rem' }}
+              style={{
+                width: '100%',
+                fontSize: '0.82rem',
+                padding: '0.55rem',
+                borderRadius: 10,
+                fontWeight: 700,
+                background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))',
+                color: 'white',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.35rem'
+              }}
             >
               ➕ Create Party
-            </button>
-          </div>
-          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
-            <input
-              type="text"
-              placeholder="Party Code..."
-              className="input"
-              value={joinCode}
-              onChange={e => setJoinCode(e.target.value)}
-              style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', borderRadius: 8, flex: 1 }}
-            />
-            <button
-              onClick={handleJoinParty}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
-            >
-              Join
             </button>
           </div>
         </div>

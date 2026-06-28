@@ -95,6 +95,18 @@ export default function SnakeArenaGame() {
   const { submitGameResult } = useGameSession()
   const { addToast } = useToast()
 
+  const [isRanked, setIsRanked] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('mode') === 'ranked') {
+        setIsRanked(true)
+        setDifficulty('nightmare')
+      }
+    }
+  }, [])
+
   // Game setup states
   const [playingState, setPlayingState] = useState<'lobby' | 'countdown' | 'playing' | 'finished'>('lobby')
   const [difficulty, setDifficulty] = useState<Difficulty>('medium')
@@ -125,6 +137,34 @@ export default function SnakeArenaGame() {
       window.removeEventListener('gamehub_snake_lobby', handleLobby)
     }
   }, [])
+
+  // Disable pull-to-refresh, overscroll, and body scrolling during active gameplay
+  useEffect(() => {
+    const isActiveGameplay = playingState === 'playing' || playingState === 'countdown';
+
+    if (isActiveGameplay) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.overscrollBehavior = 'none';
+
+      const preventDefaultTouch = (e: TouchEvent) => {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      };
+      
+      window.addEventListener('touchmove', preventDefaultTouch, { passive: false });
+
+      return () => {
+        document.body.style.overflow = '';
+        document.body.style.overscrollBehavior = '';
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.overscrollBehavior = '';
+        window.removeEventListener('touchmove', preventDefaultTouch);
+      };
+    }
+  }, [playingState]);
 
   // References for tick loops
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -639,7 +679,7 @@ export default function SnakeArenaGame() {
         opponentScore: 0,
         durationSecs: duration,
         gameMetadata: {
-          mode: 'vs-ai',
+          mode: isRanked ? 'ranked' : 'vs-ai',
           difficulty,
           foodsCollected,
           longestLength,
@@ -648,6 +688,17 @@ export default function SnakeArenaGame() {
         }
       }
     })
+
+    if (isRanked) {
+      fetch('/api/ranked/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: resultOutcome,
+          opponentName: 'ApexBot'
+        })
+      }).catch(err => console.error('Failed to submit ranked stats:', err))
+    }
   }
 
   // Smooth Canvas coordinate interpolation drawing hook
@@ -904,6 +955,25 @@ export default function SnakeArenaGame() {
           </div>
 
           <div className="setup-form">
+            {isRanked && (
+              <div style={{
+                background: 'linear-gradient(90deg, #e11d48, #9f1239)',
+                border: '1px solid #f43f5e',
+                color: 'white',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                textAlign: 'center',
+                marginBottom: '1rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                animation: 'pulse 1.5s infinite'
+              }}>
+                ⚔️ Competitive Ranked Session
+              </div>
+            )}
+
             <div className="form-group">
               <label>AI Difficulty</label>
               <div className="difficulty-grid">
@@ -911,7 +981,8 @@ export default function SnakeArenaGame() {
                   <button
                     key={d}
                     className={`btn-diff ${difficulty === d ? 'active' : ''}`}
-                    onClick={() => setDifficulty(d)}
+                    onClick={() => !isRanked && setDifficulty(d)}
+                    disabled={isRanked}
                   >
                     {d.toUpperCase()}
                   </button>
@@ -988,8 +1059,8 @@ export default function SnakeArenaGame() {
             <div className="canvas-container">
               <canvas
                 ref={canvasRef}
-                width={720}
-                height={480}
+                width={960}
+                height={640}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -1001,37 +1072,6 @@ export default function SnakeArenaGame() {
               />
             </div>
             <p className="mobile-controls-tip">💡 Swipe on the screen to change direction.</p>
-          </div>
-
-          {/* Live Collapsible Leaderboard Panel */}
-          <div className="leaderboard-panel">
-            <div className="leaderboard-header" onClick={() => setShowLeaderboard(!showLeaderboard)}>
-              <h3>🏆 Live Standings</h3>
-              <span className="collapsible-arrow">{showLeaderboard ? '▼' : '▲'}</span>
-            </div>
-
-            {showLeaderboard && (
-              <div className="leaderboard-list">
-                {leaderboard.map((s, idx) => (
-                  <div
-                    key={s.userId}
-                    className={`leaderboard-item ${s.userId === 'player-human' ? 'highlight' : ''}`}
-                    style={{ borderLeft: `4px solid ${s.color}` }}
-                  >
-                    <span className="player-rank">#{idx + 1}</span>
-                    <span className="player-name">
-                      {s.userId === 'player-human' ? (
-                        <strong style={{ color: '#fbbf24' }}>YOU</strong>
-                      ) : (
-                        s.username
-                      )}
-                    </span>
-                    <span className="player-score">{s.score} pts</span>
-                    {s.status === 'ELIMINATED' && <span className="dead-tag">DEAD</span>}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -1110,12 +1150,11 @@ export default function SnakeArenaGame() {
         }
 
         .arena-layout {
-          display: grid;
-          grid-template-columns: 1fr 280px;
-          gap: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
           width: 100%;
           max-width: 100%;
-          align-items: start;
         }
 
         .hud-status-bar {
@@ -1338,7 +1377,7 @@ export default function SnakeArenaGame() {
             padding: 0.25rem;
           }
           .arena-layout {
-            grid-template-columns: 1fr;
+            width: 100%;
             gap: 1rem;
           }
           .mobile-controls-tip {

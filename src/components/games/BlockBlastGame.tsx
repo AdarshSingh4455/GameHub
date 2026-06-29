@@ -1108,17 +1108,18 @@ export default function BlockBlastGame() {
               position: 'relative',
               width: '100%',
               aspectRatio: '1',
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%)',
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.55) 0%, rgba(15, 23, 42, 0.55) 100%)',
               backdropFilter: 'blur(8px)',
-              border: '2px solid rgba(255, 255, 255, 0.08)',
+              border: '2px solid rgba(255, 255, 255, 0.09)',
               borderRadius: '20px',
               padding: '8px',
+              marginBottom: '4px',
               boxSizing: 'border-box',
               display: 'grid',
               gridTemplateColumns: 'repeat(8, 1fr)',
               gridTemplateRows: 'repeat(8, 1fr)',
               gap: '6px',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.02)',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,255,255,0.025), 0 2px 0 rgba(255,255,255,0.04)',
             }}
             id="bb-board"
           >
@@ -1171,40 +1172,70 @@ export default function BlockBlastGame() {
             style={{
               width: '100%',
               display: 'flex',
-              gap: '12px',
-              alignItems: 'center',
+              gap: '10px',
+              alignItems: 'stretch',
               boxSizing: 'border-box',
             }}
           >
-            {/* Hold Slot Section */}
+            {/* ── Hold Slot Section (Redesigned) ── */}
             <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: 4,
-                padding: '6px',
-                background: 'rgba(255, 255, 255, 0.01)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
+                gap: 0,
+                padding: '8px 6px',
+                background: selectedPieceIdx === 99
+                  ? 'rgba(6, 182, 212, 0.08)'
+                  : 'linear-gradient(160deg, rgba(6,182,212,0.04), rgba(15,23,42,0.6))',
+                border: selectedPieceIdx === 99
+                  ? '2px solid hsl(195 100% 50% / 0.6)'
+                  : '1px solid hsl(195 100% 50% / 0.18)',
                 borderRadius: '16px',
-                width: '90px',
+                width: '94px',
+                minWidth: '94px',
                 boxSizing: 'border-box',
+                boxShadow: selectedPieceIdx === 99
+                  ? '0 0 18px hsl(195 100% 50% / 0.25), inset 0 0 10px hsl(195 100% 50% / 0.08)'
+                  : '0 4px 12px rgba(0,0,0,0.3)',
+                transition: 'all 0.2s ease',
               }}
               id="bb-hold-slot-container"
             >
-              <span style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', fontWeight: 800 }}>HOLD</span>
+              {/* HOLD badge label */}
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                background: 'linear-gradient(90deg, hsl(195 100% 50% / 0.2), hsl(220 100% 60% / 0.12))',
+                border: '1px solid hsl(195 100% 50% / 0.3)',
+                borderRadius: 20,
+                padding: '1px 7px',
+                marginBottom: '6px',
+              }}>
+                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'hsl(195 100% 70%)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hold</span>
+              </div>
+
+              {/* Hold box */}
               <div
                 style={{
-                  width: '60px',
-                  height: '60px',
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  border: selectedPieceIdx === 99 ? '2px solid #06b6d4' : '1px dashed rgba(255, 255, 255, 0.1)',
-                  borderRadius: 10,
+                  width: '62px',
+                  height: '62px',
+                  background: heldPiece ? 'rgba(6,182,212,0.06)' : 'rgba(15, 23, 42, 0.55)',
+                  border: selectedPieceIdx === 99
+                    ? '2px solid hsl(195 100% 55%)'
+                    : heldPiece
+                      ? '1px solid hsl(195 100% 50% / 0.35)'
+                      : '1px dashed rgba(255, 255, 255, 0.1)',
+                  borderRadius: 12,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: heldPiece ? 'grab' : 'default',
                   position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: heldPiece ? `0 0 12px ${heldPiece.color}40, inset 0 0 8px rgba(6,182,212,0.05)` : 'none',
+                  transition: 'all 0.2s ease',
                 }}
                 onPointerDown={(e) => heldPiece && handlePieceSlotPointerDown(e, heldPiece, 99)}
                 onClick={() => {
@@ -1216,12 +1247,14 @@ export default function BlockBlastGame() {
               >
                 {heldPiece ? (
                   <div
+                    key={heldPiece.id}
                     style={{
                       display: 'grid',
                       gridTemplateColumns: `repeat(${heldPiece.grid[0].length}, 1fr)`,
                       gap: '2px',
-                      width: '60%',
-                      height: '60%',
+                      width: '62%',
+                      height: '62%',
+                      animation: 'bb-slide-in 0.22s cubic-bezier(0.34,1.56,0.64,1) both',
                     }}
                   >
                     {heldPiece.grid.map((row, r) =>
@@ -1232,62 +1265,70 @@ export default function BlockBlastGame() {
                             backgroundColor: val === 1 ? heldPiece.color : 'transparent',
                             borderRadius: '2px',
                             aspectRatio: '1',
+                            boxShadow: val === 1 ? `0 0 5px ${heldPiece.color}80` : 'none',
                           }}
                         />
                       ))
                     )}
                   </div>
                 ) : (
-                  <span style={{ fontSize: '0.6rem', color: 'hsl(220 10% 40%)', fontWeight: 700 }}>EMPTY</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                    <div style={{ width: 20, height: 20, border: '1.5px dashed rgba(255,255,255,0.12)', borderRadius: 4 }} />
+                    <span style={{ fontSize: '0.5rem', color: 'hsl(220 10% 35%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>empty</span>
+                  </div>
                 )}
 
-                {/* Hold Indicator Badge */}
+                {/* Locked overlay */}
                 {holdUsedThisTurn && heldPiece && (
                   <div
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                      borderRadius: 10,
+                      backgroundColor: 'rgba(15, 23, 42, 0.72)',
+                      borderRadius: 11,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '0.6rem',
+                      fontSize: '0.55rem',
                       fontWeight: 900,
-                      color: 'hsl(0, 70%, 60%)',
+                      color: 'hsl(0 70% 60%)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
                     }}
                   >
-                    LOCKED
+                    Locked
                   </div>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                 <button
                   onClick={handleHold}
                   disabled={selectedPieceIdx === -1 || holdUsedThisTurn}
                   className="btn btn-secondary"
                   style={{
-                    padding: '0.25rem 0.4rem',
-                    fontSize: '0.6rem',
+                    padding: '0.22rem 0.38rem',
+                    fontSize: '0.58rem',
                     borderRadius: '6px',
-                    width: '38px',
-                    opacity: selectedPieceIdx === -1 || holdUsedThisTurn ? 0.4 : 1,
+                    flex: 1,
+                    opacity: selectedPieceIdx === -1 || holdUsedThisTurn ? 0.38 : 1,
                     cursor: selectedPieceIdx === -1 || holdUsedThisTurn ? 'not-allowed' : 'pointer',
                   }}
                   id="bb-hold-btn"
                 >
-                  📥 Hold
+                  Hold
                 </button>
                 <button
                   onClick={() => handleRotatePiece(selectedPieceIdx)}
                   disabled={selectedPieceIdx === -1}
                   className="btn btn-secondary"
                   style={{
-                    padding: '0.25rem 0.4rem',
-                    fontSize: '0.6rem',
+                    padding: '0.22rem 0.38rem',
+                    fontSize: '0.58rem',
                     borderRadius: '6px',
-                    width: '38px',
-                    opacity: selectedPieceIdx === -1 ? 0.4 : 1,
+                    flex: 1,
+                    opacity: selectedPieceIdx === -1 ? 0.38 : 1,
                     cursor: selectedPieceIdx === -1 ? 'not-allowed' : 'pointer',
                   }}
                   id="bb-rotate-btn"
@@ -1301,15 +1342,16 @@ export default function BlockBlastGame() {
             <div
               style={{
                 display: 'flex',
-                gap: '0.5rem',
+                gap: '8px',
                 flex: 1,
                 justifyContent: 'space-between',
                 background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
                 borderRadius: '16px',
-                padding: '8px',
+                padding: '10px',
                 boxSizing: 'border-box',
-                height: '106px',
+                minHeight: '106px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
               }}
               id="bb-pieces-slots"
             >
@@ -1318,23 +1360,25 @@ export default function BlockBlastGame() {
                 const isDragged = draggedIndex === idx
                 const isShaking = shakingPieceIdx === idx
 
-                let slotBorder = '1px solid transparent'
+                let slotBorder = '1px solid rgba(255,255,255,0.06)'
                 if (isShaking) {
                   // Handled by CSS class shake-animation
-                } else if (isSelected) {
-                  slotBorder = '2px solid #06b6d4'
+                } else if (isSelected && piece) {
+                  slotBorder = `2px solid ${piece.color}`
                 }
 
                 return (
                   <div
                     key={idx}
-                    className={isShaking ? 'shake-animation' : ''}
+                    className={isShaking ? 'shake-animation' : 'bb-tray-slot'}
                     style={{
                       flex: 1,
-                      height: '90px',
-                      borderRadius: '10px',
+                      minWidth: 0,
+                      borderRadius: '12px',
                       border: slotBorder,
-                      background: 'rgba(15, 23, 42, 0.4)',
+                      background: isSelected && piece
+                        ? `${piece.color}12`
+                        : 'rgba(15, 23, 42, 0.45)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1343,6 +1387,10 @@ export default function BlockBlastGame() {
                       cursor: piece ? 'grab' : 'default',
                       opacity: isDragged ? 0.2 : 1,
                       boxSizing: 'border-box',
+                      boxShadow: isSelected && piece
+                        ? `0 0 14px ${piece.color}40, 0 4px 12px rgba(0,0,0,0.3)`
+                        : '0 4px 12px rgba(0,0,0,0.2)',
+                      transition: 'all 0.18s ease',
                     }}
                     onPointerDown={(e) => piece && handlePieceSlotPointerDown(e, piece, idx)}
                     onClick={() => {
@@ -1437,38 +1485,17 @@ export default function BlockBlastGame() {
       {/* ── Styles ── */}
       <style jsx global>{`
         @keyframes pulse {
-          0% {
-            transform: scale(1);
-            opacity: 0.9;
-          }
-          100% {
-            transform: scale(1.05);
-            opacity: 1;
-          }
+          0% { transform: scale(1); opacity: 0.9; }
+          100% { transform: scale(1.05); opacity: 1; }
         }
         @keyframes floatUpAndFade {
-          0% {
-            transform: translate(-50%, -50%) scale(0.8);
-            opacity: 0;
-          }
-          20% {
-            transform: translate(-50%, -50%) scale(1.1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(-50%, -120%) scale(1);
-            opacity: 0;
-          }
+          0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+          20% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+          100% { transform: translate(-50%, -120%) scale(1); opacity: 0; }
         }
         @keyframes cellClear {
-          0% {
-            transform: scale(1);
-            filter: brightness(1.8);
-          }
-          100% {
-            transform: scale(0);
-            opacity: 0;
-          }
+          0% { transform: scale(1); filter: brightness(1.8); }
+          100% { transform: scale(0); opacity: 0; }
         }
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -1477,6 +1504,10 @@ export default function BlockBlastGame() {
           0%, 100% { transform: translateX(0); }
           20%, 60% { transform: translateX(-6px); }
           40%, 80% { transform: translateX(6px); }
+        }
+        @keyframes bb-slide-in {
+          from { opacity: 0; transform: translateX(-14px) scale(0.88); }
+          to   { opacity: 1; transform: translateX(0) scale(1); }
         }
         .shake-animation {
           animation: shake 0.4s ease-in-out;
@@ -1493,12 +1524,12 @@ export default function BlockBlastGame() {
           animation: previewPulse 0.8s infinite alternate;
         }
         @keyframes previewPulse {
-          from {
-            opacity: 0.55;
-          }
-          to {
-            opacity: 0.8;
-          }
+          from { opacity: 0.55; }
+          to { opacity: 0.8; }
+        }
+        .bb-tray-slot:not(.shake-animation):hover {
+          transform: scale(1.04);
+          box-shadow: 0 6px 18px rgba(0,0,0,0.35) !important;
         }
       `}</style>
     </div>

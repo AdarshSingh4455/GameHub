@@ -252,79 +252,93 @@ export async function GET(request: NextRequest) {
 
     // If global leaderboard with timeframes (Monthly / Weekly)
     if (timeframe === 'monthly' || timeframe === 'weekly') {
-      const days = timeframe === 'monthly' ? 30 : 7
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - days)
+      let startDate: Date
+
+      if (timeframe === 'weekly') {
+        // Use canonical week start from WeeklyLeaderboardState
+        // This ensures "this week's" scores are consistent with the reward system
+        try {
+          const { getOrCreateWeeklyState, checkAndProcessWeeklyReset } = await import('@/lib/weeklyLeaderboardEngine')
+          // Lazy check for overdue reset (non-blocking)
+          checkAndProcessWeeklyReset().catch(() => null)
+          const state = await getOrCreateWeeklyState()
+          startDate = new Date(state.startDate)
+        } catch {
+          // Fallback to 7-day rolling window
+          startDate = new Date()
+          startDate.setDate(startDate.getDate() - 7)
+        }
+      } else {
+        // Monthly: rolling 30 days
+        startDate = new Date()
+        startDate.setDate(startDate.getDate() - 30)
+      }
 
       const xpSums = await prisma.xPEvent.groupBy({
         by: ['profileId'],
         where: {
-          createdAt: {
-            gte: startDate
-          },
+          createdAt: { gte: startDate },
           profileId: showFriends ? { in: targetProfileIds } : undefined
         },
-        _sum: {
-          amount: true
-        },
-        orderBy: {
-          _sum: {
-            amount: 'desc'
-          }
-        },
+        _sum:   { amount: true },
+        _count: { id: true },
+        orderBy: { _sum: { amount: 'desc' } },
         take: 10
       })
 
       // Fetch profile details for these IDs
       const profileIds = xpSums.map(x => x.profileId)
       const profiles = await prisma.profile.findMany({
-        where: {
-          id: { in: profileIds }
-        },
+        where: { id: { in: profileIds } },
         select: {
-          id: true,
-          username: true,
-          displayName: true,
-          level: true,
-          currentRank: true,
-          previousRank: true,
-          selectedTitle: true,
-          avatarUrl: true,
-          selectedFrame: true,
-          _count: {
-            select: { wonMatches: true }
-          }
+          id: true, username: true, displayName: true, level: true,
+          currentRank: true, previousRank: true, selectedTitle: true,
+          avatarUrl: true, selectedFrame: true,
+          _count: { select: { wonMatches: true } }
         }
       })
 
-      // Map back in order of sorted sums
-      const rows = xpSums.map((x, idx) => {
+      // For weekly: tie-break by games played and first-score timestamp
+      let entries: any[] = xpSums.map(x => {
         const p = profiles.find(prof => prof.id === x.profileId)
         let movement = 'none'
-        if (p && p.currentRank !== null && p.previousRank !== null) {
-          if (p.currentRank < p.previousRank) movement = 'up'
-          else if (p.currentRank > p.previousRank) movement = 'down'
+        if (p?.currentRank !== null && p?.previousRank !== null) {
+          if ((p?.currentRank ?? 0) < (p?.previousRank ?? 0)) movement = 'up'
+          else if ((p?.currentRank ?? 0) > (p?.previousRank ?? 0)) movement = 'down'
           else movement = 'same'
         }
         return {
-          rank: idx + 1,
-          profileId: p?.id || x.profileId,
-          username: p?.username || 'Unknown',
+          profileId:   p?.id || x.profileId,
+          username:    p?.username || 'Unknown',
           displayName: p?.displayName || null,
-          level: p?.level || 1,
-          xp: x._sum.amount || 0, // show XP gained in this period
-          wins: p?._count.wonMatches || 0,
-          title: p?.selectedTitle || null,
-          avatarUrl: p?.avatarUrl || null,
+          level:       p?.level || 1,
+          xp:          x._sum.amount ?? 0,
+          totalGames:  (x._count as any).id ?? 0,
+          wins:        p?._count?.wonMatches || 0,
+          title:       p?.selectedTitle || null,
+          avatarUrl:   p?.avatarUrl || null,
           selectedFrame: p?.selectedFrame || null,
           movement,
-          currentRank: p?.currentRank || null,
+          currentRank:  p?.currentRank || null,
           previousRank: p?.previousRank || null
         }
       })
 
+      // Apply tie-break sort for weekly (score desc, fewer games, alphabetical)
+      if (timeframe === 'weekly') {
+        entries.sort((a, b) => {
+          if (b.xp !== a.xp) return b.xp - a.xp
+          if (a.totalGames !== b.totalGames) return a.totalGames - b.totalGames
+          return a.username.localeCompare(b.username)
+        })
+      }
+
+      const rows = entries.map((e, idx) => ({ ...e, rank: idx + 1, score: e.xp }))
+
       return NextResponse.json({ rows }, { status: 200 })
     }
+
+
 
     // Default: All Time
     const profiles = await prisma.profile.findMany({

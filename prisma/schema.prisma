@@ -72,6 +72,7 @@ model Profile {
   hangmanStreak        Int                 @default(0)
   tournamentRegistrations TournamentRegistration[]
   tournamentTeamMembers   TournamentTeamMember[]
+  weeklyRewards           WeeklyLeaderboardReward[]
 
   @@index([xp(sort: Desc)])
   @@index([level(sort: Desc)])
@@ -627,4 +628,40 @@ model TournamentAuditLog {
 
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 }
+
+model WeeklyLeaderboardState {
+  id         String   @id @default("current")
+  weekNumber Int      @default(1)
+  startDate  DateTime @default(now())
+  endDate    DateTime
+}
+
+model WeeklyLeaderboardArchive {
+  id                 String    @id @default(uuid())
+  weekNumber         Int       @unique
+  startDate          DateTime
+  endDate            DateTime
+  rewardsDistributed Boolean   @default(false)
+  distributedAt      DateTime?
+  standings          Json      // Array of standings: { rank: number, profileId: string, username: string, score: number, coinsEarned: number }
+}
+
+model WeeklyLeaderboardReward {
+  id             String    @id @default(uuid())
+  profileId      String
+  weekNumber     Int
+  rank           Int
+  score          Int
+  coinsEarned    Int
+  xpEarned       Int       @default(0)
+  totalGames     Int       @default(0)
+  claimed        Boolean   @default(false)
+  claimedAt      DateTime?
+  notificationId String?
+  createdAt      DateTime  @default(now())
+  profile        Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, weekNumber])
+}
+
 

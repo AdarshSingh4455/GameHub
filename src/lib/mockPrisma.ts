@@ -25,6 +25,9 @@ export interface MockDbState {
   rankedSeasons?: Record<string, any>
   seasonSnapshots?: Record<string, any>
   ads?: Record<string, any>
+  weeklyLeaderboardState?: Record<string, any>
+  weeklyLeaderboardArchive?: Record<string, any>
+  weeklyLeaderboardReward?: Record<string, any>
 }
 
 export const MOCK_COSMETIC_ITEMS = [
@@ -131,6 +134,33 @@ export function loadDb(): MockDbState {
             if (!parsed.tournamentTeams) parsed.tournamentTeams = {}
             if (!parsed.tournamentTeamMembers) parsed.tournamentTeamMembers = {}
             if (!parsed.tournamentAuditLogs) parsed.tournamentAuditLogs = {}
+            if (!parsed.weeklyLeaderboardState) parsed.weeklyLeaderboardState = {}
+            if (!parsed.weeklyLeaderboardArchive) parsed.weeklyLeaderboardArchive = {}
+            if (!parsed.weeklyLeaderboardReward) parsed.weeklyLeaderboardReward = {}
+            
+            // Seed a default current weekly leaderboard state if empty
+            if (Object.keys(parsed.weeklyLeaderboardState).length === 0) {
+              // Calculate previous Monday 10:30 AM
+              const getPrevMonday1030 = () => {
+                const d = new Date()
+                d.setHours(10, 30, 0, 0)
+                const day = d.getDay()
+                const diff = day === 0 ? -6 : 1 - day
+                d.setDate(d.getDate() + diff)
+                if (d.getTime() > Date.now()) {
+                  d.setDate(d.getDate() - 7)
+                }
+                return d
+              }
+              const start = getPrevMonday1030()
+              const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000)
+              parsed.weeklyLeaderboardState['current'] = {
+                id: 'current',
+                weekNumber: 2,
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+              }
+            }
             cachedDb = parsed
             return parsed
           }
@@ -315,7 +345,33 @@ export function loadDb(): MockDbState {
     tournamentMatches: {},
     tournamentTeams: {},
     tournamentTeamMembers: {},
-    tournamentAuditLogs: {}
+    tournamentAuditLogs: {},
+    weeklyLeaderboardState: {
+      current: {
+        id: 'current',
+        weekNumber: 2,
+        startDate: (() => {
+          const d = new Date()
+          d.setHours(10, 30, 0, 0)
+          const day = d.getDay()
+          const diff = day === 0 ? -6 : 1 - day
+          d.setDate(d.getDate() + diff)
+          if (d.getTime() > Date.now()) d.setDate(d.getDate() - 7)
+          return d.toISOString()
+        })(),
+        endDate: (() => {
+          const d = new Date()
+          d.setHours(10, 30, 0, 0)
+          const day = d.getDay()
+          const diff = day === 0 ? -6 : 1 - day
+          d.setDate(d.getDate() + diff)
+          if (d.getTime() > Date.now()) d.setDate(d.getDate() - 7)
+          return new Date(d.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        })()
+      }
+    },
+    weeklyLeaderboardArchive: {},
+    weeklyLeaderboardReward: {}
   }
 
   cachedDb = defaultDb
@@ -2125,6 +2181,167 @@ function createModelMock(modelName: string) {
           }
         }
 
+        // ── WeeklyLeaderboardState ───────────────────────────────────────────
+        if (modelName === 'weeklyLeaderboardState') {
+          if (action === 'findUnique' || action === 'findFirst') {
+            const db = loadDb()
+            const state = (db.weeklyLeaderboardState || {})['current']
+            if (state) return state
+            // return a safe default if not seeded
+            const d = new Date(); d.setHours(10,30,0,0)
+            const day = d.getDay(); const diff = day===0?-6:1-day; d.setDate(d.getDate()+diff)
+            if (d.getTime() > Date.now()) d.setDate(d.getDate()-7)
+            return { id:'current', weekNumber:2, startDate:d.toISOString(), endDate:new Date(d.getTime()+7*24*60*60*1000).toISOString() }
+          }
+          if (action === 'upsert' || action === 'update') {
+            const db = loadDb()
+            if (!db.weeklyLeaderboardState) db.weeklyLeaderboardState = {}
+            const existing = db.weeklyLeaderboardState['current'] || {}
+            const data = params.update || params.create || params.data || {}
+            db.weeklyLeaderboardState['current'] = { ...existing, ...data }
+            saveDb(db)
+            return db.weeklyLeaderboardState['current']
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.weeklyLeaderboardState) db.weeklyLeaderboardState = {}
+            const data = params.data || {}
+            db.weeklyLeaderboardState[data.id || 'current'] = data
+            saveDb(db)
+            return data
+          }
+        }
+
+        // ── WeeklyLeaderboardArchive ─────────────────────────────────────────
+        if (modelName === 'weeklyLeaderboardArchive') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            const archives = Object.values(db.weeklyLeaderboardArchive || {})
+            const where = params.where || {}
+            let result = archives as any[]
+            if (where.weekNumber !== undefined) result = result.filter(a => a.weekNumber === where.weekNumber)
+            const orderBy = params.orderBy
+            if (orderBy?.weekNumber === 'desc') result.sort((a,b)=>b.weekNumber-a.weekNumber)
+            else result.sort((a,b)=>a.weekNumber-b.weekNumber)
+            return result
+          }
+          if (action === 'findUnique' || action === 'findFirst') {
+            const db = loadDb()
+            const where = params.where || {}
+            const archives = Object.values(db.weeklyLeaderboardArchive || {}) as any[]
+            if (where.weekNumber !== undefined) return archives.find(a=>a.weekNumber===where.weekNumber) || null
+            if (where.id) return (db.weeklyLeaderboardArchive || {})[where.id] || null
+            return archives[0] || null
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.weeklyLeaderboardArchive) db.weeklyLeaderboardArchive = {}
+            const data = params.data || {}
+            const id = data.id || `archive-${Date.now()}`
+            const record = { ...data, id }
+            db.weeklyLeaderboardArchive[id] = record
+            saveDb(db)
+            return record
+          }
+          if (action === 'update') {
+            const db = loadDb()
+            if (!db.weeklyLeaderboardArchive) db.weeklyLeaderboardArchive = {}
+            const where = params.where || {}
+            const key = where.id || Object.keys(db.weeklyLeaderboardArchive).find(k => {
+              const a = (db.weeklyLeaderboardArchive||{})[k]
+              return where.weekNumber !== undefined && a.weekNumber === where.weekNumber
+            })
+            if (key && db.weeklyLeaderboardArchive[key]) {
+              const upd = params.data || {}
+              db.weeklyLeaderboardArchive[key] = { ...db.weeklyLeaderboardArchive[key], ...upd }
+              saveDb(db)
+              return db.weeklyLeaderboardArchive[key]
+            }
+            return null
+          }
+          if (action === 'count') {
+            const db = loadDb()
+            return Object.keys(db.weeklyLeaderboardArchive || {}).length
+          }
+        }
+
+        // ── WeeklyLeaderboardReward ──────────────────────────────────────────
+        if (modelName === 'weeklyLeaderboardReward') {
+          if (action === 'findMany') {
+            const db = loadDb()
+            const rewards = Object.values(db.weeklyLeaderboardReward || {}) as any[]
+            const where = params.where || {}
+            let result = rewards
+            if (where.profileId) result = result.filter(r => r.profileId === where.profileId)
+            if (where.weekNumber !== undefined) result = result.filter(r => r.weekNumber === where.weekNumber)
+            if (where.claimed !== undefined) result = result.filter(r => r.claimed === where.claimed)
+            if (params.orderBy?.createdAt === 'desc') result.sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime())
+            return result
+          }
+          if (action === 'findUnique' || action === 'findFirst') {
+            const db = loadDb()
+            const rewards = Object.values(db.weeklyLeaderboardReward || {}) as any[]
+            const where = params.where || {}
+            if (where.profileId_weekNumber) {
+              return rewards.find(r=>r.profileId===where.profileId_weekNumber.profileId && r.weekNumber===where.profileId_weekNumber.weekNumber) || null
+            }
+            if (where.profileId && where.weekNumber !== undefined) {
+              return rewards.find(r=>r.profileId===where.profileId && r.weekNumber===where.weekNumber) || null
+            }
+            if (where.id) return (db.weeklyLeaderboardReward || {})[where.id] || null
+            if (where.profileId && !where.weekNumber) return rewards.find(r=>r.profileId===where.profileId) || null
+            return rewards[0] || null
+          }
+          if (action === 'create') {
+            const db = loadDb()
+            if (!db.weeklyLeaderboardReward) db.weeklyLeaderboardReward = {}
+            const data = params.data || {}
+            const id = data.id || `reward-${Date.now()}-${Math.random().toString(36).slice(2)}`
+            const record = { ...data, id, createdAt: data.createdAt || new Date().toISOString() }
+            db.weeklyLeaderboardReward[id] = record
+            saveDb(db)
+            return record
+          }
+          if (action === 'createMany') {
+            const db = loadDb()
+            if (!db.weeklyLeaderboardReward) db.weeklyLeaderboardReward = {}
+            const items = params.data || []
+            for (const data of items) {
+              const id = data.id || `reward-${Date.now()}-${Math.random().toString(36).slice(2)}`
+              db.weeklyLeaderboardReward[id] = { ...data, id, createdAt: data.createdAt || new Date().toISOString() }
+            }
+            saveDb(db)
+            return { count: items.length }
+          }
+          if (action === 'update') {
+            const db = loadDb()
+            if (!db.weeklyLeaderboardReward) db.weeklyLeaderboardReward = {}
+            const where = params.where || {}
+            let key = where.id
+            if (!key && where.profileId_weekNumber) {
+              const rewards = Object.entries(db.weeklyLeaderboardReward)
+              const found = rewards.find(([,r]:any)=>r.profileId===where.profileId_weekNumber.profileId && r.weekNumber===where.profileId_weekNumber.weekNumber)
+              key = found ? found[0] : null
+            }
+            if (key && db.weeklyLeaderboardReward[key]) {
+              const upd = params.data || {}
+              db.weeklyLeaderboardReward[key] = { ...db.weeklyLeaderboardReward[key], ...upd }
+              saveDb(db)
+              return db.weeklyLeaderboardReward[key]
+            }
+            return null
+          }
+          if (action === 'count') {
+            const db = loadDb()
+            const rewards = Object.values(db.weeklyLeaderboardReward || {}) as any[]
+            const where = params.where || {}
+            let result = rewards
+            if (where.profileId) result = result.filter(r=>r.profileId===where.profileId)
+            if (where.weekNumber !== undefined) result = result.filter(r=>r.weekNumber===where.weekNumber)
+            return result.length
+          }
+        }
+
         // ── Fallback Actions for unregistered or secondary models ───────────
         if (action === 'findMany')   return []
         if (action === 'findUnique') return null
@@ -2173,6 +2390,7 @@ export function createPrismaMockProxy(realPrisma: any) {
         'rankedSeason', 'seasonSnapshot', 'rankedMatch', 'ad',
         'tournamentRegistration', 'subTournament', 'tournamentMatch', 'tournamentTeam', 'tournamentTeamMember',
         'tournamentAuditLog',
+        'weeklyLeaderboardState', 'weeklyLeaderboardArchive', 'weeklyLeaderboardReward',
         // Also support potential legacy aliases just in case
         'matchResult', 'gameScore',
       ]

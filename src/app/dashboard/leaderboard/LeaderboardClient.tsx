@@ -178,8 +178,8 @@ export default function LeaderboardClient() {
     return groups
   }, [gameOptions])
   
-  // Tabs: 'casual' | 'ranked' | 'hallOfFame'
-  const [activeTab, setActiveTab] = useState<'casual' | 'ranked' | 'hallOfFame'>('casual')
+  // Tabs: 'casual' | 'ranked' | 'hallOfFame' | 'weeklyHistory'
+  const [activeTab, setActiveTab] = useState<'casual' | 'ranked' | 'hallOfFame' | 'weeklyHistory'>('casual')
 
   // Casual state
   const [scope, setScope] = useState<'global' | 'friends'>('global')
@@ -199,6 +199,13 @@ export default function LeaderboardClient() {
   // Hall of Fame State
   const [hallOfFame, setHallOfFame] = useState<HallOfFameEntry[]>([])
   const [hofLoading, setHofLoading] = useState(true)
+
+  // Weekly History & Countdown State
+  const [weeklyArchives, setWeeklyArchives] = useState<any[]>([])
+  const [weeklyLoading, setWeeklyLoading] = useState(true)
+  const [nextReset, setNextReset] = useState<Date | null>(null)
+  const [countdown, setCountdown] = useState('')
+  const [expandedWeeks, setExpandedWeeks] = useState<number[]>([])
 
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
 
@@ -407,6 +414,51 @@ export default function LeaderboardClient() {
     }
   }, [activeTab])
 
+  // Fetch weekly history and countdown
+  useEffect(() => {
+    if (activeTab === 'weeklyHistory') {
+      setWeeklyLoading(true)
+      fetch('/api/leaderboard/weekly-history')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data) {
+            setWeeklyArchives(data.archives || [])
+            if (data.currentWeek?.nextReset) {
+              setNextReset(new Date(data.currentWeek.nextReset))
+            }
+          }
+          setWeeklyLoading(false)
+        })
+        .catch(() => setWeeklyLoading(false))
+    }
+    // Also fetch countdown whenever on casual/ranked tab
+    if (activeTab === 'casual' || activeTab === 'ranked') {
+      fetch('/api/leaderboard/weekly-history')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.currentWeek?.nextReset) setNextReset(new Date(data.currentWeek.nextReset))
+        })
+        .catch(() => null)
+    }
+  }, [activeTab])
+
+  // Live countdown tick
+  useEffect(() => {
+    if (!nextReset) return
+    const tick = () => {
+      const diff = nextReset.getTime() - Date.now()
+      if (diff <= 0) { setCountdown('Resetting...'); return }
+      const d = Math.floor(diff / 86400000)
+      const h = Math.floor((diff % 86400000) / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
+      setCountdown(`${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [nextReset])
+
 
 
   // Trigger Season Reset Simulation
@@ -425,6 +477,7 @@ export default function LeaderboardClient() {
 
   const myMmr = rankedStats?.mmr ?? 1000
   const myDetails = getRankDetails(myMmr)
+  const isSoon = nextReset ? (nextReset.getTime() - Date.now() < 24 * 60 * 60 * 1000) : false
 
   return (
     <div className="animate-fadeIn safe-bottom-padding leaderboard-page-container">
@@ -466,6 +519,7 @@ export default function LeaderboardClient() {
           { key: 'casual', label: 'Casual XP & High Scores', icon: <GamepadIcon size={16} /> },
           { key: 'ranked', label: 'Ranked Competitive', icon: <ZapIcon size={16} /> },
           { key: 'hallOfFame', label: 'Hall of Fame', icon: <CrownIcon size={16} /> },
+          { key: 'weeklyHistory', label: 'Weekly History', icon: <Trophy size={16} /> },
         ].map((t) => {
           const active = activeTab === t.key
           return (
@@ -488,6 +542,50 @@ export default function LeaderboardClient() {
           )
         })}
       </div>
+
+      {/* ── Weekly Reset Countdown ─────────────────────────────────────── */}
+      {countdown && (activeTab === 'casual' || activeTab === 'ranked' || activeTab === 'weeklyHistory') && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: '0.4rem',
+          background: isSoon
+            ? 'linear-gradient(135deg, hsl(35 30% 9%), hsl(25 35% 8%))'
+            : 'linear-gradient(135deg, hsl(222 25% 10%), hsl(252 30% 12%))',
+          border: isSoon
+            ? '1px solid hsl(38 95% 50% / 0.45)'
+            : '1px solid hsl(252 60% 40% / 0.4)',
+          borderRadius: 16, padding: '0.85rem 1.25rem',
+          marginBottom: '1.25rem',
+          boxShadow: isSoon ? '0 0 15px hsl(38 95% 50% / 0.12)' : 'none',
+          transition: 'all 0.3s ease'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: isSoon ? 'hsl(38 95% 55%)' : 'hsl(142 70% 55%)',
+                animation: 'pulse 2s ease infinite',
+                boxShadow: isSoon ? '0 0 8px hsl(38 95% 55%)' : 'none'
+              }} />
+              <span style={{ fontSize: '0.8rem', color: isSoon ? 'hsl(38 90% 70%)' : 'hsl(220 10% 60%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Next Weekly Reset
+              </span>
+            </div>
+            <span style={{
+              fontSize: '1.05rem', fontWeight: 900,
+              color: isSoon ? 'hsl(38 95% 60%)' : 'hsl(252 80% 75%)',
+              letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums',
+              textShadow: isSoon ? '0 0 10px hsl(38 95% 55% / 0.3)' : 'none'
+            }}>
+              {countdown}
+            </span>
+          </div>
+          {isSoon && (
+            <div style={{ fontSize: '0.72rem', color: 'hsl(38 90% 55%)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+              <span>⚠️</span> <strong>Weekly rewards will be distributed soon!</strong> Keep playing to secure your rank.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ────────────────── 1. CASUAL LEADERBOARDS TAB ────────────────── */}
       {activeTab === 'casual' && (
@@ -1126,6 +1224,180 @@ export default function LeaderboardClient() {
                 </div>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* ────────────────── 4. WEEKLY HISTORY TAB ────────────────── */}
+      {activeTab === 'weeklyHistory' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <div>
+              <h2 style={{ margin: 0, fontWeight: 900, fontSize: '1.25rem', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Trophy size={20} style={{ color: '#FFD700' }} /> Weekly Hall of Fame
+              </h2>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'hsl(220 10% 55%)' }}>
+                Permanent achievement history — every week's champions, results, and rewards.
+              </p>
+            </div>
+          </div>
+
+          {weeklyLoading ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }}>Loading weekly history...</div>
+          ) : weeklyArchives.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }} className="card">
+              No weekly results archived yet. The first results will appear here after the first weekly reset.
+            </div>
+          ) : (
+            weeklyArchives.map((archive: any) => {
+              const standings: any[] = Array.isArray(archive.standings) ? archive.standings : []
+              const champion = standings.find(s => s.rank === 1)
+              const runnerUp = standings.find(s => s.rank === 2)
+              const thirdPlace = standings.find(s => s.rank === 3)
+              const top3      = standings.slice(0, 3)
+              const rest      = standings.slice(3)
+
+              const isExpanded = expandedWeeks.includes(archive.weekNumber)
+
+              const toggleExpand = () => {
+                setExpandedWeeks(prev =>
+                  prev.includes(archive.weekNumber)
+                    ? prev.filter(w => w !== archive.weekNumber)
+                    : [...prev, archive.weekNumber]
+                )
+              }
+
+              const medalColors: Record<number, string> = {
+                0: '#FFD700', 1: '#C0C0C0', 2: '#CD7F32'
+              }
+              const medals = ['🏆', '🥈', '🥉']
+
+              const formattedStart = new Date(archive.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+              const formattedEnd = new Date(archive.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+
+              return (
+                <div
+                  key={archive.id}
+                  className="card animate-slideUp"
+                  style={{
+                    padding: '1.25rem',
+                    background: 'linear-gradient(135deg, hsl(222 25% 10%), hsl(222 20% 7%))',
+                    border: isExpanded ? '1px solid hsl(45 100% 50% / 0.35)' : '1px solid hsl(220 20% 15%)',
+                    borderRadius: 20,
+                    cursor: 'pointer',
+                    boxShadow: isExpanded ? '0 4px 20px rgba(0,0,0,0.4)' : 'none',
+                    transition: 'all 0.25s ease'
+                  }}
+                  onClick={toggleExpand}
+                >
+                  {/* Collapsed/Expanded Header Summary */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                      <h3 style={{ margin: 0, fontWeight: 900, color: 'white', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        Week #{archive.weekNumber}
+                        {archive.rewardsDistributed && (
+                          <span style={{ fontSize: '0.62rem', background: 'hsl(142 60% 15%)', color: 'hsl(142 70% 60%)', padding: '0.15rem 0.5rem', borderRadius: 6, fontWeight: 800, border: '1px solid hsl(142 60% 25%)' }}>
+                            Distributed
+                          </span>
+                        )}
+                      </h3>
+                      <span style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', fontWeight: 600 }}>
+                        {formattedStart} – {formattedEnd}
+                      </span>
+                    </div>
+
+                    {!isExpanded && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        {champion && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: 10, padding: '0.35rem 0.65rem' }}>
+                            <span style={{ fontSize: '1rem' }}>🏆</span>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Champion</span>
+                              <span style={{ fontSize: '0.78rem', color: '#FFD700', fontWeight: 800 }}>{champion.displayName || champion.username}</span>
+                            </div>
+                          </div>
+                        )}
+                        <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 45%)', fontWeight: 700, textTransform: 'uppercase' }}>Click to view details</span>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', color: 'white' }}>
+                      {isExpanded ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded Section Details */}
+                  {isExpanded && (
+                    <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.05)' }} onClick={e => e.stopPropagation()}>
+                      {/* Podium - Top 3 */}
+                      {top3.length > 0 && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                          {top3.map((p: any, idx: number) => (
+                            <div key={idx} style={{
+                              background: `${medalColors[idx]}09`,
+                              border: `1px solid ${medalColors[idx]}25`,
+                              borderRadius: 16, padding: '1rem 0.5rem',
+                              textAlign: 'center',
+                              boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+                            }}>
+                              <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>{medals[idx]}</div>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white', wordBreak: 'break-all' }}>
+                                {p.displayName || p.username}
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', marginTop: '0.25rem', fontWeight: 600 }}>
+                                {p.score.toLocaleString()} XP
+                              </div>
+                              {p.coinsEarned > 0 && (
+                                <div style={{ fontSize: '0.65rem', color: '#FFD700', fontWeight: 700, marginTop: '0.15rem' }}>
+                                  +{p.coinsEarned.toLocaleString()} 🪙
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Rest of Top 10 */}
+                      {standings.length > 0 && (
+                        <div style={{ background: 'hsl(222 20% 8% / 0.5)', borderRadius: 16, border: '1px solid hsl(220 20% 13%)', padding: '0.75rem 1rem' }}>
+                          <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'hsl(220 10% 45%)', fontWeight: 800, letterSpacing: '0.06em', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '0.35rem' }}>Standings Board</div>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <tbody>
+                              {standings.slice(0, 10).map((p: any, idx: number) => (
+                                <tr key={idx} style={{ borderBottom: idx < standings.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
+                                  <td style={{ padding: '0.5rem 0', width: 36, fontWeight: 800, color: idx < 3 ? (medalColors[idx]) : 'hsl(220 10% 50%)', fontSize: '0.8rem' }}>
+                                    {idx < 3 ? medals[idx] : `#${idx + 1}`}
+                                  </td>
+                                  <td style={{ padding: '0.5rem 0.25rem', fontSize: '0.8rem', color: 'white', fontWeight: 600 }}>
+                                    {p.displayName || p.username}
+                                  </td>
+                                  <td style={{ padding: '0.5rem 0.25rem', fontSize: '0.75rem', color: 'hsl(220 10% 55%)', textAlign: 'right', fontWeight: 600 }}>
+                                    {p.score.toLocaleString()} XP
+                                  </td>
+                                  <td style={{ padding: '0.5rem 0', fontSize: '0.72rem', color: '#FFD700', fontWeight: 800, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                    {p.coinsEarned > 0 ? `+${p.coinsEarned.toLocaleString()} 🪙` : ''}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {standings.length === 0 && (
+                        <div style={{ textAlign: 'center', color: 'hsl(220 10% 50%)', fontSize: '0.8rem', padding: '1rem 0' }}>
+                          No players participated this week.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })
           )}
         </div>
       )}

@@ -11,6 +11,9 @@ import GameIcon from '@/components/games/GameIcon'
 import PageWrapper from '@/components/layout/PageWrapper'
 import Card from '@/components/layout/Card'
 import { GamepadIcon, ZapIcon, LockIcon, PlayIcon } from '@/components/shared/Icons'
+import dynamic from 'next/dynamic'
+
+const WeeklyResultModal = dynamic(() => import('@/components/layout/WeeklyResultModal'), { ssr: false })
 
 interface Props {
   user: User | null
@@ -32,6 +35,7 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [playCounts, setPlayCounts] = useState<Record<string, number>>({})
+  const [weeklyReward, setWeeklyReward] = useState<any>(null)
 
   useEffect(() => {
     prefetchProfileDetails()
@@ -43,7 +47,15 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
         }
       })
       .catch(err => console.error('Failed to fetch platform stats:', err))
-  }, [])
+
+    // Check for unclaimed weekly reward (only for logged-in users)
+    if (user) {
+      fetch('/api/leaderboard/unclaimed-reward')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data?.reward) setWeeklyReward(data.reward) })
+        .catch(() => null)
+    }
+  }, [user])
 
   // Featured Game selection based on day of the year (daily deterministic "random")
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000)
@@ -58,6 +70,7 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
     : GAMES_REGISTRY.filter(g => g.category.toLowerCase() === selectedCategory.toLowerCase())
 
   return (
+    <>
     <PageWrapper style={{ maxWidth: 1100, marginInline: 'auto', gap: '1.25rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       {/* Header */}
       <div>
@@ -300,5 +313,13 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
         </div>
       </div>
     </PageWrapper>
+
+    {weeklyReward && (
+      <WeeklyResultModal
+        reward={weeklyReward}
+        onClose={() => setWeeklyReward(null)}
+      />
+    )}
+  </>
   )
 }

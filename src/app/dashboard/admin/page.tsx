@@ -4,6 +4,9 @@ import { WrenchIcon, MegaphoneIcon, BarChartIcon, TrophyIcon, PackageIcon, Users
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/lib/contexts/ToastContext'
+import dynamic from 'next/dynamic'
+
+const WeeklyResultModal = dynamic(() => import('@/components/layout/WeeklyResultModal'), { ssr: false })
 
 const toISTInputString = (dateVal: any) => {
   if (!dateVal) return '';
@@ -138,7 +141,11 @@ export default function AdminPage() {
 
   const [role, setRole] = useState<string | null>(null)
   const [loadingAuth, setLoadingAuth] = useState(true)
-  const [activeTab, setActiveTab] = useState<'ads' | 'analytics' | 'tournaments' | 'updates' | 'tools' | 'users'>('ads')
+  const [activeTab, setActiveTab] = useState<'ads' | 'analytics' | 'tournaments' | 'updates' | 'tools' | 'users' | 'weeklyLeaderboard'>('ads')
+  const [weeklyAdminData, setWeeklyAdminData] = useState<any>(null)
+  const [weeklyAdminLoading, setWeeklyAdminLoading] = useState(false)
+  const [weeklyAdminAction, setWeeklyAdminAction] = useState<string | null>(null)
+  const [previewCardReward, setPreviewCardReward] = useState<any>(null)
 
   // Data States
   const [ads, setAds] = useState<Ad[]>([])
@@ -539,6 +546,7 @@ export default function AdminPage() {
           { id: 'updates', label: 'Updates / Cosmetics', icon: <PackageIcon size={16} /> },
           { id: 'tools', label: 'Admin Tools', icon: <WrenchIcon size={16} /> },
           { id: 'users', label: 'User Directory', icon: <UsersIcon size={16} /> },
+          { id: 'weeklyLeaderboard', label: 'Weekly Rewards', icon: <CoinsIcon size={16} /> },
         ].map((t) => (
           <button
             key={t.id}
@@ -1837,6 +1845,165 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ─────────────────── Weekly Leaderboard Panel ─────────────────── */}
+      {activeTab === 'weeklyLeaderboard' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div>
+            <h2 style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.35rem' }}>🏆 Weekly Leaderboard Admin</h2>
+            <p style={{ fontSize: '0.8rem', color: 'hsl(220 10% 55%)' }}>Manually trigger resets, preview current Top 10, and view past archives.</p>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-sm btn-secondary"
+              disabled={weeklyAdminLoading}
+              onClick={async () => {
+                setWeeklyAdminLoading(true)
+                setWeeklyAdminAction('preview')
+                try {
+                  const res = await fetch('/api/admin/weekly-leaderboard')
+                  const data = await res.json()
+                  setWeeklyAdminData(data)
+                } catch (e) { console.error(e) } finally { setWeeklyAdminLoading(false) }
+              }}
+            >
+              🔍 Preview Current Top 10
+            </button>
+            <button
+              className="btn btn-sm btn-primary"
+              disabled={weeklyAdminLoading}
+              onClick={async () => {
+                if (!confirm('This will finalize the current week and distribute all rewards. Are you sure?')) return
+                setWeeklyAdminLoading(true)
+                setWeeklyAdminAction('finalize')
+                try {
+                  const res = await fetch('/api/admin/weekly-leaderboard', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'finalizeAndRotate' })
+                  })
+                  const data = await res.json()
+                  alert(`Done! Week ${data?.finalize?.weekNumber} finalized. ${data?.finalize?.distributed} rewards distributed.`)
+                  setWeeklyAdminData(null)
+                } catch (e) { console.error(e) } finally { setWeeklyAdminLoading(false) }
+              }}
+            >
+              ⚡ Finalize Week & Distribute Rewards
+            </button>
+            <button
+              className="btn btn-sm btn-ghost"
+              disabled={weeklyAdminLoading}
+              onClick={async () => {
+                setWeeklyAdminLoading(true)
+                setWeeklyAdminAction('check')
+                try {
+                  const res = await fetch('/api/admin/weekly-leaderboard', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'check' })
+                  })
+                  const data = await res.json()
+                  alert(data.result.ran ? `Reset ran for Week #${data.result.weekNumber}` : 'No reset needed yet.')
+                } catch (e) { console.error(e) } finally { setWeeklyAdminLoading(false) }
+              }}
+            >
+              🔄 Check Reset Status
+            </button>
+          </div>
+
+          {/* Preview Weekly Result Card section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'hsl(222 20% 9%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 14, padding: '1rem' }}>
+            <span style={{ fontSize: '0.78rem', color: 'white', fontWeight: 700 }}>🔍 Preview Weekly Result Card</span>
+            <p style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', margin: 0 }}>Simulate exactly what players will see in their celebratory reward modals for different ranks.</p>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+              {[
+                { label: 'Rank #1 (Champion)', rank: 1, coins: 2500, xp: 500, prev: 2 },
+                { label: 'Rank #2 (Runner-up)', rank: 2, coins: 1800, xp: 300, prev: 1 },
+                { label: 'Rank #3 (Podium)', rank: 3, coins: 1200, xp: 200, prev: null },
+                { label: 'Rank #10 (Top 10)', rank: 10, coins: 500, xp: 100, prev: 10 },
+                { label: 'Rank #15 (Non-winning)', rank: 15, coins: 0, xp: 0, prev: 8 }
+              ].map((cfg) => (
+                <button
+                  key={cfg.rank}
+                  className="btn btn-xs btn-ghost text-xs"
+                  onClick={() => setPreviewCardReward({
+                    id: 'preview-reward',
+                    weekNumber: 4,
+                    rank: cfg.rank,
+                    score: 8400,
+                    coinsEarned: cfg.coins,
+                    xpEarned: cfg.xp,
+                    totalGames: 18,
+                    previousRank: cfg.prev,
+                    createdAt: new Date().toISOString(),
+                    startDate: new Date(Date.now() - 7*24*60*60*1000).toISOString(),
+                    endDate: new Date().toISOString()
+                  })}
+                >
+                  {cfg.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {weeklyAdminLoading && <div style={{ color: 'hsl(220 10% 55%)', fontSize: '0.85rem' }}>Processing...</div>}
+
+          {/* Preview panel */}
+          {weeklyAdminData?.preview && (
+            <div style={{ background: 'hsl(222 20% 9%)', borderRadius: 16, padding: '1.25rem', border: '1px solid hsl(220 15% 15%)' }}>
+              <div style={{ marginBottom: '0.75rem', fontSize: '0.78rem', color: 'hsl(220 10% 50%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Current Week: #{weeklyAdminData.state?.weekNumber} | {weeklyAdminData.preview.length} players active
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ fontSize: '0.68rem', color: 'hsl(220 10% 45%)', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <th style={{ padding: '0.3rem 0.5rem', textAlign: 'left' }}>Rank</th>
+                    <th style={{ padding: '0.3rem 0.5rem', textAlign: 'left' }}>Player</th>
+                    <th style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>XP</th>
+                    <th style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>Games</th>
+                    <th style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>Coins</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weeklyAdminData.preview.map((p: any) => (
+                    <tr key={p.rank} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.8rem' }}>
+                      <td style={{ padding: '0.4rem 0.5rem', fontWeight: 700, color: p.rank <= 3 ? '#FFD700' : 'hsl(220 10% 55%)' }}>#{p.rank}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', color: 'white' }}>{p.displayName || p.username}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'hsl(220 100% 65%)' }}>{(p.score ?? 0).toLocaleString()}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'hsl(220 10% 55%)' }}>{p.totalGames}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: '#FFD700', fontWeight: 700 }}>+{p.coinsEarned}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Archives */}
+          {weeklyAdminData?.archives?.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.78rem', color: 'hsl(220 10% 50%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                Past Archives
+              </div>
+              {weeklyAdminData.archives.map((a: any) => (
+                <div key={a.id} style={{ background: 'hsl(222 20% 9%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 12, padding: '0.75rem 1rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'white' }}>Week #{a.weekNumber}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)' }}>{new Date(a.startDate).toLocaleDateString()} – {new Date(a.endDate).toLocaleDateString()}</div>
+                  <div style={{ fontSize: '0.7rem', color: a.rewardsDistributed ? 'hsl(142 70% 55%)' : 'hsl(0 70% 60%)', fontWeight: 700 }}>
+                    {a.rewardsDistributed ? '✓ Distributed' : '⏳ Pending'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {previewCardReward && (
+        <WeeklyResultModal
+          reward={previewCardReward}
+          onClose={() => setPreviewCardReward(null)}
+        />
       )}
     </div>
   )

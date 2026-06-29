@@ -548,12 +548,22 @@ export default function BlockBlastGame() {
   ) => {
     await saveHighScoreStats(finalScore, finalLines, finalCombo)
     const resultPayload = finalScore >= 1000 ? 'win' : 'loss'
+    const customTitle = resultPayload === 'win' ? 'Victory!' : 'Game Over'
+    const customSubtitle = `Cleared ${finalLines} Line${finalLines !== 1 ? 's' : ''} • Max Combo: ${finalCombo}`
 
     submitGameResult({
       gameSlug: 'block-blast',
       result: resultPayload,
       metadata: {
         score: finalScore,
+        customTitle,
+        customSubtitle,
+        statistics: [
+          { label: 'Lines Cleared', value: finalLines, color: '#fbbf24' },
+          { label: 'Highest Combo', value: `x${finalCombo}`, color: '#ec4899' },
+          { label: 'Final Score', value: finalScore, color: '#38bdf8' },
+          { label: 'Best Move Chain', value: `${finalCombo} Streak`, color: '#a855f7' },
+        ],
         gameMetadata: {
           mode,
           difficulty: mode === 'classic' ? difficulty : 'normal',

@@ -1973,11 +1973,13 @@ export default function MultiplayerPage() {
                         border: '1px solid hsl(var(--border-subtle))',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between'
+                        justifyContent: 'space-between',
+                        gap: '0.75rem',
+                        width: '100%'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ position: 'relative' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
                           <Avatar
                             avatarUrl={friend.avatarUrl}
                             username={friend.username}
@@ -1996,12 +1998,12 @@ export default function MultiplayerPage() {
                             zIndex: 5
                           }} />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, flex: 1 }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {friend.displayName || (friend.username.includes('@') ? friend.username.split('@')[0] : friend.username)}
                           </span>
                           {friend.selectedTitle && (
-                            <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase' }}>
+                            <span style={{ fontSize: '0.62rem', color: 'hsl(45 100% 55%)', fontWeight: 800, textTransform: 'uppercase', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {friend.selectedTitle}
                             </span>
                           )}
@@ -2010,7 +2012,7 @@ export default function MultiplayerPage() {
                       <button
                         className="btn btn-primary"
                         id={`invite-friend-btn-${friend.userId}`}
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: 700, minHeight: 36 }}
+                        style={{ padding: '0.3rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, minHeight: 32, flexShrink: 0, width: 'auto' }}
                         onClick={() => handleSendInvite(friend.userId || '', friend.username)}
                       >
                         Invite

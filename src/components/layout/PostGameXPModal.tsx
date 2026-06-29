@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import type { GameResultPayload } from '@/lib/contexts/GameSessionContext'
 import { getLevelProgress, xpRequiredForLevel, xpForNextLevel } from '@/lib/xpUtils'
 import { GAMES_REGISTRY } from '@/lib/games'
+import { GameIcon } from '@/components/games/GameIcon'
 
 function getBlockProgressBar(percent: number, size: number = 10): string {
   const filledCount = Math.round((percent / 100) * size)
@@ -249,6 +250,12 @@ export default function PostGameXPModal({ data, onClose }: Props) {
 
   const currentOutcome = outcomeConfigs[result] || outcomeConfigs.draw
 
+  const modalTitle = (metadata as any)?.customTitle || currentOutcome.title
+  const modalSubtitle = (metadata as any)?.customSubtitle || 
+    (layoutType === 'level' 
+      ? `Level ${currentLvl} • ${result === 'win' ? 'Completed' : 'Failed'}` 
+      : `${GAMES_REGISTRY.find(g => g.slug === gameSlug)?.name || gameSlug.replace('-', ' ')} Match`)
+
   const starText = {
     3: 'Excellent!',
     2: 'Good Job!',
@@ -371,11 +378,33 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           />
         )}
 
-        {/* Modal Header: Result Emoji & Title */}
-        <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+        {/* Modal Header: Game Icon, Result Title & Subtitle */}
+        <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.25rem' }}>
+            <div style={{
+              padding: '10px',
+              borderRadius: '16px',
+              background: 'hsl(222 20% 7% / 0.7)',
+              border: '1.5px solid hsl(220 15% 20%)',
+              boxShadow: `0 0 25px ${result === 'win' ? 'hsl(45 100% 55% / 0.18)' : result === 'loss' ? 'hsl(0 80% 55% / 0.18)' : 'hsl(220 100% 65% / 0.18)'}`,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <GameIcon slug={gameSlug} size={54} />
+            </div>
+          </div>
+
+          {/* Hero Image (Optional) */}
+          {(metadata as any)?.heroImage && (
+            <div style={{ width: '100%', borderRadius: 16, overflow: 'hidden', marginBottom: '0.5rem', border: '1.5px solid hsl(220 15% 20%)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+              <img src={(metadata as any).heroImage} alt="Mission Outcome" style={{ width: '100%', height: 'auto', display: 'block' }} />
+            </div>
+          )}
+
           <h2
             style={{
-              fontSize: '2rem',
+              fontSize: '1.8rem',
               fontWeight: 950,
               color: currentOutcome.text,
               letterSpacing: '-0.03em',
@@ -388,10 +417,10 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             }}
           >
             <span className={currentOutcome.emojiClass}>{currentOutcome.emoji}</span>
-            <span>{currentOutcome.title}</span>
+            <span>{modalTitle}</span>
           </h2>
-          <p style={{ fontSize: '0.8rem', color: 'hsl(220 10% 55%)', marginTop: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {gameSlug.replace('-', ' ')} {layoutType === 'level' && `• Level ${currentLvl}`}
+          <p style={{ fontSize: '0.9rem', color: 'white', opacity: 0.95, marginTop: '0.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>
+            {modalSubtitle}
           </p>
         </div>
 
@@ -450,7 +479,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
         )}
 
         {/* Game Stats Information Layout */}
-        {gameSlug === 'snake-arena' ? (
+        {metadata?.statistics && Array.isArray(metadata.statistics) && metadata.statistics.length > 0 ? (
           <div
             style={{
               background: 'hsl(222 20% 7% / 0.8)',
@@ -464,41 +493,32 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               zIndex: 1,
               boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
             }}
+            id="custom-statistics-card"
           >
-            {/* Final Score Row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Final Score</span>
-              <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
-                {score.toLocaleString()}
-              </span>
-            </div>
-
-            {/* Snake Stats Grid */}
+            {/* Custom Score Row */}
+            {score > 0 && !metadata.statistics.some((s: any) => s.label.toLowerCase() === 'score' || s.label.toLowerCase() === 'final score' || s.label.toLowerCase() === 'total score') && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Final Score</span>
+                <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
+                  {score.toLocaleString()}
+                </span>
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 16px', paddingTop: '4px', textAlign: 'left' }}>
-              <div>
-                <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Eliminations</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'hsl(355 85% 65%)', fontFamily: 'monospace', marginTop: '2px' }}>
-                  {gameMetadata.eliminations ?? 0}
+              {metadata.statistics.map((stat: any, idx: number) => (
+                <div key={idx} style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {stat.label}
+                  </div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: stat.color || 'white', fontFamily: 'monospace', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {stat.value}
+                  </div>
                 </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Longest Length</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
-                  {gameMetadata.longestLength ?? 3}
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Survival Time</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
-                  {formatSurvivalTime(timeSecs || gameMetadata.survivalTime || 0)}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         ) : (
-          (layoutType === 'level' || layoutType === 'endless') && (
+          gameSlug === 'snake-arena' ? (
             <div
               style={{
                 background: 'hsl(222 20% 7% / 0.8)',
@@ -507,91 +527,140 @@ export default function PostGameXPModal({ data, onClose }: Props) {
                 padding: '1.25rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '10px',
+                gap: '12px',
                 position: 'relative',
                 zIndex: 1,
                 boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
               }}
             >
-              {/* Score row */}
-              {score > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Score</span>
-                  <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
-                    {score.toLocaleString()}
-                  </span>
-                </div>
-              )}
+              {/* Final Score Row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Final Score</span>
+                <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
+                  {score.toLocaleString()}
+                </span>
+              </div>
 
-              {/* Dynamic statistics details */}
+              {/* Snake Stats Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 16px', paddingTop: '4px', textAlign: 'left' }}>
-                {/* High Score (Endless) */}
-                {layoutType === 'endless' && (
-                  <div>
-                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>High Score</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
-                      {Math.max(highScore, score).toLocaleString()}
-                    </div>
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Eliminations</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'hsl(355 85% 65%)', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {gameMetadata.eliminations ?? 0}
                   </div>
-                )}
+                </div>
 
-                {/* Moves (Level) */}
-                {layoutType === 'level' && moves > 0 && (
-                  <div>
-                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Moves</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
-                      {moves}
-                    </div>
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Longest Length</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {gameMetadata.longestLength ?? 3}
                   </div>
-                )}
+                </div>
 
-                {/* Time taken */}
-                {timeSecs > 0 && (
-                  <div>
-                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Time</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
-                      {timeSecs}s
-                    </div>
+                <div>
+                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Survival Time</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {formatSurvivalTime(timeSecs || gameMetadata.survivalTime || 0)}
                   </div>
-                )}
-
-                {/* Personal best level time */}
-                {layoutType === 'level' && result === 'win' && personalBest !== null && (
-                  <div>
-                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Best Time</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace', marginTop: '2px' }}>
-                      {personalBest}s
-                    </div>
-                  </div>
-                )}
-
-                {/* Game Specific Stats (Block Blast / Neon Tetris / Word Wizard) */}
-                {gameMetadata.linesCleared !== undefined && (
-                  <div>
-                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Lines Cleared</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
-                      {gameMetadata.linesCleared}
-                    </div>
-                  </div>
-                )}
-                {gameMetadata.wordsFound !== undefined && (
-                  <div>
-                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Words Found</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
-                      {gameMetadata.wordsFound}
-                    </div>
-                  </div>
-                )}
-                {gameMetadata.maxCombo !== undefined && (
-                  <div>
-                    <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Max Combo</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ec4899', fontFamily: 'monospace', marginTop: '2px' }}>
-                      x{gameMetadata.maxCombo}
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
+          ) : (
+            (layoutType === 'level' || layoutType === 'endless') && (
+              <div
+                style={{
+                  background: 'hsl(222 20% 7% / 0.8)',
+                  border: '1.5px solid hsl(220 15% 20%)',
+                  borderRadius: 20,
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  position: 'relative',
+                  zIndex: 1,
+                  boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
+                }}
+              >
+                {/* Score row */}
+                {score > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Score</span>
+                    <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
+                      {score.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
+                {/* Dynamic statistics details */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 16px', paddingTop: '4px', textAlign: 'left' }}>
+                  {/* High Score (Endless) */}
+                  {layoutType === 'endless' && (
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>High Score</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
+                        {Math.max(highScore, score).toLocaleString()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Moves (Level) */}
+                  {layoutType === 'level' && moves > 0 && (
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Moves</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                        {moves}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Time taken */}
+                  {timeSecs > 0 && (
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Time</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                        {timeSecs}s
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Personal best level time */}
+                  {layoutType === 'level' && result === 'win' && personalBest !== null && (
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Best Time</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace', marginTop: '2px' }}>
+                        {personalBest}s
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Game Specific Stats (Block Blast / Neon Tetris / Word Wizard) */}
+                  {gameMetadata.linesCleared !== undefined && (
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Lines Cleared</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                        {gameMetadata.linesCleared}
+                      </div>
+                    </div>
+                  )}
+                  {gameMetadata.wordsFound !== undefined && (
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Words Found</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                        {gameMetadata.wordsFound}
+                      </div>
+                    </div>
+                  )}
+                  {gameMetadata.maxCombo !== undefined && (
+                    <div>
+                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Max Combo</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ec4899', fontFamily: 'monospace', marginTop: '2px' }}>
+                        x{gameMetadata.maxCombo}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
           )
         )}
 
@@ -611,51 +680,55 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             minHeight: '80px',
           }}
         >
-          {metadata?.loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <div style={{
-                  width: '18px',
-                  height: '18px',
-                  border: '2px solid hsl(220 100% 65% / 0.2)',
-                  borderTopColor: 'hsl(220 100% 65%)',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite'
-                }} />
-                <span style={{ fontSize: '0.82rem', color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Calculating rewards...</span>
-              </div>
-              <style jsx global>{`
-                @keyframes spin {
-                  to { transform: rotate(360deg); }
-                }
-              `}</style>
+          {/* Subtle Background Sync Indicator */}
+          {(metadata as any)?.syncing && (
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              right: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '0.65rem',
+              color: 'hsl(220 10% 50%)',
+              fontWeight: 600,
+            }} id="rewards-syncing-indicator">
+              <span className="animate-spin" style={{
+                display: 'inline-block',
+                width: 8,
+                height: 8,
+                border: '1.5px solid hsl(220 100% 65% / 0.2)',
+                borderTopColor: 'hsl(220 100% 65%)',
+                borderRadius: '50%',
+              }} />
+              <span>Saving...</span>
             </div>
-          ) : (
-            <>
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
-                  +{xpDisplay}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
-              </div>
-              {coinsGained > 0 && (
-                <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
-                    +{coinsDisplay}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Coins Won</div>
-                </div>
-              )}
-              {currentStreak > 0 && (
-                <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(38 95% 60%)' }}>
-                    🔥 {currentStreak}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Streak</div>
-                </div>
-              )}
-            </>
           )}
+
+          <>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
+                +{xpDisplay}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
+            </div>
+            {coinsGained > 0 && (
+              <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
+                  +{coinsDisplay}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Coins Won</div>
+              </div>
+            )}
+            {currentStreak > 0 && (
+              <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(38 95% 60%)' }}>
+                  🔥 {currentStreak}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Streak</div>
+              </div>
+            )}
+          </>
         </div>
 
         {/* Level Up Celebration State */}
@@ -725,34 +798,62 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           </div>
         </div>
 
-        {/* Next Achievement Progress */}
-        {nextAchievement && unlockedAchievements.length === 0 && (
+        {/* Unlocked Achievements Section */}
+        {unlockedAchievements && unlockedAchievements.length > 0 ? (
           <div
+            className="animate-slideUp"
             style={{
-              background: 'hsl(222 20% 11% / 0.4)',
-              borderRadius: 12,
-              border: '1px solid hsl(220 15% 18%)',
-              padding: '0.75rem 1rem',
+              background: 'linear-gradient(135deg, hsl(45 100% 50% / 0.12), hsl(35 90% 50% / 0.12))',
+              border: '1.5px solid hsl(45 100% 55% / 0.35)',
+              borderRadius: 16,
+              padding: '0.85rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
               position: 'relative',
               zIndex: 1,
+              boxShadow: '0 4px 15px hsl(45 100% 50% / 0.1)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-              <span style={{ color: 'hsl(220 10% 50%)' }}>Next Badge: <strong>{nextAchievement.name}</strong></span>
-              <span style={{ color: 'hsl(220 10% 65%)', fontWeight: 700 }}>{nextAchievement.current} / {nextAchievement.target}</span>
+            <div style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 55%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              🏅 Badge Unlocked!
             </div>
-            <div style={{ height: 4, background: 'hsl(220 20% 8%)', borderRadius: 99, overflow: 'hidden' }}>
-              <div
-                style={{
-                  width: `${nextAchievement.progress}%`,
-                  height: '100%',
-                  background: 'hsl(45 100% 55%)',
-                  borderRadius: 99,
-                  transition: 'width 0.5s ease',
-                }}
-              />
-            </div>
+            {unlockedAchievements.map((ach: any, idx: number) => (
+              <div key={idx} style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white' }}>{ach.name}</div>
+                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 75%)', marginTop: '1px' }}>{ach.description}</div>
+              </div>
+            ))}
           </div>
+        ) : (
+          nextAchievement && (
+            <div
+              style={{
+                background: 'hsl(222 20% 11% / 0.4)',
+                borderRadius: 12,
+                border: '1px solid hsl(220 15% 18%)',
+                padding: '0.75rem 1rem',
+                position: 'relative',
+                zIndex: 1,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
+                <span style={{ color: 'hsl(220 10% 50%)' }}>Next Badge: <strong>{nextAchievement.name}</strong></span>
+                <span style={{ color: 'hsl(220 10% 65%)', fontWeight: 700 }}>{nextAchievement.current} / {nextAchievement.target}</span>
+              </div>
+              <div style={{ height: 4, background: 'hsl(220 20% 8%)', borderRadius: 99, overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${nextAchievement.progress}%`,
+                    height: '100%',
+                    background: 'hsl(45 100% 55%)',
+                    borderRadius: 99,
+                    transition: 'width 0.5s ease',
+                  }}
+                />
+              </div>
+            </div>
+          )
         )}
 
         {/* Offline Mode Banner or Guest Warning Banner */}
@@ -829,6 +930,25 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             </div>
           </div>
         ) : null}
+
+        {/* Optional Game-Specific Footer */}
+        {(metadata as any)?.gameSpecificFooter && (
+          <div
+            style={{
+              fontSize: '0.75rem',
+              color: 'hsl(220 10% 65%)',
+              textAlign: 'center',
+              padding: '0.5rem 0.75rem',
+              borderRadius: 12,
+              background: 'hsl(222 20% 7% / 0.5)',
+              border: '1px solid hsl(220 15% 18%)',
+              position: 'relative',
+              zIndex: 1,
+            }}
+          >
+            {(metadata as any).gameSpecificFooter}
+          </div>
+        )}
 
         {/* Actions Footer */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem', position: 'relative', zIndex: 1 }}>

@@ -78,6 +78,8 @@ export default function WordWizardGame() {
   const targetWordsRef = useRef<string[]>([])
   const foundTargetWordsRef = useRef<Set<string>>(new Set())
   const objectiveCompletedRef = useRef<boolean>(false)
+  const totalAttemptsRef = useRef(0)
+  const correctAttemptsRef = useRef(0)
   const activeHintRef = useRef<{ word: string; level: number } | null>(null)
   const boardRef = useRef<string[][]>([])
   const scoreRef = useRef<number>(0)
@@ -94,6 +96,8 @@ export default function WordWizardGame() {
 
   // Start a fresh game
   const startGame = useCallback(() => {
+    totalAttemptsRef.current = 0
+    correctAttemptsRef.current = 0
     let localDifficulty = difficulty
     let selectedModifier: DailyModifier | null = null
     let seed = Math.floor(Math.random() * 1000000)
@@ -207,6 +211,8 @@ export default function WordWizardGame() {
     
     // 1. Validation
     if (lowerWord.length < 3) return
+    totalAttemptsRef.current++
+
     if (!isValidWord(lowerWord)) {
       particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'Not a Word', '#ef4444')
       return
@@ -216,6 +222,8 @@ export default function WordWizardGame() {
       particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'Already Found', '#9ca3af')
       return
     }
+
+    correctAttemptsRef.current++
 
     // 2. Score calculation
     const scoreResult = calculateScore(lowerWord, path, specialTiles)
@@ -373,8 +381,28 @@ export default function WordWizardGame() {
       ? Math.max(...Array.from(foundWords).map(w => w.length)) 
       : 0
 
+    const totalAttempts = totalAttemptsRef.current
+    const correctAttempts = correctAttemptsRef.current
+    const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0
+
+    const longestWord = foundWords.size > 0
+      ? Array.from(foundWords).reduce((a, b) => a.length > b.length ? a : b, '')
+      : 'None'
+
+    const customTitle = result === 'win' ? 'Victory!' : 'Game Over'
+    const customSubtitle = `Found ${foundWords.size} Word${foundWords.size !== 1 ? 's' : ''} • Accuracy: ${accuracy}%`
+
     const metadata = {
       score,
+      customTitle,
+      customSubtitle,
+      statistics: [
+        { label: 'Words Found', value: foundWords.size, color: '#fbbf24' },
+        { label: 'Longest Word', value: longestWord, color: '#10b981' },
+        { label: 'Accuracy', value: `${accuracy}%`, color: '#ec4899' },
+        { label: 'Combo', value: `x${maxComboRef.current}`, color: '#a855f7' },
+        { label: 'Total Score', value: score, color: '#38bdf8' },
+      ],
       gameMetadata: {
         mode: mode,
         difficulty: difficulty,

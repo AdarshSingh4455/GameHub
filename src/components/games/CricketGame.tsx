@@ -214,19 +214,54 @@ export default function CricketGame() {
   // Trigger submission to server / guest simulation when ended
   useEffect(() => {
     if (step === 'ended' && matchState && matchState.winner) {
-      const score = matchState.innings1?.battingTeam === 'player'
-        ? matchState.innings1.score
-        : matchState.innings2?.score ?? 0;
-      
-      const opponentScore = matchState.innings1?.battingTeam === 'cpu'
-        ? matchState.innings1.score
-        : matchState.innings2?.score ?? 0;
+      const playerInnings = matchState.innings1?.battingTeam === 'player' ? matchState.innings1 : matchState.innings2
+      const cpuInnings = matchState.innings1?.battingTeam === 'cpu' ? matchState.innings1 : matchState.innings2
+
+      const score = playerInnings?.score ?? 0
+      const opponentScore = cpuInnings?.score ?? 0
 
       const apiResult = matchState.winner === 'player'
         ? 'win'
         : matchState.winner === 'cpu'
         ? 'loss'
         : 'draw';
+
+      // Count fours and sixes dynamically
+      let fours = 0
+      let sixes = 0
+      if (playerInnings && playerInnings.history) {
+        playerInnings.history.forEach(ball => {
+          if (ball.runs === 4) fours++
+          if (ball.runs === 6) sixes++
+        })
+      }
+
+      const strikeRate = playerInnings && playerInnings.ballsBowled > 0 
+        ? ((playerInnings.score / playerInnings.ballsBowled) * 100).toFixed(1) 
+        : '0.0'
+
+      const wicketsRemaining = wickets - (playerInnings?.wicketsLost ?? 0)
+
+      // Win margins calculation
+      let customSubtitle = ''
+      if (matchState.winner === 'player') {
+        if (matchState.innings2?.battingTeam === 'player') {
+          customSubtitle = `Won by ${wicketsRemaining} Wicket${wicketsRemaining !== 1 ? 's' : ''}`
+        } else {
+          const runMargin = score - opponentScore
+          customSubtitle = `Won by ${runMargin} Run${runMargin !== 1 ? 's' : ''}`
+        }
+      } else if (matchState.winner === 'cpu') {
+        if (matchState.innings2?.battingTeam === 'cpu') {
+          const cpuWicketsRemaining = wickets - (cpuInnings?.wicketsLost ?? 0)
+          customSubtitle = `CPU won by ${cpuWicketsRemaining} Wicket${cpuWicketsRemaining !== 1 ? 's' : ''}`
+        } else {
+          const runMargin = opponentScore - score
+          customSubtitle = `CPU won by ${runMargin} Run${runMargin !== 1 ? 's' : ''}`
+        }
+      } else {
+        customSubtitle = 'Match Tied!'
+      }
 
       submitGameResult({
         gameSlug: 'cricket',
@@ -239,6 +274,16 @@ export default function CricketGame() {
           innings1Score: matchState.innings1?.score,
           innings2Score: matchState.innings2?.score,
           winner: matchState.winner,
+          customTitle: matchState.winner === 'player' ? 'Victory' : matchState.winner === 'cpu' ? 'Defeat' : 'Draw',
+          customSubtitle,
+          statistics: [
+            { label: 'Your Score', value: playerInnings ? `${playerInnings.score}/${playerInnings.wicketsLost}` : '0/0', color: 'hsl(220 100% 65%)' },
+            { label: 'CPU Score', value: cpuInnings ? `${cpuInnings.score}/${cpuInnings.wicketsLost}` : '0/0', color: 'hsl(0 80% 65%)' },
+            { label: 'Fours', value: fours, color: '#fbbf24' },
+            { label: 'Sixes', value: sixes, color: '#ec4899' },
+            { label: 'Wickets Left', value: wicketsRemaining, color: '#10b981' },
+            { label: 'Strike Rate', value: `${strikeRate}%`, color: '#a855f7' },
+          ]
         }
       })
     }

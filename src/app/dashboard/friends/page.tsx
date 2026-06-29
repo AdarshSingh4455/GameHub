@@ -1,7 +1,7 @@
 'use client'
 import { UsersIcon, CopyIcon, LockIcon, AlertIcon, GamepadIcon, PlayIcon } from '@/components/shared/Icons'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import ProfileCardModal from '@/components/layout/ProfileCardModal'
@@ -39,6 +39,17 @@ export default function FriendsPage() {
   const router = useRouter() // Wait! Let's check if useRouter is imported. If not, we will check or import it.
   const { socket, presenceMap, updateActivity } = useSocket()
   
+  const [challengeLoadingId, setChallengeLoadingId] = useState<string | null>(null)
+  const challengeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (challengeTimeoutRef.current) {
+        clearTimeout(challengeTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const [activeTab, setActiveTab] = useState<'friends' | 'pending' | 'add' | 'recent'>('friends')
   const [friends, setFriends] = useState<ProfileSummary[]>([])
   const [challengeModalOpen, setChallengeModalOpen] = useState(false)
@@ -307,16 +318,40 @@ export default function FriendsPage() {
   const handleChallengePlayer = (gameSlug: string) => {
     if (!selectedFriendForChallenge || !socket) return
     
+    const targetUserId = selectedFriendForChallenge.userId || selectedFriendForChallenge.id
+    const friendPresence = presenceMap[targetUserId]
+    const friendStatus = friendPresence?.status ?? 'OFFLINE'
+    
+    if (friendStatus === 'IN_GAME') {
+      addToast('error', 'Player Busy', `${selectedFriendForChallenge.username} is currently in a game. Try challenging them later!`)
+      return
+    }
+
+    if (challengeLoadingId) return
+    setChallengeLoadingId(selectedFriendForChallenge.id)
+
+    if (challengeTimeoutRef.current) clearTimeout(challengeTimeoutRef.current)
+    challengeTimeoutRef.current = setTimeout(() => {
+      setChallengeLoadingId(null)
+      addToast('error', 'Challenge Timeout', 'No response from the server. Please try again.')
+    }, 10000)
+
     socket.emit('send-challenge', {
-      targetUserId: selectedFriendForChallenge.userId || selectedFriendForChallenge.id,
+      targetUserId,
       gameSlug
     }, (response: { error?: string; roomCode?: string }) => {
+      if (challengeTimeoutRef.current) {
+        clearTimeout(challengeTimeoutRef.current)
+        challengeTimeoutRef.current = null
+      }
+      setChallengeLoadingId(null)
+
       if (response && response.error) {
         addToast('error', 'Challenge Failed', response.error)
       } else if (response && response.roomCode) {
         addToast('success', 'Challenge Issued', `Challenged ${selectedFriendForChallenge.username}! Setting up the match...`)
         setChallengeModalOpen(false)
-        setTimeout(() => router.push(`/dashboard/multiplayer?action=join&code=${response.roomCode}`), 800)
+        router.push(`/dashboard/multiplayer/play/${response.roomCode}`)
       } else {
         addToast('success', 'Challenge Sent', `Challenge sent to ${selectedFriendForChallenge.username}!`)
         setChallengeModalOpen(false)
@@ -575,24 +610,21 @@ export default function FriendsPage() {
                             {isOnline && (
                               <>
                                 <button
-                                  className="btn btn-primary btn-sm"
-                                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-                                  onClick={() => {
-                                    setSelectedFriendForInvite(friend)
-                                    setInviteModalOpen(true)
-                                  }}
-                                >
-                                  <Gamepad2 size={12} /> Invite
-                                </button>
-                                <button
                                   className="btn btn-secondary btn-sm"
                                   style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', color: 'hsl(38 95% 60%)', borderColor: 'hsl(38 95% 40% / 0.3)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                  disabled={challengeLoadingId !== null}
                                   onClick={() => {
+                                    const targetUserId = friend.userId || friend.id
+                                    const friendPresence = presenceMap[targetUserId]
+                                    if (friendPresence?.status === 'IN_GAME') {
+                                      addToast('error', 'Player Busy', `${friend.username} is currently in a game. Try challenging them later!`)
+                                      return
+                                    }
                                     setSelectedFriendForChallenge(friend)
                                     setChallengeModalOpen(true)
                                   }}
                                 >
-                                  <Swords size={12} /> Challenge
+                                  <Swords size={12} /> {challengeLoadingId === friend.id ? 'Challenging...' : 'Challenge'}
                                 </button>
                               </>
                             )}

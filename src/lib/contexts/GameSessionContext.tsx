@@ -24,6 +24,74 @@ export interface AchievementUnlock {
   coinReward: number
 }
 
+function calculateLocalRewards(gameSlug: string, result: 'win' | 'loss' | 'draw', metadata: any) {
+  let baseXP = 0
+  let baseCoins = 0
+
+  const score = (metadata?.score as number) ?? 0
+  const gameMeta = (metadata?.gameMetadata as Record<string, any>) ?? {}
+  
+  if (gameSlug === 'block-blast') {
+    const difficulty = (gameMeta.difficulty ?? 'normal').toLowerCase()
+    const maxCombo = gameMeta.maxCombo ?? 0
+
+    if (result === 'win') {
+      if (score < 1000) baseXP = 50
+      else if (score < 3000) baseXP = 100
+      else baseXP = 150
+    } else {
+      baseXP = 10
+    }
+
+    const baseCoinsValue = Math.floor(score / 100)
+    const diffMultiplier = difficulty === 'hard' ? 2.0 : difficulty === 'normal' ? 1.5 : 1.0
+    const comboBonus = maxCombo * 5
+    baseCoins = Math.max(5, Math.floor((baseCoinsValue + comboBonus) * diffMultiplier))
+  } else if (gameSlug === 'neon-tetris') {
+    const maxCombo = gameMeta.maxCombo ?? 0
+
+    if (score < 1000) {
+      baseXP = 50
+    } else if (score < 5000) {
+      baseXP = 100
+    } else {
+      baseXP = 200
+    }
+
+    baseCoins = Math.max(
+      5,
+      Math.floor(score / 100) + maxCombo * 2
+    )
+  } else if (gameSlug === 'snake-arena') {
+    const foods = gameMeta.foodsCollected ?? 0
+    const elims = gameMeta.eliminations ?? 0
+    baseCoins = Math.max(5, foods * 2 + elims * 10)
+    baseXP = result === 'win' ? 100 : result === 'loss' ? 25 : 50
+  } else {
+    // standard config lookup
+    const config: Record<string, { win: number; loss: number; draw: number }> = {
+      'cricket':        { win: 100, loss: 25, draw: 50 },
+      'tic-tac-toe':    { win: 100, loss: 25, draw: 50 },
+      'four-in-a-row':  { win: 100, loss: 25, draw: 50 },
+      'scribble':       { win: 100, loss: 25, draw: 50 },
+      'dumb-charades':  { win: 100, loss: 25, draw: 50 },
+      'whos-spy':       { win: 100, loss: 25, draw: 50 },
+      'word-wizard':    { win: 100, loss: 25, draw: 50 },
+      'rps':            { win: 100, loss: 25, draw: 50 },
+      'number-guessing':{ win: 100, loss: 25, draw: 50 },
+      '2048':           { win: 50,  loss: 10, draw: 25 },
+      'fighter':        { win: 50,  loss: 10, draw: 25 },
+      'ludo':           { win: 100, loss: 25, draw: 50 },
+      'memory':         { win: 50,  loss: 10, draw: 25 },
+    }
+    const resolved = config[gameSlug] || { win: 50, loss: 10, draw: 25 }
+    baseXP = resolved[result]
+    baseCoins = result === 'win' ? 20 : 5
+  }
+
+  return { baseXP, baseCoins }
+}
+
 export interface GameResultPayload {
   gameSlug: string
   result: 'win' | 'loss' | 'draw'
@@ -482,20 +550,42 @@ export function GameSessionProvider({
       fullFallbacks.forEach(el => el.classList.remove('fullscreen-mobile-fallback'));
     }
 
+    const { baseXP, baseCoins } = calculateLocalRewards(gameSlug, result, metadata)
+
+    const oldXP = user
+      ? parseInt(localStorage.getItem('gamehub_user_xp') || '0', 10)
+      : parseInt(localStorage.getItem(GUEST_XP_KEY) || '0', 10)
+    const oldLevel = user
+      ? parseInt(localStorage.getItem('gamehub_user_level') || '1', 10)
+      : parseInt(localStorage.getItem(GUEST_LEVEL_KEY) || '1', 10)
+
+    const finalXP = oldXP + baseXP
+    const finalLevel = computeLevel(finalXP)
+    const leveledUp = finalLevel > oldLevel
+
+    // Optimistically update localStorage right away!
+    if (user) {
+      localStorage.setItem('gamehub_user_xp', finalXP.toString())
+      localStorage.setItem('gamehub_user_level', finalLevel.toString())
+    } else {
+      localStorage.setItem(GUEST_XP_KEY, finalXP.toString())
+      localStorage.setItem(GUEST_LEVEL_KEY, finalLevel.toString())
+    }
+
     const prelimPayload: GameResultPayload = {
       gameSlug,
       result,
-      xpGained: 0,
-      coinsGained: 0,
-      oldXP: user ? parseInt(localStorage.getItem('gamehub_user_xp') || '0', 10) : parseInt(localStorage.getItem(GUEST_XP_KEY) || '0', 10),
-      newXP: user ? parseInt(localStorage.getItem('gamehub_user_xp') || '0', 10) : parseInt(localStorage.getItem(GUEST_XP_KEY) || '0', 10),
-      oldLevel: user ? parseInt(localStorage.getItem('gamehub_user_level') || '1', 10) : parseInt(localStorage.getItem(GUEST_LEVEL_KEY) || '1', 10),
-      newLevel: user ? parseInt(localStorage.getItem('gamehub_user_level') || '1', 10) : parseInt(localStorage.getItem(GUEST_LEVEL_KEY) || '1', 10),
-      leveledUp: false,
-      currentStreak: 0,
+      xpGained: baseXP,
+      coinsGained: baseCoins,
+      oldXP,
+      newXP: finalXP,
+      oldLevel,
+      newLevel: finalLevel,
+      leveledUp,
+      currentStreak: user ? parseInt(localStorage.getItem('gamehub_user_streak') || '0', 10) : 0,
       unlockedAchievements: [],
       nextAchievement: {
-        name: 'Calculating...',
+        name: 'Syncing badges...',
         current: 0,
         target: 1,
         progress: 0,
@@ -504,7 +594,8 @@ export function GameSessionProvider({
       highScore: (metadata?.score as number) ?? 0,
       metadata: {
         ...metadata,
-        loading: true // Show spinner
+        loading: false,
+        syncing: true,
       }
     }
 
@@ -775,7 +866,8 @@ export function GameSessionProvider({
           isGuest: false,
           metadata: {
             ...metadata,
-            loading: false
+            loading: false,
+            syncing: false,
           }
         }
 
@@ -800,6 +892,13 @@ export function GameSessionProvider({
         setModalData(payload)
       } catch (err) {
         console.error('Error submitting game result:', err)
+        setModalData(prev => prev ? {
+          ...prev,
+          metadata: {
+            ...prev.metadata,
+            syncing: false
+          }
+        } : null)
       } finally {
         setIsLoading(false)
       }

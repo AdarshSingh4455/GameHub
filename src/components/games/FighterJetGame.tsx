@@ -81,6 +81,10 @@ export default function FighterJetGame() {
     touchStart: { x: 0, y: 0 },
     touchPlayerStart: { x: 0, y: 0 },
     gameDuration: 0,
+    enemiesDestroyed: 0,
+    bossesDefeated: 0,
+    shotsFired: 0,
+    shotsHit: 0,
   })
 
   // Start / Restart game
@@ -118,6 +122,10 @@ export default function FighterJetGame() {
       touchStart: { x: 0, y: 0 },
       touchPlayerStart: { x: 0, y: 0 },
       gameDuration: 0,
+      enemiesDestroyed: 0,
+      bossesDefeated: 0,
+      shotsFired: 0,
+      shotsHit: 0,
     }
   }
 
@@ -211,6 +219,7 @@ export default function FighterJetGame() {
           height: 12,
           speed: 8,
         })
+        stateRef.current.shotsFired++
         shootCooldown = 150 // Shoot every 150ms
       }
 
@@ -354,6 +363,7 @@ export default function FighterJetGame() {
             // Bullet hit enemy
             bullet.y = -100 // Flag bullet for deletion
             enemy.hp -= 1
+            stateRef.current.shotsHit++
 
             // Spawn spark particles
             for (let i = 0; i < 4; i++) {
@@ -372,6 +382,7 @@ export default function FighterJetGame() {
             if (enemy.hp <= 0) {
               // Destroy enemy!
               enemy.dead = true
+              stateRef.current.enemiesDestroyed++
 
               const points = enemy.type === 'boss' ? 500 : enemy.type === 'elite' ? 100 : 25
               stateRef.current.score += points
@@ -379,6 +390,7 @@ export default function FighterJetGame() {
 
               if (enemy.type === 'boss') {
                 stateRef.current.bossActive = false
+                stateRef.current.bossesDefeated++
                 setBossHp(null)
               }
 
@@ -604,12 +616,36 @@ export default function FighterJetGame() {
 
   const handleGameOver = (finalScore: number) => {
     setIsPlaying(false)
+    const bossesDefeated = stateRef.current.bossesDefeated
+    const isVictory = bossesDefeated >= 1
+    const apiResult = isVictory ? 'win' : 'loss'
+    const customTitle = isVictory ? 'Mission Completed' : 'Ship Destroyed'
+    const wavesReached = Math.floor(stateRef.current.time / 20) + 1
+    const customSubtitle = isVictory
+      ? `Defeated the Alien Boss! Wave ${wavesReached}`
+      : `Survived ${wavesReached} Wave${wavesReached !== 1 ? 's' : ''} • High Score Run`
+
+    const accuracy = stateRef.current.shotsFired > 0 
+      ? Math.round((stateRef.current.shotsHit / stateRef.current.shotsFired) * 100) 
+      : 0
+    const distance = Math.floor(stateRef.current.time * 60)
+
     submitGameResult({
       gameSlug: 'fighter',
-      result: 'loss', // Fighter jet is score-survival, so the game over condition is always a defeat/loss but saves XP based on score!
+      result: apiResult,
       metadata: {
         score: finalScore,
         timeSpent: stateRef.current.time,
+        customTitle,
+        customSubtitle,
+        statistics: [
+          { label: 'Wave Reached', value: wavesReached, color: '#fbbf24' },
+          { label: 'Enemies Shot', value: stateRef.current.enemiesDestroyed, color: 'hsl(220 100% 65%)' },
+          { label: 'Bosses Defeated', value: bossesDefeated, color: '#ec4899' },
+          { label: 'Accuracy', value: `${accuracy}%`, color: '#10b981' },
+          { label: 'Survival Time', value: `${Math.floor(stateRef.current.time)}s`, color: '#38bdf8' },
+          { label: 'Distance', value: `${distance}m`, color: '#a855f7' },
+        ]
       },
     })
   }

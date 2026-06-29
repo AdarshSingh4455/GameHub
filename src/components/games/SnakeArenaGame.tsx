@@ -673,6 +673,13 @@ export default function SnakeArenaGame() {
     const duration = Math.round((Date.now() - startTimeRef.current) / 1000)
     const resultOutcome = isWin ? 'win' : 'loss'
 
+    const leaderboard = Object.values(finalState.snakes).sort((a, b) => b.score - a.score)
+    const finalRank = leaderboard.findIndex(s => s.userId === 'player-human') + 1
+    const finalLength = finalState.snakes['player-human']?.body.length ?? 3
+
+    const customTitle = isWin ? 'Victory!' : 'Game Over'
+    const customSubtitle = `Rank #${finalRank} • ${isWin ? 'Arena Master' : 'Arena Elimination'}`
+
     submitGameResult({
       gameSlug: 'snake-arena',
       result: resultOutcome,
@@ -680,6 +687,15 @@ export default function SnakeArenaGame() {
         score: finalState.snakes['player-human']?.score ?? 0,
         opponentScore: 0,
         durationSecs: duration,
+        customTitle,
+        customSubtitle,
+        statistics: [
+          { label: 'Rank', value: `#${finalRank}`, color: finalRank === 1 ? '#fbbf24' : 'white' },
+          { label: 'Final Length', value: finalLength, color: '#10b981' },
+          { label: 'Food Collected', value: foodsCollected, color: '#ec4899' },
+          { label: 'Eliminations', value: eliminations, color: 'hsl(0 80% 65%)' },
+          { label: 'Survival Time', value: `${duration}s`, color: '#38bdf8' },
+        ],
         gameMetadata: {
           mode: isRanked ? 'ranked' : 'vs-ai',
           difficulty,

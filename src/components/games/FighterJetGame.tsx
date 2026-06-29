@@ -1,4 +1,5 @@
 'use client'
+import { PlaneIcon } from '@/components/shared/Icons'
 
 import React, { useRef, useEffect, useState } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -655,7 +656,7 @@ export default function FighterJetGame() {
   if (!isPlaying) {
     return (
       <div className="card glass" style={{ padding: '2.5rem', textAlign: 'center', margin: '0 auto', maxWidth: 500 }}>
-        <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>✈️</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><PlaneIcon size={48} className="text-blue-400" /></div>
         <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem' }}>Fighter Jet</h2>
         <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginBottom: '2rem' }}>
           Dodge enemy ships, shoot them down, and survive waves. Boss battles occur every 1,000 points.

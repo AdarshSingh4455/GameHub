@@ -1,4 +1,5 @@
 'use client'
+import { CarIcon, FlaskIcon, LockIcon, TrophyIcon, LightbulbIcon, HistoryIcon, LogOutIcon, GiftIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -1599,7 +1600,7 @@ export default function UnblockTrafficGame() {
           id="unblock-traffic-setup-screen"
         >
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '0.25rem' }}>🚗</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><CarIcon size={48} className="text-blue-400" /></div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>Unblock Traffic</h2>
             <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.2rem', lineHeight: 1.4 }}>
               Clear a path to guide the red car to the Exit gate. Slide horizontal cars left/right, and vertical cars up/down.
@@ -1668,7 +1669,7 @@ export default function UnblockTrafficGame() {
                     }}
                     title={`${lvlDiff.toUpperCase()} Level`}
                   >
-                    {isPlayable ? lvlNum : '🔒'}
+                    {isPlayable ? lvlNum : <LockIcon size={12} className="mx-auto" />}
                     {isPlayable && (
                       <span
                         style={{
@@ -1703,7 +1704,7 @@ export default function UnblockTrafficGame() {
                 }}
                 id="traffic-enter-lab-btn"
               >
-                🔬 Enter Endless Lab
+                <FlaskIcon size={14} className="inline mr-1 text-purple-400" /> Enter Endless Lab
               </button>
             ) : (
               <div
@@ -1717,7 +1718,7 @@ export default function UnblockTrafficGame() {
                   color: 'hsl(220 10% 45%)',
                 }}
               >
-                🔒 Endless Lab Mode unlocks after Level 50
+                <LockIcon size={14} className="inline mr-1 text-red-500" /> Endless Lab Mode unlocks after Level 50
               </div>
             )}
           </div>
@@ -1738,7 +1739,7 @@ export default function UnblockTrafficGame() {
           id="traffic-endless-lab-screen"
         >
           <div style={{ textAlign: 'center' }}>
-            <span style={{ fontSize: '2.5rem' }}>🔬</span>
+            <span style={{ display: 'flex', justifyContent: 'center' }}><FlaskIcon size={36} className="text-purple-400" /></span>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 950, color: 'white', letterSpacing: '-0.02em', marginTop: '0.25rem' }}>
               TRAFFIC ENDLESS LAB
             </h2>
@@ -1760,7 +1761,7 @@ export default function UnblockTrafficGame() {
               Lab Best Run (Score)
             </div>
             <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'hsl(48 95% 50%)', marginTop: '0.15rem' }}>
-              🏆 {labBestRun || 'N/A'}
+              <TrophyIcon size={14} className="inline mr-1 text-yellow-400" /> {labBestRun || 'N/A'}
             </div>
           </div>
 
@@ -1820,7 +1821,7 @@ export default function UnblockTrafficGame() {
               style={{ flex: 1.5, borderRadius: 12, padding: '0.65rem' }}
               id="traffic-lab-launch-btn"
             >
-              🚗 Launch Escape Run
+              <CarIcon size={14} className="inline mr-1" /> Launch Escape Run
             </button>
             <button
               onClick={() => setStage('setup')}
@@ -2310,7 +2311,7 @@ export default function UnblockTrafficGame() {
               style={{ flex: 1.2, borderRadius: 12 }}
               id="traffic-hint-btn"
             >
-              💡 Hint ({hintsUsed === 0 ? 'Free' : 'Ad'})
+              <LightbulbIcon size={14} className="inline mr-1 text-yellow-400" /> Hint ({hintsUsed === 0 ? 'Free' : 'Ad'})
             </button>
             <button
               onClick={handleUndo}
@@ -2330,7 +2331,7 @@ export default function UnblockTrafficGame() {
               style={{ flex: 1, borderRadius: 12 }}
               id="traffic-restart-btn"
             >
-              🔄 Restart
+              <HistoryIcon size={14} className="inline mr-1" /> Restart
             </button>
             <button
               onClick={() => {
@@ -2341,7 +2342,7 @@ export default function UnblockTrafficGame() {
               style={{ flex: 0.8, borderRadius: 12 }}
               id="traffic-exit-gameplay-btn"
             >
-              🚪 Exit
+              <LogOutIcon size={14} className="inline mr-1" /> Exit
             </button>
           </div>
         </div>
@@ -2415,7 +2416,7 @@ export default function UnblockTrafficGame() {
                 style={{ width: '100%', borderRadius: 10 }}
                 id="traffic-claim-ad-reward-btn"
               >
-                🎁 Claim Extra Hint
+                <GiftIcon size={14} className="inline mr-1 text-pink-400" /> Claim Extra Hint
               </button>
             )}
           </div>

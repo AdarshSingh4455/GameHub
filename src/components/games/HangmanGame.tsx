@@ -1,4 +1,5 @@
 'use client'
+import { GamepadIcon, TrophyIcon, FrownIcon, PlayIcon, HeartIcon, LightbulbIcon, FlagIcon, HelpIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -260,7 +261,7 @@ export default function HangmanGame() {
     if (isCorrect) {
       handleGameOver(true)
     } else {
-      addToast('error', 'Wrong Guess ❌', `"${guess}" is not the secret word.`)
+      addToast('error', 'Wrong Guess', `"${guess}" is not the secret word.`)
       if (newGuessesLeft <= 0) {
         handleGameOver(false)
       }
@@ -445,7 +446,7 @@ export default function HangmanGame() {
       {stage === 'LOBBY' ? (
         <div className="card glass text-center" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: 16 }}>
           <div>
-            <span style={{ fontSize: '3rem', display: 'block', marginBottom: '0.5rem' }}>🪓</span>
+            <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><GamepadIcon size={48} className="text-purple-400" /></span>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Hangman Classic</h2>
             <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
               Guess the hidden word before running out of attempts!
@@ -493,7 +494,7 @@ export default function HangmanGame() {
           </div>
 
           <button onClick={startNewGameFlow} className="btn btn-primary" style={{ width: '100%', padding: '0.8rem', borderRadius: 12, fontWeight: 700, fontSize: '1rem' }}>
-            Start Solo Game 🚀
+            Start Solo Game
           </button>
         </div>
       ) : (
@@ -502,7 +503,7 @@ export default function HangmanGame() {
           {introStage !== 'DONE' ? (
             /* Cool category intro spinner/reveal */
             <div style={{ padding: '4rem 1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-              <div style={{ fontSize: '3rem', animation: 'spin-slow 2s linear infinite' }}>🎲</div>
+              <div style={{ display: 'flex', justifyContent: 'center', margin: '0.5rem auto' }}><HelpIcon size={36} className="text-purple-400" /></div>
               <div
                 className="cat-intro-text"
                 style={{
@@ -525,14 +526,14 @@ export default function HangmanGame() {
               {/* HUD / Indicators */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>🏷️ Category</span>
+                  <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Category</span>
                   <span style={{ fontSize: '0.95rem', fontWeight: 900, textTransform: 'uppercase', color: 'hsl(270 80% 75%)' }}>
                     {category}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <div style={{ padding: '0.4rem 0.75rem', background: 'hsl(220 20% 7%)', border: '1px solid hsl(220 15% 15%)', borderRadius: 10, fontSize: '0.8rem' }}>
-                    ❤️ Lives: <strong style={{ color: lives <= 2 ? 'hsl(350 90% 60%)' : 'hsl(142 70% 50%)' }}>{lives}</strong>
+                    <HeartIcon size={12} className="inline mr-1 text-red-500" fill="currentColor" /> Lives: <strong style={{ color: lives <= 2 ? 'hsl(350 90% 60%)' : 'hsl(142 70% 50%)' }}>{lives}</strong>
                   </div>
                   {difficulty !== 'hard' && !isGameOver && (
                     <button
@@ -541,7 +542,7 @@ export default function HangmanGame() {
                       className={`btn btn-sm ${hintsLeft > 0 ? 'btn-primary' : 'btn-secondary'}`}
                       style={{ borderRadius: 10, fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
                     >
-                      💡 Hint ({hintsLeft})
+                      <LightbulbIcon size={12} className="inline mr-1 text-yellow-400" /> Hint ({hintsLeft})
                     </button>
                   )}
                 </div>
@@ -589,7 +590,7 @@ export default function HangmanGame() {
                     className="btn btn-ghost"
                     style={{ flex: 1, borderRadius: 10, fontSize: '0.82rem', padding: '0.5rem', border: '1px solid hsl(220 15% 18%)' }}
                   >
-                    🏳️ Give Up
+                    <FlagIcon size={12} className="inline mr-1" /> Give Up
                   </button>
                 </div>
               )}
@@ -644,7 +645,7 @@ export default function HangmanGame() {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5,8,16,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
           <div className="card glass" style={{ background: 'hsl(222 18% 12% / 0.95)', border: '1px solid hsl(220 15% 22%)', borderRadius: 20, padding: '2rem', maxWidth: 400, width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div className="text-center">
-              <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.25rem' }}>💡</span>
+              <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.25rem' }}><LightbulbIcon size={36} className="text-yellow-400" /></span>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Guess the Entire Word</h3>
               <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.82rem', marginTop: '0.25rem' }}>
                 Warning: If you run out of guess attempts ({fullGuessesLeft} left), you will immediately lose the match!
@@ -664,7 +665,7 @@ export default function HangmanGame() {
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => handleFullWordGuess()} className="btn btn-primary" style={{ flex: 2, padding: '0.65rem', borderRadius: 10, fontWeight: 700 }}>
-                Submit Guess 🚀
+                Submit Guess
               </button>
               <button onClick={() => setShowGuessModal(false)} className="btn btn-secondary" style={{ flex: 1, padding: '0.65rem', borderRadius: 10, fontWeight: 700 }}>
                 Cancel

@@ -1,4 +1,5 @@
 'use client'
+import { BotIcon, UsersIcon, TrophyIcon, SwordsIcon, HistoryIcon, FlagIcon } from '@/components/shared/Icons'
 
 import { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -354,7 +355,7 @@ export default function TicTacToeGame() {
               }}
             >
               <div style={{ textAlign: 'left', fontSize: '0.8rem', fontWeight: 800, color: 'hsl(220 10% 70%)' }}>
-                🤖 PLAY VS AI
+                <BotIcon size={14} className="inline mr-1 text-purple-400" /> PLAY VS AI
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
@@ -418,7 +419,7 @@ export default function TicTacToeGame() {
               }}
             >
               <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(220 10% 70%)' }}>
-                👥 LOCAL SAME-DEVICE
+                <UsersIcon size={14} className="inline mr-1 text-blue-400" /> LOCAL SAME-DEVICE
               </div>
               <p style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', textAlign: 'left', margin: '0 0 0.5rem 0' }}>
                 Pass the device and play turn-based matches face-to-face.
@@ -525,12 +526,12 @@ export default function TicTacToeGame() {
   // --- RENDERING GAME BOARD ---
   const statusMsg = winner
     ? winner === 'draw'
-      ? "It's a draw! 🤝"
+      ? "It's a draw!"
       : winner === 'X'
-        ? gameMode === 'vs-ai' ? '🏆 You Win!' : '🏆 Player X Wins!'
-        : gameMode === 'vs-ai' ? '🤖 AI Wins!' : '🏆 Player O Wins!'
+        ? gameMode === 'vs-ai' ? 'You Win!' : 'Player X Wins!'
+        : gameMode === 'vs-ai' ? 'AI Wins!' : 'Player O Wins!'
     : isThinking
-      ? '🤖 AI is analyzing…'
+      ? 'AI is analyzing…'
       : gameMode === 'vs-ai'
         ? 'Your turn (X)'
         : `Turn: Player ${currentTurn}`
@@ -562,7 +563,7 @@ export default function TicTacToeGame() {
           width: '100%',
           boxSizing: 'border-box'
         }}>
-          ⚔️ Competitive Ranked Session
+          <SwordsIcon size={14} className="inline mr-1 text-purple-400" /> Competitive Ranked Session
         </div>
       )}
 
@@ -649,7 +650,7 @@ export default function TicTacToeGame() {
           onClick={handleReset}
           id="ttt-play-again-btn"
         >
-          🔄 Restart Board
+          <HistoryIcon size={14} className="inline mr-1" /> Restart Board
         </button>
         <button
           className="btn btn-secondary"
@@ -657,7 +658,7 @@ export default function TicTacToeGame() {
           onClick={handleQuit}
           id="ttt-quit-btn"
         >
-          🏳️ Menu
+          <FlagIcon size={14} className="inline mr-1" /> Menu
         </button>
       </div>
     </div>

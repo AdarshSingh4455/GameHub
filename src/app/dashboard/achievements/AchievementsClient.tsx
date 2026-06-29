@@ -1,4 +1,5 @@
 'use client'
+import { TrophyIcon, LockIcon, AwardIcon, SearchIcon, CoinsIcon, SparklesIcon } from '@/components/shared/Icons'
 
 import React, { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
@@ -218,7 +219,7 @@ export default function AchievementsClient({ user }: Props) {
       {/* Header Banner */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
         <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 850, margin: 0, letterSpacing: '-0.02em', color: 'white' }}>
-          🎯 Achievements Vault
+          <TrophyIcon size={20} className="text-yellow-400" /> Achievements Vault
         </h1>
         <p style={{ color: 'hsl(220 10% 55%)', margin: 0, fontSize: '0.9rem' }}>
           Complete games, defeat AI opponents, and unlock exclusive rewards.
@@ -241,7 +242,7 @@ export default function AchievementsClient({ user }: Props) {
         >
           <div>
             <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'hsl(38 95% 65%)' }}>
-              🔒 Playing as Guest
+              <LockIcon size={14} className="text-muted-foreground" /> Playing as Guest
             </div>
             <div style={{ fontSize: '0.8rem', color: 'hsl(220 10% 65%)', marginTop: '0.15rem' }}>
               Achievements progress is simulated in your browser. Register to save your badges permanently!
@@ -277,11 +278,11 @@ export default function AchievementsClient({ user }: Props) {
           <div style={{ display: 'flex', gap: '1.25rem' }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 45%)' }}>Total XP Earned</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'hsl(142 70% 55%)', marginTop: '0.15rem' }}>✨ {totalXPUnlocks} XP</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'hsl(142 70% 55%)', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '4px' }}><SparklesIcon size={14} /> <span>{totalXPUnlocks} XP</span></div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 45%)' }}>Total Coins Claimed</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'hsl(45 100% 55%)', marginTop: '0.15rem' }}>🪙 {totalCoinsUnlocks}</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'hsl(45 100% 55%)', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '4px' }}><CoinsIcon size={14} /> <span>{totalCoinsUnlocks}</span></div>
             </div>
           </div>
         </div>
@@ -340,7 +341,7 @@ export default function AchievementsClient({ user }: Props) {
             }}
             id="achievement-search-input"
           />
-          <span style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'hsl(220 10% 45%)' }}>🔍</span>
+          <span style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'hsl(220 10% 45%)', display: 'flex', alignItems: 'center' }}><SearchIcon size={14} /></span>
         </div>
       </div>
 
@@ -395,7 +396,7 @@ export default function AchievementsClient({ user }: Props) {
                   boxShadow: ach.isUnlocked ? '0 4px 12px hsl(38 95% 50% / 0.2)' : 'none'
                 }}
               >
-                {ach.isUnlocked ? '🏅' : '🔒'}
+                {ach.isUnlocked ? <AwardIcon size={18} className="text-yellow-400" /> : <LockIcon size={18} className="text-muted-foreground" />}
               </div>
 
               {/* Text Description */}

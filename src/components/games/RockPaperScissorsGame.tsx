@@ -3,16 +3,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getRPSMove, RPSMove } from '@/lib/gameAI'
+import { RockVector, PaperVector, ScissorsVector } from '@/components/games/RockPaperScissorsAssets'
+import { BotIcon, FlagIcon } from '@/components/shared/Icons'
+
+const MOVE_ICONS: Record<RPSMove, (props: { size?: number; style?: React.CSSProperties }) => React.ReactNode> = {
+  rock: (props) => <RockVector {...props} />,
+  paper: (props) => <PaperVector {...props} />,
+  scissors: (props) => <ScissorsVector {...props} />,
+}
 
 type GameMode = 'vs-ai' | 'local-pvp' | 'lobby-sim'
 type Difficulty = 'moderate' | 'hard'
 type GameState = 'setup' | 'playing' | 'round-reveal' | 'gameover'
-
-const MOVE_EMOJIS: Record<RPSMove, string> = {
-  rock: '✊',
-  paper: '✋',
-  scissors: '✌️',
-}
 
 const RPS_RULES: Record<RPSMove, RPSMove> = {
   rock: 'scissors',
@@ -250,8 +252,8 @@ export default function RockPaperScissorsGame() {
         }}
         id="rps-setup-menu"
       >
-        <div>
-          <div style={{ fontSize: '3.5rem', marginBottom: '0.25rem' }}>✊</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <RockVector size={64} style={{ marginBottom: '0.5rem' }} />
           <h2 style={{ fontWeight: 900, fontSize: '1.5rem', margin: 0, color: 'white' }}>Rock Paper Scissors</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.25rem' }}>
             Classic showdown. Best of 3 rounds wins. Predict your opponent's tendencies!
@@ -553,8 +555,9 @@ export default function RockPaperScissorsGame() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', justifyContent: 'center', flex: 1 }}>
             {gameMode === 'vs-ai' ? (
               <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: '0 0 0.5rem 0' }}>
-                  {isThinking ? '🤖 AI is choosing...' : 'Make Your Choice'}
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  {isThinking && <BotIcon size={16} style={{ color: 'hsl(270 80% 70%)', animation: 'pulse 1.5s infinite' }} />}
+                  <span>{isThinking ? 'AI is choosing...' : 'Make Your Choice'}</span>
                 </h3>
                 <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)', margin: 0 }}>Round {roundsPlayed + 1} of 3</p>
               </div>
@@ -582,11 +585,13 @@ export default function RockPaperScissorsGame() {
                     borderRadius: 16,
                     border: '1px solid hsl(220 15% 22%)',
                     background: 'hsl(222 20% 9%)',
-                    fontSize: '2rem',
                     cursor: isThinking ? 'default' : 'pointer',
                     transition: 'all 0.15s',
                     outline: 'none',
                     opacity: isThinking ? 0.6 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                   id={`rps-btn-${move}`}
                   onMouseEnter={(e) => {
@@ -596,7 +601,7 @@ export default function RockPaperScissorsGame() {
                     if (!isThinking) e.currentTarget.style.borderColor = 'hsl(220 15% 22%)'
                   }}
                 >
-                  {MOVE_EMOJIS[move]}
+                  {MOVE_ICONS[move]({ size: 40 })}
                 </button>
               ))}
             </div>
@@ -607,8 +612,8 @@ export default function RockPaperScissorsGame() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
             <div style={{ display: 'flex', gap: '2.5rem', alignItems: 'center' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
-                  {MOVE_EMOJIS[p1Choice]}
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
+                  {MOVE_ICONS[p1Choice]({ size: 64 })}
                 </div>
                 <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', fontWeight: 700, marginTop: '0.4rem' }}>
                   Player 1
@@ -618,8 +623,8 @@ export default function RockPaperScissorsGame() {
               <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(220 10% 40%)' }}>vs</div>
 
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
-                  {MOVE_EMOJIS[p2Choice]}
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
+                  {MOVE_ICONS[p2Choice]({ size: 64 })}
                 </div>
                 <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', fontWeight: 700, marginTop: '0.4rem' }}>
                   {gameMode === 'vs-ai' ? 'AI' : 'Player 2'}
@@ -651,11 +656,12 @@ export default function RockPaperScissorsGame() {
       <div style={{ textAlign: 'center' }}>
         <button
           className="btn btn-secondary btn-sm"
-          style={{ width: '100%', borderRadius: 12 }}
+          style={{ width: '100%', borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           onClick={() => setGameState('setup')}
           id="rps-quit-btn"
         >
-          🏳️ Back to Setup Menu
+          <FlagIcon size={14} />
+          <span>Back to Setup Menu</span>
         </button>
       </div>
     </div>

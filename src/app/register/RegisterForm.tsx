@@ -1,4 +1,5 @@
 'use client'
+import { SuccessIcon } from '@/components/shared/Icons'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -66,7 +67,7 @@ export default function RegisterForm() {
   if (success) {
     return (
       <div style={{ textAlign: 'center', padding: '1rem' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><SuccessIcon size={48} className="text-green-500" /></div>
         <h2 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Account created!</h2>
         <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
           Check your email to confirm your account, then sign in.

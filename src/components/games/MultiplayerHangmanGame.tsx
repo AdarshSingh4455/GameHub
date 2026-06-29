@@ -1,4 +1,5 @@
 'use client'
+import { EditIcon, HeartIcon, LightbulbIcon, FlagIcon, TrophyIcon, FrownIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect } from 'react'
 import { useSocket } from '@/lib/contexts/SocketContext'
@@ -235,7 +236,7 @@ export default function MultiplayerHangmanGame({
       {stage === 'WORD_SUBMISSION' && (
         <div className="card glass text-center animate-fadeIn" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', borderRadius: 16, width: '100%', maxWidth: 360, margin: '0 auto' }}>
           <div>
-            <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem' }}>✍️</span>
+            <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><EditIcon size={36} className="text-purple-400" /></span>
             <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Enter Your Secret Word</h3>
             <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.85rem' }}>
               Submit the word your opponent will have to guess. Minimum 3 letters.
@@ -259,7 +260,7 @@ export default function MultiplayerHangmanGame({
                 className="btn btn-primary"
                 style={{ width: '100%', padding: '0.75rem', borderRadius: 12, fontWeight: 700 }}
               >
-                Submit Word 🚀
+                Submit Word
               </button>
             </div>
           ) : (

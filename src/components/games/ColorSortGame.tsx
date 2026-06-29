@@ -1,4 +1,5 @@
 'use client'
+import { FlaskIcon, LockIcon, TrophyIcon, AwardIcon, ZapIcon, LightbulbIcon, HistoryIcon, LogOutIcon, AlertIcon, GiftIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -1107,7 +1108,7 @@ export default function ColorSortGame() {
           id="colorsort-setup-screen"
         >
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '0.25rem' }}>🧪</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><FlaskIcon size={48} className="text-purple-400" /></div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>Color Sort</h2>
             <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.2rem', lineHeight: 1.4 }}>
               Sort all matching colored liquids into separate glass jars. Pour strategically and unlock the Endless Lab!
@@ -1176,7 +1177,7 @@ export default function ColorSortGame() {
                     }}
                     title={`${lvlDiff.toUpperCase()} Level`}
                   >
-                    {isPlayable ? lvlNum : '🔒'}
+                    {isPlayable ? lvlNum : <LockIcon size={12} className="mx-auto" />}
                     {isPlayable && (
                       <span
                         style={{
@@ -1212,7 +1213,7 @@ export default function ColorSortGame() {
                 }}
                 id="colorsort-enter-lab-btn"
               >
-                🔬 Enter Endless Lab
+                <FlaskIcon size={14} className="inline mr-1 text-purple-400" /> Enter Endless Lab
               </button>
             ) : (
               <div
@@ -1227,7 +1228,7 @@ export default function ColorSortGame() {
                 }}
                 id="colorsort-lab-locked-badge"
               >
-                🔒 Endless Lab Mode unlocks after Level 50
+                <LockIcon size={14} className="inline mr-1 text-red-500" /> Endless Lab Mode unlocks after Level 50
               </div>
             )}
           </div>
@@ -1248,7 +1249,7 @@ export default function ColorSortGame() {
           id="colorsort-endless-lab-screen"
         >
           <div style={{ textAlign: 'center' }}>
-            <span style={{ fontSize: '2.5rem' }}>🔬</span>
+            <span style={{ display: 'flex', justifyContent: 'center' }}><FlaskIcon size={36} className="text-purple-400" /></span>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 950, color: 'white', letterSpacing: '-0.02em', marginTop: '0.25rem' }}>
               ENDLESS LAB
             </h2>
@@ -1270,7 +1271,7 @@ export default function ColorSortGame() {
               Lab Best Run (Score)
             </div>
             <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'hsl(48 95% 50%)', marginTop: '0.15rem' }}>
-              🏆 {labBestRun || 'N/A'}
+              <TrophyIcon size={14} className="inline mr-1 text-yellow-400" /> {labBestRun || 'N/A'}
             </div>
           </div>
 
@@ -1330,7 +1331,7 @@ export default function ColorSortGame() {
               style={{ flex: 1.5, borderRadius: 12, padding: '0.65rem' }}
               id="colorsort-lab-launch-btn"
             >
-              🧪 Launch Experiment
+              <FlaskIcon size={14} className="inline mr-1" /> Launch Experiment
             </button>
             <button
               onClick={() => setStage('setup')}
@@ -1375,7 +1376,7 @@ export default function ColorSortGame() {
               id="colorsort-level-preview"
             >
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '0.35rem' }}>🧪</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><FlaskIcon size={36} className="text-purple-400" /></div>
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', margin: 0 }}>
                   Color Sort
                 </h2>
@@ -1401,17 +1402,17 @@ export default function ColorSortGame() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-around' }}>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.2rem' }}>🥇</div>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}><AwardIcon size={18} style={{ color: 'hsl(45 100% 55%)' }} /></div>
                     <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(48 95% 55%)' }}>{previewData.gold}s</div>
                     <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)' }}>Gold</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.2rem' }}>🥈</div>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}><AwardIcon size={18} style={{ color: 'hsl(220 10% 75%)' }} /></div>
                     <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(210 70% 65%)' }}>{previewData.silver}s</div>
                     <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)' }}>Silver</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.2rem' }}>🥉</div>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}><AwardIcon size={18} style={{ color: 'hsl(35 60% 50%)' }} /></div>
                     <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(28 80% 60%)' }}>{previewData.bronze}s</div>
                     <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)' }}>Bronze</div>
                   </div>
@@ -1421,7 +1422,7 @@ export default function ColorSortGame() {
                   if (!best) return null
                   return (
                     <div style={{ textAlign: 'center', marginTop: '0.25rem', fontSize: '0.72rem', color: 'hsl(142 70% 55%)', fontWeight: 700 }}>
-                      ⚡ Your Best: {best}s
+                      <ZapIcon size={14} className="inline mr-1 text-yellow-400" /> Your Best: {best}s
                     </div>
                   )
                 })()}
@@ -1473,9 +1474,9 @@ export default function ColorSortGame() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '0.55rem', color: 'hsl(220 10% 50%)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Targets</span>
                 <div style={{ fontSize: '0.62rem', fontWeight: 800, color: 'hsl(45 100% 55%)', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                  <span>⭐ Gold: {formatTargetTime(goldTime)}</span>
-                  <span>⭐ Silver: {formatTargetTime(silverTime)}</span>
-                  <span>⭐ Bronze: {formatTargetTime(bronzeTime)}</span>
+                  <span>Gold: {formatTargetTime(goldTime)}</span>
+                  <span>Silver: {formatTargetTime(silverTime)}</span>
+                  <span>Bronze: {formatTargetTime(bronzeTime)}</span>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -1876,7 +1877,7 @@ export default function ColorSortGame() {
               style={{ flex: 1.2, borderRadius: 12 }}
               id="colorsort-hint-btn"
             >
-              💡 Hint ({hintsUsed === 0 ? 'Free' : 'Ad'})
+              <LightbulbIcon size={14} className="inline mr-1 text-yellow-400" /> Hint ({hintsUsed === 0 ? 'Free' : 'Ad'})
             </button>
             <button
               onClick={handleUndo}
@@ -1896,7 +1897,7 @@ export default function ColorSortGame() {
               style={{ flex: 1, borderRadius: 12 }}
               id="colorsort-restart-btn"
             >
-              🔄 Restart
+              <HistoryIcon size={14} className="inline mr-1" /> Restart
             </button>
             <button
               onClick={() => {
@@ -1908,7 +1909,7 @@ export default function ColorSortGame() {
               style={{ flex: 0.8, borderRadius: 12 }}
               id="colorsort-exit-gameplay-btn"
             >
-              🚪 Exit
+              <LogOutIcon size={14} className="inline mr-1" /> Exit
             </button>
           </div>
         </div>
@@ -1946,7 +1947,7 @@ export default function ColorSortGame() {
             }}
           >
             <div>
-              <div style={{ fontSize: '2.2rem', marginBottom: '0.35rem' }}>⚠️</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.35rem' }}><AlertIcon size={36} className="text-red-500" /></div>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', margin: 0 }}>
                 You&apos;re Stuck
               </h3>
@@ -1976,7 +1977,7 @@ export default function ColorSortGame() {
                 }}
                 id="colorsort-stuck-restart-btn"
               >
-                🔄 Restart Level
+                Restart Level
               </button>
 
               {!usedRescueJar && (
@@ -2019,7 +2020,7 @@ export default function ColorSortGame() {
                   }}
                   id="colorsort-easier-variant-btn"
                 >
-                  💡 Try Easier Variant
+                  Try Easier Variant
                 </button>
               )}
 
@@ -2112,7 +2113,7 @@ export default function ColorSortGame() {
                 style={{ width: '100%', borderRadius: 10 }}
                 id="colorsort-claim-ad-reward-btn"
               >
-                🎁 Claim Extra Hint
+                <GiftIcon size={14} className="inline mr-1 text-pink-400" /> Claim Extra Hint
               </button>
             )}
           </div>

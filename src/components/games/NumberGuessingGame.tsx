@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getNumberGuess } from '@/lib/gameAI'
+import { GamepadIcon, BotIcon, UsersIcon, AlertIcon, TrophyIcon } from '@/components/shared/Icons'
 
 type GameMode = 'vs-ai' | 'local-pvp' | 'lobby-sim'
 type Difficulty = 'moderate' | 'hard'
@@ -74,15 +75,15 @@ export default function NumberGuessingGame() {
     let isCorrect = false
 
     if (guessVal === secretNumber) {
-      feedback = 'Correct! 🎉'
+      feedback = 'Correct!'
       isCorrect = true
     } else if (guessVal > secretNumber) {
-      feedback = 'Too High! 📉'
+      feedback = 'Too High!'
       if (guessVal < maxBound) {
         setMaxBound(guessVal - 1)
       }
     } else {
-      feedback = 'Too Low! 📈'
+      feedback = 'Too Low!'
       if (guessVal > minBound) {
         setMinBound(guessVal + 1)
       }
@@ -221,7 +222,7 @@ export default function NumberGuessingGame() {
         id="numguess-setup-menu"
       >
         <div>
-          <div style={{ fontSize: '3.5rem', marginBottom: '0.25rem' }}>🔢</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><GamepadIcon size={48} className="text-blue-400" /></div>
           <h2 style={{ fontWeight: 900, fontSize: '1.5rem', margin: 0, color: 'white' }}>Number Guessing</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.25rem' }}>
             Compete to find a secret number between 1 and 100. Get instant high/low feedback!
@@ -298,8 +299,9 @@ export default function NumberGuessingGame() {
                 gap: '0.75rem',
               }}
             >
-              <div style={{ textAlign: 'left', fontSize: '0.8rem', fontWeight: 800, color: 'hsl(220 10% 70%)' }}>
-                🤖 PLAY VS AI
+              <div style={{ textAlign: 'left', fontSize: '0.8rem', fontWeight: 800, color: 'hsl(220 10% 70%)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <BotIcon size={14} className="text-purple-400" />
+                <span>PLAY VS AI</span>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
@@ -362,8 +364,9 @@ export default function NumberGuessingGame() {
                 alignItems: 'flex-start',
               }}
             >
-              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(220 10% 70%)' }}>
-                👥 LOCAL SAME-DEVICE
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(220 10% 70%)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <UsersIcon size={14} className="text-blue-400" />
+                <span>LOCAL SAME-DEVICE</span>
               </div>
               <p style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', textAlign: 'left', margin: '0 0 0.5rem 0' }}>
                 Compete turn-based to guess the secret system number. First to land it wins!
@@ -436,10 +439,14 @@ export default function NumberGuessingGame() {
                   padding: '0.5rem',
                   borderRadius: 8,
                   textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
                 id="lobby-feedback-alert"
               >
-                ⚠️ {lobbyError}
+                <AlertIcon size={14} />
+                <span>{lobbyError}</span>
               </div>
             )}
 
@@ -469,10 +476,10 @@ export default function NumberGuessingGame() {
 
   // --- RENDERING ACTIVE GAMEBOARD ---
   const currentTurnText = winner
-    ? `🏆 Match Over! ${winner} Wins!`
+    ? `Match Over! ${winner} Wins!`
     : isThinking
-      ? '🤖 AI is analyzing bounds…'
-      : `Current Turn: ${currentTurn}`
+      ? 'AI is analyzing bounds…'
+      : `Turn: ${currentTurn}`
 
   return (
     <div
@@ -596,7 +603,7 @@ export default function NumberGuessingGame() {
               </form>
             ) : (
               <div style={{ textAlign: 'center', padding: '0.5rem', color: 'hsl(220 10% 60%)', fontSize: '0.85rem' }}>
-                🤖 AI is analyzing the bounds...
+                AI is analyzing the bounds...
               </div>
             )}
           </div>
@@ -652,7 +659,7 @@ export default function NumberGuessingGame() {
           onClick={() => setGameState('setup')}
           id="numguess-quit-btn"
         >
-          🏳️ Back to Setup Menu
+          Back to Setup Menu
         </button>
       </div>
     </div>

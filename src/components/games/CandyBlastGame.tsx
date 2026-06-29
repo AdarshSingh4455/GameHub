@@ -1,4 +1,5 @@
 'use client'
+import { SnowflakeIcon, ShieldIcon, LockIcon, PackageIcon, TargetIcon, TrophyIcon, ZapIcon, CheckIcon, FrownIcon, HistoryIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -18,12 +19,12 @@ const GEM_COLORS: Record<string, { emoji: string; name: string; gradient: string
   orange: { emoji: '🔥', name: 'Tangerine Flame', gradient: 'linear-gradient(135deg, #ff7b00, #ff0000)', glow: '0 0 12px rgba(255, 123, 0, 0.5)' },
 }
 
-const BLOCKER_INFO: Record<string, { emoji: string; label: string; style: React.CSSProperties }> = {
-  ice: { emoji: '❄️', label: 'Ice Block', style: { border: '2px solid #a5f3fc', background: 'rgba(165, 243, 252, 0.25)' } },
-  stone: { emoji: '🪨', label: 'Stone Block', style: { border: '2px solid #64748b', background: 'rgba(100, 116, 139, 0.4)' } },
-  lock: { emoji: '🔒', label: 'Locked Candy', style: { border: '2px solid #f87171', background: 'rgba(248, 113, 113, 0.15)' } },
-  double_lock: { emoji: '🔐', label: 'Double Locked', style: { border: '2px solid #b91c1c', background: 'rgba(185, 28, 28, 0.25)' } },
-  crate: { emoji: '📦', label: 'Crate Box', style: { border: '2px solid #b45309', background: 'rgba(180, 83, 9, 0.3)' } },
+const BLOCKER_INFO: Record<string, { emoji: React.ReactNode; label: string; style: React.CSSProperties }> = {
+  ice: { emoji: <SnowflakeIcon size={16} className="text-cyan-200" />, label: 'Ice Block', style: { border: '2px solid #a5f3fc', background: 'rgba(165, 243, 252, 0.25)' } },
+  stone: { emoji: <ShieldIcon size={16} className="text-slate-400" />, label: 'Stone Block', style: { border: '2px solid #64748b', background: 'rgba(100, 116, 139, 0.4)' } },
+  lock: { emoji: <LockIcon size={16} className="text-red-400" />, label: 'Locked Candy', style: { border: '2px solid #f87171', background: 'rgba(248, 113, 113, 0.15)' } },
+  double_lock: { emoji: <LockIcon size={16} className="text-red-600" />, label: 'Double Locked', style: { border: '2px solid #b91c1c', background: 'rgba(185, 28, 28, 0.25)' } },
+  crate: { emoji: <PackageIcon size={16} className="text-amber-600" />, label: 'Crate Box', style: { border: '2px solid #b45309', background: 'rgba(180, 83, 9, 0.3)' } },
 }
 
 const LOCAL_STORAGE_PROGRESS_KEY = 'gamehub_candycrush_progress_v1'
@@ -592,7 +593,7 @@ export default function CandyBlastGame() {
                 zIndex: 10,
                 backdropFilter: 'blur(4px)'
               }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔄</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><HistoryIcon size={36} className="text-blue-400 animate-spin" /></div>
                 <h3 style={{ fontWeight: 800, fontSize: '1.1rem' }}>No Possible Moves</h3>
                 <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)' }}>Reshuffling board...</p>
               </div>
@@ -637,11 +638,11 @@ export default function CandyBlastGame() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' }}>
               {objectivesProgress.map((obj, idx) => {
                 let text = ''
-                let icon: React.ReactNode = '🎯'
+                let icon: React.ReactNode = <TargetIcon size={14} />
 
                 if (obj.type === 'score') {
                   text = `Reach ${obj.target} Points`
-                  icon = <span style={{ fontSize: '1.2rem' }}>🏆</span>
+                  icon = <TrophyIcon size={16} className="text-yellow-400" />
                 } else if (obj.type === 'clear_color' && obj.color) {
                   const gemName = GEM_COLORS[obj.color]?.name || obj.color
                   text = `Clear ${obj.target} ${gemName}s`
@@ -651,7 +652,7 @@ export default function CandyBlastGame() {
                   icon = <CandyPiece color={null} special={null} blocker={obj.blockerType} size={20} />
                 } else if (obj.type === 'combo') {
                   text = `Reach a ${obj.target}x Combo Chain`
-                  icon = <span style={{ fontSize: '1.2rem' }}>⚡</span>
+                  icon = <ZapIcon size={16} className="text-yellow-400" />
                 }
 
                 return (
@@ -668,7 +669,7 @@ export default function CandyBlastGame() {
                       </span>
                     </div>
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, color: obj.completed ? 'hsl(142 70% 55%)' : 'hsl(220 10% 60%)' }}>
-                      {obj.completed ? '✅' : `${obj.current} / ${obj.target}`}
+                      {obj.completed ? <CheckIcon size={14} className="text-green-500" /> : `${obj.current} / ${obj.target}`}
                     </span>
                   </div>
                 )
@@ -734,7 +735,7 @@ export default function CandyBlastGame() {
             boxShadow: matchResult === 'win' ? '0 0 30px rgba(74, 222, 128, 0.15)' : '0 0 30px rgba(248, 113, 113, 0.15)',
           }}>
             <span style={{ fontSize: '3.5rem', marginBottom: '0.5rem', display: 'block' }}>
-              {matchResult === 'win' ? '🏆' : '💀'}
+              {matchResult === 'win' ? <TrophyIcon size={48} className="text-yellow-400" /> : <FrownIcon size={48} className="text-red-500" />}
             </span>
 
             <h2 style={{

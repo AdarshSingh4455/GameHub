@@ -1,4 +1,5 @@
 'use client'
+import { GamepadIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -466,7 +467,7 @@ export default function BlockBlastGame() {
     // Floating Popups
     if (linesCount > 0) {
       const popupText = `${scoreFromClears + comboBonus > 0 ? `+${scoreFromClears + comboBonus}` : ''} ${
-        nextCombo > 1 ? `Combo x${nextCombo}! 🔥` : 'Clear! ⚡'
+        nextCombo > 1 ? `Combo x${nextCombo}! 🔥` : 'Clear!'
       }`
       if (boardRef.current) {
         const boardRect = boardRef.current.getBoundingClientRect()
@@ -894,7 +895,7 @@ export default function BlockBlastGame() {
           }}
         >
           <div>
-            <div style={{ fontSize: '3.5rem', marginBottom: '0.25rem' }}>🧱</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><GamepadIcon size={48} className="text-cyan-400" /></div>
             <h2 style={{ fontWeight: 950, fontSize: '1.8rem', margin: 0, textShadow: '0 0 10px rgba(6, 182, 212, 0.4)' }}>
               Block Blast
             </h2>
@@ -1025,7 +1026,7 @@ export default function BlockBlastGame() {
             }}
             id="bb-start-btn"
           >
-            Start Blast! 🧱
+            Start Blast!
           </button>
         </div>
       )}

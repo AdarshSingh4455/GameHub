@@ -1,4 +1,5 @@
 'use client'
+import { DropletIcon, LockIcon, AwardIcon, LightbulbIcon, FlagIcon, TrophyIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -733,7 +734,7 @@ export default function WaterConnectGame() {
         id="waterconnect-setup-menu"
       >
         <div>
-          <div style={{ fontSize: '3.5rem', marginBottom: '0.25rem' }}>💧</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><DropletIcon size={48} className="text-blue-400" /></div>
           <h2 style={{ fontWeight: 900, fontSize: '1.55rem', margin: 0, color: 'white', letterSpacing: '-0.02em' }}>Water Connect</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.3rem', lineHeight: 1.45 }}>
             Redesigned flow puzzle game! Connect all matching color nodes to cover the entire grid. Paths cannot cross!
@@ -853,7 +854,7 @@ export default function WaterConnectGame() {
                   }}
                   title={`${lvlDiff.toUpperCase()} Level`}
                 >
-                  {isPlayable ? lvlNum : '🔒'}
+                  {isPlayable ? lvlNum : <LockIcon size={12} className="mx-auto" />}
                   {isPlayable && (
                     <span
                       style={{
@@ -916,7 +917,7 @@ export default function WaterConnectGame() {
           id="waterconnect-level-preview"
         >
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.8rem', marginBottom: '0.25rem' }}>💧</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.25rem' }}><DropletIcon size={36} className="text-blue-400" /></div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', margin: 0 }}>
               Water Connect
             </h2>
@@ -942,17 +943,17 @@ export default function WaterConnectGame() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-around' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.2rem' }}>🥇</div>
+                <div style={{ display: 'flex', justifyContent: 'center' }}><AwardIcon size={18} style={{ color: 'hsl(45 100% 55%)' }} /></div>
                 <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'hsl(45 100% 55%)' }}>{goldTime}s</div>
                 <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)' }}>Gold</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.2rem' }}>🥈</div>
+                <div style={{ display: 'flex', justifyContent: 'center' }}><AwardIcon size={18} style={{ color: 'hsl(220 10% 75%)' }} /></div>
                 <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'hsl(210 70% 65%)' }}>{silverTime}s</div>
                 <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)' }}>Silver</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.2rem' }}>🥉</div>
+                <div style={{ display: 'flex', justifyContent: 'center' }}><AwardIcon size={18} style={{ color: 'hsl(35 60% 50%)' }} /></div>
                 <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'hsl(28 80% 60%)' }}>{bronzeTime}s</div>
                 <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)' }}>Bronze</div>
               </div>
@@ -1202,7 +1203,7 @@ export default function WaterConnectGame() {
           onClick={handleHintClick}
           id="waterconnect-hint-btn"
         >
-          💡 Solve Path Hint
+          <LightbulbIcon size={14} className="inline mr-1 text-yellow-400" /> Solve Path Hint
         </button>
         <button
           className="btn btn-secondary"
@@ -1213,7 +1214,7 @@ export default function WaterConnectGame() {
           }}
           id="waterconnect-quit-btn"
         >
-          🏳️ Setup
+          <FlagIcon size={14} className="inline mr-1" /> Setup
         </button>
       </div>
 
@@ -1236,7 +1237,7 @@ export default function WaterConnectGame() {
           }}
         >
           <div style={{ textAlign: 'center', color: 'hsl(45 100% 55%)', textShadow: '0 0 10px hsl(45 100% 55% / 0.5)', fontWeight: 900 }}>
-            🎉 FLOW COMPLETE!
+            <TrophyIcon size={14} className="inline mr-1 text-yellow-400" /> FLOW COMPLETE!
           </div>
         </div>
       )}

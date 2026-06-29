@@ -1,4 +1,5 @@
 'use client'
+import { TrophyIcon, GamepadIcon, ZapIcon, CrownIcon, GlobeIcon, UsersIcon, AwardIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect } from 'react'
 import ProfileCardModal from '@/components/layout/ProfileCardModal'
@@ -429,7 +430,7 @@ export default function LeaderboardClient() {
     <div className="animate-fadeIn safe-bottom-padding leaderboard-page-container">
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}>🏆 Global Leaderboard</h1>
+          <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}><TrophyIcon size={24} className="inline mr-2 text-yellow-400" /> Global Leaderboard</h1>
           <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.85rem' }}>
             Check out current rankings, seasonal milestones, and compete in the multiplayer ranked ecosystem.
           </p>
@@ -462,9 +463,9 @@ export default function LeaderboardClient() {
         className="no-scrollbar"
       >
         {[
-          { key: 'casual', label: 'Casual XP & High Scores', icon: '🎮' },
-          { key: 'ranked', label: 'Ranked Competitive', icon: '⚡' },
-          { key: 'hallOfFame', label: 'Hall of Fame', icon: '👑' },
+          { key: 'casual', label: 'Casual XP & High Scores', icon: <GamepadIcon size={16} /> },
+          { key: 'ranked', label: 'Ranked Competitive', icon: <ZapIcon size={16} /> },
+          { key: 'hallOfFame', label: 'Hall of Fame', icon: <CrownIcon size={16} /> },
         ].map((t) => {
           const active = activeTab === t.key
           return (
@@ -496,8 +497,8 @@ export default function LeaderboardClient() {
             {user && (
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', marginRight: '0.25rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Scope:</span>
-                <button onClick={() => setScope('global')} className={`btn btn-sm ${scope === 'global' ? 'btn-primary' : 'btn-secondary'}`}>🌍 Global</button>
-                <button onClick={() => setScope('friends')} className={`btn btn-sm ${scope === 'friends' ? 'btn-primary' : 'btn-secondary'}`}>👥 Friends</button>
+                <button onClick={() => setScope('global')} className={`btn btn-sm ${scope === 'global' ? 'btn-primary' : 'btn-secondary'}`}><GlobeIcon size={14} className="inline mr-1" /> Global</button>
+                <button onClick={() => setScope('friends')} className={`btn btn-sm ${scope === 'friends' ? 'btn-primary' : 'btn-secondary'}`}><UsersIcon size={14} className="inline mr-1" /> Friends</button>
               </div>
             )}
 
@@ -584,7 +585,7 @@ export default function LeaderboardClient() {
                       >
                         <td style={{ padding: '0.85rem 1rem', fontWeight: 700, color: row.rank <= 3 ? ['hsl(45 100% 60%)', 'hsl(220 15% 75%)', 'hsl(25 80% 55%)'][row.rank - 1] : 'hsl(220 10% 50%)', fontSize: '0.9rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ minWidth: '1.75rem' }}>{row.rank <= 3 ? ['🥇', '🥈', '🥉'][row.rank - 1] : `#${row.rank}`}</span>
+                            <span style={{ minWidth: '1.75rem' }}>{row.rank <= 3 ? <AwardIcon size={18} style={{ color: row.rank === 1 ? 'hsl(45 100% 55%)' : row.rank === 2 ? 'hsl(220 10% 75%)' : 'hsl(35 60% 50%)' }} /> : `#${row.rank}`}</span>
                           </div>
                         </td>
                         <td style={{ padding: '0.85rem 1rem' }}>
@@ -864,7 +865,7 @@ export default function LeaderboardClient() {
           {/* Ranked Table */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <h3 style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0, color: 'hsl(220 10% 55%)' }}>
-              🏆 Seasonal Leaderboard
+              <TrophyIcon size={20} className="inline mr-2 text-yellow-400" /> Seasonal Leaderboard
             </h3>
             <div className="card" style={{ overflow: 'hidden', border: '1px solid hsl(220 20% 16%)' }}>
               {rankedLoading ? (
@@ -1068,7 +1069,7 @@ export default function LeaderboardClient() {
                 }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
                     <div>
-                      <h3 style={{ margin: 0, fontWeight: 900, color: 'hsl(45 100% 55%)', fontSize: '1.15rem' }}>👑 {entry.seasonName}</h3>
+                      <h3 style={{ margin: 0, fontWeight: 900, color: 'hsl(45 100% 55%)', fontSize: '1.15rem' }}><CrownIcon size={18} className="inline mr-2 text-yellow-400" /> {entry.seasonName}</h3>
                       <span style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>
                         Archived: {new Date(entry.endDate).toLocaleDateString()}
                       </span>
@@ -1104,7 +1105,7 @@ export default function LeaderboardClient() {
                       {entry.topPlayers.map((player, pIdx) => (
                         <tr key={pIdx} style={{ fontSize: '0.8rem', borderBottom: pIdx < entry.topPlayers.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
                           <td style={{ padding: '0.5rem 0.5rem', fontWeight: 700, color: pIdx === 0 ? 'hsl(45 100% 55%)' : 'hsl(220 10% 50%)' }}>
-                            {pIdx === 0 ? '🥇 1st' : pIdx === 1 ? '🥈 2nd' : pIdx === 2 ? '🥉 3rd' : `#${pIdx + 1}`}
+                            {pIdx <= 2 ? <AwardIcon size={16} style={{ color: pIdx === 0 ? 'hsl(45 100% 55%)' : pIdx === 1 ? 'hsl(220 10% 75%)' : 'hsl(35 60% 50%)' }} /> : `#${pIdx + 1}`}
                           </td>
                           <td style={{ padding: '0.5rem 0.5rem', fontWeight: 600, color: 'white' }}>
                             {player.displayName || (player.username.includes('@') ? player.username.split('@')[0] : player.username)}
@@ -1121,7 +1122,7 @@ export default function LeaderboardClient() {
 
               {hallOfFame.length === 0 && (
                 <div style={{ padding: '3rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }} className="card">
-                  🏆 No archived season records in the Hall of Fame yet. Resets will snapshot standings here.
+                  No archived season records in the Hall of Fame yet. Resets will snapshot standings here.
                 </div>
               )}
             </>

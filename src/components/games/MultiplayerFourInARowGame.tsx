@@ -1,4 +1,5 @@
 'use client'
+import { UsersIcon, TrophyIcon, HistoryIcon, FrownIcon, FlagIcon, GamepadIcon, EyeIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect } from 'react'
 import { useSocket } from '@/lib/contexts/SocketContext'
@@ -236,28 +237,28 @@ export default function MultiplayerFourInARowGame({ roomCode, session, players, 
   const lineCoords = getLineCoordinates()
 
   const isMyTurn = currentTurn === currentUserId
-  let turnIcon = '❌'
+  let turnIcon: React.ReactNode = <GamepadIcon size={14} className="inline mr-1" />
   let turnText = isMyTurn ? 'Your Turn' : `${getUsername(currentTurn)}'s Turn`
   let turnColor = isMyTurn ? 'hsl(220 100% 65%)' : 'hsl(270 80% 65%)'
   let turnBg = isMyTurn ? 'hsl(220 100% 50% / 0.1)' : 'hsl(270 80% 50% / 0.1)'
   let turnBorder = isMyTurn ? 'hsl(220 100% 50% / 0.3)' : 'hsl(270 80% 50% / 0.3)'
 
   if (isSpectator) {
-    turnIcon = '👁️'
+    turnIcon = <EyeIcon size={14} className="inline mr-1" />
     turnText = `Spectating Match: ${getUsername(currentTurn)}'s Turn`
     turnColor = 'hsl(142 70% 50%)'
     turnBg = 'hsl(142 70% 50% / 0.1)'
     turnBorder = 'hsl(142 70% 50% / 0.3)'
   } else if (isFinished) {
     if (winnerId === 'DRAW' || !winnerId) {
-      turnIcon = '🤝'
+      turnIcon = <UsersIcon size={14} className="inline mr-1" />
       turnText = "It's a Tie!"
       turnColor = 'hsl(45 100% 55%)'
       turnBg = 'hsl(45 100% 50% / 0.1)'
       turnBorder = 'hsl(45 100% 50% / 0.3)'
     } else {
       const didIWin = winnerId === currentUserId
-      turnIcon = '🏆'
+      turnIcon = <TrophyIcon size={14} className="inline mr-1 text-yellow-400" />
       turnText = didIWin ? 'You Won!' : `${getUsername(winnerId)} Won!`
       turnColor = didIWin ? 'hsl(220 100% 65%)' : 'hsl(270 80% 65%)'
       turnBg = didIWin ? 'hsl(220 100% 50% / 0.15)' : 'hsl(270 80% 50% / 0.15)'
@@ -469,7 +470,7 @@ export default function MultiplayerFourInARowGame({ roomCode, session, players, 
       {isFinished ? (
         <div className="card glass text-center animate-fadeIn" style={{ padding: '1.5rem', marginTop: '0.5rem', border: '1px solid hsl(var(--border-subtle))' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-            {winnerId === currentUserId ? '🏆 You Won!' : winnerId === 'DRAW' ? "🤝 Match Tied!" : isSpectator ? '🏁 Match Over' : '💀 You Lost'}
+            {winnerId === currentUserId ? <span>🏆 You Won!</span> : winnerId === 'DRAW' ? <span>🤝 Match Tied!</span> : isSpectator ? <span>Match Over</span> : <span>💀 You Lost</span>}
           </h3>
           <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
             {winnerId === 'DRAW' ? 'Board is fully completed.' : `Winner: ${getUsername(winnerId)}`}
@@ -490,7 +491,7 @@ export default function MultiplayerFourInARowGame({ roomCode, session, players, 
                 onClick={handlePlayAgain}
                 style={{ flex: 2, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))' }}
               >
-                {replayVotes[currentUserId] ? '⏳ Waiting...' : '🔄 Play Again'}
+                {replayVotes[currentUserId] ? 'Waiting...' : 'Play Again'}
               </button>
             )}
           </div>
@@ -507,7 +508,7 @@ export default function MultiplayerFourInARowGame({ roomCode, session, players, 
             style={{ width: '100%', borderRadius: 12 }}
             onClick={onLeave}
           >
-            🏳️ Leave Match
+            Leave Match
           </button>
         </div>
       )}

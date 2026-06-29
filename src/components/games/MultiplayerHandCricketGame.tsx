@@ -1,4 +1,5 @@
 'use client'
+import { LogOutIcon, GamepadIcon, UsersIcon, PlayIcon, TargetIcon, CoinsIcon, TrophyIcon, ZapIcon, MessageIcon, CopyIcon, CheckIcon, CrownIcon, FrownIcon, HelpIcon, UserIcon } from '@/components/shared/Icons'
 
 import React, { useState } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
@@ -419,7 +420,7 @@ export default function MultiplayerHandCricketGame({
             className="btn btn-secondary"
             style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', borderRadius: 8, minWidth: 'auto' }}
           >
-            {copied ? '✅ Copied' : '📋 Copy Code'}
+            {copied ? <span><CheckIcon size={12} className="inline mr-1 text-green-500" /> Copied</span> : <span><CopyIcon size={12} className="inline mr-1" /> Copy Code</span>}
           </button>
           <button
             id="cricket-leave-room-btn"
@@ -431,7 +432,7 @@ export default function MultiplayerHandCricketGame({
               background: 'hsl(0 80% 50% / 0.08)'
             }}
           >
-            🚪 Leave
+            <LogOutIcon size={12} className="inline mr-1" /> Leave
           </button>
         </div>
       </div>
@@ -439,7 +440,7 @@ export default function MultiplayerHandCricketGame({
       {/* ── STAGE: TEAM_SETUP ── */}
       {stage === 'TEAM_SETUP' && (
         <div className="card glass text-center animate-fadeIn" style={{ padding: '2rem', border: '1px solid hsl(var(--border-subtle))' }}>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '1rem' }}>Team Selection 🏏</h2>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '1rem' }}>Team Selection</h2>
           <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
             Choose your side for this Team Hand Cricket match!
           </p>
@@ -456,11 +457,11 @@ export default function MultiplayerHandCricketGame({
               flexDirection: 'column',
               gap: '1rem'
             }}>
-              <h3 style={{ color: 'hsl(210 100% 65%)', fontWeight: 800, fontSize: '1.15rem' }}>🔵 Blue Team</h3>
+              <h3 style={{ color: 'hsl(210 100% 65%)', fontWeight: 800, fontSize: '1.15rem' }}>Blue Team</h3>
               <div style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
                 {teams['BLUE'].players.map((id: string) => (
                   <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: id === currentUserId ? 700 : 400 }}>
-                    <span>{id === teams['BLUE'].captain ? '👑' : '👤'}</span>
+                    <span>{id === teams['BLUE'].captain ? <CrownIcon size={12} className="text-yellow-400" /> : <UserIcon size={12} />}</span>
                     <span>{getUsername(id)} {id === currentUserId && '(You)'}</span>
                   </div>
                 ))}
@@ -494,11 +495,11 @@ export default function MultiplayerHandCricketGame({
               flexDirection: 'column',
               gap: '1rem'
             }}>
-              <h3 style={{ color: 'hsl(142 70% 55%)', fontWeight: 800, fontSize: '1.15rem' }}>🟢 Green Team</h3>
+              <h3 style={{ color: 'hsl(142 70% 55%)', fontWeight: 800, fontSize: '1.15rem' }}>Green Team</h3>
               <div style={{ minHeight: '120px', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
                 {teams['GREEN'].players.map((id: string) => (
                   <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: id === currentUserId ? 700 : 400 }}>
-                    <span>{id === teams['GREEN'].captain ? '👑' : '👤'}</span>
+                    <span>{id === teams['GREEN'].captain ? <CrownIcon size={12} className="text-yellow-400" /> : <UserIcon size={12} />}</span>
                     <span>{getUsername(id)} {id === currentUserId && '(You)'}</span>
                   </div>
                 ))}
@@ -538,7 +539,7 @@ export default function MultiplayerHandCricketGame({
                   background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))'
                 }}
               >
-                🚀 Start Team Match
+                Start Team Match
               </button>
               {players.length % 2 !== 0 && (
                 <p style={{ color: 'hsl(var(--warning))', fontSize: '0.75rem', marginTop: '0.5rem', fontWeight: 600 }}>
@@ -557,7 +558,7 @@ export default function MultiplayerHandCricketGame({
       {/* ── STAGE: TOSS ── */}
       {stage === 'TOSS' && (
         <div className="card glass text-center animate-fadeIn" style={{ padding: '3rem 2rem', border: '1px solid hsl(var(--border-subtle))' }}>
-          <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>🪙</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}><CoinsIcon size={64} className="text-yellow-400" /></div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.5rem' }}>The Coin Toss</h2>
           
           <div style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
@@ -567,7 +568,7 @@ export default function MultiplayerHandCricketGame({
           {isMeTossWinner ? (
             <div style={{ marginTop: '1.5rem' }}>
               <p style={{ color: 'hsl(var(--success))', fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.5rem' }}>
-                🎉 You won the toss as Captain! Choose your team's role:
+                You won the toss as Captain! Choose your team's role:
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: 400, margin: '0 auto' }}>
                 <button
@@ -577,7 +578,7 @@ export default function MultiplayerHandCricketGame({
                   disabled={isSubmitting}
                   style={{ padding: '1.25rem', fontSize: '1.1rem', fontWeight: 700, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))' }}
                 >
-                  🏏 Bat First
+                  <PlayIcon size={12} className="inline mr-1" /> Bat First
                 </button>
                 <button
                   id="cricket-toss-bowl-btn"
@@ -586,7 +587,7 @@ export default function MultiplayerHandCricketGame({
                   disabled={isSubmitting}
                   style={{ padding: '1.25rem', fontSize: '1.1rem', fontWeight: 700, background: 'linear-gradient(135deg, hsl(142 70% 45%), hsl(160 80% 45%))' }}
                 >
-                  🎯 Bowl First
+                  <TargetIcon size={12} className="inline mr-1" /> Bowl First
                 </button>
               </div>
             </div>
@@ -635,7 +636,7 @@ export default function MultiplayerHandCricketGame({
                 
                 {isMeActive ? (
                   <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>
-                    {isMeBatting ? '🏏 You are Batting!' : '🎯 You are Bowling!'}
+                    {isMeBatting ? <span>You are Batting!</span> : <span>You are Bowling!</span>}
                   </span>
                 ) : (
                   <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', fontWeight: 600 }}>
@@ -672,7 +673,7 @@ export default function MultiplayerHandCricketGame({
             {/* Partnership details & bowler */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem', marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.75rem', fontSize: '0.8rem' }}>
               <div>
-                🏏 Partnership: <strong style={{ color: 'white' }}>{currentPartnership}</strong> runs
+                Partnership: <strong style={{ color: 'white' }}>{currentPartnership}</strong> runs
                 <div style={{ color: 'hsl(var(--text-muted))', fontSize: '0.75rem', marginTop: '2px' }}>
                   Current Batter: <span style={{ color: activeBattingColor, fontWeight: 700 }}>{getUsername(battingUserId)}</span> ({playerRuns[battingUserId] || 0} runs)
                 </div>
@@ -711,7 +712,7 @@ export default function MultiplayerHandCricketGame({
               className="btn btn-secondary"
               style={{ flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
             >
-              🏏 Batting Lineup ▼
+              Batting Lineup ▼
             </button>
             <button
               id="cricket-bowling-rotation-btn"
@@ -719,7 +720,7 @@ export default function MultiplayerHandCricketGame({
               className="btn btn-secondary"
               style={{ flex: 1, padding: '0.5rem', borderRadius: 10, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
             >
-              🎯 Bowling Rotation ▼
+              Bowling Rotation ▼
             </button>
           </div>
 
@@ -734,7 +735,7 @@ export default function MultiplayerHandCricketGame({
                 backgroundColor: 'hsl(222 20% 8%)', border: '1px solid rgba(255, 255, 255, 0.1)'
               }} onClick={e => e.stopPropagation()}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>🏏 Batting Lineup</h3>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>Batting Lineup</h3>
                   <button onClick={() => setShowBattingModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.25rem' }}>×</button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -744,7 +745,7 @@ export default function MultiplayerHandCricketGame({
                     return (
                       <div key={id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', textDecoration: isBatterOut ? 'line-through' : 'none', opacity: isBatterOut ? 0.45 : 1 }}>
                         <span style={{ color: isBatterActive ? activeBattingColor : 'white', fontWeight: isBatterActive ? 700 : 400 }}>
-                          {idx + 1}. {getUsername(id)} {id === myCaptainId && '👑'}
+                          {idx + 1}. {getUsername(id)} {id === myCaptainId && <CrownIcon size={12} className="text-yellow-400" />}
                         </span>
                         <strong style={{ color: 'hsl(var(--text-secondary))' }}>{playerRuns[id] || 0} runs</strong>
                       </div>
@@ -767,7 +768,7 @@ export default function MultiplayerHandCricketGame({
                 backgroundColor: 'hsl(222 20% 8%)', border: '1px solid rgba(255, 255, 255, 0.1)'
               }} onClick={e => e.stopPropagation()}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>🎯 Bowling Rotation</h3>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>Bowling Rotation</h3>
                   <button onClick={() => setShowBowlingModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.25rem' }}>×</button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -776,7 +777,7 @@ export default function MultiplayerHandCricketGame({
                     return (
                       <div key={id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                         <span style={{ color: isBowlerActive ? getTeamColor(bowlingTeam) : 'white', fontWeight: isBowlerActive ? 700 : 400 }}>
-                          Over {idx + 1}: {getUsername(id)} {id === teams[bowlingTeam].captain && '👑'}
+                          Over {idx + 1}: {getUsername(id)} {id === teams[bowlingTeam].captain && <CrownIcon size={12} className="text-yellow-400" />}
                         </span>
                         <span style={{ color: 'hsl(var(--text-muted))', fontSize: '0.8rem' }}>
                           {isBowlerActive ? 'Bowling' : 'Waiting'}
@@ -829,12 +830,12 @@ export default function MultiplayerHandCricketGame({
                 <>
                   {revealState === 'ball' && (
                     <div style={{ position: 'relative', height: 44, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ fontSize: '1.75rem', animation: 'spin-ball 1s linear infinite' }}>🏏⚾</div>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', animation: 'spin-ball 1s linear infinite' }}><GamepadIcon size={24} /></div>
                     </div>
                   )}
                   {revealState === 'clash' && (
                     <div style={{ display: 'inline-block', animation: 'shake-impact 0.8s ease-in-out', color: 'hsl(var(--warning))', fontSize: '0.9rem', fontWeight: 900 }}>
-                      ⚡ CLASH! ⚡
+                      CLASH!
                     </div>
                   )}
                   {(revealState === 'result' || revealState === 'idle') && (
@@ -955,7 +956,7 @@ export default function MultiplayerHandCricketGame({
           {/* Quick Chat Logs & Commentary Logs */}
           <div className="card glass" style={{ padding: '1rem', borderRadius: 12 }}>
             <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(var(--text-muted))', textTransform: 'uppercase', marginBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
-              Match Commentary & Chat 📻
+              <MessageIcon size={14} className="inline mr-1" /> Match Commentary & Chat
             </h4>
 
             {/* Quick chat bubbles display */}
@@ -1018,7 +1019,7 @@ export default function MultiplayerHandCricketGame({
             position: 'relative'
           }}>
             <div style={{ fontSize: '6rem', marginBottom: '1rem', animation: 'bounce-trophy 2s infinite ease-in-out' }}>
-              {session.winnerId === myTeamKey ? '🏆' : session.winnerId === 'DRAW' ? '🤝' : '💀'}
+              {session.winnerId === myTeamKey ? <TrophyIcon size={48} className="text-yellow-400" /> : session.winnerId === 'DRAW' ? <UsersIcon size={48} className="text-gray-400" /> : <FrownIcon size={48} className="text-red-500" />}
             </div>
             
             <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem', color: 'white' }}>
@@ -1040,7 +1041,7 @@ export default function MultiplayerHandCricketGame({
                 onClick={onLeave}
                 style={{ flex: 1, borderRadius: 12 }}
               >
-                🚪 Leave Room
+                Leave Room
               </button>
               <button
                 className="btn btn-primary"
@@ -1049,7 +1050,7 @@ export default function MultiplayerHandCricketGame({
                 onClick={handlePlayAgain}
                 style={{ flex: 2, borderRadius: 12, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))' }}
               >
-                {replayVotes[currentUserId] ? '⏳ Voted' : '🔄 Play Again'}
+                {replayVotes[currentUserId] ? 'Voted' : 'Play Again'}
               </button>
             </div>
             
@@ -1085,7 +1086,7 @@ export default function MultiplayerHandCricketGame({
             boxShadow: '0 10px 40px rgba(0,0,0,0.6)'
           }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'hsl(var(--brand-secondary))', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-              ⚡ Final Ball Replay ⚡
+              Final Ball Replay
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', marginBottom: '1.5rem' }}>
               {lastBall.isOut ? '🔴 BATTER OUT!' : `🏏 +${lastBall.runs} RUNS`}

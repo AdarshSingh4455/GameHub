@@ -1,3 +1,4 @@
+import { LightbulbIcon } from '@/components/shared/Icons'
 import React from 'react'
 
 interface WordValidationModalProps {
@@ -47,7 +48,7 @@ export default function WordValidationModal({
           gap: '1.25rem',
         }}
       >
-        <div style={{ fontSize: '3rem', margin: '0 auto' }}>💡</div>
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto' }}><LightbulbIcon size={48} className="text-yellow-400" /></div>
         
         <div>
           <h3

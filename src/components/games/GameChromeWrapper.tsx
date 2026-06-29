@@ -6,8 +6,9 @@ import { useFullscreen } from '@/lib/hooks/useFullscreen'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getLevelProgress } from '@/lib/xpUtils'
 import GameIcon from '@/components/games/GameIcon'
-
 import { useSocket } from '@/lib/contexts/SocketContext'
+import { HeaderButton } from '@/components/shared/HeaderButton'
+import { InfoIcon, BookIcon } from '@/components/shared/Icons'
 
 interface Props {
   slug: string
@@ -291,47 +292,21 @@ export default function GameChromeWrapper({ slug, name, emoji, description, chil
             <GameIcon slug={slug} size={24} />
             <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'white' }}>{name}</span>
             {description && (
-              <button
-                type="button"
+              <HeaderButton
                 onClick={() => setShowDesc(!showDesc)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: showDesc ? 'hsl(220 100% 70%)' : 'hsl(220 10% 55%)',
-                  fontSize: '1rem',
-                  cursor: 'pointer',
-                  padding: '0.2rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  transition: 'color 0.2s',
-                }}
+                icon={<InfoIcon size={16} />}
                 title="Toggle description"
-              >
-                ℹ️
-              </button>
+                isActive={showDesc}
+                id="game-desc-btn"
+              />
             )}
-            <button
-              type="button"
+            <HeaderButton
               onClick={() => setShowRules(true)}
-              style={{
-                background: 'hsl(220 20% 16%)',
-                border: '1px solid hsl(220 15% 24%)',
-                color: 'white',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                padding: '0.3rem 0.65rem',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                transition: 'all 0.15s ease',
-              }}
+              icon={<BookIcon size={16} />}
+              label="Rules"
               title="Show rules to play"
               id="game-rules-btn"
-            >
-              📖 Rules
-            </button>
+            />
           </div>
         </div>
 
@@ -489,7 +464,8 @@ export default function GameChromeWrapper({ slug, name, emoji, description, chil
                   gap: '8px',
                 }}
               >
-                <span>📖</span> Rules to Play: {name}
+                <BookIcon size={20} style={{ color: 'hsl(220 100% 70%)' }} />
+                <span>Rules to Play: {name}</span>
               </h2>
               <button
                 onClick={() => setShowRules(false)}

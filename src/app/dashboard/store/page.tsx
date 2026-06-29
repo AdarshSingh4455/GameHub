@@ -1,4 +1,5 @@
 'use client'
+import { CoinsIcon, SparklesIcon, PaletteIcon, MessageIcon, PackageIcon, ShieldIcon, GiftIcon, TrophyIcon, LockIcon, UserIcon, KeyIcon, CheckIcon, ZapIcon, EyeIcon, AwardIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
@@ -48,22 +49,22 @@ const LOCKED_PREVIEWS: Record<string, Array<{
   emoji: string
 }>> = {
   TITLE: [
-    { name: 'Cosmic Title', priceCoins: 150, requirement: 'Reach Level 15', emoji: '⚡' },
-    { name: 'Shadow Warrior', priceCoins: 80, requirement: 'Purchase in Store', emoji: '⚡' },
-    { name: 'Game Legend', priceCoins: 500, requirement: 'Win 100 Matches', emoji: '⚡' },
-    { name: 'Speed Demon', priceCoins: 120, requirement: 'Solve Memory Match in 15s', emoji: '⚡' }
+    { name: 'Cosmic Title', priceCoins: 150, requirement: 'Reach Level 15', emoji: '' },
+    { name: 'Shadow Warrior', priceCoins: 80, requirement: 'Purchase in Store', emoji: '' },
+    { name: 'Game Legend', priceCoins: 500, requirement: 'Win 100 Matches', emoji: '' },
+    { name: 'Speed Demon', priceCoins: 120, requirement: 'Solve Memory Match in 15s', emoji: '' }
   ],
   AVATAR_FRAME: [
-    { name: 'Neon Frame', priceCoins: 100, requirement: 'Reach Level 5', emoji: '🖼️' },
-    { name: 'Prestige Border', priceCoins: 250, requirement: 'Reach Level 10', emoji: '🖼️' },
-    { name: 'Ruby Glow', priceCoins: 350, requirement: 'Reach Level 25', emoji: '🖼️' },
-    { name: 'Champion Frame', priceCoins: 450, requirement: 'Win 50 Matches', emoji: '🖼️' }
+    { name: 'Neon Frame', priceCoins: 100, requirement: 'Reach Level 5', emoji: '' },
+    { name: 'Prestige Border', priceCoins: 250, requirement: 'Reach Level 10', emoji: '' },
+    { name: 'Ruby Glow', priceCoins: 350, requirement: 'Reach Level 25', emoji: '' },
+    { name: 'Champion Frame', priceCoins: 450, requirement: 'Win 50 Matches', emoji: '' }
   ],
   EFFECT: [
-    { name: 'Thunder Effect', priceCoins: 300, requirement: 'Open in Rare Mystery Crate', emoji: '✨' },
-    { name: 'Cosmic Trail', priceCoins: 200, requirement: 'Reach Level 15', emoji: '✨' },
-    { name: 'Rainbow Sparkles', priceCoins: 150, requirement: 'Daily Rewards streak 7', emoji: '✨' },
-    { name: 'Golden Aura', priceCoins: 400, requirement: 'Reach Level 50', emoji: '✨' }
+    { name: 'Thunder Effect', priceCoins: 300, requirement: 'Open in Rare Mystery Crate', emoji: '' },
+    { name: 'Cosmic Trail', priceCoins: 200, requirement: 'Reach Level 15', emoji: '' },
+    { name: 'Rainbow Sparkles', priceCoins: 150, requirement: 'Daily Rewards streak 7', emoji: '' },
+    { name: 'Golden Aura', priceCoins: 400, requirement: 'Reach Level 50', emoji: '' }
   ]
 }
 
@@ -249,7 +250,7 @@ export default function StorePage() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Purchase failed')
         
-        addToast('success', 'Streak Protection Active! 🛡️', 'Streak protection is active on your profile.')
+        addToast('success', 'Streak Protection Active!', 'Streak protection is active on your profile.')
         fetchStoreData()
         window.dispatchEvent(new Event('gamehub_xp_update'))
       } catch (err: any) {
@@ -455,7 +456,7 @@ export default function StorePage() {
     ctx.font = '800 13px system-ui'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('SCRATCH HERE 🤞', canvas.width / 2, canvas.height / 2)
+    ctx.fillText('SCRATCH HERE', canvas.width / 2, canvas.height / 2)
 
     setScratchPercent(0)
     scratchStateRef.current = { isDrawing: false, lastX: 0, lastY: 0, scratchedPixels: new Set() }
@@ -660,12 +661,12 @@ export default function StorePage() {
               display: 'inline-block',
               marginTop: '4px'
             }}>
-              🏆 {previewedTitle}
+              <TrophyIcon size={14} className="inline mr-1 text-yellow-400" /> {previewedTitle}
             </span>
           )}
           {previewedEffect && (
             <span style={{ fontSize: '0.68rem', color: 'hsl(210 100% 65%)', fontWeight: 700, marginTop: '2px', display: 'block' }}>
-              ✨ Effect: {previewedEffect}
+              <SparklesIcon size={14} className="inline mr-1 text-purple-400" /> Effect: {previewedEffect}
             </span>
           )}
         </div>
@@ -803,11 +804,11 @@ export default function StorePage() {
                     ) : item.type === 'AVATAR_FRAME' ? (
                       '🖼️'
                     ) : item.type === 'CHAT_PACK' ? (
-                      '💬'
+                      <MessageIcon size={16} />
                     ) : item.type === 'SCRATCHER' ? (
                       '🃏'
                     ) : (
-                      '📦'
+                      <PackageIcon size={16} />
                     )}
                   </div>
 
@@ -889,7 +890,7 @@ export default function StorePage() {
                             onClick={() => handlePreview(item)}
                             style={{ flex: 1, borderRadius: 12, fontSize: '0.7rem', padding: '0.4rem' }}
                           >
-                            👁️ Preview
+                            <EyeIcon size={14} className="inline mr-1" /> Preview
                           </button>
                         )}
                         <button
@@ -929,7 +930,7 @@ export default function StorePage() {
                             color: !requirementMet ? 'hsl(220 10% 40%)' : undefined
                           }}
                         >
-                          {buyingId === item.id ? 'Unlocking...' : !requirementMet ? 'Locked' : item.priceCoins === 0 ? '🎁 Unlock' : `💰 ${item.priceCoins}`}
+                          {buyingId === item.id ? 'Unlocking...' : !requirementMet ? 'Locked' : item.priceCoins === 0 ? 'Unlock' : `${item.priceCoins}`}
                         </button>
                       </div>
                     )}
@@ -941,7 +942,7 @@ export default function StorePage() {
               ['TITLE', 'AVATAR_FRAME', 'EFFECT'].includes(activeCategory) ? (
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', alignItems: 'center' }}>
                   <Card variant="glass" style={{ padding: '2rem 1rem', textAlign: 'center', background: 'hsl(220 20% 10% / 0.6)', borderStyle: 'dashed' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔒</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><LockIcon size={48} className="text-muted-foreground" /></div>
                     <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: 'white', margin: '0 0 0.25rem 0' }}>No items unlocked yet</h3>
                     <p style={{ fontSize: '0.8rem', color: 'hsl(220 10% 55%)', margin: 0 }}>Unlock locked items by leveling up or opening mystery crates!</p>
                   </Card>
@@ -973,8 +974,8 @@ export default function StorePage() {
                                 👤
                               </div>
                             )}
-                            {activeCategory === 'EFFECT' && <span style={{ textShadow: '0 0 10px currentColor' }}>{preview.name.includes('Thunder') ? '⚡' : preview.name.includes('Rainbow') ? '🌈' : '✨'}</span>}
-                            <span style={{ position: 'absolute', bottom: -5, right: -5, fontSize: '0.85rem' }}>🔒</span>
+                            {activeCategory === 'EFFECT' && <span style={{ display: 'inline-flex', alignItems: 'center' }}><SparklesIcon size={24} className="text-purple-400" /></span>}
+                            <span style={{ position: 'absolute', bottom: -5, right: -5, display: 'inline-flex', alignItems: 'center' }}><LockIcon size={14} className="text-red-500" /></span>
                           </div>
                           
                           <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', marginTop: '0.25rem' }}>{preview.name}</div>
@@ -984,7 +985,7 @@ export default function StorePage() {
                           </div>
                           
                           <div style={{ width: '100%', padding: '0.35rem', background: 'hsl(220 20% 12%)', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700, color: 'hsl(45 100% 55%)' }}>
-                            💰 {preview.priceCoins} Coins
+                            <CoinsIcon size={14} className="inline mr-1 text-yellow-400" /> {preview.priceCoins} Coins
                           </div>
                         </Card>
                       ))}
@@ -1061,7 +1062,7 @@ export default function StorePage() {
                 zIndex: 0,
               }} className="animate-fadeIn">
                 <span style={{ fontSize: '2.8rem' }}>
-                  {scratcherReward.type === 'coins' ? '🪙' : scratcherReward.type === 'xp' ? '✨' : scratcherReward.type === 'badge' ? '🏅' : scratcherReward.type === 'crate' ? '🎁' : '👤'}
+                  {scratcherReward.type === 'coins' ? <CoinsIcon size={32} className="text-yellow-400" /> : scratcherReward.type === 'xp' ? <SparklesIcon size={32} className="text-purple-400" /> : scratcherReward.type === 'badge' ? <AwardIcon size={32} className="text-yellow-400" /> : scratcherReward.type === 'crate' ? <GiftIcon size={32} className="text-pink-400" /> : <UserIcon size={32} />}
                 </span>
                 <strong style={{ fontSize: '1.1rem', color: 'hsl(45 100% 60%)' }}>
                   {scratcherReward.name}
@@ -1115,7 +1116,7 @@ export default function StorePage() {
                 style={{ width: '100%', borderRadius: 12 }}
                 id="scratcher-claim-btn"
               >
-                🎉 Claim Reward!
+                Claim Reward!
               </button>
             ) : (
               <button className="btn btn-secondary" disabled style={{ width: '100%', borderRadius: 12, opacity: 0.5 }}>
@@ -1216,7 +1217,7 @@ export default function StorePage() {
                 >
                   🎁
                   {/* Lock badge or emblem */}
-                  <span style={{ position: 'absolute', bottom: -5, right: -5, background: '#1e293b', border: '1px solid #475569', borderRadius: '50%', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>🔑</span>
+                  <span style={{ position: 'absolute', bottom: -5, right: -5, background: '#1e293b', border: '1px solid #475569', borderRadius: '50%', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><KeyIcon size={14} className="text-yellow-400" /></span>
                 </div>
               </div>
             ) : (
@@ -1232,7 +1233,7 @@ export default function StorePage() {
                 }}
               >
                 <div style={{ fontSize: '0.75rem', fontWeight: 950, color: 'hsl(45 100% 60%)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  🔓 ITEM UNLOCKED!
+                  ITEM UNLOCKED!
                 </div>
                 <div
                   style={{
@@ -1248,7 +1249,7 @@ export default function StorePage() {
                     fontSize: '4.5rem',
                   }}
                 >
-                  {crateReward.type === 'coins' ? '🪙' : crateReward.type === 'xp' ? '✨' : '👤'}
+                  {crateReward.type === 'coins' ? <CoinsIcon size={32} className="text-yellow-400" /> : crateReward.type === 'xp' ? <SparklesIcon size={32} className="text-purple-400" /> : <UserIcon size={32} />}
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.4rem', fontWeight: 950, color: 'white', margin: 0 }}>
@@ -1319,7 +1320,7 @@ export default function StorePage() {
                   }}
                   style={{ borderRadius: 12, width: '100%' }}
                 >
-                  🎉 Awesomeness!
+                  Awesomeness!
                 </button>
               )}
             </div>

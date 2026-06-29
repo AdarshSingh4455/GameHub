@@ -1,4 +1,5 @@
 'use client'
+import { TrophyIcon, AwardIcon, CoinsIcon, TargetIcon, UserIcon, BarChartIcon, ScrollIcon, UsersIcon, PaletteIcon, GamepadIcon, GiftIcon, CalendarIcon, FlaskIcon, SearchIcon, MessageIcon, TagIcon, PackageIcon, StoreIcon, SparklesIcon, CrownIcon, LockIcon } from '@/components/shared/Icons'
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -732,15 +733,15 @@ export default function ProfilePage() {
   const getNextLevelUnlocks = (lvl: number) => {
     const rewards: string[] = []
     if (lvl % 5 === 0) {
-      rewards.push(`🏆 Exclusive Level ${lvl} Milestone Badge`)
+      rewards.push(`Exclusive Level ${lvl} Milestone Badge`)
     }
-    if (lvl === 5) rewards.push('🎖️ Rising Star Badge')
-    if (lvl === 10) rewards.push('🎖️ Veteran Badge')
-    if (lvl === 25) rewards.push('🏅 Champion Badge')
+    if (lvl === 5) rewards.push('Rising Star Badge')
+    if (lvl === 10) rewards.push('Veteran Badge')
+    if (lvl === 25) rewards.push('Champion Badge')
     
     const coinsUnlock = 50 + (lvl * 10)
-    rewards.push(`🪙 ${coinsUnlock} Coins Bonus`)
-    rewards.push('🎯 Next Achievement Progress milestones')
+    rewards.push(`${coinsUnlock} Coins Bonus`)
+    rewards.push('Next Achievement Progress milestones')
     
     return rewards
   }
@@ -799,7 +800,7 @@ export default function ProfilePage() {
               Level: <strong style={{ color: 'hsl(270 80% 65%)' }}>{profile.level}</strong>
             </div>
             <div style={{ fontSize: '0.82rem', color: 'hsl(220 10% 55%)' }}>
-              Coins: <strong style={{ color: 'hsl(45 100% 55%)' }}>🪙 {profile.coins}</strong>
+              Coins: <strong style={{ color: 'hsl(45 100% 55%)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CoinsIcon size={14} /> <span>{profile.coins}</span></strong>
             </div>
           </div>
         </div>
@@ -808,14 +809,14 @@ export default function ProfilePage() {
       {/* Tabs Menu Selection – horizontally swipeable on mobile */}
       <div className="horizontal-tab-bar">
         {[
-          { id: 'overview', label: 'Overview', icon: '👤' },
-          { id: 'stats', label: 'Stats', icon: '📊' },
-          { id: 'ranked', label: 'Ranked', icon: '🏆' },
-          { id: 'tournaments', label: 'Tournaments', icon: '🎖️' },
-          { id: 'matches', label: 'Matches', icon: '📜' },
-          { id: 'achievements', label: 'Achievements', icon: '🏅' },
-          { id: 'friends', label: 'Friends', icon: '👥' },
-          { id: 'cosmetics', label: 'Cosmetics', icon: '🎨' },
+          { id: 'overview', label: 'Overview', icon: <UserIcon size={16} /> },
+          { id: 'stats', label: 'Stats', icon: <BarChartIcon size={16} /> },
+          { id: 'ranked', label: 'Ranked', icon: <TrophyIcon size={16} /> },
+          { id: 'tournaments', label: 'Tournaments', icon: <AwardIcon size={16} /> },
+          { id: 'matches', label: 'Matches', icon: <ScrollIcon size={16} /> },
+          { id: 'achievements', label: 'Achievements', icon: <AwardIcon size={16} /> },
+          { id: 'friends', label: 'Friends', icon: <UsersIcon size={16} /> },
+          { id: 'cosmetics', label: 'Cosmetics', icon: <PaletteIcon size={16} /> },
         ].map(t => (
           <button
             key={t.id}
@@ -902,7 +903,7 @@ export default function ProfilePage() {
               <div style={{ padding: '1rem', background: 'hsl(222 20% 7% / 0.4)', border: '1px solid hsl(220 15% 12%)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Preferred Play Area</span>
                 <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(220 100% 70%)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  🎮 {favoriteGameLabel}
+                  <GamepadIcon size={14} className="inline mr-1" /> {favoriteGameLabel}
                 </span>
                 <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>Most played game mode</span>
               </div>
@@ -911,7 +912,7 @@ export default function ProfilePage() {
               <div style={{ padding: '1rem', background: 'hsl(222 20% 7% / 0.4)', border: '1px solid hsl(220 15% 12%)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'hsl(220 10% 45%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Recent Achievement</span>
                 <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(45 100% 60%)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={profile.achievements[0]?.achievement.name}>
-                  🏅 {profile.achievements[0]?.achievement.name || 'No Badges'}
+                  <AwardIcon size={14} className="inline mr-1 text-yellow-400" /> {profile.achievements[0]?.achievement.name || 'No Badges'}
                 </span>
                 <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {profile.achievements[0]?.achievement.description || 'Unlock by playing matches'}
@@ -991,7 +992,7 @@ export default function ProfilePage() {
               }}
             >
               <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(270 80% 65%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                🎁 Reward Preview: Next Level Unlocks:
+                <GiftIcon size={14} className="inline mr-1 text-pink-400" /> Reward Preview: Next Level Unlocks:
               </div>
               <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.1rem', fontSize: '0.8rem', color: 'hsl(220 10% 60%)', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                 {getNextLevelUnlocks(profile.level + 1).map((reward, i) => (
@@ -1031,7 +1032,7 @@ export default function ProfilePage() {
                     }}
                     title={`${item.achievement.name}: ${item.achievement.description}`}
                   >
-                    <span style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🏅</span>
+                    <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.25rem' }}><AwardIcon size={24} className="text-yellow-400" /></span>
                     <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'white', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
                       {item.achievement.name}
                     </span>
@@ -1075,7 +1076,7 @@ export default function ProfilePage() {
             {/* SVG Weekly Bar Chart */}
             <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20 }}>
               <h3 style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1.25rem', letterSpacing: '0.05em' }}>
-                📅 Match Activity (Last 7 Days)
+                <CalendarIcon size={16} className="inline mr-2 text-blue-400" /> Match Activity (Last 7 Days)
               </h3>
               
               <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
@@ -1128,7 +1129,7 @@ export default function ProfilePage() {
             <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '1.5rem', flexWrap: 'wrap' }}>
               <div>
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 0.5rem', letterSpacing: '0.05em' }}>
-                  🎯 Win Rate
+                  <TargetIcon size={16} className="inline mr-2 text-pink-400" /> Win Rate
                 </h3>
                 <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.8rem', margin: 0, maxWidth: 180, lineHeight: 1.4 }}>
                   Compare wins against total games played. Maintain a streak to level up faster!
@@ -1174,7 +1175,7 @@ export default function ProfilePage() {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1.25rem' }}>
                 <div style={{ background: 'hsl(222 20% 8% / 0.8)', border: '1px solid hsl(220 15% 15%)', padding: '1.25rem', borderRadius: 16, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>🏆</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><TrophyIcon size={32} className="text-yellow-400" /></div>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)' }}>Highest Score</div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'hsl(45 100% 60%)', marginTop: '0.25rem' }}>{bbStats.highScore.toLocaleString()}</div>
                 </div>
@@ -1184,12 +1185,12 @@ export default function ProfilePage() {
                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'hsl(270 80% 65%)', marginTop: '0.25rem' }}>{bbStats.bestCombo}x</div>
                 </div>
                 <div style={{ background: 'hsl(222 20% 8% / 0.8)', border: '1px solid hsl(220 15% 15%)', padding: '1.25rem', borderRadius: 16, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>🧪</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><FlaskIcon size={32} className="text-purple-400" /></div>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)' }}>Avg Lines Cleared</div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'hsl(142 70% 55%)', marginTop: '0.25rem' }}>{bbStats.avgLines}</div>
                 </div>
                 <div style={{ background: 'hsl(222 20% 8% / 0.8)', border: '1px solid hsl(220 15% 15%)', padding: '1.25rem', borderRadius: 16, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>🎮</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><GamepadIcon size={32} className="text-blue-400" /></div>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(220 10% 50%)' }}>Games Played</div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginTop: '0.25rem' }}>{bbStats.playCount}</div>
                 </div>
@@ -1253,7 +1254,7 @@ export default function ProfilePage() {
                 }}
                 id="matches-opponent-search"
               />
-              <span style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: 'hsl(220 10% 45%)', fontSize: '0.8rem' }}>🔍</span>
+              <span style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: 'hsl(220 10% 45%)', display: 'flex', alignItems: 'center' }}><SearchIcon size={12} /></span>
             </div>
 
             {/* Filter by game */}
@@ -1314,7 +1315,7 @@ export default function ProfilePage() {
             </div>
           ) : matches.length === 0 ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'hsl(220 20% 7%)', borderRadius: 16, border: '1px dashed hsl(220 15% 15%)' }}>
-              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>📜</span>
+              <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><ScrollIcon size={36} className="text-muted-foreground" /></span>
               <h4 style={{ margin: 0, fontWeight: 700, color: 'white' }}>No Matches Found</h4>
               <p style={{ color: 'hsl(220 10% 45%)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
                 No records match your filters. Go play games to start log compilation!
@@ -1535,12 +1536,12 @@ export default function ProfilePage() {
               {/* Ranked Match History Log */}
               <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20, flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: 0, letterSpacing: '0.05em' }}>
-                  📜 Recent Ranked Matches
+                  <ScrollIcon size={16} className="inline mr-2 text-blue-400" /> Recent Ranked Matches
                 </h3>
 
                 {rankedStats.recentMatches.length === 0 ? (
                   <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'hsl(220 20% 7%)', borderRadius: 16, border: '1px dashed hsl(220 15% 15%)' }}>
-                    <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>🎮</span>
+                    <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><GamepadIcon size={36} className="text-muted-foreground" /></span>
                     <h4 style={{ margin: 0, fontWeight: 700, color: 'white' }}>No Matches Recorded</h4>
                     <p style={{ color: 'hsl(220 10% 45%)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
                       Simulate or play multiplayer matches to build your record.
@@ -1621,7 +1622,7 @@ export default function ProfilePage() {
 
           {achievementProgress.length === 0 ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'hsl(220 20% 7%)', borderRadius: 16, border: '1px dashed hsl(220 15% 15%)' }}>
-              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>🎖️</span>
+              <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><AwardIcon size={36} className="text-muted-foreground" /></span>
               <h4 style={{ margin: 0, fontWeight: 700, color: 'white' }}>No Achievements Yet</h4>
               <p style={{ color: 'hsl(220 10% 45%)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
                 Play games to start earning achievements!
@@ -1655,7 +1656,7 @@ export default function ProfilePage() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '1.3rem', flexShrink: 0
                     }}>
-                      {ach.isUnlocked ? '🏅' : '🔒'}
+                      {ach.isUnlocked ? <AwardIcon size={16} className="text-yellow-400" /> : <LockIcon size={16} className="text-muted-foreground" />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 750, fontSize: '0.88rem', color: ach.isUnlocked ? 'hsl(142 70% 70%)' : 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1667,7 +1668,7 @@ export default function ProfilePage() {
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontSize: '0.65rem', color: 'hsl(142 70% 55%)', fontWeight: 700 }}>+{ach.xpReward} XP</div>
-                      <div style={{ fontSize: '0.65rem', color: 'hsl(45 100% 55%)', fontWeight: 700 }}>🪙 {ach.coinReward}</div>
+                      <div style={{ fontSize: '0.65rem', color: 'hsl(45 100% 55%)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}><CoinsIcon size={10} /> <span>{ach.coinReward}</span></div>
                     </div>
                   </div>
 
@@ -1711,7 +1712,7 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {!user ? (
             <div className="card glass" style={{ padding: '2rem', borderRadius: 20, textAlign: 'center' }}>
-              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>👥</span>
+              <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><UsersIcon size={36} className="text-muted-foreground" /></span>
               <h3 style={{ fontWeight: 700, color: 'white', margin: '0 0 0.5rem' }}>Friend List</h3>
               <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.82rem', margin: '0 0 0.75rem' }}>
                 Log in to see and manage your real friends list.
@@ -1723,7 +1724,7 @@ export default function ProfilePage() {
             <div style={{ padding: '3rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }}>Loading friends...</div>
           ) : friends.length === 0 ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'hsl(220 20% 7%)', borderRadius: 16, border: '1px dashed hsl(220 15% 15%)' }}>
-              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>👋</span>
+              <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><UsersIcon size={36} className="text-muted-foreground" /></span>
               <h4 style={{ margin: 0, fontWeight: 700, color: 'white' }}>No Friends Added</h4>
               <p style={{ color: 'hsl(220 10% 45%)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
                 Add friends from the <a href="/dashboard/friends" style={{ color: 'hsl(220 100% 65%)', textDecoration: 'none', fontWeight: 700 }}>Friends page</a>.
@@ -1809,15 +1810,15 @@ export default function ProfilePage() {
                 {profile.inventory.map((item: any, idx: number) => {
                   const cosmetic = item.cosmeticItem
                   const typeEmoji: Record<string, string> = {
-                    AVATAR_FRAME: '🖼️',
-                    BOARD_THEME: '🎨',
-                    CHAT_COLOR: '💬',
-                    TITLE: '🏷️',
-                    BADGE: '🏅',
-                    AVATAR: '🧑',
-                    CHAT_PACK: '📦',
-                    SCRATCHER: '🎰',
-                    EFFECT: '✨',
+                    AVATAR_FRAME: 'Frame',
+                    BOARD_THEME: 'Theme',
+                    CHAT_COLOR: 'Color',
+                    TITLE: 'Title',
+                    BADGE: 'Badge',
+                    AVATAR: 'Avatar',
+                    CHAT_PACK: 'Pack',
+                    SCRATCHER: 'Scratcher',
+                    EFFECT: 'Effect',
                   }
                   return (
                     <div
@@ -1840,7 +1841,7 @@ export default function ProfilePage() {
                         boxSizing: 'border-box'
                       }}
                     >
-                      <div style={{ fontSize: '2rem', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{typeEmoji[cosmetic.type] || '🎁'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px' }}><GiftIcon size={24} className="text-pink-400" /></div>
                       <div style={{ fontWeight: 750, fontSize: '0.8rem', color: 'white', lineHeight: 1.2, height: '2.4rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{cosmetic.name}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center', width: '100%' }}>
                         <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'hsl(270 60% 60%)', background: 'hsl(270 50% 15%)', padding: '0.15rem 0.5rem', borderRadius: 99, width: 'fit-content' }}>
@@ -1857,7 +1858,7 @@ export default function ProfilePage() {
             </>
           ) : (
             <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'hsl(220 20% 7%)', borderRadius: 16, border: '1px dashed hsl(220 15% 15%)' }}>
-              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>🎨</span>
+              <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><PaletteIcon size={36} className="text-muted-foreground" /></span>
               <h4 style={{ margin: 0, fontWeight: 700, color: 'white' }}>No Cosmetics Yet</h4>
               <p style={{ color: 'hsl(220 10% 45%)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
                 Visit the <a href="/dashboard/store" style={{ color: 'hsl(270 80% 65%)', textDecoration: 'none', fontWeight: 700 }}>Store</a> to get cosmetics.
@@ -1931,7 +1932,7 @@ export default function ProfilePage() {
               {/* Official History */}
               <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20, background: 'hsl(222 20% 8% / 0.6)', border: '1px solid hsl(220 15% 15%)' }}>
                 <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '1rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  🏅 Official Esports Tournaments
+                  <TrophyIcon size={16} className="inline mr-2 text-yellow-400" /> Official Esports Tournaments
                 </h3>
                 {tournamentData.officialHistory.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'hsl(220 10% 50%)', fontSize: '0.8rem' }}>
@@ -1955,13 +1956,13 @@ export default function ProfilePage() {
                         <div>
                           <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'white' }}>{h.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', marginTop: '0.15rem' }}>
-                            🎮 {getGameBySlug(h.gameSlug)?.name || h.gameSlug} • {new Date(h.startDate).toLocaleDateString()}
+                            <GamepadIcon size={12} className="inline mr-1 text-purple-400" /> {getGameBySlug(h.gameSlug)?.name || h.gameSlug} • {new Date(h.startDate).toLocaleDateString()}
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           {h.result === 'CHAMPION' ? (
                             <span style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 50%)', background: 'hsl(45 100% 50% / 0.12)', padding: '0.2rem 0.5rem', borderRadius: 6, border: '1px solid hsl(45 100% 50% / 0.3)' }}>
-                              🏆 CHAMPION
+                              <CrownIcon size={12} className="inline mr-1 text-yellow-400" /> CHAMPION
                             </span>
                           ) : (
                             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(220 10% 60%)', background: 'hsl(222 15% 15%)', padding: '0.2rem 0.5rem', borderRadius: 6 }}>
@@ -1981,7 +1982,7 @@ export default function ProfilePage() {
               {/* Community History */}
               <div className="card glass" style={{ padding: '1.5rem', borderRadius: 20, background: 'hsl(222 20% 8% / 0.6)', border: '1px solid hsl(220 15% 15%)' }}>
                 <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '1rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  👥 Community Tournaments
+                  <UsersIcon size={16} className="inline mr-2 text-blue-400" /> Community Tournaments
                 </h3>
                 {tournamentData.communityHistory.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'hsl(220 10% 50%)', fontSize: '0.8rem' }}>
@@ -2011,7 +2012,7 @@ export default function ProfilePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           {h.result === 'CHAMPION' ? (
                             <span style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 50%)', background: 'hsl(45 100% 50% / 0.12)', padding: '0.2rem 0.5rem', borderRadius: 6, border: '1px solid hsl(45 100% 50% / 0.3)' }}>
-                              🏆 CHAMPION
+                              <CrownIcon size={12} className="inline mr-1 text-yellow-400" /> CHAMPION
                             </span>
                           ) : (
                             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(220 10% 60%)', background: 'hsl(222 15% 15%)', padding: '0.2rem 0.5rem', borderRadius: 6 }}>

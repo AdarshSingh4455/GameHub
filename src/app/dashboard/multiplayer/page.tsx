@@ -1,4 +1,5 @@
 'use client'
+import { GamepadIcon, UsersIcon, LockIcon, MailIcon, MessageIcon, CoinsIcon, TrophyIcon, ZapIcon, TimerIcon, CopyIcon, LinkIcon, CrownIcon, UserIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { AlertTriangle, Plus, LogIn, Zap, Smartphone, Share2 } from 'lucide-react'
@@ -928,7 +929,7 @@ export default function MultiplayerPage() {
     const domain = typeof window !== 'undefined' ? window.location.origin : 'https://gamehub.app'
     const browserUrl = `${domain}/dashboard/multiplayer/play/${lobbyRoomCode}`
     const deepLink = `gamehub://join?room=${lobbyRoomCode}`
-    const shareText = `Join my GameHub room! 🎮\n\nRoom Code: ${lobbyRoomCode}\n\nMobile App: ${deepLink}\nWeb Browser: ${browserUrl}`
+    const shareText = `Join my GameHub room!\n\nRoom Code: ${lobbyRoomCode}\n\nMobile App: ${deepLink}\nWeb Browser: ${browserUrl}`
 
     if (navigator.share) {
       navigator.share({
@@ -1013,7 +1014,7 @@ export default function MultiplayerPage() {
               style={{ fontSize: 'clamp(2.2rem, 6vw, 3rem)', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}
               className="gradient-text"
             >
-              Multiplayer Dashboard 🌐
+              Multiplayer Dashboard
             </h1>
             <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '1rem' }}>
               Connect with friends, chat in real-time, and challenge opponents!
@@ -1222,7 +1223,7 @@ export default function MultiplayerPage() {
               {/* Room Invites */}
               <div className="card glass" style={{ padding: '1.5rem', border: '1px solid hsl(var(--border-subtle))' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  📩 Received Invites
+                  <MailIcon size={16} className="inline mr-2 text-blue-400" /> Received Invites
                   {invites.length > 0 && (
                     <span style={{
                       fontSize: '0.75rem',
@@ -1293,7 +1294,7 @@ export default function MultiplayerPage() {
 
                           {/* 4. Game Name */}
                           <div style={{ color: 'white', fontWeight: 600, fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                            🎮 Game: <span style={{ color: 'hsl(220 100% 70%)' }}>{gameName}</span> (Code: <span style={{ fontFamily: 'monospace' }}>{invite.room.roomCode}</span>)
+                            <GamepadIcon size={14} className="inline mr-1 text-purple-400" /> Game: <span style={{ color: 'hsl(220 100% 70%)' }}>{gameName}</span> (Code: <span style={{ fontFamily: 'monospace' }}>{invite.room.roomCode}</span>)
                           </div>
 
                           {/* 5. Invite message */}
@@ -1303,7 +1304,7 @@ export default function MultiplayerPage() {
 
                           {/* 6. Timestamp */}
                           <div style={{ fontSize: '0.68rem', color: 'hsl(var(--text-muted))' }}>
-                            🕒 {timestamp}
+                            <TimerIcon size={12} className="inline mr-1 text-gray-400" /> {timestamp}
                           </div>
 
                           {/* 7. Accept / Reject buttons */}
@@ -1356,7 +1357,7 @@ export default function MultiplayerPage() {
               {/* Online Friends List */}
               <div className="card glass" style={{ padding: '1.5rem', border: '1px solid hsl(var(--border-subtle))' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem' }}>
-                  👥 Friends Presence
+                  <UsersIcon size={16} className="inline mr-2 text-blue-400" /> Friends Presence
                 </h3>
                 {friends.length === 0 ? (
                   <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.9rem', textAlign: 'center', padding: '1rem 0' }}>
@@ -1460,7 +1461,7 @@ export default function MultiplayerPage() {
             >
               {SUPPORTED_MULTIPLAYER_GAMES.map(game => (
                 <option key={game.slug} value={game.slug}>
-                  {game.emoji} {game.name}
+                  {game.name}
                 </option>
               ))}
             </select>
@@ -1604,8 +1605,9 @@ export default function MultiplayerPage() {
               <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'hsl(var(--brand-primary))', display: 'block', marginBottom: '0.25rem' }}>
                 Game Lobby
               </span>
-              <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>
-                {selectedGameInfo?.emoji} {selectedGameInfo?.name}
+              <h2 style={{ fontSize: '1.6rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <GameIcon slug={selectedGameInfo?.slug || ''} size={24} />
+                <span>{selectedGameInfo?.name}</span>
               </h2>
               <span id="lobby-player-count" style={{ fontSize: '0.85rem', color: 'hsl(var(--text-secondary))' }}>
                 Players: {players.length} / {room?.maxPlayers || 4}
@@ -1633,7 +1635,7 @@ export default function MultiplayerPage() {
                   style={{ padding: '0.5rem 0.75rem', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-subtle))', fontSize: '1.1rem', minHeight: 44 }}
                   title="Copy Room Code"
                 >
-                  📋
+                  <CopyIcon size={14} />
                 </button>
                 <button
                   id="lobby-invite-btn"
@@ -1642,7 +1644,7 @@ export default function MultiplayerPage() {
                   style={{ padding: '0.5rem 0.75rem', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-subtle))', fontSize: '1.1rem', minHeight: 44 }}
                   title="Copy Invite Link"
                 >
-                  🔗
+                  <LinkIcon size={14} />
                 </button>
                 <button
                   className="btn"
@@ -1724,7 +1726,7 @@ export default function MultiplayerPage() {
                               style={{ position: 'absolute', top: -10, right: -10, fontSize: '1.1rem', zIndex: 5 }}
                               title="Host"
                             >
-                              👑
+                              <CrownIcon size={14} className="text-yellow-400" />
                             </span>
                           )}
                         </div>
@@ -1788,7 +1790,7 @@ export default function MultiplayerPage() {
                       }}
                     >
                       <div style={{ width: 42, height: 42, borderRadius: '50%', border: '2px dashed hsl(var(--border-subtle))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
-                        👤
+                        <UserIcon size={14} className="text-blue-400" />
                       </div>
                       <span style={{ color: 'hsl(var(--text-muted))', fontSize: '0.85rem' }}>Waiting for player...</span>
                     </div>
@@ -1849,7 +1851,7 @@ export default function MultiplayerPage() {
             {/* Right Box: Chat Panel */}
             <div className="card glass" style={{ padding: '1.5rem', border: '1px solid hsl(var(--border-subtle))', display: 'flex', flexDirection: 'column', height: 420 }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, borderBottom: '1px solid hsl(var(--border-subtle))', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
-                💬 Lobby Chat
+                <MessageIcon size={16} className="inline mr-2 text-blue-400" /> Lobby Chat
               </h3>
 
               {/* Chat Feed */}

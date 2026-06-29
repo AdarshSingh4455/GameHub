@@ -1,3 +1,4 @@
+import { GamepadIcon } from '@/components/shared/Icons'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import RegisterForm from './RegisterForm'
@@ -13,7 +14,7 @@ export default function RegisterPage() {
       <div className="card animate-slideUp" style={{ width: '100%', maxWidth: 440, padding: '2.5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <span style={{ fontWeight: 800, fontSize: '1.5rem', display: 'block', marginBottom: '0.25rem' }} className="gradient-text">🎮 GameHub</span>
+            <span style={{ fontWeight: 800, fontSize: '1.5rem', display: 'block', marginBottom: '0.25rem' }} className="gradient-text"><GamepadIcon size={20} className="inline mr-1 text-blue-400" /> GameHub</span>
           </Link>
           <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.25rem' }}>Create your account</h1>
           <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.9rem' }}>Free forever · Earn XP · Climb leaderboards</p>

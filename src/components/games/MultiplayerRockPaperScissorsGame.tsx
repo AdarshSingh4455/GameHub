@@ -5,6 +5,13 @@ import { useSocket } from '@/lib/contexts/SocketContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import MultiplayerHeader from './MultiplayerHeader'
 import MatchReactions from './MatchReactions'
+import { RockVector, PaperVector, ScissorsVector } from '@/components/games/RockPaperScissorsAssets'
+
+const MOVE_ICONS = {
+  rock: (props: any) => <RockVector {...props} />,
+  paper: (props: any) => <PaperVector {...props} />,
+  scissors: (props: any) => <ScissorsVector {...props} />,
+}
 
 function playTurnNotificationSound() {
   try {
@@ -47,11 +54,7 @@ interface Props {
   onLeave: () => void
 }
 
-const MOVE_EMOJIS = {
-  rock: '✊',
-  paper: '✋',
-  scissors: '✌️',
-}
+// MOVE_EMOJIS removed
 
 export default function MultiplayerRockPaperScissorsGame({ roomCode, session, players, currentUserId, onLeave }: Props) {
   const { socket } = useSocket()
@@ -192,10 +195,12 @@ export default function MultiplayerRockPaperScissorsGame({ roomCode, session, pl
                       borderRadius: 16,
                       border: '1px solid hsl(220 15% 22%)',
                       background: 'hsl(222 20% 9%)',
-                      fontSize: '2rem',
                       cursor: 'pointer',
                       transition: 'all 0.15s',
                       outline: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                     id={`rps-btn-${choice}`}
                     onMouseEnter={(e) => {
@@ -205,13 +210,13 @@ export default function MultiplayerRockPaperScissorsGame({ roomCode, session, pl
                       e.currentTarget.style.borderColor = 'hsl(220 15% 22%)'
                     }}
                   >
-                    {MOVE_EMOJIS[choice]}
+                    {MOVE_ICONS[choice]({ size: 40 })}
                   </button>
                 ))}
               </div>
             ) : isPlayer ? (
-              <div style={{ fontSize: '3rem', animation: 'pulse 1.5s infinite' }}>
-                {MOVE_EMOJIS[myChoice as keyof typeof MOVE_EMOJIS] || '⏳'}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', animation: 'pulse 1.5s infinite' }}>
+                {myChoice ? MOVE_ICONS[myChoice as keyof typeof MOVE_ICONS]({ size: 48 }) : null}
                 <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', marginTop: '0.5rem' }}>
                   Your Move Submitted
                 </div>
@@ -233,8 +238,8 @@ export default function MultiplayerRockPaperScissorsGame({ roomCode, session, pl
             
             <div style={{ display: 'flex', gap: '2.5rem', alignItems: 'center' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
-                  {MOVE_EMOJIS[myChoice as keyof typeof MOVE_EMOJIS]}
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
+                  {MOVE_ICONS[myChoice as keyof typeof MOVE_ICONS]({ size: 64 })}
                 </div>
                 <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', fontWeight: 700, marginTop: '0.4rem' }}>
                   You
@@ -244,8 +249,8 @@ export default function MultiplayerRockPaperScissorsGame({ roomCode, session, pl
               <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(220 10% 40%)' }}>vs</div>
 
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '3.5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
-                  {MOVE_EMOJIS[opponentChoice as keyof typeof MOVE_EMOJIS]}
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
+                  {MOVE_ICONS[opponentChoice as keyof typeof MOVE_ICONS]({ size: 64 })}
                 </div>
                 <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', fontWeight: 700, marginTop: '0.4rem' }}>
                   {opponent?.username || 'Opponent'}

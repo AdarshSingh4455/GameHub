@@ -10,6 +10,7 @@ import { prefetchProfileDetails } from '@/lib/prefetch'
 import GameIcon from '@/components/games/GameIcon'
 import PageWrapper from '@/components/layout/PageWrapper'
 import Card from '@/components/layout/Card'
+import { GamepadIcon, ZapIcon, LockIcon, PlayIcon } from '@/components/shared/Icons'
 
 interface Props {
   user: User | null
@@ -61,7 +62,7 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
       {/* Header */}
       <div>
         <h1 style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.8rem)', fontWeight: 900, marginBottom: '0.25rem', color: 'white' }}>
-          {user ? `Welcome back, ${username} 👋` : 'Pick a Game, Jump In 🎮'}
+          {user ? `Welcome back, ${username}` : 'Pick a Game, Jump In'}
         </h1>
         <p style={{ color: 'hsl(220 10% 55%)', margin: 0, fontSize: '0.85rem' }}>
           {user ? 'Continue your streak and climb the leaderboards.' : 'Play as guest — or create an account to save your XP.'}
@@ -70,7 +71,10 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
         {!user && (
           <Card style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'white' }}>🔒 Unlock full features</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <LockIcon size={14} style={{ color: 'hsl(45 100% 55%)' }} />
+                <span>Unlock full features</span>
+              </div>
               <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4 }}>Create a free account to earn XP, unlock achievements, and compete on leaderboards.</div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
@@ -120,7 +124,9 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
               <span>🔥</span> Featured Spotlight
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.75rem', letterSpacing: '-0.02em', margin: 0 }}>
-              <span style={{ fontSize: '2.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '3.2rem', height: '3.2rem', background: 'hsl(220 100% 60% / 0.1)', borderRadius: '14px', border: '1px solid hsl(220 100% 60% / 0.2)' }}>{featuredGame.emoji}</span>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '3.2rem', height: '3.2rem', background: 'hsl(220 100% 60% / 0.1)', borderRadius: '14px', border: '1px solid hsl(220 100% 60% / 0.2)' }}>
+                <GameIcon slug={featuredGame.slug} size={32} />
+              </span>
               <span>{featuredGame.name}</span>
             </h2>
             <p style={{ color: 'hsl(220 10% 75%)', fontSize: '0.88rem', margin: 0, lineHeight: 1.6, maxWidth: '600px' }}>
@@ -138,11 +144,15 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
               flexShrink: 0, 
               position: 'relative', 
               zIndex: 2,
-              boxShadow: '0 4px 14px hsl(220 100% 60% / 0.25)' 
+              boxShadow: '0 4px 14px hsl(220 100% 60% / 0.25)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
             }} 
             id="spotlight-play-btn"
           >
-            🚀 Play Spotlight
+            <PlayIcon size={14} />
+            <span>Play Spotlight</span>
           </Link>
         </div>
       )}
@@ -152,7 +162,10 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
 
       {/* Quick Play Row (Horizontal scroll swipe) */}
       <div>
-        <h2 style={{ fontWeight: 900, fontSize: '1.05rem', marginBottom: '0.5rem', color: 'white', letterSpacing: '-0.01em' }}>⚡ Quick Play</h2>
+        <h2 style={{ fontWeight: 900, fontSize: '1.05rem', marginBottom: '0.5rem', color: 'white', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <ZapIcon size={16} style={{ color: 'hsl(45 100% 55%)' }} />
+          <span>Quick Play</span>
+        </h2>
         
         <div className="quick-play-scroll" style={{
           display: 'flex',
@@ -190,7 +203,10 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
       <div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ fontWeight: 900, fontSize: '1.05rem', color: 'white', letterSpacing: '-0.01em', margin: 0 }}>🎮 All Games</h2>
+            <h2 style={{ fontWeight: 900, fontSize: '1.05rem', color: 'white', letterSpacing: '-0.01em', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <GamepadIcon size={18} style={{ color: 'hsl(220 100% 65%)' }} />
+              <span>All Games</span>
+            </h2>
             {!isGamesLibrary && (
               <Link href="/dashboard/games" style={{ fontSize: '0.75rem', color: 'hsl(220 100% 65%)', textDecoration: 'none', fontWeight: 700 }}>View catalog →</Link>
             )}

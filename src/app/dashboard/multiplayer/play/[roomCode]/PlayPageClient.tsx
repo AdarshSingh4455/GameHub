@@ -17,6 +17,7 @@ import MultiplayerWhosSpyGame from '@/components/games/MultiplayerWhosSpyGame'
 import MultiplayerSnakeArenaGame from '@/components/games/MultiplayerSnakeArenaGame'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import SocketDiagnostics from '@/components/layout/SocketDiagnostics'
+import { LogOutIcon, AlertIcon, BanIcon, ZapIcon, HelpIcon } from '@/components/shared/Icons'
 
 const SESSION_KEY = 'mp_screen'
 const SESSION_ROOM_CODE_KEY = 'mp_lobby_room_code'
@@ -404,7 +405,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
             textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.6)'
           }}
         >
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🚪</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}><LogOutIcon size={40} className="text-red-500" /></div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>
             {isMatchFinished ? 'Leave Match?' : 'Forfeit & Leave?'}
           </h3>
@@ -507,7 +508,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   if (error) {
     return (
       <div className="card glass text-center" style={{ maxWidth: 500, margin: '4rem auto', padding: '2.5rem' }}>
-        <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '1rem' }}>⚠️</span>
+        <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><AlertIcon size={48} className="text-red-500" /></span>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem', color: 'hsl(var(--danger))' }}>Connection Error</h2>
         <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
           {error}
@@ -537,7 +538,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
   if (!isPlayer) {
     return (
       <div className="card glass text-center" style={{ maxWidth: 500, margin: '4rem auto', padding: '2.5rem' }}>
-        <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '1rem' }}>🚫</span>
+        <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><BanIcon size={48} className="text-yellow-500" /></span>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem', color: 'hsl(var(--warning))' }}>Access Denied</h2>
         <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
           You are not registered as a player in this room.
@@ -566,7 +567,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
           fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center',
           justifyContent: 'center', gap: '0.5rem'
         }}>
-          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: '1rem' }}>⚡</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', animation: 'spin 1s linear infinite' }}><ZapIcon size={14} /></span>
           Connection lost — attempting to reconnect...
         </div>
       )}
@@ -641,7 +642,7 @@ export default function PlayPageClient({ roomCode }: PlayPageClientProps) {
 
       {session && !['cricket','dots-boxes','tic-tac-toe','memory','rps','number-guessing','scribble','hangman','whos-spy','four-in-a-row','snake-arena'].includes(session.gameSlug) && (
         <div className="card glass text-center" style={{ maxWidth: 500, margin: '4rem auto', padding: '2.5rem' }}>
-          <span style={{ fontSize: '3.5rem', display: 'block', marginBottom: '1rem' }}>❓</span>
+          <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><HelpIcon size={48} className="text-purple-400" /></span>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>Unknown Game Mode</h2>
           <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
             The game mode &quot;{session?.gameSlug}&quot; is not currently supported in multiplayer.

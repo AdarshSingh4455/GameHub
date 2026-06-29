@@ -1,4 +1,5 @@
 'use client'
+import { TrophyIcon, GiftIcon, CoinsIcon, TargetIcon, AwardIcon, LockIcon, MessageIcon, SparklesIcon, CrownIcon, CheckIcon, PackageIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -28,11 +29,11 @@ interface ProfileStats {
 }
 
 const UPCOMING_UNLOCKS = [
-  { level: 5, reward: '👑 Novice Leader Badge', description: 'Unlock the Novice Leader badge on your profile and entry to elite chat.' },
-  { level: 10, reward: '🎖️ Gaming Expert Badge', description: 'Unlock the Veteran badge and +500 bonus coins.' },
-  { level: 15, reward: '🛡️ Strategist Badge', description: 'Unlock special match customization options.' },
-  { level: 20, reward: '🎯 Perfect Accuracy Badge', description: 'Earn double XP multiplier on selected weekend games.' },
-  { level: 25, reward: '💎 GameHub Legend Badge', description: 'Unlock permanent golden name styling in leaderboards.' },
+  { level: 5, reward: 'Novice Leader Badge', description: 'Unlock the Novice Leader badge on your profile and entry to elite chat.' },
+  { level: 10, reward: 'Gaming Expert Badge', description: 'Unlock the Veteran badge and +500 bonus coins.' },
+  { level: 15, reward: 'Strategist Badge', description: 'Unlock special match customization options.' },
+  { level: 20, reward: 'Perfect Accuracy Badge', description: 'Earn double XP multiplier on selected weekend games.' },
+  { level: 25, reward: 'GameHub Legend Badge', description: 'Unlock permanent golden name styling in leaderboards.' },
 ]
 
 export default function RewardsPage() {
@@ -233,16 +234,16 @@ export default function RewardsPage() {
         if (!res.ok) throw new Error()
         const data = await res.json()
 
-        addToast('daily_reward_claimed', 'Reward Claimed! 🎁', `Claimed Day ${data.dayClaimed} reward: +${data.coinsGained} Coins and +${data.xpGained} XP!`)
+        addToast('daily_reward_claimed', 'Reward Claimed!', `Claimed Day ${data.dayClaimed} reward: +${data.coinsGained} Coins and +${data.xpGained} XP!`)
 
         if (data.unlockedAchievements?.length > 0) {
           data.unlockedAchievements.forEach((ach: { name: string; description: string }) => {
-            addToast('achievement_unlocked', 'Achievement Unlocked! 🏆', `${ach.name}: ${ach.description}`)
+            addToast('achievement_unlocked', 'Achievement Unlocked!', `${ach.name}: ${ach.description}`)
           })
         }
 
         if (data.leveledUp) {
-          addToast('level_up', 'Level Up! ⭐', `Congratulations! You reached Level ${data.newLevel}!`)
+          addToast('level_up', 'Level Up!', `Congratulations! You reached Level ${data.newLevel}!`)
         }
 
         // Trigger header details to update
@@ -352,7 +353,7 @@ export default function RewardsPage() {
     <PageWrapper className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper" style={{ maxWidth: 1000, marginInline: 'auto' }}>
       {/* Header */}
       <div>
-        <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: 900, marginBottom: '0.25rem' }}>🎯 Rewards Hub</h1>
+        <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: 900, marginBottom: '0.25rem' }}><TrophyIcon size={24} className="inline mr-2 text-yellow-400" /> Rewards Hub</h1>
         <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.95rem' }}>
           Collect daily login incentives, view unlocked levels, and trace game achievements.
         </p>
@@ -403,7 +404,7 @@ export default function RewardsPage() {
             Coins Balance
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '2.5rem' }}>🪙</span>
+            <span style={{ display: 'flex', alignItems: 'center' }}><CoinsIcon size={32} className="text-yellow-400" /></span>
             <div>
               <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'hsl(45 100% 55%)', lineHeight: 1.1 }}>
                 {stats.coins} Coins
@@ -419,7 +420,7 @@ export default function RewardsPage() {
       {/* Row 2: Daily Login Rewards Calendar */}
       <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>🎁 Daily Login Calendar</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}><GiftIcon size={18} className="inline mr-2 text-pink-400" /> Daily Login Calendar</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.15rem' }}>
             Get bonus coins and XP every calendar day you log in.
           </p>
@@ -463,7 +464,7 @@ export default function RewardsPage() {
                   DAY {reward.day}
                 </div>
                 <div style={{ fontSize: '1.5rem', margin: '0.1rem 0' }}>
-                  {reward.day === 7 ? '👑' : isClaimed ? '📦' : '🎁'}
+                  {reward.day === 7 ? <CrownIcon size={20} className="text-yellow-400" /> : isClaimed ? <PackageIcon size={20} className="text-gray-500" /> : <GiftIcon size={20} className="text-pink-400" />}
                 </div>
                 <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white' }}>
                   +{reward.coins}c
@@ -506,7 +507,7 @@ export default function RewardsPage() {
             style={{ alignSelf: 'center', minWidth: 250, borderRadius: 12 }}
             id="rewards-claim-btn"
           >
-            {claiming ? 'Claiming...' : '🎁 Claim Today\'s Reward'}
+            {claiming ? 'Claiming...' : 'Claim Today\'s Reward'}
           </button>
         ) : (
           <div
@@ -531,7 +532,7 @@ export default function RewardsPage() {
       {/* Row 3: Upcoming Unlocks */}
       <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>🔓 Upcoming Unlocks</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}><LockIcon size={18} className="inline mr-2 text-blue-400" /> Upcoming Unlocks</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.15rem' }}>
             Reach level milestones to unlock badges, multipliers, and features.
           </p>
@@ -566,7 +567,7 @@ export default function RewardsPage() {
                     flexShrink: 0,
                   }}
                 >
-                  {isUnlocked ? '✓' : `Lvl ${unlock.level}`}
+                  {isUnlocked ? <CheckIcon size={14} className="text-green-500" /> : `Lvl ${unlock.level}`}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isUnlocked ? 'hsl(220 15% 90%)' : 'hsl(220 10% 80%)' }}>
@@ -585,7 +586,7 @@ export default function RewardsPage() {
       {/* Row 4: Achievements List */}
       <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>🎯 Badges & Achievements</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}><TargetIcon size={18} className="inline mr-2 text-pink-400" /> Badges & Achievements</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.15rem' }}>
             Earn extra coins and XP rewards by completing gameplay challenges.
           </p>
@@ -617,7 +618,7 @@ export default function RewardsPage() {
                   boxShadow: ach.isUnlocked ? '0 4px 10px hsl(45 100% 55% / 0.2)' : 'none',
                 }}
               >
-                {ach.isUnlocked ? '🏅' : '🔒'}
+                {ach.isUnlocked ? <AwardIcon size={18} className="text-yellow-400" /> : <LockIcon size={18} className="text-muted-foreground" />}
               </div>
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.88rem', color: ach.isUnlocked ? 'hsl(45 100% 65%)' : 'hsl(220 10% 80%)' }}>
@@ -664,7 +665,7 @@ export default function RewardsPage() {
       {/* Row 5: Owned Chat Packs */}
       <Card variant="glass" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>💬 Owned Chat Packs</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}><MessageIcon size={18} className="inline mr-2 text-blue-400" /> Owned Chat Packs</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.15rem' }}>
             Browse your unlocked and purchased chat packs. Preview phrases to use during in-game chat.
           </p>

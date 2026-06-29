@@ -1,4 +1,5 @@
 'use client'
+import { TrophyIcon, UsersIcon, GamepadIcon, CrownIcon, PlusIcon, CalendarIcon, PlugIcon, AwardIcon, LockIcon, HistoryIcon, EyeIcon } from '@/components/shared/Icons'
 
 import React, { useEffect, useState, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -326,7 +327,7 @@ export default function TournamentsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Registration failed')
-      addToast('success', 'Registered Successfully! 🏆', 'You are signed up for this tournament.')
+      addToast('success', 'Registered Successfully!', 'You are signed up for this tournament.')
       setTeamFormOpen(false)
       await fetchTournaments(tId)
     } catch (err: any) {
@@ -549,7 +550,7 @@ export default function TournamentsPage() {
       setPlayingState('waiting')
       setPlayPanelOpen(true)
       setTimerCount(10)
-      addToast('success', 'Joined Lobby 🚪', 'Waiting for opponent to ready up.')
+      addToast('success', 'Joined Lobby', 'Waiting for opponent to ready up.')
       
       // Simulate opponent joining after 2.5s if it's a bot match
       const isBotOpponent = data.match.p2Id?.startsWith('bot-') || data.match.p1Id?.startsWith('bot-')
@@ -605,7 +606,7 @@ export default function TournamentsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to submit score')
       
-      addToast(outcome === 'win' ? 'success' : 'info', outcome === 'win' ? 'Victory! 🎉' : 'Eliminated', outcome === 'win' ? 'Advanced to next round!' : 'You have been knocked out.')
+      addToast(outcome === 'win' ? 'success' : 'info', outcome === 'win' ? 'Victory!' : 'Eliminated', outcome === 'win' ? 'Advanced to next round!' : 'You have been knocked out.')
       setPlayPanelOpen(false)
       setActiveMatch(null)
       await fetchTournaments(selectedTournament.id)
@@ -639,9 +640,9 @@ export default function TournamentsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Rewards claim failed')
       if (data.isOfficial) {
-        addToast('success', 'Claimed! 🎁', `Granted +${data.coinsReward} coins and +${data.xpReward} XP!`)
+        addToast('success', 'Claimed!', `Granted +${data.coinsReward} coins and +${data.xpReward} XP!`)
       } else {
-        addToast('success', 'Claimed! 🤝', 'Claimed community trophy badge!')
+        addToast('success', 'Claimed!', 'Claimed community trophy badge!')
       }
       await fetchTournaments(tId)
     } catch (err: any) {
@@ -761,7 +762,7 @@ export default function TournamentsPage() {
           </div>
           {championName && (
             <div style={{ fontSize: '0.78rem', color: '#fbbf24', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <span>🏆 Champion:</span>
+              <TrophyIcon size={14} className="inline mr-1 text-yellow-400" /> <span>Champion:</span>
               <span>{championName}</span>
             </div>
           )}
@@ -964,7 +965,7 @@ export default function TournamentsPage() {
             border: '1px solid hsl(220 100% 60% / 0.3)',
             color: 'hsl(220 100% 70%)',
           }}>
-            🔒 Coming Soon
+            <LockIcon size={14} className="inline mr-1" /> Coming Soon
           </div>
 
           <div>
@@ -1063,7 +1064,7 @@ export default function TournamentsPage() {
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', justifyContent: 'center' }}>
-            <span style={{ fontSize: '2rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>🏆</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}><TrophyIcon size={32} className="text-yellow-400" /></span>
             <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', margin: 0, lineHeight: 1.2 }}>
               ESPORTS TOURNAMENT ARENA
             </h1>
@@ -1090,7 +1091,7 @@ export default function TournamentsPage() {
           padding: '4rem 1.5rem', background: '#0e111e', border: '1px solid #ef4444', borderRadius: 16,
           boxShadow: '0 8px 32px rgba(239, 68, 68, 0.08)', gap: '1.25rem', textAlign: 'center', margin: '2rem 0'
         }}>
-          <span style={{ fontSize: '3rem' }}>🔌</span>
+          <span style={{ display: 'flex', justifyContent: 'center' }}><PlugIcon size={48} className="text-red-500" /></span>
           <div>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'white', margin: 0 }}>
               Connection Error
@@ -1104,7 +1105,7 @@ export default function TournamentsPage() {
             onClick={() => fetchTournaments()}
             style={{ fontWeight: 800, padding: '0.6rem 1.5rem', background: '#ef4444', border: 'none', cursor: 'pointer', borderRadius: 8 }}
           >
-            🔄 Retry Connection
+            <HistoryIcon size={14} className="inline mr-1" /> Retry Connection
           </button>
         </div>
       ) : loading ? (
@@ -1236,7 +1237,7 @@ export default function TournamentsPage() {
                         color: t.isOfficial ? '#818cf8' : '#34d399',
                         border: t.isOfficial ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(16,185,129,0.3)'
                       }}>
-                        {t.isOfficial ? '👑 Official' : '👥 Community'}
+                        {t.isOfficial ? 'Official' : 'Community'}
                       </span>
 
                       {/* Live Badge */}
@@ -1263,7 +1264,7 @@ export default function TournamentsPage() {
                       {t.name}
                     </h3>
                     <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.1rem 0 0.5rem', textTransform: 'uppercase', fontWeight: 800 }}>
-                      🎮 {t.gameSlug.replace('-', ' ')}
+                      <GamepadIcon size={14} className="inline mr-1 text-purple-400" /> {t.gameSlug.replace('-', ' ')}
                     </p>
                   </div>
 
@@ -1360,12 +1361,12 @@ export default function TournamentsPage() {
                     color: selectedTournament.isOfficial ? '#818cf8' : '#34d399',
                     border: selectedTournament.isOfficial ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(16,185,129,0.3)'
                   }}>
-                    {selectedTournament.isOfficial ? '👑 Official Tournament' : '👥 Community Tournament'}
+                    {selectedTournament.isOfficial ? 'Official Tournament' : 'Community Tournament'}
                   </span>
                   
                   {selectedTournament.privacy !== 'PUBLIC' && (
                     <span style={{ fontSize: '0.65rem', background: '#334155', color: '#f3f4f6', padding: '0.2rem 0.5rem', borderRadius: 6, fontWeight: 800 }}>
-                      🔒 PRIVATE
+                      <LockIcon size={12} className="inline mr-1" /> PRIVATE
                     </span>
                   )}
                 </div>
@@ -1688,7 +1689,7 @@ export default function TournamentsPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: r.status === 'WAITING_LIST' ? '#fbbf24' : '#10b981' }} />
                         <span style={{ fontSize: '0.8rem', color: '#f3f4f6', fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                          {r.team ? `🛡️ ${r.team.name}` : (r.profile?.username || 'Player')}
+                          {r.team ? `${r.team.name}` : (r.profile?.username || 'Player')}
                         </span>
                       </div>
                       
@@ -1806,7 +1807,7 @@ export default function TournamentsPage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>
-                🏆 Host Tournament Event
+                <TrophyIcon size={16} className="inline mr-1" /> Host Tournament Event
               </h3>
               <button onClick={() => setCreateModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
                 <X size={20} />
@@ -2094,7 +2095,7 @@ export default function TournamentsPage() {
                     onClick={() => handleResolveMatch('win')}
                     style={{ flex: 1, fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #059669)' }}
                   >
-                    🎲 Submit Win
+                    Submit Win
                   </button>
                   
                   <button 
@@ -2123,7 +2124,7 @@ export default function TournamentsPage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                👁️ Spectator Mode: Live Stream
+                <EyeIcon size={14} className="inline mr-1 text-red-500 animate-pulse" /> Spectator Mode: Live Stream
               </h3>
               <button onClick={() => setSpectatingMatch(null)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
                 <X size={18} />
@@ -2144,7 +2145,7 @@ export default function TournamentsPage() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
               <span style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', padding: '0.2rem 0.5rem', borderRadius: 6, fontWeight: 900 }}>
-                🎮 Turn: {spectatorTurn}
+                <GamepadIcon size={14} className="inline mr-1" /> Turn: {spectatorTurn}
               </span>
               
               <span style={{ color: '#94a3b8' }}>
@@ -2248,7 +2249,7 @@ export default function TournamentsPage() {
                   color: '#fbbf24', padding: '0.3rem 0.8rem', borderRadius: 99, fontWeight: 900,
                   marginTop: '0.5rem', border: '1px solid rgba(251,191,36,0.25)', letterSpacing: '0.05em'
                 }}>
-                  🏆 RANK #1 CHAMPION
+                  <CrownIcon size={18} className="inline mr-1 text-yellow-400" /> CHAMPION
                 </span>
               </div>
 
@@ -2260,7 +2261,7 @@ export default function TournamentsPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                   <span style={{ color: '#64748b', fontWeight: 800 }}>Game Mode</span>
-                  <span style={{ color: '#3b82f6', fontWeight: 900, textTransform: 'uppercase' }}>🎮 {championDetails.game.replace('-', ' ')}</span>
+                  <span style={{ color: '#3b82f6', fontWeight: 900, textTransform: 'uppercase' }}><GamepadIcon size={14} className="inline mr-1 text-purple-400" /> {championDetails.game.replace('-', ' ')}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                   <span style={{ color: '#64748b', fontWeight: 800 }}>Date Cleared</span>
@@ -2292,7 +2293,7 @@ export default function TournamentsPage() {
                   </div>
                 ) : (
                   <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px dashed rgba(239, 68, 68, 0.2)', borderRadius: 12, padding: '0.75rem', fontSize: '0.75rem', color: '#f87171', fontWeight: 800 }}>
-                    🛡️ Community Tournament: Zero Progression Mode (Earned bragging rights!)
+                    Community Tournament: Zero Progression Mode (Earned bragging rights!)
                   </div>
                 )}
               </div>
@@ -2303,7 +2304,7 @@ export default function TournamentsPage() {
               <button
                 className="btn btn-primary"
                 onClick={() => {
-                  const text = `🏆 I just won the Champion title in the "${championDetails.tournament}" Tournament playing ${championDetails.game}! Play now on GameHub!`
+                  const text = `I just won the Champion title in the "${championDetails.tournament}" Tournament playing ${championDetails.game}! Play now on GameHub!`
                   navigator.clipboard.writeText(text)
                   addToast('success', 'Shared Card! 📤', 'Champion Card text shared to clipboard. Ready to post!')
                 }}
@@ -2340,7 +2341,7 @@ export default function TournamentsPage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>
-                🛡️ Team Captain Panel
+                Team Captain Panel
               </h3>
               <button onClick={() => setTeamFormOpen(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
                 <X size={18} />

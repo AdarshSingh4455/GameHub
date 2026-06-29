@@ -1,4 +1,5 @@
 import React from 'react'
+import { Gamepad2 } from 'lucide-react'
 import { GAMES_REGISTRY } from '@/lib/games'
 
 interface GameIconProps {
@@ -589,20 +590,17 @@ export const GameIcon: React.FC<GameIconProps> = ({ slug, size = 40, className }
     )
   }
 
-  // Fallback to game registry emoji
-  const game = GAMES_REGISTRY.find(g => g.slug === slug)
+  // Fallback to vector icon if no SVG defined
   return (
-    <span
+    <Gamepad2
       className={className}
+      size={size}
       style={{
-        fontSize: `${size * 0.7}px`,
-        lineHeight: 1,
         display: 'inline-block',
-        verticalAlign: 'middle'
+        verticalAlign: 'middle',
+        color: accentColor
       }}
-    >
-      {game?.emoji || '🎮'}
-    </span>
+    />
   )
 }
 export default GameIcon

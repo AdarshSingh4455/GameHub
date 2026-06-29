@@ -1,3 +1,4 @@
+import { BotIcon, GiftIcon, SparklesIcon, HeartIcon, PaletteIcon, FileTextIcon, GemIcon, BanIcon, ZapIcon, GlobeIcon } from '@/components/shared/Icons'
 // Word Wizard HUD Component
 // Displays stats: score, combo counter, time progress, category quests, active modifiers, and hints control
 
@@ -35,34 +36,34 @@ export default function WordWizardHUD({
   const getQuestLabel = (quest: string) => {
     switch (quest) {
       case 'animals':
-        return '🦄 Spell an Animal word!'
+        return 'Spell an Animal word!'
       case 'food':
-        return '🍎 Spell a Food word!'
+        return 'Spell a Food word!'
       case 'magic':
-        return '🪄 Spell a Magic/Spell word!'
+        return 'Spell a Magic/Spell word!'
       case 'nature':
-        return '🌿 Spell a Nature word!'
+        return 'Spell a Nature word!'
       case 'colors':
-        return '🎨 Spell a Color word!'
+        return 'Spell a Color word!'
       default:
-        return '📝 Spell any word!'
+        return 'Spell any word!'
     }
   }
 
   const getModifierLabel = (mod: DailyModifier) => {
     switch (mod) {
       case 'double_rare':
-        return '💎 Double Rare Letters'
+        return 'Double Rare Letters'
       case 'no_hints':
-        return '🚫 No Hints Allowed'
+        return 'No Hints Allowed'
       case 'time_attack':
-        return '⚡ Time Attack (+3s/word)'
+        return 'Time Attack (+3s/word)'
       case 'giant_board':
-        return '🗺️ Giant 6x6 Board'
+        return 'Giant 6x6 Board'
       case 'combo_frenzy':
         return '🔥 Combo Frenzy (2x Combos)'
       default:
-        return '🔮 Classic Modifier'
+        return 'Classic Modifier'
     }
   }
 

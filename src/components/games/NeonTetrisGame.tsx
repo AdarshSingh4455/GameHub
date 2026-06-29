@@ -1,4 +1,5 @@
 'use client'
+import { ZapIcon, TrophyIcon, PlayIcon, LogOutIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -1019,7 +1020,7 @@ export default function NeonTetrisGame() {
               }
             }
           `}} />
-          <div style={{ fontSize: '3rem', marginBottom: '0.5rem', animation: 'neonFlicker 4s infinite' }}>⚡</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', animation: 'neonFlicker 4s infinite' }}><ZapIcon size={48} className="text-yellow-400" /></div>
           <h1 style={{ 
             fontFamily: "'Outfit', 'Inter', sans-serif",
             fontWeight: 950, 
@@ -1114,7 +1115,7 @@ export default function NeonTetrisGame() {
           }}
         >
           <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            🏆 MODE STATS RECORD
+            <TrophyIcon size={14} className="inline mr-1 text-yellow-400" /> MODE STATS RECORD
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '0.75rem', marginTop: '0.5rem' }}>
             <div>
@@ -1138,7 +1139,7 @@ export default function NeonTetrisGame() {
           style={{ width: '100%', borderRadius: 12, padding: '0.75rem', fontWeight: 800, boxShadow: '0 0 15px rgba(6, 182, 212, 0.3)' }}
           id="nt-start-btn"
         >
-          🚀 Play Mode
+          <PlayIcon size={14} className="inline mr-1" /> Play Mode
         </button>
       </div>
     )
@@ -1203,7 +1204,7 @@ export default function NeonTetrisGame() {
           className="btn btn-secondary"
           style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', borderRadius: '6px' }}
         >
-          🚪 Quit
+          <LogOutIcon size={14} className="inline mr-1" /> Quit
         </button>
       </div>
 

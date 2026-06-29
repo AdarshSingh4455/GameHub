@@ -1,4 +1,5 @@
 'use client'
+import { TrophyIcon, UsersIcon, GamepadIcon, AwardIcon, CoinsIcon, BellIcon, InboxIcon, LockIcon } from '@/components/shared/Icons'
 
 import React, { useEffect, useState } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -134,19 +135,19 @@ export default function NotificationsPage() {
 
   const getEmojiForType = (type: string) => {
     switch (type) {
-      case 'ACHIEVEMENT': return '🏆'
-      case 'FRIEND_REQUEST': return '👥'
-      case 'ROOM_INVITE': return '🎮'
-      case 'TOURNAMENT': return '🏅'
-      case 'BILLING': return '🪙'
-      default: return '🔔'
+      case 'ACHIEVEMENT': return <TrophyIcon size={18} className="text-yellow-400" />
+      case 'FRIEND_REQUEST': return <UsersIcon size={18} className="text-blue-400" />
+      case 'ROOM_INVITE': return <GamepadIcon size={18} className="text-purple-400" />
+      case 'TOURNAMENT': return <AwardIcon size={18} className="text-yellow-400" />
+      case 'BILLING': return <CoinsIcon size={18} className="text-yellow-400" />
+      default: return <BellIcon size={18} className="text-gray-400" />
     }
   }
 
   if (!user) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-        <h3>🔒 Access Restricted</h3>
+        <h3><LockIcon size={20} className="inline mr-2 text-red-500" /> Access Restricted</h3>
         <p style={{ color: 'hsl(220 10% 50%)' }}>Please sign in to view your notification logs.</p>
       </div>
     )
@@ -162,7 +163,7 @@ export default function NotificationsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 900, margin: 0, color: 'white', letterSpacing: '-0.02em' }}>
-            🔔 Notification Hub
+            <BellIcon size={20} className="inline mr-2 text-blue-400" /> Notification Hub
           </h1>
           <p style={{ color: 'hsl(220 10% 55%)', margin: '0.2rem 0 0', fontSize: '0.9rem' }}>
             Stay updated on achievements, friend requests, room invitations, and tournament brackets.
@@ -240,7 +241,7 @@ export default function NotificationsPage() {
         </div>
       ) : filteredNotifications.length === 0 ? (
         <Card style={{ textAlign: 'center', padding: '4rem 2rem', background: 'hsl(222 20% 8% / 0.6)', border: '1px dashed hsl(220 15% 16%)' }}>
-          <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem' }}>📭</span>
+          <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><InboxIcon size={48} className="text-muted-foreground" /></span>
           <h3 style={{ fontWeight: 700, color: 'white', margin: 0 }}>In-box Empty</h3>
           <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.82rem', margin: '0.5rem 0 0' }}>All clean! No alerts found in this category.</p>
         </Card>

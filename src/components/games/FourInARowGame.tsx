@@ -1,4 +1,5 @@
 'use client'
+import { SwordsIcon, BotIcon, UsersIcon, TrophyIcon, HistoryIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -340,7 +341,7 @@ export default function FourInARowGame() {
               letterSpacing: '0.05em',
               animation: 'pulse 1.5s infinite'
             }}>
-              ⚔️ Competitive Ranked Session
+              <SwordsIcon size={14} className="inline mr-1 text-purple-400" /> Competitive Ranked Session
             </div>
           )}
 
@@ -351,7 +352,7 @@ export default function FourInARowGame() {
               style={{ borderRadius: 10, flex: 1, cursor: isRanked ? 'not-allowed' : 'pointer' }}
               disabled={isRanked}
             >
-              🤖 VS AI
+              <BotIcon size={14} className="inline mr-1 text-purple-400" /> VS AI
             </button>
             <button
               onClick={() => { playSynthSound('click'); setMode('local-pvp') }}
@@ -359,7 +360,7 @@ export default function FourInARowGame() {
               style={{ borderRadius: 10, flex: 1, cursor: isRanked ? 'not-allowed' : 'pointer' }}
               disabled={isRanked}
             >
-              👥 Local PVP
+              <UsersIcon size={14} className="inline mr-1 text-blue-400" /> Local PVP
             </button>
           </div>
 
@@ -404,10 +405,10 @@ export default function FourInARowGame() {
       }}>
         {winnerInfo ? (
           winnerInfo.winner === 'DRAW' ? (
-            <span style={{ fontWeight: 800, color: 'hsl(45 90% 55%)' }}>🤝 It&apos;s a Draw!</span>
+            <span style={{ fontWeight: 800, color: 'hsl(45 90% 55%)' }}><UsersIcon size={16} className="inline mr-1 text-gray-400" /> It&apos;s a Draw!</span>
           ) : (
             <span style={{ fontWeight: 800, color: winnerInfo.winner === 'X' ? 'hsl(355 85% 55%)' : 'hsl(45 95% 50%)' }}>
-              🏆 {winnerInfo.winner === 'X' ? 'Red' : 'Yellow'} Wins!
+              <TrophyIcon size={16} className="inline mr-1 text-yellow-400" /> {winnerInfo.winner === 'X' ? 'Red' : 'Yellow'} Wins!
             </span>
           )
         ) : (
@@ -573,7 +574,7 @@ export default function FourInARowGame() {
           onClick={() => handleReset(false)}
           style={{ flex: 1, borderRadius: 12, padding: '0.5rem' }}
         >
-          🔄 Restart Game
+          <HistoryIcon size={14} className="inline mr-1" /> Restart Game
         </button>
       </div>
 

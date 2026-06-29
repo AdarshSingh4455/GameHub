@@ -1,4 +1,5 @@
 'use client'
+import { GamepadIcon, BotIcon, UsersIcon, TrophyIcon, FlagIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -596,7 +597,7 @@ export default function DotsAndBoxesGame() {
         id="dotsboxes-setup-menu"
       >
         <div>
-          <div style={{ fontSize: '3.5rem', marginBottom: '0.25rem' }}>🕹️</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><GamepadIcon size={48} className="text-blue-400" /></div>
           <h2 style={{ fontWeight: 900, fontSize: '1.55rem', margin: 0, color: 'white', letterSpacing: '-0.02em' }}>Dots & Boxes</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.3rem', lineHeight: 1.4 }}>
             Take turns connecting adjacent dots. Complete boxes to score and claim points. Extra turns granted upon box completions!
@@ -697,7 +698,7 @@ export default function DotsAndBoxesGame() {
               }}
             >
               <div style={{ textAlign: 'left', fontSize: '0.8rem', fontWeight: 800, color: 'hsl(220 10% 70%)' }}>
-                🤖 CHALLENGE AI
+                <BotIcon size={14} className="inline mr-1" /> CHALLENGE AI
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {(['easy', 'medium', 'hard'] as Difficulty[]).map(diff => (
@@ -740,7 +741,7 @@ export default function DotsAndBoxesGame() {
               style={{ width: '100%', borderRadius: 12 }}
               id="db-start-local"
             >
-              👥 Local Match (2 Players)
+              <UsersIcon size={14} className="inline mr-1" /> Local Match (2 Players)
             </button>
           </div>
         ) : (
@@ -856,7 +857,7 @@ export default function DotsAndBoxesGame() {
         style={{ padding: '2rem', textAlign: 'center', maxWidth: 390, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
         id="db-online-lobby"
       >
-        <div style={{ fontSize: '3rem' }}>🕹️</div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}><GamepadIcon size={36} className="text-blue-400" /></div>
         <h2 style={{ fontWeight: 700, fontSize: '1.25rem', margin: 0 }}>Dots & Boxes Room</h2>
         <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.82rem', lineHeight: 1.4 }}>
           {isHost ? 'Waiting for opponent to connect. Share code to start.' : 'Connected! Waiting for host to launch the match.'}
@@ -892,7 +893,7 @@ export default function DotsAndBoxesGame() {
   // Determine active turn metadata
   const isPlayer1Active = currentTurn === 'P1'
 
-  let turnIcon = '🔵'
+  let turnIcon: React.ReactNode = null
   let turnText = 'Player 1 Turn'
   let turnColor = 'hsl(210 100% 55%)'
   let turnBg = 'hsl(210 100% 50% / 0.1)'
@@ -900,34 +901,34 @@ export default function DotsAndBoxesGame() {
 
   if (winner) {
     if (winner === 'draw') {
-      turnIcon = '🤝'
+      turnIcon = <UsersIcon size={14} className="inline mr-1" />
       turnText = 'Tie Match!'
       turnColor = 'hsl(45 100% 55%)'
       turnBg = 'hsl(45 100% 50% / 0.1)'
       turnBorder = 'hsl(45 100% 50% / 0.3)'
     } else {
       const isP1Win = winner === 'Player 1'
-      turnIcon = '🏆'
+      turnIcon = <TrophyIcon size={14} className="inline mr-1 text-yellow-400" />
       turnText = isP1Win ? 'Player 1 Wins!' : (gameMode === 'vs-ai' ? 'AI Wins!' : 'Player 2 Wins!')
       turnColor = isP1Win ? 'hsl(210 100% 55%)' : 'hsl(355 100% 55%)'
       turnBg = isP1Win ? 'hsl(210 100% 50% / 0.15)' : 'hsl(355 100% 50% / 0.15)'
       turnBorder = isP1Win ? 'hsl(210 100% 50% / 0.4)' : 'hsl(355 100% 50% / 0.4)'
     }
   } else if (isThinking) {
-    turnIcon = '🤖'
+    turnIcon = <BotIcon size={14} className="inline mr-1 text-purple-400" />
     turnText = 'AI Turn'
     turnColor = 'hsl(355 100% 55%)'
     turnBg = 'hsl(355 100% 50% / 0.1)'
     turnBorder = 'hsl(355 100% 50% / 0.3)'
   } else if (gameMode === 'online') {
     if (isPlayer1Active) {
-      turnIcon = '🔵'
+      turnIcon = <UsersIcon size={14} className="inline mr-1 text-blue-500" />
       turnText = 'Your Turn'
       turnColor = 'hsl(210 100% 55%)'
       turnBg = 'hsl(210 100% 50% / 0.1)'
       turnBorder = 'hsl(210 100% 50% / 0.3)'
     } else {
-      turnIcon = '🔴'
+      turnIcon = <UsersIcon size={14} className="inline mr-1 text-red-500" />
       turnText = 'Opponent Turn'
       turnColor = 'hsl(355 100% 55%)'
       turnBg = 'hsl(355 100% 50% / 0.1)'
@@ -1248,7 +1249,7 @@ export default function DotsAndBoxesGame() {
           onClick={handleQuit}
           id="db-quit-btn"
         >
-          🏳️ Back to Setup Menu
+          <FlagIcon size={14} className="inline mr-1" /> Back to Setup Menu
         </button>
       </div>
 

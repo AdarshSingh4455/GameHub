@@ -1,4 +1,5 @@
 'use client'
+import { GamepadIcon, CoinsIcon, GlobeIcon, UserIcon, BotIcon, PlayIcon, TargetIcon, HelpIcon, AlertIcon, ZapIcon, LockIcon, TrophyIcon, FrownIcon, UsersIcon } from '@/components/shared/Icons'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -256,7 +257,7 @@ export default function CricketGame() {
   if (step === 'setup') {
     return (
       <div className="card shadow-lg animate-fadeIn" style={{ padding: 'clamp(1rem, 5vw, 2.5rem)', maxWidth: 500, margin: '2rem auto', border: '1px solid hsl(220 20% 20%)', background: 'hsl(220 20% 12% / 0.8)', backdropFilter: 'blur(12px)', borderRadius: 20 }}>
-        <div style={{ fontSize: '4rem', textAlign: 'center', marginBottom: '1rem' }}>🏏</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><GamepadIcon size={64} className="text-green-400" /></div>
         <h2 style={{ fontWeight: 800, fontSize: '1.75rem', textAlign: 'center', marginBottom: '0.5rem', color: 'hsl(220 15% 92%)' }}>Hand Cricket Setup</h2>
         <p style={{ color: 'hsl(220 10% 55%)', textAlign: 'center', marginBottom: '2rem', fontSize: '0.9rem', lineHeight: 1.6 }}>
           Configure your match. Play overs-based hand cricket with wickets and full toss simulation.
@@ -319,7 +320,7 @@ export default function CricketGame() {
           onClick={() => setStep('toss')}
           id="cricket-go-toss"
         >
-          🪙 Proceed to Toss
+          <CoinsIcon size={14} className="inline mr-1 text-yellow-400" /> Proceed to Toss
         </button>
 
         <button
@@ -328,7 +329,7 @@ export default function CricketGame() {
           onClick={() => router.push('/dashboard/multiplayer?action=create&game=cricket')}
           id="cricket-play-friends"
         >
-          🌐 Play With Friends
+          <GlobeIcon size={14} className="inline mr-1 text-blue-400" /> Play With Friends
         </button>
       </div>
     )
@@ -363,7 +364,7 @@ export default function CricketGame() {
             disabled={isTossing}
             style={{ padding: '1rem', fontSize: '1.1rem', fontWeight: 700 }}
           >
-            👨 Heads
+            <UserIcon size={14} className="inline mr-1" /> Heads
           </button>
           <button
             className="btn btn-secondary btn-lg"
@@ -371,7 +372,7 @@ export default function CricketGame() {
             disabled={isTossing}
             style={{ padding: '1rem', fontSize: '1.1rem', fontWeight: 700 }}
           >
-            🦊 Tails
+            <BotIcon size={14} className="inline mr-1" /> Tails
           </button>
         </div>
       </div>
@@ -384,7 +385,7 @@ export default function CricketGame() {
     return (
       <div className="card shadow-lg animate-fadeIn" style={{ padding: '2.5rem', maxWidth: 500, margin: '2rem auto', border: '1px solid hsl(220 20% 20%)', background: 'hsl(220 20% 12% / 0.8)', backdropFilter: 'blur(12px)', borderRadius: 20 }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ fontSize: '4rem' }}>{isPlayerWinner ? '🎉' : '🤖'}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>{isPlayerWinner ? <TrophyIcon size={48} className="text-yellow-400" /> : <BotIcon size={48} className="text-purple-400" />}</div>
           <h2 style={{ fontWeight: 800, fontSize: '1.75rem', marginTop: '1rem', color: 'hsl(220 15% 92%)' }}>
             {isPlayerWinner ? 'You Won the Toss!' : 'CPU Won the Toss!'}
           </h2>
@@ -402,14 +403,14 @@ export default function CricketGame() {
                 onClick={() => startMatch('bat')}
                 style={{ padding: '1rem', fontWeight: 700 }}
               >
-                🏏 Bat First
+                <PlayIcon size={14} className="inline mr-1" /> Bat First
               </button>
               <button
                 className="btn btn-primary btn-lg"
                 onClick={() => startMatch('bowl')}
                 style={{ padding: '1rem', fontWeight: 700 }}
               >
-                🎯 Bowl First
+                <TargetIcon size={14} className="inline mr-1" /> Bowl First
               </button>
             </div>
           </div>
@@ -455,7 +456,7 @@ export default function CricketGame() {
         <div className="card shadow-lg" style={{ padding: '1.25rem 1.5rem', background: 'hsl(220 20% 10% / 0.9)', border: '1px solid hsl(220 20% 18%)', borderRadius: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '1.25rem' }}>{isPlayerBatting ? '🏏' : '🎯'}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center' }}>{isPlayerBatting ? <GamepadIcon size={18} /> : <TargetIcon size={18} />}</span>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: 6, background: isPlayerBatting ? 'hsl(220 100% 65% / 0.15)' : 'hsl(0 80% 60% / 0.15)', color: isPlayerBatting ? 'hsl(220 100% 65%)' : 'hsl(0 80% 60%)', textTransform: 'uppercase' }}>
                 {isPlayerBatting ? 'Player Batting' : 'CPU Batting'}
               </span>
@@ -517,7 +518,7 @@ export default function CricketGame() {
                   color: isPlayerBatting ? 'hsl(220 100% 65%)' : 'hsl(220 15% 90%)'
                 }}
               >
-                {isAnimating ? '❓' : (lastBall ? (isPlayerBatting ? lastBall.batsmanPick : lastBall.bowlerPick) : '-')}
+                {isAnimating ? <HelpIcon size={14} /> : (lastBall ? (isPlayerBatting ? lastBall.batsmanPick : lastBall.bowlerPick) : '-')}
               </div>
             </div>
 
@@ -538,7 +539,7 @@ export default function CricketGame() {
                   color: isPlayerBowling ? 'hsl(0 80% 60%)' : 'hsl(220 15% 90%)'
                 }}
               >
-                {isAnimating ? '❓' : (lastBall ? (isPlayerBatting ? lastBall.bowlerPick : lastBall.batsmanPick) : '-')}
+                {isAnimating ? <HelpIcon size={14} /> : (lastBall ? (isPlayerBatting ? lastBall.bowlerPick : lastBall.batsmanPick) : '-')}
               </div>
             </div>
           </div>
@@ -550,11 +551,11 @@ export default function CricketGame() {
               <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
                 {lastBall.isOut ? (
                   <span style={{ color: 'hsl(0 80% 60%)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                    🔴 OUT! (Matched at {lastBall.batsmanPick})
+                    OUT! (Matched at {lastBall.batsmanPick})
                   </span>
                 ) : (
                   <span style={{ color: 'hsl(142 70% 55%)' }}>
-                    🏏 +{lastBall.runs} Runs!
+                    +{lastBall.runs} Runs!
                   </span>
                 )}
               </div>
@@ -562,7 +563,7 @@ export default function CricketGame() {
               <span style={{ fontSize: '0.85rem', color: isSixDisabledForBowling ? 'hsl(0 80% 60%)' : 'hsl(220 10% 55%)', fontWeight: isSixDisabledForBowling ? 600 : 400 }}>
                 {isPlayerBatting ? 'Choose a number to bat' : (
                   isSixDisabledForBowling 
-                    ? '🔒 6 can only be used 3 times per over while bowling.' 
+                    ? '6 can only be used 3 times per over while bowling.' 
                     : 'Choose a number to bowl'
                 )}
               </span>
@@ -599,7 +600,7 @@ export default function CricketGame() {
                 }}
                 id={`cricket-btn-${n}`}
               >
-                {isRestrictedSix ? '🔒' : n}
+                {isRestrictedSix ? <LockIcon size={12} /> : n}
               </button>
             )
           })}
@@ -626,7 +627,7 @@ export default function CricketGame() {
           <div className="six-overlay-container">
             <div className="six-flash" />
             <div className="six-ball-trail" />
-            <div className="six-ball-emoji">🥎</div>
+            <div className="six-ball-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TargetIcon size={24} className="text-yellow-500" /></div>
             <div className="six-text">SIX!</div>
             {sixCoins.map(coin => (
               <div
@@ -847,7 +848,7 @@ export default function CricketGame() {
     return (
       <div className="card shadow-lg animate-slideUp" style={{ padding: '2.5rem', maxWidth: 500, margin: '2rem auto', border: '1px solid hsl(220 20% 20%)', background: 'hsl(220 20% 12% / 0.8)', backdropFilter: 'blur(12px)', borderRadius: 20, textAlign: 'center' }}>
         <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>
-          {isPlayerWin ? '🏆' : isCpuWin ? '💀' : '🤝'}
+          {isPlayerWin ? <TrophyIcon size={48} className="text-yellow-400" /> : isCpuWin ? <FrownIcon size={48} className="text-red-500" /> : <UsersIcon size={48} className="text-gray-400" />}
         </div>
         <h2 style={{ fontWeight: 900, fontSize: '1.8rem', marginBottom: '0.5rem', color: isPlayerWin ? 'hsl(142 70% 55%)' : isCpuWin ? 'hsl(0 80% 60%)' : 'hsl(220 15% 90%)' }}>
           {isPlayerWin ? 'You Won!' : isCpuWin ? 'CPU Won!' : 'Match Drawn!'}

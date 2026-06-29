@@ -5,6 +5,8 @@ import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import GameIcon from './GameIcon'
 import { getSnakeAIMove } from '@/lib/snakeAI'
+import { PowerupBadge } from '@/components/shared/PowerupBadge'
+import { LightbulbIcon } from '@/components/shared/Icons'
 import type { Position, SnakePlayer, FoodItem, PowerupItem, SnakeArenaState } from '@/lib/snakeArenaTypes'
 
 type Difficulty = 'easy' | 'medium' | 'hard' | 'nightmare'
@@ -1039,16 +1041,14 @@ export default function SnakeArenaGame() {
               </div>
               <div className="hud-status-item flex-grow-right" style={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <span className="hud-status-label" style={{ marginRight: '0.5rem' }}>Power:</span>
-                <div className="hud-status-powerups">
+                <div className="hud-status-powerups" style={{ display: 'flex', gap: '0.35rem' }}>
                   {myActivePowerups.length === 0 ? (
                     <span className="hud-status-value-muted">None</span>
                   ) : (
                     myActivePowerups.map(p => {
                       const timeLeft = Math.max(0, Math.round((p.expiresAt - Date.now()) / 1000))
                       return (
-                        <span key={p.type} className={`powerup-pill badge-${p.type}`}>
-                          {p.type.toUpperCase()} ({timeLeft}s)
-                        </span>
+                        <PowerupBadge key={p.type} type={p.type as any} timeLeft={timeLeft} />
                       )
                     })
                   )}
@@ -1071,7 +1071,10 @@ export default function SnakeArenaGame() {
                 }}
               />
             </div>
-            <p className="mobile-controls-tip">💡 Swipe on the screen to change direction.</p>
+            <p className="mobile-controls-tip" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <LightbulbIcon size={14} style={{ color: 'hsl(45 100% 55%)' }} />
+              <span>Swipe on the screen to change direction.</span>
+            </p>
           </div>
         </div>
       )}

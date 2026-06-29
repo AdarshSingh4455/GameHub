@@ -1,4 +1,5 @@
 'use client'
+import { PaletteIcon, EditIcon, TrashIcon, CopyIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useSocket } from '@/lib/contexts/SocketContext'
@@ -481,7 +482,7 @@ export default function MultiplayerScribbleGame({
             <>
               {isDrawer ? (
                 <div style={{ fontSize: '0.7rem', color: 'hsl(142 70% 55%)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  ✏️ Draw: <span style={{ color: 'hsl(142 70% 65%)', fontSize: '0.9rem' }}>{selectedWord}</span>
+                  <EditIcon size={14} className="inline mr-1" /> Draw: <span style={{ color: 'hsl(142 70% 65%)', fontSize: '0.9rem' }}>{selectedWord}</span>
                 </div>
               ) : (
                 <div>
@@ -719,7 +720,7 @@ export default function MultiplayerScribbleGame({
                 ))}
               </div>
               <button className="btn" onClick={clearCanvas} style={{ padding: '0.4rem 0.75rem', minWidth: 'auto', border: '1px solid hsl(var(--danger) / 0.3)', color: 'hsl(var(--danger))', fontSize: '0.8rem', backgroundColor: 'transparent', cursor: 'pointer' }}>
-                🗑️ Clear
+                <TrashIcon size={14} className="inline mr-1" /> Clear
               </button>
             </div>
           )}

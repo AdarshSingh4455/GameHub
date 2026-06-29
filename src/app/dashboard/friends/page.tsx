@@ -1,4 +1,5 @@
 'use client'
+import { UsersIcon, CopyIcon, LockIcon, AlertIcon, GamepadIcon, PlayIcon } from '@/components/shared/Icons'
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -289,7 +290,7 @@ export default function FriendsPage() {
       if (res.ok) {
         addToast(
           'success',
-          'Invite Dispatched! 🎮',
+          'Invite Dispatched!',
           `Room invite created for ${selectedFriendForInvite.username}. Redirecting you to lobby...`
         )
         setInviteModalOpen(false)
@@ -313,11 +314,11 @@ export default function FriendsPage() {
       if (response && response.error) {
         addToast('error', 'Challenge Failed', response.error)
       } else if (response && response.roomCode) {
-        addToast('success', 'Challenge Issued ⚔️', `Challenged ${selectedFriendForChallenge.username}! Setting up the match...`)
+        addToast('success', 'Challenge Issued', `Challenged ${selectedFriendForChallenge.username}! Setting up the match...`)
         setChallengeModalOpen(false)
         setTimeout(() => router.push(`/dashboard/multiplayer?action=join&code=${response.roomCode}`), 800)
       } else {
-        addToast('success', 'Challenge Sent ⚔️', `Challenge sent to ${selectedFriendForChallenge.username}!`)
+        addToast('success', 'Challenge Sent', `Challenge sent to ${selectedFriendForChallenge.username}!`)
         setChallengeModalOpen(false)
       }
     })
@@ -330,7 +331,7 @@ export default function FriendsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
         <div>
           <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 850, margin: 0, letterSpacing: '-0.02em', color: 'white' }}>
-            👥 Social Progression
+            <UsersIcon size={20} className="inline mr-1 text-blue-400" /> Social Progression
           </h1>
           <p style={{ color: 'hsl(220 10% 55%)', margin: '0.2rem 0 0', fontSize: '0.9rem' }}>
             Add players using friend codes, monitor online presence, and send game room invites.
@@ -365,7 +366,7 @@ export default function FriendsPage() {
               }}
               title="Click to copy Friend Code"
             >
-              {myProfile.friendCode || 'GH-GENERATE'} 📋
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><span>{myProfile.friendCode || 'GH-GENERATE'}</span><CopyIcon size={14} className="text-blue-400" /></span>
             </div>
           </Card>
         )}
@@ -389,7 +390,7 @@ export default function FriendsPage() {
         >
           <div>
             <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'hsl(38 95% 65%)' }}>
-              🔒 Social Access Restricted
+              <LockIcon size={14} className="inline mr-1" /> Social Access Restricted
             </div>
             <div style={{ fontSize: '0.8rem', color: 'hsl(220 10% 65%)', marginTop: '0.2rem' }}>
               Social progression, heartbeats, and invites are disabled for Guest sessions. Join today to create friendships!
@@ -440,7 +441,7 @@ export default function FriendsPage() {
 
       {error && (
         <div style={{ background: 'hsl(0 80% 55% / 0.1)', border: '1px solid hsl(0 80% 55% / 0.3)', borderRadius: 12, padding: '0.75rem 1rem', color: 'hsl(0 80% 65%)', fontSize: '0.85rem' }}>
-          ⚠️ {error}
+          <AlertIcon size={14} className="inline mr-1 text-red-400" /> {error}
         </div>
       )}
 
@@ -485,7 +486,7 @@ export default function FriendsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {friends.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'hsl(222 20% 8% / 0.6)', border: '1px solid hsl(220 15% 15%)', borderRadius: 18 }}>
-                      <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem' }}>👋</span>
+                      <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><UsersIcon size={36} className="text-blue-400" /></span>
                       <h3 style={{ fontWeight: 700, color: 'white', margin: 0 }}>No Friends Added</h3>
                       <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.82rem', margin: '0.5rem 0 1.25rem' }}>Start finding players to compile your Friends list.</p>
                       <button className="btn btn-primary btn-sm" onClick={() => setActiveTab('add')}>Find Players</button>
@@ -819,7 +820,7 @@ export default function FriendsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {recentPlayers.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'hsl(222 20% 8% / 0.6)', border: '1px solid hsl(220 15% 15%)', borderRadius: 18 }}>
-                      <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem' }}>🎮</span>
+                      <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><GamepadIcon size={36} className="text-blue-400" /></span>
                       <h3 style={{ fontWeight: 700, color: 'white', margin: 0 }}>No Recent Players</h3>
                       <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.82rem', margin: '0.5rem 0 0' }}>Opponents from your recent ranked matches will appear here.</p>
                     </div>
@@ -922,7 +923,7 @@ export default function FriendsPage() {
           >
             <div>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 850, color: 'white' }}>
-                🎮 Invite {selectedFriendForInvite.username}
+                Invite {selectedFriendForInvite.username}
               </h3>
               <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'hsl(220 10% 55%)' }}>
                 Select a game to generate a lobby invite code.
@@ -947,7 +948,7 @@ export default function FriendsPage() {
                   }}
                   onClick={() => handleInviteToRoom(game.slug)}
                 >
-                  🚀 Play {game.name}
+                  <PlayIcon size={14} className="inline mr-1" /> Play {game.name}
                 </button>
               ))}
             </div>

@@ -1,4 +1,5 @@
 'use client'
+import { TargetIcon, LockIcon, CoinsIcon, TrophyIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
@@ -205,7 +206,7 @@ export default function ChallengesPage() {
         if (res.ok && data.success) {
           addToast(
             'achievement_unlocked',
-            'Challenge Claimed! 🎯',
+            'Challenge Claimed!',
             `Earned +${ch.xpReward} XP and +${ch.coinReward} Coins!`
           )
           window.dispatchEvent(new Event('gamehub_xp_update'))
@@ -379,7 +380,7 @@ export default function ChallengesPage() {
                       +{item.xpReward} XP
                     </span>
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, background: 'rgba(255, 183, 3, 0.1)', border: '1px solid rgba(255, 183, 3, 0.2)', color: 'hsl(45 100% 60%)', padding: '0.15rem 0.45rem', borderRadius: 99 }}>
-                      🪙 +{item.coinReward}
+                      <CoinsIcon size={14} className="inline mr-1 text-yellow-400" /> +{item.coinReward}
                     </span>
                   </div>
                 </div>
@@ -389,7 +390,7 @@ export default function ChallengesPage() {
         </div>
       ) : filteredChallenges.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 2rem', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '24px' }}>
-          <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>🏆</span>
+          <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><TrophyIcon size={48} className="text-yellow-400" /></span>
           <h3 style={{ fontWeight: 800, color: 'hsl(220 15% 90%)', marginBottom: '0.25rem' }}>No challenges here</h3>
           <p style={{ color: 'hsl(220 10% 50%)', fontSize: '0.78rem', margin: 0 }}>
             {activeTab === 'COMPLETED'
@@ -481,7 +482,7 @@ export default function ChallengesPage() {
                       disabled
                       style={{ padding: '0.35rem 1rem', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.03)', background: 'none', borderRadius: '10px', cursor: 'not-allowed' }}
                     >
-                      🔒 In Progress
+                      <LockIcon size={14} className="inline mr-1" /> In Progress
                     </button>
                   )}
                 </div>

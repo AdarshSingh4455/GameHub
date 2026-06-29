@@ -1,4 +1,5 @@
 'use client'
+import { TrophyIcon, HelpIcon, BotIcon, UsersIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -619,7 +620,7 @@ export default function MemoryMatchGame() {
               }}
             >
               <div style={{ textAlign: 'left', fontSize: '0.8rem', fontWeight: 800, color: 'hsl(220 10% 70%)' }}>
-                🤖 PLAY VS AI
+                <BotIcon size={14} className="inline mr-1" /> PLAY VS AI
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
@@ -701,7 +702,7 @@ export default function MemoryMatchGame() {
               }}
             >
               <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'hsl(220 10% 70%)' }}>
-                👥 LOCAL SAME-DEVICE
+                <UsersIcon size={14} className="inline mr-1" /> LOCAL SAME-DEVICE
               </div>
               <p style={{ fontSize: '0.72rem', color: 'hsl(220 10% 55%)', textAlign: 'left', margin: '0 0 0.5rem 0' }}>
                 Alternate card flips face-to-face. Matches grant bonus turns.
@@ -814,10 +815,10 @@ export default function MemoryMatchGame() {
 
   const turnMessage = winner
     ? winner === 'draw'
-      ? "It's a tie game! 🤝"
-      : `🏆 ${winner} wins the Match!`
+      ? "It's a tie game!"
+      : `${winner} wins the Match!`
     : isThinking
-      ? '🤖 AI is recalling matches…'
+      ? 'AI is recalling matches…'
       : `Turn: ${currentTurn}`
 
   const totalSlots = gridSize === '4x4' ? 16 : 25
@@ -916,7 +917,7 @@ export default function MemoryMatchGame() {
                 }}
                 id="memory-trophy-tile"
               >
-                <div style={{ fontSize: `calc(${cardEmojiSize} * 1.25)` }}>🏆</div>
+                <div style={{ display: 'flex', justifyContent: 'center' }}><TrophyIcon size={36} className="text-yellow-400" /></div>
               </div>
             )
           }
@@ -960,7 +961,7 @@ export default function MemoryMatchGame() {
                   color: 'white',
                 }}
               >
-                ❓
+                <HelpIcon size={24} className="text-white/40" />
               </div>
 
               {/* Card Front */}
@@ -996,7 +997,7 @@ export default function MemoryMatchGame() {
           onClick={() => setGameState('setup')}
           id="memory-quit-btn"
         >
-          🏳️ Back to Setup Menu
+          Back to Setup Menu
         </button>
       </div>
     </div>

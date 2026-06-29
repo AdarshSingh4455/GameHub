@@ -6,7 +6,7 @@ import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useRouter } from 'next/navigation'
 import Avatar from '@/components/shared/Avatar'
 import { GAMES_REGISTRY } from '@/lib/games'
-import { Users, X } from 'lucide-react'
+import { UsersIcon, XIcon, GamepadIcon } from '@/components/shared/Icons'
 
 interface FriendEntry {
   id: string
@@ -83,7 +83,13 @@ export default function FriendsActivityDrawer() {
   // Close on outside click
   useEffect(() => {
     if (!isOpen) return
-    const handler = () => setIsOpen(false)
+    const handler = (e: MouseEvent) => {
+      // Don't close if click is inside drawer or on toggle button
+      if (drawerRef.current?.contains(e.target as Node)) return
+      const toggleBtn = document.getElementById('friends-activity-toggle')
+      if (toggleBtn?.contains(e.target as Node)) return
+      setIsOpen(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [isOpen])
@@ -151,12 +157,20 @@ export default function FriendsActivityDrawer() {
           <div style={{ fontWeight: 700, fontSize: '0.8rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {displayName}
           </div>
-          <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {presence?.status === 'IN_GAME'
-              ? `🎮 ${gameNameFromSlug(presence.gameSlug)}${presence.startedAt ? ` · ${formatElapsed(Date.now() - presence.startedAt)}` : ''}`
-              : isOnline
-                ? statusLabel
-                : `Last active: ${formatLastSeen(f.lastSeenAt)}`}
+          <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 55%)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {presence?.status === 'IN_GAME' ? (
+              <>
+                <GamepadIcon size={12} style={{ color: 'hsl(270 80% 65%)' }} />
+                <span>
+                  {gameNameFromSlug(presence.gameSlug)}
+                  {presence.startedAt ? ` · ${formatElapsed(Date.now() - presence.startedAt)}` : ''}
+                </span>
+              </>
+            ) : isOnline ? (
+              <span>{statusLabel}</span>
+            ) : (
+              <span>Last active: {formatLastSeen(f.lastSeenAt)}</span>
+            )}
           </div>
         </div>
       </div>
@@ -195,7 +209,7 @@ export default function FriendsActivityDrawer() {
           transition: 'all 0.2s ease',
         }}
       >
-        {isOpen ? <X size={20} /> : <Users size={20} />}
+        {isOpen ? <XIcon size={20} /> : <UsersIcon size={20} />}
         {!isOpen && onlineCount > 0 && (
           <span style={{
             position: 'absolute',
@@ -279,8 +293,8 @@ export default function FriendsActivityDrawer() {
           {/* Scrollable list */}
           <div style={{ overflowY: 'auto', flex: 1, padding: '0.5rem' }}>
             {friends.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'hsl(220 10% 45%)', fontSize: '0.8rem' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
+              <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'hsl(220 10% 45%)', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <UsersIcon size={32} style={{ color: 'hsl(220 10% 40%)' }} />
                 <div>No friends yet.</div>
                 <button
                   onClick={() => { setIsOpen(false); router.push('/dashboard/friends') }}

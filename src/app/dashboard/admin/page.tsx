@@ -1,4 +1,5 @@
 'use client'
+import { WrenchIcon, MegaphoneIcon, BarChartIcon, TrophyIcon, PackageIcon, UsersIcon, CoinsIcon, SnowflakeIcon, AwardIcon, ZapIcon, GemIcon, PhoneIcon, EditIcon, TrashIcon, SettingsIcon, GamepadIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -525,19 +526,19 @@ export default function AdminPage() {
     <div className="animate-fadeIn admin-page-container">
       {/* Header */}
       <div>
-        <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}>🛠️ Super Admin Control Center</h1>
+        <h1 style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, marginBottom: '0.25rem' }}><WrenchIcon size={24} className="inline mr-2 text-purple-400" /> Super Admin Control Center</h1>
         <p style={{ color: 'hsl(220 10% 55%)' }}>Perform platform operations, review system analytics, manage ad banners, and publish game updates.</p>
       </div>
 
       {/* Tabs list (Optimized for 390x844 responsive flow - wrapping and horizontal swipeable) */}
       <div className="horizontal-tab-bar">
         {[
-          { id: 'ads', label: 'Ads Management', emoji: '📢' },
-          { id: 'analytics', label: 'Analytics', emoji: '📊' },
-          { id: 'tournaments', label: 'Tournaments', emoji: '🏆' },
-          { id: 'updates', label: 'Updates / Cosmetics', emoji: '📦' },
-          { id: 'tools', label: 'Admin Tools', emoji: '🔧' },
-          { id: 'users', label: 'User Directory', emoji: '👥' },
+          { id: 'ads', label: 'Ads Management', icon: <MegaphoneIcon size={16} /> },
+          { id: 'analytics', label: 'Analytics', icon: <BarChartIcon size={16} /> },
+          { id: 'tournaments', label: 'Tournaments', icon: <TrophyIcon size={16} /> },
+          { id: 'updates', label: 'Updates / Cosmetics', icon: <PackageIcon size={16} /> },
+          { id: 'tools', label: 'Admin Tools', icon: <WrenchIcon size={16} /> },
+          { id: 'users', label: 'User Directory', icon: <UsersIcon size={16} /> },
         ].map((t) => (
           <button
             key={t.id}
@@ -545,7 +546,7 @@ export default function AdminPage() {
             className={`horizontal-tab-item ${activeTab === t.id ? 'active' : ''}`}
             id={`admin-tab-${t.id}`}
           >
-            <span>{t.emoji}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{t.icon}</span>
             <span>{t.label}</span>
             {activeTab === t.id && (
               <div className="active-indicator" />
@@ -564,7 +565,7 @@ export default function AdminPage() {
           {/* Create Ad Form */}
           <div className="card" style={{ padding: '1.25rem' }}>
             <h2 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '1rem', color: 'white' }}>
-              {adForm.id ? '✏️ Edit Ad Banner' : '➕ Create Ad Banner'}
+              {adForm.id ? 'Edit Ad Banner' : 'Create Ad Banner'}
             </h2>
             <form onSubmit={handleAdSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -805,7 +806,7 @@ export default function AdminPage() {
             {/* Economy Block */}
             <div className="card" style={{ padding: '1.25rem' }}>
               <h3 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1rem' }}>
-                🪙 Economy Status
+                <CoinsIcon size={16} className="inline mr-2 text-yellow-400" /> Economy Status
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
@@ -839,7 +840,7 @@ export default function AdminPage() {
             {/* Ads CTR Block */}
             <div className="card" style={{ padding: '1.25rem' }}>
               <h3 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1rem' }}>
-                📢 Ads Performance
+                <MegaphoneIcon size={16} className="inline mr-2 text-blue-400" /> Ads Performance
               </h3>
               <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center', alignItems: 'center', height: '100%', paddingBottom: '1rem' }}>
                 <div>
@@ -863,7 +864,7 @@ export default function AdminPage() {
           {/* Game popularity */}
           <div className="card" style={{ padding: '1.25rem' }}>
             <h3 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'hsl(220 10% 50%)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
-              🎮 Game Stats Summary
+              <GamepadIcon size={16} className="inline mr-2 text-purple-400" /> Game Stats Summary
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', textAlign: 'center' }}>
               <div style={{ padding: '0.5rem', background: 'hsl(220 20% 7%)', borderRadius: 8 }}>
@@ -871,7 +872,7 @@ export default function AdminPage() {
                 <strong style={{ fontSize: '1rem', color: 'white' }}>{analytics.games.mostPlayed}</strong>
               </div>
               <div style={{ padding: '0.5rem', background: 'hsl(220 20% 7%)', borderRadius: 8 }}>
-                <span style={{ fontSize: '0.7rem', color: 'hsl(0 80% 60%)', display: 'block', fontWeight: 700 }}>❄️ LEAST PLAYED GAME</span>
+                <span style={{ fontSize: '0.7rem', color: 'hsl(0 80% 60%)', display: 'block', fontWeight: 700 }}><SnowflakeIcon size={12} className="inline mr-1 text-cyan-400" /> LEAST PLAYED GAME</span>
                 <strong style={{ fontSize: '1rem', color: 'white' }}>{analytics.games.leastPlayed}</strong>
               </div>
             </div>
@@ -885,7 +886,7 @@ export default function AdminPage() {
           {/* Create Tournament Form */}
           <div className="card" style={{ padding: '1.5rem', background: 'hsl(222 18% 10%)', border: '1px solid hsl(220 15% 16%)', borderRadius: '16px' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.25rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              🏆 Create Tournament Configuration
+              <TrophyIcon size={16} className="inline mr-2 text-yellow-400" /> Create Tournament Configuration
             </h2>
             <form onSubmit={handleTournamentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
@@ -1252,10 +1253,10 @@ export default function AdminPage() {
                       </div>
 
                       <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
-                        {t.rewardCoins > 0 && <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>💰 {t.rewardCoins} Coins</span>}
-                        {t.rewardBadge && <span className="badge badge-blue" style={{ fontSize: '0.62rem' }}>🎖️ {t.rewardBadge}</span>}
-                        {t.rewardTitle && <span className="badge badge-purple" style={{ fontSize: '0.62rem' }}>⚡ {t.rewardTitle}</span>}
-                        {t.rewardCosmetic && <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>💎 {t.rewardCosmetic} (Limited)</span>}
+                        {t.rewardCoins > 0 && <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}><CoinsIcon size={12} className="inline mr-1 text-yellow-400" /> {t.rewardCoins} Coins</span>}
+                        {t.rewardBadge && <span className="badge badge-blue" style={{ fontSize: '0.62rem' }}><AwardIcon size={12} className="inline mr-1 text-blue-400" /> {t.rewardBadge}</span>}
+                        {t.rewardTitle && <span className="badge badge-purple" style={{ fontSize: '0.62rem' }}><ZapIcon size={12} className="inline mr-1 text-purple-400" /> {t.rewardTitle}</span>}
+                        {t.rewardCosmetic && <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}><GemIcon size={12} className="inline mr-1 text-pink-400" /> {t.rewardCosmetic} (Limited)</span>}
                       </div>
                     </div>
 
@@ -1290,14 +1291,14 @@ export default function AdminPage() {
                         }}
                         style={{ padding: '0.3rem 0.5rem', fontSize: '0.72rem' }}
                       >
-                        ✏️ Edit
+                        Edit
                       </button>
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={() => handleTournamentDelete(t.id)}
                         style={{ padding: '0.3rem 0.5rem', color: 'hsl(0 80% 60%)', fontSize: '0.72rem' }}
                       >
-                        🗑️ Delete
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -1319,7 +1320,7 @@ export default function AdminPage() {
           {/* Create Cosmetic Form */}
           <div className="card" style={{ padding: '1.25rem' }}>
             <h2 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '1rem', color: 'white' }}>
-              {cosmeticForm.id ? '✏️ Edit Cosmetic Item' : '📦 Publish New Cosmetic Item'}
+              {cosmeticForm.id ? 'Edit Cosmetic Item' : 'Publish New Cosmetic Item'}
             </h2>
             <form onSubmit={handleCosmeticSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -1544,7 +1545,7 @@ export default function AdminPage() {
       {activeTab === 'tools' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="card" style={{ padding: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.5rem', color: 'white' }}>🔧 Administrative Utilities</h2>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.5rem', color: 'white' }}><SettingsIcon size={16} className="inline mr-2 text-gray-400" /> Administrative Utilities</h2>
             <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
               Run system utilities to audit, repair, and sync player states across the platform.
             </p>
@@ -1631,7 +1632,7 @@ export default function AdminPage() {
           <div className="card" style={{ padding: '1.5rem' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
               <div>
-                <h2 style={{ fontSize: '1.10rem', fontWeight: 800, color: 'white', margin: 0 }}>👥 Platform User Directory</h2>
+                <h2 style={{ fontSize: '1.10rem', fontWeight: 800, color: 'white', margin: 0 }}><UsersIcon size={16} className="inline mr-2 text-blue-400" /> Platform User Directory</h2>
                 <p style={{ color: 'hsl(220 10% 55%)', fontSize: '0.82rem', marginTop: '0.2rem', margin: 0 }}>
                   Search, filter, and view sign-in details for all registered accounts.
                 </p>
@@ -1702,7 +1703,7 @@ export default function AdminPage() {
                           <td style={{ padding: '0.75rem 1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <span style={{ color: 'white' }}>{u.email}</span>
-                              {u.phone && u.phone !== 'N/A' && u.phone.trim() !== '' && <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>📱 {u.phone}</span>}
+                              {u.phone && u.phone !== 'N/A' && u.phone.trim() !== '' && <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}><PhoneIcon size={12} className="inline mr-1 text-gray-400" /> {u.phone}</span>}
                             </div>
                           </td>
                           <td style={{ padding: '0.75rem 1rem' }}>
@@ -1786,7 +1787,7 @@ export default function AdminPage() {
                               <span style={{ color: 'hsl(220 10% 40%)' }}> · </span>
                               <span style={{ color: 'hsl(220 100% 65%)' }}>{u.xp.toLocaleString()} XP</span>
                               <span style={{ color: 'hsl(220 10% 40%)' }}> · </span>
-                              <span style={{ color: 'hsl(45 100% 55%)' }}>🪙 {u.coins.toLocaleString()}</span>
+                              <span style={{ color: 'hsl(45 100% 55%)' }}><CoinsIcon size={12} className="inline mr-1 text-yellow-400" /> {u.coins.toLocaleString()}</span>
                             </span>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>

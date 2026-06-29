@@ -1,3 +1,4 @@
+import { HeartIcon, BotIcon, GiftIcon, TargetIcon, GlobeIcon, FlaskIcon, PlayIcon, CarIcon, FileTextIcon, SparklesIcon, TrophyIcon, CalendarIcon, TimerIcon, HelpIcon } from '@/components/shared/Icons'
 // Word Wizard Premium Game Component
 // Implements Boggle/Word Hunt gameplay with Magic Library theme, full state orchestration, daily modifiers, and GameSession integration
 
@@ -17,17 +18,17 @@ import { WordWizardParticles, ParticlesRef } from './WordWizardParticles'
 
 const QUEST_CATEGORIES = ['nature', 'animals', 'food', 'sports', 'countries', 'science', 'movies', 'vehicles']
 
-const getCategoryEmoji = (cat: string) => {
+const getCategoryIcon = (cat: string) => {
   switch (cat) {
-    case 'nature': return '🌿'
-    case 'animals': return '🦄'
-    case 'food': return '🍎'
-    case 'sports': return '⚽'
-    case 'countries': return '🌎'
-    case 'science': return '🔬'
-    case 'movies': return '🎬'
-    case 'vehicles': return '🚗'
-    default: return '📝'
+    case 'nature': return <HeartIcon size={14} style={{ color: 'hsl(142 70% 55%)' }} className="inline mr-1" />
+    case 'animals': return <BotIcon size={14} style={{ color: 'hsl(270 80% 65%)' }} className="inline mr-1" />
+    case 'food': return <GiftIcon size={14} style={{ color: 'hsl(350 80% 55%)' }} className="inline mr-1" />
+    case 'sports': return <TargetIcon size={14} style={{ color: 'hsl(220 100% 65%)' }} className="inline mr-1" />
+    case 'countries': return <GlobeIcon size={14} style={{ color: 'hsl(180 70% 50%)' }} className="inline mr-1" />
+    case 'science': return <FlaskIcon size={14} style={{ color: 'hsl(280 80% 60%)' }} className="inline mr-1" />
+    case 'movies': return <PlayIcon size={14} style={{ color: 'hsl(340 85% 60%)' }} className="inline mr-1" />
+    case 'vehicles': return <CarIcon size={14} style={{ color: 'hsl(45 100% 55%)' }} className="inline mr-1" />
+    default: return <FileTextIcon size={14} className="inline mr-1" />
   }
 }
 
@@ -207,12 +208,12 @@ export default function WordWizardGame() {
     // 1. Validation
     if (lowerWord.length < 3) return
     if (!isValidWord(lowerWord)) {
-      particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'Not a Word ❌', '#ef4444')
+      particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'Not a Word', '#ef4444')
       return
     }
 
     if (foundWords.has(lowerWord)) {
-      particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'Already Found ⚠️', '#9ca3af')
+      particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'Already Found', '#9ca3af')
       return
     }
 
@@ -278,11 +279,11 @@ export default function WordWizardGame() {
       if (type === 'freeze' && mode !== 'endless') {
         // Freeze timer (add 5s)
         setTimeLeft((prev) => (prev !== null ? Math.min(maxTime, prev + 5) : null))
-        particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 180, '❄ Freeze +5s!', '#22d3ee')
+        particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 180, 'Freeze +5s!', '#22d3ee')
       } else if (type === 'arcane' && activeModifier !== 'no_hints') {
         // Grant extra hint
         setHintsRemaining((prev) => prev + 1)
-        particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 180, '🔮 Extra Hint!', '#a78bfa')
+        particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 180, 'Extra Hint!', '#a78bfa')
       }
     }
 
@@ -308,7 +309,7 @@ export default function WordWizardGame() {
     // Find target words that have not been found yet
     const unfoundTargets = targetWords.filter((w) => !foundTargetWords.has(w))
     if (unfoundTargets.length === 0) {
-      particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'All targets found! 🏆', '#fbbf24')
+      particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'All targets found!', '#fbbf24')
       return
     }
 
@@ -327,7 +328,7 @@ export default function WordWizardGame() {
           hintWord = otherUnfound[Math.floor(Math.random() * otherUnfound.length)]
           nextLevel = 1
         } else {
-          particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'Max hints reached! 💡', '#fbbf24')
+          particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'Max hints reached!', '#fbbf24')
           return
         }
       }
@@ -562,7 +563,7 @@ export default function WordWizardGame() {
           }}
         >
           <div>
-            <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🧙‍♂️</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><SparklesIcon size={48} className="text-purple-400" /></div>
             <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.03em', margin: 0 }}>
               Word Wizard
             </h2>
@@ -590,7 +591,7 @@ export default function WordWizardGame() {
                     fontWeight: 700,
                   }}
                 >
-                  {m === 'daily' ? '📅 Daily' : m === 'endless' ? '♾ Endless' : '⌛ Classic'}
+                  {m === 'daily' ? <span>Daily</span> : m === 'endless' ? <span>Endless</span> : <span>Classic</span>}
                 </button>
               ))}
             </div>
@@ -641,7 +642,7 @@ export default function WordWizardGame() {
                 {getModifierDescription(getDailyModifier())}
               </div>
               <div style={{ fontWeight: 700, color: '#fef08a', fontSize: '0.8rem', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                🌎 Target Category: Countries
+                Target Category: Countries
               </div>
             </div>
           )}
@@ -658,7 +659,7 @@ export default function WordWizardGame() {
               marginTop: 10,
             }}
           >
-            Spellwards! 🔮
+            Spellwards!
           </button>
         </div>
       )}
@@ -694,7 +695,7 @@ export default function WordWizardGame() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#fef08a', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {getCategoryEmoji(targetCategory)} {targetCategory.charAt(0).toUpperCase() + targetCategory.slice(1)} Challenge
+                {getCategoryIcon(targetCategory)} <span>{targetCategory.charAt(0).toUpperCase() + targetCategory.slice(1)} Challenge</span>
               </span>
               <span style={{ fontSize: '0.85rem', fontWeight: 850, color: 'rgba(255, 255, 255, 0.7)' }}>
                 Progress: {foundTargetWords.size}/{targetWords.length}
@@ -858,7 +859,7 @@ export default function WordWizardGame() {
                 textAlign: 'center',
               }}
             >
-              <div style={{ fontSize: '4rem', marginBottom: '1rem', animation: 'pulse 1s infinite alternate' }}>🎉</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', animation: 'pulse 1s infinite alternate' }}><TrophyIcon size={64} className="text-yellow-400" /></div>
               <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#fbbf24', textShadow: '0 0 15px rgba(251, 191, 36, 0.4)', margin: 0 }}>
                 CATEGORY COMPLETE!
               </h2>
@@ -903,7 +904,7 @@ export default function WordWizardGame() {
                   boxShadow: '0 8px 20px rgba(99, 102, 241, 0.35)',
                 }}
               >
-                Next Category! 🔮
+                Next Category!
               </button>
             </div>
           )}

@@ -1,4 +1,5 @@
 'use client'
+import { ArrowRightIcon, LockIcon, KeyIcon, LightbulbIcon, HistoryIcon, LogOutIcon, GiftIcon, AwardIcon, ZapIcon } from '@/components/shared/Icons'
 
 import { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -1371,7 +1372,7 @@ export default function ArrowPuzzleGame() {
           id="arrow-puzzle-setup"
         >
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '0.25rem' }}>➡️</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><ArrowRightIcon size={48} className="text-blue-400" /></div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>Arrow Puzzle</h2>
             <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.2rem', lineHeight: 1.4 }}>
               Clear the board by releasing arrows along their neon tracks. Connect, unlock, and plan your exit paths!
@@ -1444,7 +1445,7 @@ export default function ArrowPuzzleGame() {
                         </button>
                       </div>
                     ) : (
-                      <span style={{ fontSize: '0.9rem' }}>🔒 Locked</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}><LockIcon size={14} className="text-red-500" /> <span>Locked</span></span>
                     )}
                   </div>
                 )
@@ -1543,7 +1544,7 @@ export default function ArrowPuzzleGame() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: '2.25rem', marginBottom: '0.25rem' }}>➡️</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.25rem' }}><ArrowRightIcon size={36} className="text-blue-400" /></div>
                   <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'white', margin: 0 }}>Arrow Puzzle</h3>
                   <p style={{ fontSize: '0.78rem', color: 'hsl(220 10% 55%)', marginTop: '0.25rem' }}>
                     {difficulty.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} · Level {level}
@@ -1554,17 +1555,17 @@ export default function ArrowPuzzleGame() {
                   <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', color: 'hsl(220 10% 50%)', fontWeight: 800, letterSpacing: '0.08em' }}>Time Targets</div>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.1rem' }}>🥇</div>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}><AwardIcon size={18} style={{ color: 'hsl(45 100% 55%)' }} /></div>
                       <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'hsl(45 100% 60%)' }}>≤ {goldTime}s</div>
                       <div style={{ fontSize: '0.6rem', color: 'hsl(220 10% 50%)' }}>Gold</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.1rem' }}>🥈</div>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}><AwardIcon size={18} style={{ color: 'hsl(220 10% 75%)' }} /></div>
                       <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'hsl(220 10% 75%)' }}>≤ {silverTime}s</div>
                       <div style={{ fontSize: '0.6rem', color: 'hsl(220 10% 50%)' }}>Silver</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.1rem' }}>🥉</div>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}><AwardIcon size={18} style={{ color: 'hsl(35 60% 50%)' }} /></div>
                       <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'hsl(28 80% 60%)' }}>≤ {bronzeTime}s</div>
                       <div style={{ fontSize: '0.6rem', color: 'hsl(220 10% 50%)' }}>Bronze</div>
                     </div>
@@ -1599,7 +1600,7 @@ export default function ArrowPuzzleGame() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.62rem', color: 'hsl(220 10% 55%)', fontWeight: 800, textTransform: 'uppercase' }}>Targets</span>
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'hsl(45 100% 55%)' }}>
-                  🥇{goldTime}s 🥈{silverTime}s 🥉{bronzeTime}s
+                  <span>Gold: {goldTime}s · Silver: {silverTime}s · Bronze: {bronzeTime}s</span>
                 </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -1972,7 +1973,7 @@ export default function ArrowPuzzleGame() {
                               padding: '1px 2px',
                             }}
                           >
-                            {cell.isKey ? '🔑' : '🔒'}
+                            {cell.isKey ? <KeyIcon size={10} style={{ color: 'hsl(45 100% 55%)' }} /> : <LockIcon size={10} style={{ color: 'hsl(355 85% 55%)' }} />}
                           </div>
                         )}
 
@@ -2001,7 +2002,7 @@ export default function ArrowPuzzleGame() {
                               fontSize: '0.55rem',
                             }}
                           >
-                            ⚡
+                            <ZapIcon size={14} className="text-yellow-400" />
                           </div>
                         )}
                       </button>
@@ -2017,13 +2018,13 @@ export default function ArrowPuzzleGame() {
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button onClick={handleHintClick} className="btn btn-secondary" style={{ flex: 1.2, borderRadius: 12 }} id="hint-btn">
-              💡 Hint ({hintsUsed === 0 ? 'Free' : 'Ad'})
+              <LightbulbIcon size={14} className="inline mr-1 text-yellow-400" /> Hint ({hintsUsed === 0 ? 'Free' : 'Ad'})
             </button>
             <button onClick={handleRestart} className="btn btn-secondary" style={{ flex: 1, borderRadius: 12 }} id="arrow-restart-btn">
-              🔄 Restart
+              <HistoryIcon size={14} className="inline mr-1" /> Restart
             </button>
             <button onClick={handleExit} className="btn btn-ghost" style={{ flex: 1, borderRadius: 12 }} id="arrow-exit-gameplay-btn">
-              🚪 Exit
+              <LogOutIcon size={14} className="inline mr-1" /> Exit
             </button>
           </div>
         </div>
@@ -2097,7 +2098,7 @@ export default function ArrowPuzzleGame() {
                 style={{ width: '100%', borderRadius: 10 }}
                 id="claim-ad-reward-btn"
               >
-                🎁 Claim Extra Hint
+                <GiftIcon size={14} className="inline mr-1 text-pink-400" /> Claim Extra Hint
               </button>
             )}
           </div>
@@ -2207,7 +2208,7 @@ export default function ArrowPuzzleGame() {
                     }}
                     id={`btn-select-level-${activeLevelSelectDiff}-${lvlNum}`}
                   >
-                    {isPlayable ? lvlNum : '🔒'}
+                    {isPlayable ? lvlNum : <LockIcon size={12} className="mx-auto" />}
                   </button>
                 )
               })}

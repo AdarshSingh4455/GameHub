@@ -1,4 +1,5 @@
 'use client'
+import { GamepadIcon, PlayIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
@@ -320,14 +321,14 @@ export default function Game2048() {
   if (gameState === 'setup') {
     return (
       <div className="card glass" style={{ padding: '2.5rem', textAlign: 'center', margin: '0 auto', maxWidth: 500 }}>
-        <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🔢</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><GamepadIcon size={48} className="text-blue-400" /></div>
         <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem' }}>2048</h2>
         <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.9rem', marginBottom: '2rem' }}>
           Slide tiles and merge matching numbers to reach 2048! Can you build the ultimate tile?
         </p>
 
         <button className="btn btn-primary btn-lg animate-pulse-glow" onClick={startGame} style={{ width: '100%' }}>
-          🎮 Play Game
+          <PlayIcon size={14} className="inline mr-1" /> Play Game
         </button>
       </div>
     )

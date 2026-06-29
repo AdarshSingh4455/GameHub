@@ -325,7 +325,7 @@ export default function WordWizardBoard({
                       boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
                     }}
                   >
-                    {special === 'gold' ? '2x' : special === 'arcane' ? '★' : special === 'freeze' ? '❄' : 'combo'}
+                    {special === 'gold' ? '2X' : special === 'arcane' ? '★' : special === 'freeze' ? 'FRZ' : 'CBO'}
                   </span>
                 )}
 

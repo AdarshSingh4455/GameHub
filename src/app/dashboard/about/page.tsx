@@ -1,4 +1,5 @@
 'use client'
+import { GamepadIcon, LinkIcon, TrendingIcon, UsersIcon, SwordsIcon, AwardIcon, PaletteIcon, CodeIcon, EyeIcon, RocketIcon, CalendarIcon, WrenchIcon, HeartIcon, ZapIcon, AtomIcon, FileTextIcon, GemIcon, LockIcon, PlugIcon, GlobeIcon, UserIcon, TrophyIcon, PhoneIcon } from '@/components/shared/Icons'
 
 import React, { useEffect, useState } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
@@ -70,7 +71,7 @@ export default function AboutPage() {
           background: 'radial-gradient(circle at center, hsl(220 100% 60% / 0.08) 0%, transparent 60%)',
           pointerEvents: 'none'
         }} />
-        <span style={{ fontSize: '3rem', display: 'block', animation: 'float 4s ease-in-out infinite' }}>🎮</span>
+        <span style={{ fontSize: '3rem', display: 'flex', justifyContent: 'center', animation: 'float 4s ease-in-out infinite' }}><GamepadIcon size={48} className="text-purple-400" /></span>
         <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }} className="gradient-text">
           GameHub
         </h1>
@@ -82,14 +83,14 @@ export default function AboutPage() {
           className="btn btn-primary"
           style={{ marginTop: '0.5rem', borderRadius: 12, padding: '0.6rem 1.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          <span>🔗</span> Share GameHub
+          <LinkIcon size={14} className="inline mr-1" /> Share GameHub
         </button>
       </Card>
 
       {/* ── Live Platform Statistics ── */}
       <Card>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem 0', letterSpacing: '0.05em' }}>
-          📈 Live Platform Statistics
+          <TrendingIcon size={18} className="inline mr-1 text-blue-400" /> Live Platform Statistics
         </h2>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '1.5rem', color: 'hsl(220 10% 50%)', fontSize: '0.85rem' }}>
@@ -98,12 +99,12 @@ export default function AboutPage() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }} className="profile-stats-grid">
             {[
-              { label: 'Total Players', val: stats?.totalPlayers ?? 0, color: 'hsl(220 100% 70%)', emoji: '👥' },
-              { label: 'Total Multiplayer Matches', val: stats?.totalMatches ?? 0, color: 'hsl(270 80% 70%)', emoji: '⚔️' },
-              { label: 'Total Games', val: stats?.totalGames ?? 0, color: 'hsl(142 70% 55%)', emoji: '🎮' },
-              { label: 'Total Achievements', val: stats?.totalAchievements ?? 0, color: 'hsl(45 100% 60%)', emoji: '🎖️' },
-              { label: 'Total Cosmetics', val: stats?.totalCosmetics ?? 0, color: 'hsl(340 85% 65%)', emoji: '🎨' },
-              { label: 'Total Friend Connections', val: stats?.totalFriendConnections ?? 0, color: 'hsl(180 70% 50%)', emoji: '🤝' }
+              { label: 'Total Players', val: stats?.totalPlayers ?? 0, color: 'hsl(220 100% 70%)', icon: <UsersIcon size={20} style={{ color: 'hsl(220 100% 70%)' }} /> },
+              { label: 'Total Multiplayer Matches', val: stats?.totalMatches ?? 0, color: 'hsl(270 80% 70%)', icon: <SwordsIcon size={20} style={{ color: 'hsl(270 80% 70%)' }} /> },
+              { label: 'Total Games', val: stats?.totalGames ?? 0, color: 'hsl(142 70% 55%)', icon: <GamepadIcon size={20} style={{ color: 'hsl(142 70% 55%)' }} /> },
+              { label: 'Total Achievements', val: stats?.totalAchievements ?? 0, color: 'hsl(45 100% 60%)', icon: <AwardIcon size={20} style={{ color: 'hsl(45 100% 60%)' }} /> },
+              { label: 'Total Cosmetics', val: stats?.totalCosmetics ?? 0, color: 'hsl(340 85% 65%)', icon: <PaletteIcon size={20} style={{ color: 'hsl(340 85% 65%)' }} /> },
+              { label: 'Total Friend Connections', val: stats?.totalFriendConnections ?? 0, color: 'hsl(180 70% 50%)', icon: <UsersIcon size={20} style={{ color: 'hsl(180 70% 50%)' }} /> }
             ].map((s, idx) => (
               <div 
                 key={idx} 
@@ -119,7 +120,7 @@ export default function AboutPage() {
                   gap: '4px'
                 }}
               >
-                <span style={{ fontSize: '1.25rem' }}>{s.emoji}</span>
+                <span style={{ display: 'flex', alignItems: 'center' }}>{s.icon}</span>
                 <span style={{ fontSize: '1.5rem', fontWeight: 900, color: s.color }}>
                   {s.val.toLocaleString()}
                 </span>
@@ -158,7 +159,7 @@ export default function AboutPage() {
         }}
       >
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: 0, letterSpacing: '0.05em' }}>
-          👨‍💻 Product Founder
+          <CodeIcon size={16} className="inline mr-1 text-purple-400" /> Product Founder
         </h2>
         <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'flex-start' }} className="founder-wrapper">
           <div 
@@ -197,7 +198,7 @@ export default function AboutPage() {
       {/* ── Vision Section ── */}
       <Card>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem 0', letterSpacing: '0.05em' }}>
-          👁️ Platform Vision & Roadmap
+          <EyeIcon size={16} className="inline mr-1 text-blue-400" /> Platform Vision & Roadmap
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.92rem', color: 'hsl(220 10% 75%)', lineHeight: 1.6 }}>
           <p style={{ margin: 0, fontWeight: 500, color: 'white' }}>
@@ -205,19 +206,20 @@ export default function AboutPage() {
           </p>
           <div>
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'hsl(220 100% 70%)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.04em' }}>
-              🚀 Future Roadmap:
+              <RocketIcon size={14} className="inline mr-1 text-blue-400" /> Future Roadmap:
             </span>
             <div className="about-roadmap-grid">
               {[
-                '🎮 New Puzzle & Arcade Games',
-                '🏆 Competitive Seasonal Tournaments',
-                '⚔️ Advanced Ranked Modes & MMR',
-                '👥 Community Hubs & Clubs',
-                '📱 Native iOS & Android Apps',
-                '🌐 Global Cross-play Matchmaking'
+                { label: 'New Puzzle & Arcade Games', icon: <GamepadIcon size={14} style={{ color: 'hsl(220 100% 70%)' }} /> },
+                { label: 'Competitive Seasonal Tournaments', icon: <TrophyIcon size={14} style={{ color: 'hsl(45 100% 60%)' }} /> },
+                { label: 'Advanced Ranked Modes & MMR', icon: <SwordsIcon size={14} style={{ color: 'hsl(340 85% 65%)' }} /> },
+                { label: 'Community Hubs & Clubs', icon: <UsersIcon size={14} style={{ color: 'hsl(180 70% 50%)' }} /> },
+                { label: 'Native iOS & Android Apps', icon: <PhoneIcon size={14} style={{ color: 'hsl(142 70% 55%)' }} /> },
+                { label: 'Global Cross-play Matchmaking', icon: <GlobeIcon size={14} style={{ color: 'hsl(270 80% 70%)' }} /> }
               ].map((r, i) => (
-                <div key={i} style={{ padding: '0.5rem 0.75rem', background: 'hsl(222 20% 7%)', borderRadius: 8, fontSize: '0.8rem', border: '1px solid hsl(220 15% 12%)' }}>
-                  {r}
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 0.75rem', background: 'hsl(222 20% 7%)', borderRadius: 8, fontSize: '0.8rem', border: '1px solid hsl(220 15% 12%)' }}>
+                  {r.icon}
+                  <span>{r.label}</span>
                 </div>
               ))}
             </div>
@@ -228,7 +230,7 @@ export default function AboutPage() {
       {/* ── Timeline Section ── */}
       <Card>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1.25rem 0', letterSpacing: '0.05em' }}>
-          🗓️ Platform Timeline
+          <CalendarIcon size={16} className="inline mr-1 text-blue-400" /> Platform Timeline
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'relative', paddingLeft: '1.5rem' }}>
           <div style={{ position: 'absolute', left: 4, top: 8, bottom: 8, width: 2, background: 'hsl(220 15% 18%)' }} />
@@ -263,18 +265,18 @@ export default function AboutPage() {
       {/* ── Technology Stack ── */}
       <Card>
         <h2 style={{ fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 45%)', margin: '0 0 1rem 0', letterSpacing: '0.05em' }}>
-          🛠️ Technology Stack
+          <WrenchIcon size={16} className="inline mr-1 text-purple-400" /> Technology Stack
         </h2>
         <div className="tech-stack-grid">
           {[
-            { name: 'Next.js 15', desc: 'API routes & SSR layout compilation', icon: '⚡' },
-            { name: 'React 19', desc: 'Declarative component logic', icon: '⚛️' },
-            { name: 'TypeScript', desc: 'Static compile-time type safety', icon: '📘' },
-            { name: 'Prisma ORM', desc: 'Database model querying', icon: '💎' },
-            { name: 'PostgreSQL', desc: 'Robust transactional database', icon: '🐘' },
-            { name: 'Supabase', desc: 'Secure user login session management', icon: '⚡' },
-            { name: 'Socket.IO', desc: 'Real-time room syncing and actions', icon: '🔌' },
-            { name: 'Tailwind CSS', desc: 'Responsive CSS layout overrides', icon: '🎨' }
+            { name: 'Next.js 15', desc: 'API routes & SSR layout compilation', icon: <ZapIcon size={16} style={{ color: 'hsl(45 100% 55%)' }} /> },
+            { name: 'React 19', desc: 'Declarative component logic', icon: <AtomIcon size={16} style={{ color: 'hsl(190 90% 60%)' }} /> },
+            { name: 'TypeScript', desc: 'Static compile-time type safety', icon: <FileTextIcon size={16} style={{ color: 'hsl(220 100% 65%)' }} /> },
+            { name: 'Prisma ORM', desc: 'Database model querying', icon: <GemIcon size={16} style={{ color: 'hsl(270 80% 60%)' }} /> },
+            { name: 'PostgreSQL', desc: 'Robust transactional database', icon: <LockIcon size={16} style={{ color: 'hsl(220 10% 60%)' }} /> },
+            { name: 'Supabase', desc: 'Secure user login session management', icon: <ZapIcon size={16} style={{ color: 'hsl(142 70% 55%)' }} /> },
+            { name: 'Socket.IO', desc: 'Real-time room syncing and actions', icon: <PlugIcon size={16} style={{ color: 'hsl(270 80% 65%)' }} /> },
+            { name: 'Tailwind CSS', desc: 'Responsive CSS layout overrides', icon: <PaletteIcon size={16} style={{ color: 'hsl(340 85% 65%)' }} /> }
           ].map((t, i) => (
             <div 
               key={i} 
@@ -289,7 +291,7 @@ export default function AboutPage() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.1rem' }}>{t.icon}</span>
+                <span style={{ display: 'flex', alignItems: 'center' }}>{t.icon}</span>
                 <span style={{ fontWeight: 800, fontSize: '0.85rem', color: 'white' }}>{t.name}</span>
               </div>
               <p style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', margin: 0, lineHeight: 1.3 }}>{t.desc}</p>
@@ -316,7 +318,7 @@ export default function AboutPage() {
           Play. Compete. Progress. Connect.
         </span>
         <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 40%)', marginTop: '0.5rem' }}>
-          Built with ❤️ by Adarsh Singh
+          <span>Built with </span><HeartIcon size={12} fill="currentColor" style={{ display: 'inline', color: 'hsl(350 80% 55%)', margin: '0 2px', verticalAlign: 'middle' }} /><span> by Adarsh Singh</span>
         </span>
       </footer>
 

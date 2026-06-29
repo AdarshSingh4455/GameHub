@@ -1,4 +1,5 @@
 'use client'
+import { TrophyIcon, UsersIcon, HistoryIcon, FrownIcon, FlagIcon, GamepadIcon } from '@/components/shared/Icons'
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/lib/contexts/ToastContext'
@@ -156,7 +157,7 @@ export default function MultiplayerDotsBoxesGame({
   const isFinished = session.status === 'FINISHED'
   const winnerId = session.winnerId
 
-  let turnIcon = '🔵'
+  let turnIcon: React.ReactNode = <GamepadIcon size={14} className="inline mr-1" />
   let turnText = isMyTurn ? 'Your Turn' : `${getUsername(currentTurn)}'s Turn`
   let turnColor = isMyTurn ? 'hsl(210 100% 55%)' : 'hsl(355 100% 55%)'
   let turnBg = isMyTurn ? 'hsl(210 100% 50% / 0.1)' : 'hsl(355 100% 50% / 0.1)'
@@ -164,14 +165,14 @@ export default function MultiplayerDotsBoxesGame({
 
   if (isFinished) {
     if (winnerId === 'DRAW' || !winnerId) {
-      turnIcon = '🤝'
+      turnIcon = <UsersIcon size={14} className="inline mr-1" />
       turnText = "It's a Tie!"
       turnColor = 'hsl(45 100% 55%)'
       turnBg = 'hsl(45 100% 50% / 0.1)'
       turnBorder = 'hsl(45 100% 50% / 0.3)'
     } else {
       const didIWin = winnerId === currentUserId
-      turnIcon = '🏆'
+      turnIcon = <TrophyIcon size={14} className="inline mr-1 text-yellow-400" />
       turnText = didIWin ? 'You Won!' : `${getUsername(winnerId)} Won!`
       turnColor = didIWin ? 'hsl(210 100% 55%)' : 'hsl(355 100% 55%)'
       turnBg = didIWin ? 'hsl(210 100% 50% / 0.15)' : 'hsl(355 100% 50% / 0.15)'
@@ -429,7 +430,7 @@ export default function MultiplayerDotsBoxesGame({
       {isFinished ? (
         <div className="card glass text-center animate-fadeIn" style={{ padding: '1.5rem', marginTop: '0.5rem', border: '1px solid hsl(var(--border-subtle))' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-            {winnerId === currentUserId ? '🏆 You Won!' : winnerId === 'DRAW' ? "🤝 Match Tied!" : '💀 You Lost'}
+            {winnerId === currentUserId ? <span>🏆 You Won!</span> : winnerId === 'DRAW' ? <span>🤝 Match Tied!</span> : <span>💀 You Lost</span>}
           </h3>
           <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
             Final Score: {myScore} - {opponentScore}
@@ -449,7 +450,7 @@ export default function MultiplayerDotsBoxesGame({
               onClick={handlePlayAgain}
               style={{ flex: 2, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))' }}
             >
-              {replayVotes[currentUserId] ? '⏳ Waiting...' : '🔄 Play Again'}
+              {replayVotes[currentUserId] ? 'Waiting...' : 'Play Again'}
             </button>
           </div>
           {replayVotes[opponentUserId] && !replayVotes[currentUserId] && (
@@ -465,7 +466,7 @@ export default function MultiplayerDotsBoxesGame({
             style={{ width: '100%', borderRadius: 12 }}
             onClick={onLeave}
           >
-            🏳️ Leave Match
+            Leave Match
           </button>
         </div>
       )}

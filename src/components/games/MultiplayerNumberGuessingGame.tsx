@@ -5,6 +5,7 @@ import { useSocket } from '@/lib/contexts/SocketContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import MultiplayerHeader from './MultiplayerHeader'
 import MatchReactions from './MatchReactions'
+import { TrophyIcon, UsersIcon, FrownIcon, TimerIcon, PlayIcon, ArrowRightIcon } from '@/components/shared/Icons'
 
 function playTurnNotificationSound() {
   try {
@@ -128,10 +129,10 @@ export default function MultiplayerNumberGuessingGame({ roomCode, session, playe
   const activePlayers = players.slice(0, 2)
 
   const getWinnerMessage = () => {
-    if (winnerId === 'DRAW') return 'It is a tie game! 🤝'
-    if (winnerId === currentUserId) return '🏆 You guessed the number! You win!'
+    if (winnerId === 'DRAW') return 'It is a tie game!'
+    if (winnerId === currentUserId) return 'You guessed the number! You win!'
     const winnerName = players.find(p => p.userId === winnerId)?.username || 'Opponent'
-    return `🏆 ${winnerName} guessed the number! Opponent wins!`
+    return `${winnerName} guessed the number! Opponent wins!`
   }
 
   // The secret number guessed correctly at the end of the game
@@ -208,8 +209,8 @@ export default function MultiplayerNumberGuessingGame({ roomCode, session, playe
         {isFinished
           ? getWinnerMessage()
           : currentTurn === currentUserId
-            ? '👉 Your Turn: Submit a Guess!'
-            : `⌛ Waiting for ${players.find(p => p.userId === currentTurn)?.username || 'opponent'}'s guess...`}
+            ? 'Your Turn: Submit a Guess!'
+            : `Waiting for ${players.find(p => p.userId === currentTurn)?.username || 'opponent'}'s guess...`}
       </div>
 
       {/* Control Panel card */}
@@ -282,7 +283,7 @@ export default function MultiplayerNumberGuessingGame({ roomCode, session, playe
               </form>
             ) : (
               <div style={{ textAlign: 'center', padding: '0.5rem', color: 'hsl(220 10% 50%)', fontSize: '0.85rem' }}>
-                ⌛ Opponent is thinking...
+                Opponent is thinking...
               </div>
             )}
           </div>

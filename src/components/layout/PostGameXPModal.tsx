@@ -212,7 +212,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
   let layoutType: 'level' | 'endless' | 'puzzle' | 'multiplayer' = 'puzzle'
   if (metadata?.multiplayer || gameSlug.startsWith('multiplayer-') || ['scribble', 'cricket'].includes(gameSlug)) {
     layoutType = 'multiplayer'
-  } else if (['arrow-puzzle', 'color-sort', 'water-sort', 'unblock-traffic', 'unblock-me', 'water-connect', 'candy-blast', 'ai-infinite-candy-crush', 'pipe-connect'].includes(gameSlug)) {
+  } else if (['arrow-puzzle', 'color-sort', 'water-sort', 'unblock-traffic', 'unblock-me', 'water-connect', 'candy-blast', 'ai-infinite-candy-crush', 'pipe-connect', 'bubble-shooter'].includes(gameSlug)) {
     layoutType = 'level'
   } else if (['2048', 'snake', 'fighter-jet', 'fighter', 'neontetris', 'blockblast', 'snake-arena'].includes(gameSlug)) {
     layoutType = 'endless'
@@ -958,40 +958,44 @@ export default function PostGameXPModal({ data, onClose }: Props) {
                 <button
                   className="btn btn-primary"
                   onClick={() => onClose('replay')}
-                  style={{ flex: 1.3, borderRadius: 12 }}
+                  style={{ flex: 1.3, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   id="modal-replay-btn"
                 >
-                  🔄 Play Again
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  Play Again
                 </button>
                 <button
                   className="btn btn-secondary"
                   onClick={handleBackToLobby}
-                  style={{ flex: 1, borderRadius: 12 }}
+                  style={{ flex: 1, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   id="modal-lobby-btn"
                 >
-                  Back to Lobby
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                  Lobby
                 </button>
               </>
             ) : (
               <>
                 {/* Primary Action Button (Level vs Endless vs Puzzle) */}
-                {layoutType === 'level' && result === 'win' ? (
+                {layoutType === 'level' && result === 'win' && (metadata?.hasNextLevel ?? gameMetadata?.hasNextLevel ?? true) ? (
                   <button
                     className="btn btn-primary"
                     onClick={() => onClose('next')}
-                    style={{ flex: 1.3, borderRadius: 12 }}
+                    style={{ flex: 1.3, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                     id="modal-next-btn"
                   >
-                    ➡️ Next Level
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    Next Level
                   </button>
                 ) : (
                   <button
                     className="btn btn-primary"
                     onClick={() => onClose('replay')}
-                    style={{ flex: 1.3, borderRadius: 12 }}
+                    style={{ flex: 1.3, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                     id="modal-replay-btn"
                   >
-                    🔄 Play Again
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    Play Again
                   </button>
                 )}
 
@@ -1000,21 +1004,23 @@ export default function PostGameXPModal({ data, onClose }: Props) {
                   <button
                     className="btn btn-secondary"
                     onClick={() => onClose('replay')}
-                    style={{ flex: 1, borderRadius: 12 }}
+                    style={{ flex: 1, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                     id="modal-replay-btn-level-win"
                   >
-                    🔄 Replay
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    Replay
                   </button>
                 )}
 
-                {/* Dashboard fallback */}
+                {/* Home fallback */}
                 <button
                   className="btn btn-secondary"
                   onClick={handleBackToDashboard}
-                  style={{ flex: 1, borderRadius: 12 }}
+                  style={{ flex: 1, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   id="modal-dashboard-btn"
                 >
-                  Dashboard
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  Home
                 </button>
               </>
             )}

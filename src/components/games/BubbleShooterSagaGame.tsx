@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
-import GameIcon from './GameIcon'
 
 // ─── CONFIGURATION & DATA STRUCTURES ────────────────────────────────────────
 
@@ -30,7 +29,7 @@ const BUBBLE_COLORS = [
 
 const COLOR_NAMES = ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Cyan']
 
-// Data-Driven level designs (0=Empty, 1-6=Colors, 7=Rainbow, 8=Fireball, 9=Kitten)
+// Handcrafted tutorial levels (Level 1, 2, 3)
 const LEVELS: BubbleLevelConfig[] = [
   {
     level: 1,
@@ -52,7 +51,7 @@ const LEVELS: BubbleLevelConfig[] = [
     level: 2,
     name: "Kitten Rescue",
     objective: 'rescue',
-    objectiveText: "Rescue the 3 trapped kittens!",
+    objectiveText: "Rescue the trapped kittens!",
     maxShots: 25,
     targetRescues: 3,
     gridColors: ['#ef4444', '#3b82f6', '#a855f7', '#06b6d4'],
@@ -85,6 +84,95 @@ const LEVELS: BubbleLevelConfig[] = [
     ],
   },
 ]
+
+// Procedural Level Generator for Level 4+
+export function getLevelConfig(level: number): BubbleLevelConfig {
+  if (level <= 3) {
+    return LEVELS[level - 1]
+  }
+
+  // Linear feedback pseudo-random generator
+  const seed = level * 13579
+  const random = (offset: number) => {
+    const x = Math.sin(seed + offset) * 10000
+    return x - Math.floor(x)
+  }
+
+  const name = `Level ${level}`
+  const objectives: ('clear' | 'rescue' | 'score')[] = ['clear', 'rescue', 'score']
+  const objective = objectives[(level - 4) % 3]
+
+  // Scale colors and layouts
+  const colorCount = Math.min(6, 3 + Math.floor((level - 4) / 3))
+  const activeColors = BUBBLE_COLORS.slice(0, colorCount)
+  const baseShots = 22
+  const maxShots = Math.max(12, baseShots + Math.floor(level / 3) - Math.floor(level / 6) * 2)
+
+  const initialRows = Math.min(11, 5 + Math.floor((level - 4) / 2))
+  const initialGridLayout: number[][] = []
+
+  let targetRescues = 0
+  let targetScore = 0
+  let objectiveText = ''
+
+  if (objective === 'rescue') {
+    targetRescues = 2 + Math.floor(level / 4)
+    objectiveText = `Rescue the ${targetRescues} trapped kittens!`
+  } else if (objective === 'score') {
+    targetScore = 4000 + (level - 4) * 800
+    objectiveText = `Score ${targetScore.toLocaleString()} points!`
+  } else {
+    objectiveText = 'Clear all bubbles!'
+  }
+
+  let kittenSpotsLeft = targetRescues
+  const cols = 8
+
+  for (let r = 0; r < initialRows; r++) {
+    const colsInRow = r % 2 === 0 ? cols : cols - 1
+    const rowData: number[] = []
+
+    for (let c = 0; c < colsInRow; c++) {
+      const randVal = random(r * 100 + c)
+
+      if (objective === 'rescue' && kittenSpotsLeft > 0 && r < 3 && randVal < 0.25) {
+        rowData.push(9) // Kitten
+        kittenSpotsLeft--
+      } else if (randVal < 0.05 + Math.min(0.08, level * 0.004)) {
+        // Special bubbles: 7=Rainbow, 8=Fireball
+        rowData.push(random(r * 200 + c) < 0.5 ? 7 : 8)
+      } else if (randVal < 0.82) {
+        const colIdx = 1 + Math.floor(random(r * 300 + c) * colorCount)
+        rowData.push(colIdx)
+      } else {
+        rowData.push(0)
+      }
+    }
+    initialGridLayout.push(rowData)
+  }
+
+  // Backup placement for kittens if they weren't fully placed
+  if (objective === 'rescue' && kittenSpotsLeft > 0) {
+    for (let c = 0; c < cols; c++) {
+      if (kittenSpotsLeft > 0 && initialGridLayout[0][c] !== 9) {
+        initialGridLayout[0][c] = 9
+        kittenSpotsLeft--
+      }
+    }
+  }
+
+  return {
+    level,
+    name,
+    objective,
+    objectiveText,
+    maxShots,
+    targetScore,
+    targetRescues,
+    gridColors: activeColors,
+    initialGridLayout,
+  }
+}
 
 // Web Audio API Sound Synthesizer
 const playSound = (type: string, isMuted: boolean) => {
@@ -218,7 +306,7 @@ interface FloatingText {
 }
 
 export default function BubbleShooterSagaGame() {
-  const { submitGameResult, isLoading } = useGameSession()
+  const { submitGameResult } = useGameSession()
   const { addToast } = useToast()
 
   // Game UI/Screen navigation states
@@ -237,18 +325,17 @@ export default function BubbleShooterSagaGame() {
   const [rescuesCount, setRescuesCount] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
-  const [gameResult, setGameResult] = useState<'win' | 'loss' | null>(null)
 
   // Canvas Refs & Game Engine coordinates
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   
   const COLS_COUNT = 8
-  const ROWS_COUNT = 11
-  const CANVAS_WIDTH = 440
-  const CANVAS_HEIGHT = 560
-  const BUBBLE_RADIUS = 24
-  const HEX_HEIGHT = 41.5 // cell height offset
+  const ROWS_COUNT = 15 // increased height
+  const CANVAS_WIDTH = 480 // expanded width
+  const CANVAS_HEIGHT = 720 // expanded height
+  const BUBBLE_RADIUS = 26
+  const HEX_HEIGHT = 45
 
   // Engine state references (to bypass React rendering overhead)
   const stateRef = useRef({
@@ -268,6 +355,7 @@ export default function BubbleShooterSagaGame() {
     isPoppingOrFalling: false,
     ceilingOffsetY: 0,
     isShooting: false,
+    gameFinishedTriggered: false,
   })
 
   // Load Saved Game Progress
@@ -311,17 +399,17 @@ export default function BubbleShooterSagaGame() {
   // Hex coordinate converter to Pixel x, y
   const getHexCoordinates = useCallback((row: number, col: number) => {
     const isOdd = row % 2 !== 0
-    const startX = isOdd ? BUBBLE_RADIUS * 1.5 : BUBBLE_RADIUS
+    const boardMargin = (CANVAS_WIDTH - (COLS_COUNT * BUBBLE_RADIUS * 2)) / 2
+    const startX = boardMargin + (isOdd ? BUBBLE_RADIUS * 1.5 : BUBBLE_RADIUS)
     const x = startX + col * BUBBLE_RADIUS * 2
     const y = BUBBLE_RADIUS + row * HEX_HEIGHT + stateRef.current.ceilingOffsetY
     return { x, y }
-  }, [])
+  }, [BUBBLE_RADIUS])
 
   // Start active game session
   const startGame = useCallback((config: BubbleLevelConfig) => {
     setActiveLevel(config)
     setIsPaused(false)
-    setGameResult(null)
     setScore(0)
     setShotsLeft(config.maxShots)
     setRescuesCount(0)
@@ -338,6 +426,7 @@ export default function BubbleShooterSagaGame() {
     engine.shot = null
     engine.isShooting = false
     engine.angle = -Math.PI / 2
+    engine.gameFinishedTriggered = false
 
     // Initialize Grid with Level layout
     const grid: (Bubble | null)[][] = Array(ROWS_COUNT).fill(null).map(() => Array(COLS_COUNT).fill(null))
@@ -366,12 +455,12 @@ export default function BubbleShooterSagaGame() {
     ]
 
     setScreen('game')
-  }, [getHexCoordinates])
+  }, [getHexCoordinates, BUBBLE_RADIUS])
 
   // Mouse / Touch Aim Handler
   const handleAimMove = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current
-    if (!canvas || isPaused || gameResult) return
+    if (!canvas || isPaused || stateRef.current.gameFinishedTriggered) return
     const rect = canvas.getBoundingClientRect()
     
     // Scale aim coordinates relative to virtual size
@@ -383,7 +472,7 @@ export default function BubbleShooterSagaGame() {
 
     // Calculate angle from launcher bottom center
     const launcherX = CANVAS_WIDTH / 2
-    const launcherY = CANVAS_HEIGHT - 45
+    const launcherY = CANVAS_HEIGHT - 60
     const dx = x - launcherX
     const dy = y - launcherY
 
@@ -392,7 +481,7 @@ export default function BubbleShooterSagaGame() {
     if (angle > -0.15) angle = -0.15
     if (angle < -Math.PI + 0.15) angle = -Math.PI + 0.15
     stateRef.current.angle = angle
-  }, [isPaused, gameResult])
+  }, [isPaused])
 
   const onMouseMove = (e: React.MouseEvent) => {
     handleAimMove(e.clientX, e.clientY)
@@ -407,11 +496,11 @@ export default function BubbleShooterSagaGame() {
   // Trigger bubble shooting
   const triggerShoot = useCallback(() => {
     const engine = stateRef.current
-    if (engine.isShooting || engine.shot || isPaused || gameResult || engine.localShots <= 0) return
+    if (engine.isShooting || engine.shot || isPaused || engine.gameFinishedTriggered || engine.localShots <= 0) return
 
     const launcherX = CANVAS_WIDTH / 2
-    const launcherY = CANVAS_HEIGHT - 45
-    const speed = 12
+    const launcherY = CANVAS_HEIGHT - 60
+    const speed = 13
     const vx = Math.cos(engine.angle) * speed
     const vy = Math.sin(engine.angle) * speed
 
@@ -432,12 +521,12 @@ export default function BubbleShooterSagaGame() {
     setShotsLeft(engine.localShots)
 
     playSound('shoot', isMuted)
-  }, [activeLevel, isPaused, gameResult, isMuted])
+  }, [activeLevel, isPaused, isMuted, BUBBLE_RADIUS])
 
   // Swap Queue Bubble
   const swapBubble = () => {
     const engine = stateRef.current
-    if (engine.isShooting || isPaused || gameResult) return
+    if (engine.isShooting || isPaused || engine.gameFinishedTriggered) return
     const temp = engine.nextColorsQueue[0]
     engine.nextColorsQueue[0] = engine.nextColorsQueue[1]
     engine.nextColorsQueue[1] = temp
@@ -446,17 +535,17 @@ export default function BubbleShooterSagaGame() {
 
   // Synthesize popping particles
   const createExplosion = (x: number, y: number, color: string) => {
-    const count = 10
+    const count = 12
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2
-      const speed = 1 + Math.random() * 4
+      const speed = 1.5 + Math.random() * 4.5
       stateRef.current.particles.push({
         x,
         y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         color,
-        radius: 2 + Math.random() * 4,
+        radius: 2 + Math.random() * 3.5,
         alpha: 1,
         decay: 0.02 + Math.random() * 0.02,
       })
@@ -492,7 +581,8 @@ export default function BubbleShooterSagaGame() {
     if (isFireball) {
       playSound('explosion', isMuted)
       for (let r = Math.max(0, hitRow - 1); r <= Math.min(ROWS_COUNT - 1, hitRow + 1); r++) {
-        for (let c = 0; c < COLS_COUNT; c++) {
+        const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+        for (let c = 0; c < colsInRow; c++) {
           if (engine.grid[r][c]) {
             popped.add(`${r},${c}`)
           }
@@ -591,7 +681,8 @@ export default function BubbleShooterSagaGame() {
         playSound('bounce', isMuted)
 
         for (let r = 0; r < ROWS_COUNT; r++) {
-          for (let c = 0; c < COLS_COUNT; c++) {
+          const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+          for (let c = 0; c < colsInRow; c++) {
             const b = engine.grid[r][c]
             if (b) {
               const { y } = getHexCoordinates(r, c)
@@ -645,12 +736,13 @@ export default function BubbleShooterSagaGame() {
 
     let dropCount = 0
     for (let r = 0; r < ROWS_COUNT; r++) {
-      for (let c = 0; c < COLS_COUNT; c++) {
+      const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+      for (let c = 0; c < colsInRow; c++) {
         const b = engine.grid[r][c]
         if (b && b.state === 'idle' && !connected.has(`${r},${c}`)) {
           b.state = 'falling'
-          b.fallVelX = (Math.random() - 0.5) * 4
-          b.fallVelY = 2 + Math.random() * 3
+          b.fallVelX = (Math.random() - 0.5) * 4.5
+          b.fallVelY = 2 + Math.random() * 3.5
           dropCount++
 
           if (b.colorIndex === 9) {
@@ -672,7 +764,7 @@ export default function BubbleShooterSagaGame() {
 
   const checkGameStates = useCallback(() => {
     const engine = stateRef.current
-    if (gameResult) return
+    if (engine.gameFinishedTriggered) return
 
     let victory = false
     const config = activeLevel!
@@ -680,13 +772,15 @@ export default function BubbleShooterSagaGame() {
     if (config.objective === 'clear') {
       let remaining = false
       for (let r = 0; r < ROWS_COUNT; r++) {
-        for (let c = 0; c < COLS_COUNT; c++) {
+        const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+        for (let c = 0; c < colsInRow; c++) {
           const b = engine.grid[r][c]
           if (b && b.state === 'idle') {
             remaining = true
             break
           }
         }
+        if (remaining) break
       }
       if (!remaining) victory = true
     } else if (config.objective === 'rescue') {
@@ -704,9 +798,10 @@ export default function BubbleShooterSagaGame() {
       return
     }
 
-    const dangerLineY = CANVAS_HEIGHT - 120
+    const dangerLineY = CANVAS_HEIGHT - 130
     for (let r = 0; r < ROWS_COUNT; r++) {
-      for (let c = 0; c < COLS_COUNT; c++) {
+      const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+      for (let c = 0; c < colsInRow; c++) {
         const b = engine.grid[r][c]
         if (b && b.state === 'idle' && b.y + BUBBLE_RADIUS >= dangerLineY) {
           handleGameOver(false)
@@ -718,11 +813,13 @@ export default function BubbleShooterSagaGame() {
     if (engine.localShots <= 0 && !engine.shot && !engine.isPoppingOrFalling) {
       handleGameOver(false)
     }
-  }, [activeLevel, gameResult])
+  }, [activeLevel, BUBBLE_RADIUS])
 
   const handleGameOver = useCallback((isVictory: boolean) => {
     const engine = stateRef.current
-    setGameResult(isVictory ? 'win' : 'loss')
+    if (engine.gameFinishedTriggered) return
+    engine.gameFinishedTriggered = true
+
     playSound(isVictory ? 'victory' : 'failure', isMuted)
 
     const finalScore = engine.localScore
@@ -730,19 +827,20 @@ export default function BubbleShooterSagaGame() {
 
     let stars = 1
     if (isVictory) {
-      if (lvlNum === 1) {
-        stars = finalScore > 3500 ? 3 : finalScore > 2000 ? 2 : 1
-      } else if (lvlNum === 2) {
-        stars = finalScore > 4500 ? 3 : finalScore > 3000 ? 2 : 1
+      const target = activeLevel!.targetScore || (1500 + lvlNum * 500)
+      if (finalScore >= target * 1.5) {
+        stars = 3
+      } else if (finalScore >= target) {
+        stars = 2
       } else {
-        stars = finalScore > 6500 ? 3 : finalScore > 4000 ? 2 : 1
+        stars = 1
       }
     } else {
       stars = 0
     }
 
     const updatedUnlocked = [...unlockedLevels]
-    if (isVictory && lvlNum === unlockedLevels[unlockedLevels.length - 1] && lvlNum < LEVELS.length) {
+    if (isVictory && !unlockedLevels.includes(lvlNum + 1)) {
       updatedUnlocked.push(lvlNum + 1)
     }
 
@@ -756,6 +854,9 @@ export default function BubbleShooterSagaGame() {
 
     saveProgress(updatedUnlocked, updatedScores, updatedStars, engine.comboCount)
 
+    // Redirect screen immediately back to map so when result modal exits, map is shown
+    setScreen('map')
+
     submitGameResult({
       gameSlug: 'bubble-shooter',
       result: isVictory ? 'win' : 'loss',
@@ -763,6 +864,7 @@ export default function BubbleShooterSagaGame() {
         score: finalScore,
         level: lvlNum,
         stars,
+        hasNextLevel: true, // Endless progression supports level+1 indefinitely
         gameMetadata: {
           level: lvlNum,
           stars,
@@ -770,12 +872,35 @@ export default function BubbleShooterSagaGame() {
         },
         statistics: [
           { label: 'Level Reached', value: lvlNum, color: '#fbbf24' },
-          { label: 'Score Earned', value: finalScore, color: 'hsl(220 100% 65%)' },
+          { label: 'Score Earned', value: finalScore.toLocaleString(), color: 'hsl(220 100% 65%)' },
           { label: 'Stars Earned', value: '★'.repeat(stars) || 'None', color: '#ec4899' },
         ],
       },
     })
   }, [activeLevel, bestScores, starsEarned, unlockedLevels, isMuted, submitGameResult])
+
+  // Listen for platform-wide replay and next-level events from PostGameXPModal
+  useEffect(() => {
+    const handleReplayEvent = () => {
+      if (activeLevel) {
+        startGame(activeLevel)
+      }
+    }
+    const handleNextLevelEvent = () => {
+      if (activeLevel) {
+        const nextLvlConfig = getLevelConfig(activeLevel.level + 1)
+        startGame(nextLvlConfig)
+      }
+    }
+
+    window.addEventListener('gamehub_replay', handleReplayEvent)
+    window.addEventListener('gamehub_next_level', handleNextLevelEvent)
+
+    return () => {
+      window.removeEventListener('gamehub_replay', handleReplayEvent)
+      window.removeEventListener('gamehub_next_level', handleNextLevelEvent)
+    }
+  }, [activeLevel, startGame])
 
   useEffect(() => {
     if (screen !== 'game') return
@@ -798,15 +923,17 @@ export default function BubbleShooterSagaGame() {
       ctx.fillStyle = grad
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
 
+      // Draw background ambient stars
       ctx.fillStyle = 'rgba(255, 255, 255, 0.03)'
       ctx.beginPath()
       ctx.arc(80, 100, 3, 0, 2 * Math.PI)
       ctx.arc(320, 180, 2, 0, 2 * Math.PI)
       ctx.arc(140, 260, 4, 0, 2 * Math.PI)
       ctx.arc(380, 80, 3.5, 0, 2 * Math.PI)
+      ctx.arc(220, 400, 3, 0, 2 * Math.PI)
       ctx.fill()
 
-      const dangerLineY = CANVAS_HEIGHT - 120
+      const dangerLineY = CANVAS_HEIGHT - 130
       ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)'
       ctx.lineWidth = 2
       ctx.setLineDash([5, 5])
@@ -839,7 +966,8 @@ export default function BubbleShooterSagaGame() {
           hitGrid = true
         } else {
           for (let r = 0; r < ROWS_COUNT; r++) {
-            for (let c = 0; c < COLS_COUNT; c++) {
+            const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+            for (let c = 0; c < colsInRow; c++) {
               const target = engine.grid[r][c]
               if (target && target.state === 'idle') {
                 const dist = Math.hypot(s.x - target.x, s.y - target.y)
@@ -849,13 +977,15 @@ export default function BubbleShooterSagaGame() {
                 }
               }
             }
+            if (hitGrid) break
           }
         }
 
         if (hitGrid) {
           let minDistance = Infinity
           for (let r = 0; r < ROWS_COUNT; r++) {
-            for (let c = 0; c < COLS_COUNT; c++) {
+            const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+            for (let c = 0; c < colsInRow; c++) {
               if (!engine.grid[r][c]) {
                 const { x: cellX, y: cellY } = getHexCoordinates(r, c)
                 const dist = Math.hypot(s.x - cellX, s.y - cellY)
@@ -886,14 +1016,15 @@ export default function BubbleShooterSagaGame() {
         }
       }
 
-      if (!engine.shot && !isPaused && !gameResult && engine.localShots > 0) {
+      // Draw prediction trajectory line
+      if (!engine.shot && !isPaused && !engine.gameFinishedTriggered && engine.localShots > 0) {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)'
         ctx.lineWidth = 3
         ctx.setLineDash([4, 6])
         ctx.beginPath()
 
         const lX = CANVAS_WIDTH / 2
-        const lY = CANVAS_HEIGHT - 45
+        const lY = CANVAS_HEIGHT - 60
         ctx.moveTo(lX, lY)
 
         let currX = lX
@@ -902,7 +1033,7 @@ export default function BubbleShooterSagaGame() {
         let predVX = Math.cos(aimAngle) * 8
         let predVY = Math.sin(aimAngle) * 8
 
-        for (let step = 0; step < 60; step++) {
+        for (let step = 0; step < 75; step++) {
           currX += predVX
           currY += predVY
 
@@ -921,7 +1052,8 @@ export default function BubbleShooterSagaGame() {
 
       engine.isPoppingOrFalling = false
       for (let r = 0; r < ROWS_COUNT; r++) {
-        for (let c = 0; c < COLS_COUNT; c++) {
+        const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+        for (let c = 0; c < colsInRow; c++) {
           const b = engine.grid[r][c]
           if (!b) continue
 
@@ -929,7 +1061,7 @@ export default function BubbleShooterSagaGame() {
             engine.isPoppingOrFalling = true
             b.popProgress = (b.popProgress || 0) + 0.08
             if (b.popProgress >= 1) {
-              const hexColor = b.colorIndex <= 6 ? BUBBLE_COLORS[b.colorIndex - 1] : '#f59e0b'
+              const hexColor = b.colorIndex <= 6 ? BUBBLE_COLORS[b.colorIndex - 1] : '#fbbf24'
               createExplosion(b.x, b.y, hexColor)
               engine.grid[r][c] = null
             } else {
@@ -960,8 +1092,9 @@ export default function BubbleShooterSagaGame() {
         drawBubbleBall(ctx, engine.shot.x, engine.shot.y, engine.shot.colorIndex)
       }
 
+      // Draw Cannon launcher body
       const launcherX = CANVAS_WIDTH / 2
-      const launcherY = CANVAS_HEIGHT - 45
+      const launcherY = CANVAS_HEIGHT - 60
 
       ctx.fillStyle = '#1e1b4b'
       ctx.strokeStyle = '#312e81'
@@ -971,6 +1104,7 @@ export default function BubbleShooterSagaGame() {
       ctx.fill()
       ctx.stroke()
 
+      // Launcher barrel pointer line
       ctx.strokeStyle = '#fbbf24'
       ctx.lineWidth = 6
       ctx.lineCap = 'round'
@@ -979,10 +1113,12 @@ export default function BubbleShooterSagaGame() {
       ctx.lineTo(launcherX + Math.cos(engine.angle) * 45, launcherY + Math.sin(engine.angle) * 45)
       ctx.stroke()
 
+      // Display queued current bubble inside the cannon barrel
       if (engine.nextColorsQueue.length > 0 && !engine.shot) {
         drawBubbleBall(ctx, launcherX, launcherY, engine.nextColorsQueue[0])
       }
 
+      // Preview next bubble in queue
       if (engine.nextColorsQueue.length > 1) {
         drawBubbleBall(ctx, launcherX - 60, launcherY + 12, engine.nextColorsQueue[1], 15)
       }
@@ -1033,7 +1169,7 @@ export default function BubbleShooterSagaGame() {
 
     animId = requestAnimationFrame(renderLoop)
     return () => cancelAnimationFrame(animId)
-  }, [screen, activeLevel, isPaused, gameResult, isMuted, getHexCoordinates, checkGameStates])
+  }, [screen, activeLevel, isPaused, isMuted, getHexCoordinates, checkGameStates, BUBBLE_RADIUS])
 
   const drawBubbleBall = (ctx: CanvasRenderingContext2D, x: number, y: number, colorIndex: number, radiusOverride?: number) => {
     const r = radiusOverride || BUBBLE_RADIUS
@@ -1054,6 +1190,7 @@ export default function BubbleShooterSagaGame() {
       ctx.arc(x, y, r, 0, 2 * Math.PI)
       ctx.fill()
     } else if (colorIndex === 7) {
+      // Rainbow wild bubble
       ctx.shadowColor = '#06b6d4'
       const grad = ctx.createLinearGradient(x - r, y - r, x + r, y + r)
       grad.addColorStop(0, '#ef4444')
@@ -1068,6 +1205,7 @@ export default function BubbleShooterSagaGame() {
       ctx.arc(x, y, r, 0, 2 * Math.PI)
       ctx.fill()
     } else if (colorIndex === 8) {
+      // Fireball explosion bubble
       ctx.shadowColor = '#f97316'
       const grad = ctx.createRadialGradient(x - r / 3, y - r / 3, r / 8, x, y, r)
       grad.addColorStop(0, '#fef08a')
@@ -1079,6 +1217,7 @@ export default function BubbleShooterSagaGame() {
       ctx.arc(x, y, r, 0, 2 * Math.PI)
       ctx.fill()
     } else if (colorIndex === 9) {
+      // Custom Vector Kitten drawn natively on canvas
       ctx.shadowColor = '#f472b6'
       ctx.fillStyle = '#f472b6'
       ctx.strokeStyle = '#ffffff'
@@ -1088,16 +1227,81 @@ export default function BubbleShooterSagaGame() {
       ctx.fill()
       ctx.stroke()
 
+      // Lighter pink ears
       ctx.shadowBlur = 0
-      ctx.fillStyle = '#ffffff'
-      ctx.font = `${r * 0.9}px sans-serif`
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('🐱', x, y)
+      
+      // Draw left ear triangle
+      ctx.fillStyle = '#f472b6'
+      ctx.beginPath()
+      ctx.moveTo(x - r * 0.6, y - r * 0.1)
+      ctx.lineTo(x - r * 0.6, y - r * 0.75)
+      ctx.lineTo(x - r * 0.1, y - r * 0.4)
+      ctx.closePath()
+      ctx.fill()
+
+      // Draw right ear triangle
+      ctx.beginPath()
+      ctx.moveTo(x + r * 0.6, y - r * 0.1)
+      ctx.lineTo(x + r * 0.6, y - r * 0.75)
+      ctx.lineTo(x + r * 0.1, y - r * 0.4)
+      ctx.closePath()
+      ctx.fill()
+
+      // Inner lighter ears
+      ctx.fillStyle = '#fce7f3'
+      ctx.beginPath()
+      ctx.moveTo(x - r * 0.5, y - r * 0.25)
+      ctx.lineTo(x - r * 0.5, y - r * 0.6)
+      ctx.lineTo(x - r * 0.2, y - r * 0.4)
+      ctx.closePath()
+      ctx.fill()
+
+      ctx.beginPath()
+      ctx.moveTo(x + r * 0.5, y - r * 0.25)
+      ctx.lineTo(x + r * 0.5, y - r * 0.6)
+      ctx.lineTo(x + r * 0.2, y - r * 0.4)
+      ctx.closePath()
+      ctx.fill()
+
+      // Eyes (black dots)
+      ctx.fillStyle = '#1e1b4b'
+      ctx.beginPath()
+      ctx.arc(x - r * 0.25, y, r * 0.1, 0, 2 * Math.PI)
+      ctx.arc(x + r * 0.25, y, r * 0.1, 0, 2 * Math.PI)
+      ctx.fill()
+
+      // Nose (tiny pink triangle)
+      ctx.fillStyle = '#fca5a5'
+      ctx.beginPath()
+      ctx.moveTo(x - r * 0.08, y + r * 0.1)
+      ctx.lineTo(x + r * 0.08, y + r * 0.1)
+      ctx.lineTo(x, y + r * 0.2)
+      ctx.closePath()
+      ctx.fill()
+
+      // Whiskers (thin white lines)
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      // left whiskers
+      ctx.moveTo(x - r * 0.35, y + r * 0.1)
+      ctx.lineTo(x - r * 0.7, y + r * 0.05)
+      ctx.moveTo(x - r * 0.35, y + r * 0.15)
+      ctx.lineTo(x - r * 0.7, y + r * 0.2)
+      // right whiskers
+      ctx.moveTo(x + r * 0.35, y + r * 0.1)
+      ctx.lineTo(x + r * 0.7, y + r * 0.05)
+      ctx.moveTo(x + r * 0.35, y + r * 0.15)
+      ctx.lineTo(x + r * 0.7, y + r * 0.2)
+      ctx.stroke()
     }
 
     ctx.restore()
   }
+
+  // Generate dynamic list of levels up to highest unlocked level plus one locked level
+  const maxUnlockedLevel = Math.max(...unlockedLevels, 1)
+  const visibleLevels = Array.from({ length: Math.max(4, maxUnlockedLevel + 1) }, (_, i) => getLevelConfig(i + 1))
 
   return (
     <div
@@ -1107,52 +1311,64 @@ export default function BubbleShooterSagaGame() {
         borderRadius: 24,
         background: 'linear-gradient(135deg, hsl(222 25% 10%), hsl(222 20% 6%))',
         border: '1px solid hsl(220 20% 18%)',
-        padding: '1.25rem',
+        padding: '0.75rem',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '1rem',
+        gap: '0.75rem',
         position: 'relative',
         overflow: 'hidden',
         width: '100%',
-        minHeight: 590,
-        maxWidth: 480,
+        maxWidth: 500,
         margin: '0 auto',
       }}
     >
-      <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+      <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, padding: '0 0.5rem' }}>
         <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          🔮 Bubble Shooter Saga
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ color: 'hsl(220 100% 65%)' }}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          Bubble Shooter Saga
         </h3>
         <button
           onClick={() => setIsMuted(prev => !prev)}
           className="btn btn-ghost"
-          style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', color: 'hsl(220 10% 60%)' }}
+          style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', color: 'hsl(220 10% 60%)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
         >
-          {isMuted ? '🔇 Muted' : '🔊 Sound'}
+          {isMuted ? (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>
+              Muted
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+              Sound
+            </>
+          )}
         </button>
       </div>
 
       {screen === 'map' && (
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', alignItems: 'center', flex: 1, gap: '1.5rem', zIndex: 5 }}>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: 'hsl(220 10% 55%)', textAlign: 'center', maxWidth: '300px', lineHeight: 1.4 }}>
-            Explore the Whisper Woods and rescue the trapped kittens! Complete the challenges to advance.
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', alignItems: 'center', flex: 1, gap: '1.25rem', zIndex: 5, padding: '0 0.25rem' }}>
+          <p style={{ margin: 0, fontSize: '0.78rem', color: 'hsl(220 10% 55%)', textAlign: 'center', maxWidth: '340px', lineHeight: 1.4 }}>
+            Explore Whisper Woods, pop magical bubbles, and rescue trapped kittens! Keep unlocking to play endless procedural levels.
           </p>
 
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '1.25rem',
+              gap: '0.75rem',
               width: '100%',
+              maxHeight: '440px',
+              overflowY: 'auto',
               background: 'hsl(222 20% 8% / 0.6)',
               border: '1px solid hsl(220 20% 14%)',
               borderRadius: 16,
-              padding: '1rem',
+              padding: '0.85rem',
               boxSizing: 'border-box'
             }}
           >
-            {LEVELS.map((lvl) => {
+            {visibleLevels.map((lvl) => {
               const isLvlUnlocked = unlockedLevels.includes(lvl.level)
               const bestScore = bestScores[lvl.level] || 0
               const stars = starsEarned[lvl.level] || 0
@@ -1168,7 +1384,7 @@ export default function BubbleShooterSagaGame() {
                     background: isLvlUnlocked ? 'hsl(222 18% 12% / 0.7)' : 'hsl(222 18% 10% / 0.3)',
                     border: isLvlUnlocked ? '1px solid hsl(220 15% 20%)' : '1px solid hsl(220 15% 14%)',
                     borderRadius: 12,
-                    padding: '0.75rem 1rem',
+                    padding: '0.65rem 0.85rem',
                     opacity: isLvlUnlocked ? 1 : 0.5,
                   }}
                 >
@@ -1183,8 +1399,9 @@ export default function BubbleShooterSagaGame() {
                       {lvl.objectiveText}
                     </div>
                     {bestScore > 0 && (
-                      <div style={{ fontSize: '0.68rem', color: 'hsl(45 100% 60%)', marginTop: '0.15rem' }}>
-                        Best: {bestScore} pts • {'★'.repeat(stars)}
+                      <div style={{ fontSize: '0.68rem', color: 'hsl(45 100% 60%)', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>Best: {bestScore} pts</span>
+                        <span style={{ color: 'hsl(45 100% 55%)' }}>{'★'.repeat(stars)}</span>
                       </div>
                     )}
                   </div>
@@ -1198,9 +1415,22 @@ export default function BubbleShooterSagaGame() {
                       borderRadius: 8,
                       fontWeight: 700,
                       boxShadow: isLvlUnlocked ? '0 4px 10px hsl(220 100% 60% / 0.2)' : 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}
                   >
-                    {isLvlUnlocked ? 'Play' : 'Locked'}
+                    {isLvlUnlocked ? (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Play
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Locked
+                      </>
+                    )}
                   </button>
                 </div>
               )
@@ -1217,21 +1447,25 @@ export default function BubbleShooterSagaGame() {
               <span style={{ fontSize: '0.98rem', color: '#fbbf24', fontWeight: 900 }}>{score}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800 }}>Shots Left</span>
+              <span style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800 }}>Shots</span>
               <span style={{ fontSize: '0.98rem', color: shotsLeft <= 5 ? '#ef4444' : '#ffffff', fontWeight: 900 }}>{shotsLeft}</span>
             </div>
             {activeLevel.objective === 'rescue' && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800 }}>Rescued</span>
+                <span style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, display: 'inline-flex', alignItems: 'center' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '3px' }}><path d="M12 5c.67 0 1.35.09 2 .26a8 8 0 1 1-4 0c.65-.17 1.33-.26 2-.26z"/><path d="M2 10s.5-1.5 2-1.5 2 1.5 2 1.5"/><path d="M22 10s-.5-1.5-2-1.5-2 1.5-2 1.5"/></svg>
+                  Rescued
+                </span>
                 <span style={{ fontSize: '0.98rem', color: '#3b82f6', fontWeight: 900 }}>{rescuesCount} / {activeLevel.targetRescues}</span>
               </div>
             )}
             <button
               onClick={() => setIsPaused(true)}
               className="btn btn-ghost"
-              style={{ fontSize: '0.72rem', padding: '0.35rem 0.5rem', border: '1px solid hsl(220 10% 25%)', borderRadius: 8 }}
+              style={{ fontSize: '0.72rem', padding: '0.35rem 0.5rem', border: '1px solid hsl(220 10% 25%)', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
-              ⏸ Pause
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>
+              Pause
             </button>
           </div>
 
@@ -1241,12 +1475,16 @@ export default function BubbleShooterSagaGame() {
               width: '100%',
               maxWidth: CANVAS_WIDTH,
               aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
+              maxHeight: 'calc(100vh - 200px)',
               background: '#040209',
               borderRadius: 16,
               border: '2px solid hsl(220 20% 18%)',
               boxShadow: 'inset 0 0 20px rgba(0,0,0,0.85)',
               touchAction: 'none',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
             onMouseMove={onMouseMove}
             onTouchMove={onTouchMove}
@@ -1256,10 +1494,16 @@ export default function BubbleShooterSagaGame() {
               ref={canvasRef}
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
-              style={{ display: 'block', width: '100%', height: '100%' }}
+              style={{
+                display: 'block',
+                width: '100%',
+                height: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain'
+              }}
             />
 
-            {!isPaused && !gameResult && (
+            {!isPaused && (
               <button
                 onClick={(e) => { e.stopPropagation(); swapBubble() }}
                 className="btn btn-secondary"
@@ -1275,47 +1519,37 @@ export default function BubbleShooterSagaGame() {
                   borderColor: 'hsl(220 15% 22% / 0.8)',
                   color: 'white',
                   boxShadow: '0 4px 10px rgba(0,0,0,0.4)',
-                  zIndex: 20
+                  zIndex: 20,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}
               >
-                🔄 Swap
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V8a4 4 0 0 0-4-4H3"/><path d="m3 8 4-4-4 4"/><path d="M7 4v12a4 4 0 0 0 4 4h10"/></svg>
+                Swap
               </button>
             )}
           </div>
 
           {isPaused && (
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(5, 3, 10, 0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', borderRadius: 16, zIndex: 100 }}>
-              <h2 style={{ margin: 0, color: 'white', fontSize: '1.4rem', fontWeight: 800 }}>Game Paused</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '160px' }}>
-                <button onClick={() => setIsPaused(false)} className="btn btn-primary" style={{ padding: '0.5rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700 }}>Resume</button>
-                <button onClick={() => startGame(activeLevel)} className="btn btn-secondary" style={{ padding: '0.5rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700 }}>Restart</button>
-                <button onClick={() => setScreen('map')} className="btn btn-ghost" style={{ padding: '0.5rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700, color: 'hsl(0 70% 65%)' }}>Quit to Map</button>
-              </div>
-            </div>
-          )}
-
-          {gameResult && (
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(5, 3, 10, 0.88)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', borderRadius: 16, zIndex: 100 }}>
-              <div style={{ fontSize: '3rem' }}>{gameResult === 'win' ? '🏆' : '💀'}</div>
-              <h2 style={{ margin: 0, color: gameResult === 'win' ? '#fbbf24' : '#ef4444', fontSize: '1.5rem', fontWeight: 900 }}>
-                {gameResult === 'win' ? 'Level Complete!' : 'Game Over'}
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(5, 3, 10, 0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', borderRadius: 16, zIndex: 100 }}>
+              <h2 style={{ margin: 0, color: 'white', fontSize: '1.4rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ color: 'hsl(220 100% 65%)' }}><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>
+                Game Paused
               </h2>
-              
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', textTransform: 'uppercase', fontWeight: 800 }}>Final Score</div>
-                <div style={{ fontSize: '1.8rem', color: 'white', fontWeight: 900 }}>{score}</div>
-              </div>
-
-              {gameResult === 'win' && (
-                <div style={{ display: 'flex', gap: '0.2rem', fontSize: '1.5rem', color: '#fbbf24' }}>
-                  {'★'.repeat(score > (activeLevel.level === 1 ? 3500 : activeLevel.level === 2 ? 4500 : 6500) ? 3 : score > (activeLevel.level === 1 ? 2000 : activeLevel.level === 2 ? 3000 : 4000) ? 2 : 1)}
-                  {'☆'.repeat(3 - (score > (activeLevel.level === 1 ? 3500 : activeLevel.level === 2 ? 4500 : 6500) ? 3 : score > (activeLevel.level === 1 ? 2000 : activeLevel.level === 2 ? 3000 : 4000) ? 2 : 1))}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '0.65rem', width: '220px' }}>
-                <button onClick={() => startGame(activeLevel)} className="btn btn-primary" style={{ flex: 1, padding: '0.55rem', borderRadius: 8, fontSize: '0.78rem', fontWeight: 700 }}>Retry</button>
-                <button onClick={() => setScreen('map')} className="btn btn-secondary" style={{ flex: 1, padding: '0.55rem', borderRadius: 8, fontSize: '0.78rem', fontWeight: 700 }}>Map</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '170px' }}>
+                <button onClick={() => setIsPaused(false)} className="btn btn-primary" style={{ padding: '0.55rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Resume
+                </button>
+                <button onClick={() => startGame(activeLevel)} className="btn btn-secondary" style={{ padding: '0.55rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  Restart
+                </button>
+                <button onClick={() => setScreen('map')} className="btn btn-ghost" style={{ padding: '0.55rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700, color: 'hsl(0 75% 65%)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  Quit to Map
+                </button>
               </div>
             </div>
           )}

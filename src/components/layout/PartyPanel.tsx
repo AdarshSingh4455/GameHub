@@ -39,7 +39,6 @@ export default function PartyPanel() {
 
   const [party, setParty] = useState<PartyState | null>(null)
   const [joinCode, setJoinCode] = useState('')
-  const [chatMessage, setChatMessage] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [receivedInvites, setReceivedInvites] = useState<PartyInvite[]>([])
 
@@ -49,6 +48,7 @@ export default function PartyPanel() {
   const [inviteStatuses, setInviteStatuses] = useState<Record<string, InviteStatus>>({})
 
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const inviteExpireRef = useRef<NodeJS.Timeout | null>(null)
   const currentUserId = user?.id || ''
 
@@ -178,17 +178,19 @@ export default function PartyPanel() {
 
   const handleSendChat = useCallback((e: React.FormEvent) => {
     e.preventDefault()
-    if (!socket || !chatMessage.trim()) return
-    socket.emit('party-chat', { message: chatMessage.trim() })
-    setChatMessage('')
-  }, [socket, chatMessage])
+    const input = chatInputRef.current
+    if (!socket || !input || !input.value.trim()) return
+    socket.emit('party-chat', { message: input.value.trim() })
+    input.value = ''
+  }, [socket])
 
   const handleChatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      if (chatMessage.trim()) {
-        socket?.emit('party-chat', { message: chatMessage.trim() })
-        setChatMessage('')
+      const input = chatInputRef.current
+      if (socket && input && input.value.trim()) {
+        socket.emit('party-chat', { message: input.value.trim() })
+        input.value = ''
       }
     }
   }
@@ -269,9 +271,9 @@ export default function PartyPanel() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', padding: '0.5rem 0' }}>
           <p style={{ margin: 0, fontSize: '0.78rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4 }}>Form a party to chat in real-time, invite friends, and join matches together.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', width: '100%', alignItems: 'center' }}>
               <input type="text" placeholder="Enter code..." className="input" value={joinCode} onChange={e => setJoinCode(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleJoinParty() }} style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', borderRadius: 10, backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-default))', color: 'hsl(var(--text-primary))', flex: 1, minWidth: 0, outline: 'none' }} />
-              <button onClick={() => handleJoinParty()} className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '0.55rem 0.9rem', borderRadius: 10, fontWeight: 700, flexShrink: 0 }}>Join</button>
+              <button onClick={() => handleJoinParty()} className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '0.55rem 0.8rem', borderRadius: 10, fontWeight: 700, flexShrink: 0, width: 'auto', display: 'inline-flex' }}>Join</button>
             </div>
             <button onClick={handleCreateParty} className="btn btn-primary" style={{ width: '100%', fontSize: '0.82rem', padding: '0.55rem', borderRadius: 10, fontWeight: 700, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))', color: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
               + Create Party
@@ -330,9 +332,9 @@ export default function PartyPanel() {
               )}
               <div ref={chatEndRef} />
             </div>
-            <form onSubmit={handleSendChat} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem', alignItems: 'flex-end' }}>
-              <textarea placeholder="Type message... (Enter to send)" className="input" value={chatMessage} onChange={e => setChatMessage(e.target.value)} onKeyDown={handleChatKeyDown} rows={1} style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.65rem', fontSize: '0.78rem', borderRadius: 10, resize: 'none', lineHeight: 1.4, maxHeight: 72, overflowY: 'auto', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-default))', color: 'hsl(var(--text-primary))', outline: 'none' }} />
-              <button type="submit" className="btn btn-primary" style={{ flexShrink: 0, fontSize: '0.78rem', padding: '0.45rem 0.85rem', borderRadius: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>Send</button>
+            <form onSubmit={handleSendChat} style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem', alignItems: 'flex-end', width: '100%' }}>
+              <textarea ref={chatInputRef} placeholder="Type message... (Enter to send)" className="input" onKeyDown={handleChatKeyDown} rows={1} style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.65rem', fontSize: '0.78rem', borderRadius: 10, resize: 'none', lineHeight: 1.4, maxHeight: 72, overflowY: 'auto', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-default))', color: 'hsl(var(--text-primary))', outline: 'none' }} />
+              <button type="submit" className="btn btn-primary" style={{ flexShrink: 0, fontSize: '0.78rem', padding: '0.45rem 0.75rem', borderRadius: 10, fontWeight: 700, whiteSpace: 'nowrap', width: 'auto', display: 'inline-flex' }}>Send</button>
             </form>
           </div>
         </div>

@@ -303,6 +303,22 @@ export const GAMES_REGISTRY: GameInfo[] = [
     componentName: 'snakearena',
     supportsRanked: true,
   },
+  {
+    slug: 'bubble-shooter',
+    name: 'Bubble Shooter Saga',
+    category: 'Puzzle',
+    categories: ['Puzzle', 'Strategy'],
+    emoji: '🔮',
+    description: 'Pop matching bubbles, drop floating clusters, and complete magical saga objectives!',
+    multiplayer: false,
+    type: 'internal',
+    badge: 'New',
+    componentName: 'bubbleshooter',
+    supportsLeaderboard: true,
+    leaderboardModes: [
+      { value: 'bubble-shooter-classic', label: 'Bubble Shooter Classic' }
+    ],
+  },
 ]
 
 export function getGameBySlug(slug: string): GameInfo | undefined {

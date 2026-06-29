@@ -186,6 +186,67 @@ export const ACHIEVEMENT_RULES: AchievementRule[] = [
     },
   },
   {
+    slug: 'bubble-shooter-first-win',
+    check: async ({ profileId, gameSlug, result, tx }) => {
+      if (gameSlug !== 'bubble-shooter' || result !== 'win') return false
+      const count = await tx.score.count({
+        where: {
+          game: { slug: 'bubble-shooter' },
+          profileId,
+        },
+      })
+      return count >= 1
+    },
+  },
+  {
+    slug: 'bubble-shooter-apprentice',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'bubble-shooter') return false
+      const scores = await tx.score.findMany({
+        where: {
+          game: { slug: 'bubble-shooter' },
+          profileId,
+        },
+      })
+      return scores.some((s) => {
+        const meta = (s.metadata as Record<string, any>) || {}
+        return (meta.level ?? 0) >= 2
+      })
+    },
+  },
+  {
+    slug: 'bubble-shooter-master',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'bubble-shooter') return false
+      const scores = await tx.score.findMany({
+        where: {
+          game: { slug: 'bubble-shooter' },
+          profileId,
+        },
+      })
+      return scores.some((s) => {
+        const meta = (s.metadata as Record<string, any>) || {}
+        return (meta.level ?? 0) >= 3
+      })
+    },
+  },
+  {
+    slug: 'bubble-shooter-perfect',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'bubble-shooter') return false
+      const scores = await tx.score.findMany({
+        where: {
+          game: { slug: 'bubble-shooter' },
+          profileId,
+        },
+      })
+      return scores.some((s) => {
+        const meta = (s.metadata as Record<string, any>) || {}
+        return (meta.stars ?? 0) >= 3
+      })
+    },
+  },
+  {
     slug: 'level-5',
     check: async ({ profileId, tx }) => {
       const profile = await tx.profile.findUnique({
@@ -1381,8 +1442,18 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
       case 'ww-daily-champion':
       case 'ww-no-hints':
       case 'ww-vocabulary-king':
+      case 'bubble-shooter-first-win':
+      case 'bubble-shooter-perfect':
         current = isUnlocked ? 1 : 0
         target = 1
+        break
+      case 'bubble-shooter-apprentice':
+        current = getMemMaxLevel('bubble-shooter')
+        target = 2
+        break
+      case 'bubble-shooter-master':
+        current = getMemMaxLevel('bubble-shooter')
+        target = 3
         break
       case 'bb-line-destroyer':
         let totalBBLines = 0

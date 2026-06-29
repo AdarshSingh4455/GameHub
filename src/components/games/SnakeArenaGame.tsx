@@ -130,6 +130,28 @@ export default function SnakeArenaGame() {
   const [foodsCollected, setFoodsCollected] = useState<number>(0)
   const [eliminations, setEliminations] = useState<number>(0)
 
+  // Pre-load Powerup SVGs as images
+  const powerupImagesRef = useRef<Record<string, HTMLImageElement>>({})
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const svgs: Record<string, string> = {
+      magnet: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 11V6a5 5 0 0 0-10 0v5"/><path d="M17 11a3 3 0 0 0-6 0V6a1 1 0 0 1 2 0v5a1 1 0 0 0 2 0V6a3 3 0 0 0-6 0v5a7 7 0 0 0 14 0Z"/></svg>`,
+      speed: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2322c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+      shield: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+      double: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><text x="50%" y="53%" dominant-baseline="central" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="9" fill="%23ec4899">2x</text></svg>`,
+      ghost: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23a855f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10a10 10 0 0 1 20 0v11l-3-2-3 2-3-2-3 2-3-2-5 3v-11z"/><path d="M9 10h.01"/><path d="M15 10h.01"/></svg>`,
+      freeze: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2306b6d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="12" x2="4" y2="4"/><line x1="12" y1="12" x2="20" y2="20"/><line x1="12" y1="12" x2="20" y2="4"/><line x1="12" y1="12" x2="4" y2="20"/></svg>`
+    }
+
+    const imgs: Record<string, HTMLImageElement> = {}
+    Object.entries(svgs).forEach(([key, value]) => {
+      const img = new Image()
+      img.src = value
+      imgs[key] = img
+    })
+    powerupImagesRef.current = imgs
+  }, [])
+
   // Listen to Universal Result Modal actions
   useEffect(() => {
     const handleReplay = () => {
@@ -332,12 +354,11 @@ export default function SnakeArenaGame() {
   useEffect(() => {
     if (playingState !== 'playing') return
 
-    const tickInterval = setInterval(() => {
+    let timeoutId: NodeJS.Timeout
+
+    const tick = () => {
       const state = stateRef.current
-      if (!state || state.status !== 'PLAYING') {
-        clearInterval(tickInterval)
-        return
-      }
+      if (!state || state.status !== 'PLAYING') return
 
       // Update player steer direction
       const human = state.snakes['player-human']
@@ -354,7 +375,6 @@ export default function SnakeArenaGame() {
       }
 
       // Run local authoritative game step
-      // (Bypassing server imports to avoid server code bundling overhead)
       const nextTickState = simulateServerTick(state)
 
       setGameState(nextTickState)
@@ -364,21 +384,26 @@ export default function SnakeArenaGame() {
       // Track statistics increments
       const updatedHuman = nextTickState.snakes['player-human']
       if (updatedHuman) {
-        if (updatedHuman.body.length > longestLength) {
-          setLongestLength(updatedHuman.body.length)
-        }
+        setLongestLength(prev => Math.max(prev, updatedHuman.body.length))
         setFoodsCollected(Math.max(0, Math.floor(updatedHuman.score / 10)))
         setEliminations(updatedHuman.eliminations)
       }
 
       // Check Game Over
       if (nextTickState.status === 'FINISHED') {
-        clearInterval(tickInterval)
         handleFinished(nextTickState)
+      } else {
+        // Calculate dynamic tick interval: starts at 135ms, decreases to 90ms max over survival time
+        const elapsedSeconds = (Date.now() - nextTickState.startTime) / 1000
+        const currentInterval = Math.max(90, 135 - (elapsedSeconds / 3.0)) // speed up 1ms every 3 seconds
+        timeoutId = setTimeout(tick, currentInterval)
       }
-    }, 100) // Fixed tick rate 100ms
+    }
 
-    return () => clearInterval(tickInterval)
+    // Start recursive loop
+    timeoutId = setTimeout(tick, 135)
+
+    return () => clearTimeout(timeoutId)
   }, [playingState, difficulty])
 
   const simulateServerTick = (state: SnakeArenaState): SnakeArenaState => {
@@ -883,14 +908,20 @@ export default function SnakeArenaGame() {
         ctx.fill()
         ctx.stroke()
 
-        // Draw character representation in powerup box
-        ctx.shadowBlur = 0
-        ctx.fillStyle = '#ffffff'
-        ctx.font = `bold ${cellHeight * 0.8}px sans-serif`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        const letter = powerup.type.substring(0, 1).toUpperCase()
-        ctx.fillText(letter, x, y)
+        // Draw SVG representation in powerup box
+        const img = powerupImagesRef.current[powerup.type]
+        if (img && img.complete) {
+          const iconSize = radius * 1.25
+          ctx.drawImage(img, x - iconSize / 2, y - iconSize / 2, iconSize, iconSize)
+        } else {
+          ctx.shadowBlur = 0
+          ctx.fillStyle = '#ffffff'
+          ctx.font = `bold ${cellHeight * 0.7}px sans-serif`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          const label = powerup.type === 'double' ? '2x' : powerup.type.substring(0, 1).toUpperCase()
+          ctx.fillText(label, x, y)
+        }
       }
 
       // 3. Draw Snakes with smooth coordinate interpolation
@@ -959,12 +990,34 @@ export default function SnakeArenaGame() {
         if (sId === 'player-human') {
           ctx.save()
           ctx.beginPath()
-          const glowGrad = ctx.createRadialGradient(headX, headY, cellWidth * 0.2, headX, headY, cellWidth * 1.1)
-          glowGrad.addColorStop(0, `${snake.color}66`) // semi-transparent snake color
-          glowGrad.addColorStop(1, `${snake.color}00`) // transparent
+          
+          const pulseFactor = isProtected ? (1.35 + Math.sin(Date.now() / 100) * 0.25) : 1.1
+          const glowRadius = cellWidth * pulseFactor
+          const glowGrad = ctx.createRadialGradient(headX, headY, cellWidth * 0.2, headX, headY, glowRadius)
+          
+          const colorCenter = isProtected ? 'rgba(255, 255, 255, 0.95)' : `${snake.color}66`
+          const colorEdge = isProtected ? 'rgba(251, 191, 36, 0)' : `${snake.color}00`
+          
+          glowGrad.addColorStop(0, colorCenter)
+          if (isProtected) {
+            glowGrad.addColorStop(0.3, `${snake.color}cc`)
+          }
+          glowGrad.addColorStop(1, colorEdge)
+          
           ctx.fillStyle = glowGrad
-          ctx.arc(headX, headY, cellWidth * 1.1, 0, 2 * Math.PI)
+          ctx.arc(headX, headY, glowRadius, 0, 2 * Math.PI)
           ctx.fill()
+
+          if (isProtected) {
+            ctx.strokeStyle = '#ffffff'
+            ctx.lineWidth = 3
+            ctx.shadowBlur = 10
+            ctx.shadowColor = '#fbbf24'
+            ctx.beginPath()
+            ctx.arc(headX, headY, cellWidth * (0.85 + Math.sin(Date.now() / 120) * 0.15), 0, 2 * Math.PI)
+            ctx.stroke()
+          }
+
           ctx.restore()
         }
 

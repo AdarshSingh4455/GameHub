@@ -154,6 +154,11 @@ const achievements = [
   { slug: 'snake-wins-10', name: 'King Cobra', description: 'Win 10 Snake Arena matches.', xpReward: 200, coinReward: 50, category: 'wins', gameSlug: 'snake-arena' },
   { slug: 'snake-nightmare-conqueror', name: 'Nightmare Conqueror', description: 'Conquer the Nightmare AI in Solo Mode.', xpReward: 250, coinReward: 100, category: 'special', gameSlug: 'snake-arena' },
   { slug: 'snake-longest', name: 'Longest Snake', description: 'Reach a length of 50 or more in a match.', xpReward: 200, coinReward: 50, category: 'gameplay', gameSlug: 'snake-arena' },
+  // Bubble Shooter Saga Achievements
+  { slug: 'bubble-shooter-first-win', name: 'Pop to Victory', description: 'Win your first Bubble Shooter Saga level.', xpReward: 100, coinReward: 25, category: 'wins', gameSlug: 'bubble-shooter' },
+  { slug: 'bubble-shooter-apprentice', name: 'Saga Apprentice', description: 'Complete Level 2 in the Bubble Shooter Saga.', xpReward: 150, coinReward: 30, category: 'gameplay', gameSlug: 'bubble-shooter' },
+  { slug: 'bubble-shooter-master', name: 'Saga Master', description: 'Complete Level 3 (Finish the Saga) in Bubble Shooter.', xpReward: 300, coinReward: 75, category: 'gameplay', gameSlug: 'bubble-shooter' },
+  { slug: 'bubble-shooter-perfect', name: 'Perfect Aim', description: 'Earn 3 stars on any Bubble Shooter Saga level.', xpReward: 200, coinReward: 50, category: 'special', gameSlug: 'bubble-shooter' },
 ]
 
 async function main() {

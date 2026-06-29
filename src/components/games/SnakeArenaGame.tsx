@@ -8,6 +8,7 @@ import { getSnakeAIMove } from '@/lib/snakeAI'
 import { PowerupBadge } from '@/components/shared/PowerupBadge'
 import { LightbulbIcon } from '@/components/shared/Icons'
 import type { Position, SnakePlayer, FoodItem, PowerupItem, SnakeArenaState } from '@/lib/snakeArenaTypes'
+import { SnakeEffectManager } from '@/lib/SnakeEffectManager'
 
 type Difficulty = 'easy' | 'medium' | 'hard' | 'nightmare'
 type MapTheme = 'classic' | 'ice' | 'lava' | 'maze' | 'neon'
@@ -118,6 +119,11 @@ export default function SnakeArenaGame() {
 
   // authorative logic ticks states
   const [gameState, setGameState] = useState<SnakeArenaState | null>(null)
+  
+  const effectManagerRef = useRef<SnakeEffectManager | null>(null)
+  if (!effectManagerRef.current) {
+    effectManagerRef.current = new SnakeEffectManager()
+  }
   
   // Stats tracking
   const [longestLength, setLongestLength] = useState<number>(3)
@@ -727,9 +733,10 @@ export default function SnakeArenaGame() {
     if (!ctx) return
 
     let animFrame: number
+    const em = effectManagerRef.current
 
     const render = () => {
-      if (!gameState) return
+      if (!gameState || !em) return
       
       const width = canvas.width
       const height = canvas.height
@@ -741,6 +748,9 @@ export default function SnakeArenaGame() {
       // Clear Canvas with MapTheme palettes
       ctx.fillStyle = mapTheme === 'ice' ? 'hsl(200 40% 6%)' : mapTheme === 'lava' ? 'hsl(10 30% 5%)' : 'hsl(222 25% 6%)'
       ctx.fillRect(0, 0, width, height)
+
+      // Draw Background Polish (drifting stars)
+      em.drawBackgroundPolish(ctx, width, height)
 
       // Draw Grid lines
       ctx.strokeStyle = mapTheme === 'ice' ? 'rgba(100,200,255,0.04)' : mapTheme === 'lava' ? 'rgba(255,100,50,0.04)' : 'rgba(255,255,255,0.03)'
@@ -758,6 +768,69 @@ export default function SnakeArenaGame() {
         ctx.stroke()
       }
 
+      // Detection logic for food, powerups, and deaths
+      const currentFoods = gameState.foods
+      const currentPowerups = gameState.powerups
+      const currentSnakes = gameState.snakes
+
+      // Detect food eats
+      for (const pf of em.prevFoodIds) {
+        if (!currentFoods.some(cf => cf.id === pf.id)) {
+          const fx = (pf.x + 0.5) * cellWidth
+          const fy = (pf.y + 0.5) * cellHeight
+          let color = '#10b981'
+          if (pf.type === 'golden') color = '#fbbf24'
+          else if (pf.type === 'giant') color = '#f97316'
+          else if (pf.type === 'dead') color = '#ef4444'
+          em.spawnExplosion(fx, fy, color, pf.type === 'giant' ? 18 : 10)
+        }
+      }
+      em.prevFoodIds = currentFoods.map(f => ({ id: f.id, x: f.x, y: f.y, type: f.type })) as any
+
+      // Detect powerups
+      for (const pp of em.prevPowerupIds) {
+        if (!currentPowerups.some(cp => cp.id === pp.id)) {
+          const px = (pp.x + 0.5) * cellWidth
+          const py = (pp.y + 0.5) * cellHeight
+          em.spawnExplosion(px, py, '#8b5cf6', 22, 3.5)
+        }
+      }
+      em.prevPowerupIds = currentPowerups.map(p => ({ id: p.id, x: p.x, y: p.y })) as any
+
+      // Detect eliminations
+      for (const sId in currentSnakes) {
+        const cs = currentSnakes[sId]
+        const prevState = em.prevSnakesState[sId]
+        if (prevState === 'ACTIVE' && cs.status === 'ELIMINATED') {
+          const head = cs.body[0] || { x: 20, y: 20 }
+          const hx = (head.x + 0.5) * cellWidth
+          const hy = (head.y + 0.5) * cellHeight
+          em.spawnExplosion(hx, hy, cs.color, 35, 4.0)
+
+          if (sId === 'player-human') {
+            em.addNotification('💥 WASTED - YOU CRASHED!', '#ef4444', 150)
+          } else {
+            const human = currentSnakes['player-human']
+            const wasKilledByHuman = cs.body.some(seg => {
+              const hHead = human?.body[0]
+              return hHead && Math.abs(seg.x - hHead.x) <= 1 && Math.abs(seg.y - hHead.y) <= 1
+            })
+            if (wasKilledByHuman) {
+              em.addNotification(`🎯 ELIMINATED ${cs.username.toUpperCase()} (+50)`, '#fbbf24', 120)
+            } else {
+              em.addNotification(`💀 ${cs.username.toUpperCase()} CRASHED`, '#94a3b8', 95)
+            }
+          }
+        }
+      }
+
+      // Sync active state map
+      const nextSnakesState: Record<string, 'ACTIVE' | 'ELIMINATED'> = {}
+      for (const sId in currentSnakes) {
+        nextSnakesState[sId] = currentSnakes[sId].status
+      }
+      em.prevSnakesState = nextSnakesState
+
       // Interpolation progress factor
       const progress = Math.min(1, (Date.now() - lastTickTimeRef.current) / 100)
 
@@ -765,21 +838,22 @@ export default function SnakeArenaGame() {
       for (const food of gameState.foods) {
         ctx.beginPath()
         let pulse = 1 + Math.sin(Date.now() / 150) * 0.15
-        let radius = (cellWidth / 1.8) * pulse // Increased food size
+        const scale = em.getSpawnScale(food.id)
+        let radius = (cellWidth / 1.8) * pulse * scale
         let color = '#10b981' // Green normal
 
         if (food.type === 'golden') {
           color = '#fbbf24' // Yellow gold
-          ctx.shadowBlur = 18 // Increased glow
+          ctx.shadowBlur = 18 // Glow
           ctx.shadowColor = '#fbbf24'
         } else if (food.type === 'giant') {
           color = '#f97316' // Orange giant
-          radius = (cellWidth / 1.25) * pulse // Increased food size
-          ctx.shadowBlur = 15 // Increased glow
+          radius = (cellWidth / 1.25) * pulse * scale
+          ctx.shadowBlur = 15 // Glow
           ctx.shadowColor = '#f97316'
         } else if (food.type === 'dead') {
           color = '#ef4444' // Dotted red scattered
-          radius = cellWidth / 3.0
+          radius = (cellWidth / 3.0) * scale
         }
 
         ctx.fillStyle = color
@@ -795,7 +869,8 @@ export default function SnakeArenaGame() {
         const x = (powerup.x + 0.5) * cellWidth
         const y = (powerup.y + 0.5) * cellHeight
         const pulse = 1 + Math.sin(Date.now() / 120) * 0.12
-        const radius = (cellWidth / 1.6) * pulse
+        const scale = em.getSpawnScale(powerup.id)
+        const radius = (cellWidth / 1.6) * pulse * scale
 
         ctx.shadowBlur = 14
         ctx.shadowColor = '#8b5cf6'
@@ -827,12 +902,12 @@ export default function SnakeArenaGame() {
         // Spawn protection visual flashing
         if (isProtected && Math.floor(Date.now() / 100) % 2 === 0) continue
 
-        ctx.lineWidth = cellWidth * 0.95 // Increased snake thickness slightly
+        ctx.lineWidth = cellWidth * 0.95 // Snake thickness
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         ctx.strokeStyle = snake.color
         
-        ctx.shadowBlur = 16 // Increased glow visibility
+        ctx.shadowBlur = 16 // Glow visibility
         ctx.shadowColor = snake.color
 
         // Draw body segments
@@ -907,6 +982,12 @@ export default function SnakeArenaGame() {
         ctx.fillText(labelText, headX, headY - cellHeight * 0.75)
         ctx.shadowBlur = 0 // reset shadow
       }
+
+      // Draw collection particles
+      em.updateAndDrawParticles(ctx)
+
+      // Draw active kill notifications
+      em.drawNotifications(ctx, width, cellHeight)
 
       animFrame = requestAnimationFrame(render)
     }

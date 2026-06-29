@@ -36,7 +36,7 @@ Object.values(CATEGORIES).forEach(list => {
 })
 
 // General common vocabulary to fill up standard gameplay
-const COMMON_WORDS: string[] = [
+export const COMMON_WORDS: string[] = [
   // 3 letters
   'act', 'add', 'age', 'ago', 'aim', 'all', 'amp', 'and', 'any', 'ape', 'apt', 'arc', 'are', 'art', 'ask', 'ate', 'awe',
   'bad', 'bag', 'ban', 'bar', 'bat', 'bed', 'beg', 'bet', 'big', 'bin', 'bit', 'box', 'boy', 'bud', 'bug', 'bus', 'but', 'buy',

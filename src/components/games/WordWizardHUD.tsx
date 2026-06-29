@@ -14,6 +14,7 @@ interface HUDProps {
   hintsRemaining: number
   onUseHint: () => void
   disabled?: boolean
+  remainingCount?: number
 }
 
 export default function WordWizardHUD({
@@ -25,6 +26,7 @@ export default function WordWizardHUD({
   hintsRemaining,
   onUseHint,
   disabled = false,
+  remainingCount,
 }: HUDProps) {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -115,6 +117,24 @@ export default function WordWizardHUD({
             }}
           >
             Combo x{combo}
+          </div>
+        )}
+
+        {/* Remaining Words Badge */}
+        {remainingCount !== undefined && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              padding: '4px 12px',
+              borderRadius: 12,
+            }}
+          >
+            <span style={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Remaining</span>
+            <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#38bdf8' }}>{remainingCount}</span>
           </div>
         )}
 

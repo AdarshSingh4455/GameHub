@@ -1,8 +1,6 @@
-// Word Wizard Board Component
-// Renders the board grid, connects paths, and handles drag/tap gesture inputs
-
 import React, { useRef } from 'react'
 import { getWordFromPath } from '@/lib/wordWizardEngine'
+import { SelectionGestureEngine } from '@/lib/word-engine/SelectionGestureEngine'
 
 export interface BoardProps {
   grid: string[][]
@@ -40,19 +38,17 @@ export default function WordWizardBoard({
 
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    const cellW = rect.width / size
-    const cellH = rect.height / size
 
-    const c = Math.floor(x / cellW)
-    const r = Math.floor(y / cellH)
+    // Use forgiving radial engine
+    const match = SelectionGestureEngine.getClosestCell(x, y, rect.width, rect.height, size, 0.90)
 
-    if (r >= 0 && r < size && c >= 0 && c < size) {
+    if (match) {
       isDragging.current = true
-      const cellKey = `${r},${c}`
+      const cellKey = `${match.r},${match.c}`
       lastCellRef.current = cellKey
-      setPath([[r, c]])
+      setPath([[match.r, match.c]])
 
-      particlesRef.current?.addBurst(x, y, '#6366f1', 6)
+      particlesRef.current?.addBurst(x, y, '#818cf8', 8)
       
       // Request pointer capture to track drag outside cell
       boardRef.current?.setPointerCapture(e.pointerId)
@@ -66,45 +62,55 @@ export default function WordWizardBoard({
 
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    const cellW = rect.width / size
-    const cellH = rect.height / size
 
-    const c = Math.floor(x / cellW)
-    const r = Math.floor(y / cellH)
+    // Use forgiving radial engine
+    const match = SelectionGestureEngine.getClosestCell(x, y, rect.width, rect.height, size, 0.90)
 
-    if (r >= 0 && r < size && c >= 0 && c < size) {
+    if (match) {
+      const { r, c } = match
       const cellKey = `${r},${c}`
       if (cellKey === lastCellRef.current) return
 
       // Emit trail
-      particlesRef.current?.addTrail(x, y, 'rgba(129, 140, 248, 0.4)')
+      particlesRef.current?.addTrail(x, y, 'rgba(139, 92, 246, 0.55)')
 
       setPath((prev) => {
-        // If empty path, start it
         if (prev.length === 0) {
           lastCellRef.current = cellKey
           return [[r, c]]
         }
 
         const lastCell = prev[prev.length - 1]
-        const secondLastCell = prev[prev.length - 2]
-
+        
         // Backward drag -> erase last item (feels super premium)
-        if (secondLastCell && secondLastCell[0] === r && secondLastCell[1] === c) {
+        const indexInPath = prev.findIndex(([pr, pc]) => pr === r && pc === c)
+        if (indexInPath !== -1 && indexInPath < prev.length - 1) {
           lastCellRef.current = cellKey
-          return prev.slice(0, -1)
+          return prev.slice(0, indexInPath + 1)
         }
 
         // Check if cell is already in the path
-        const alreadyInPath = prev.some(([pr, pc]) => pr === r && pc === c)
-        if (alreadyInPath) return prev
+        if (indexInPath !== -1) return prev
 
-        // Check adjacency
+        // Check adjacency and interpolate if needed (for fast drags/diagonal snapping)
         const dr = Math.abs(lastCell[0] - r)
         const dc = Math.abs(lastCell[1] - c)
-        if (dr <= 1 && dc <= 1 && (dr !== 0 || dc !== 0)) {
+
+        if (dr <= 1 && dc <= 1) {
+          // Adjacent cell, add directly
           lastCellRef.current = cellKey
           return [...prev, [r, c]]
+        } else {
+          // Fast drag or skipped intermediate cells. Interpolate to make diagonal/straight drags seamless!
+          const interp = SelectionGestureEngine.getInterpolatedPath(lastCell[0], lastCell[1], r, c)
+          
+          // Filter out cells already in the path
+          const filteredInterp = interp.filter(([ir, ic]) => !prev.some(([pr, pc]) => pr === ir && pc === ic))
+          
+          if (filteredInterp.length > 0) {
+            lastCellRef.current = cellKey
+            return [...prev, ...filteredInterp]
+          }
         }
 
         return prev
@@ -191,20 +197,35 @@ export default function WordWizardBoard({
           const y2 = `${(r2 + 0.5) * cellPercent}%`
 
           return (
-            <line
-              key={index}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="url(#pathGradient)"
-              strokeWidth="10"
-              strokeLinecap="round"
-              style={{
-                filter: 'drop-shadow(0 0 6px hsl(250, 89%, 60%))',
-                opacity: 0.85,
-              }}
-            />
+            <g key={index}>
+              {/* Outer glow trail */}
+              <line
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="rgba(129, 140, 248, 0.25)"
+                strokeWidth="18"
+                strokeLinecap="round"
+                style={{
+                  filter: 'blur(3px)',
+                }}
+              />
+              {/* Inner core path */}
+              <line
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="url(#pathGradient)"
+                strokeWidth="8"
+                strokeLinecap="round"
+                style={{
+                  filter: 'drop-shadow(0 0 6px hsl(250, 89%, 60%))',
+                  opacity: 0.95,
+                }}
+              />
+            </g>
           )
         })}
       </svg>

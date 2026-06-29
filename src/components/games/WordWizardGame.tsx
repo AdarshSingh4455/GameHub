@@ -12,21 +12,22 @@ import {
 } from '@/lib/wordWizardEngine'
 import { isValidWord, getWordCategory, CATEGORIES } from '@/lib/wordWizardDictionary'
 import { getDailyModifier, getDailySeed, getModifierDescription, DailyModifier } from '@/lib/wordWizardDaily'
+import { getWordsClient } from '@/lib/word-engine/client'
 import WordWizardBoard from './WordWizardBoard'
 import WordWizardHUD from './WordWizardHUD'
 import { WordWizardParticles, ParticlesRef } from './WordWizardParticles'
 
-const QUEST_CATEGORIES = ['nature', 'animals', 'food', 'sports', 'countries', 'science', 'movies', 'vehicles']
+const QUEST_CATEGORIES = ['Animals', 'Objects', 'Food', 'Sports', 'Technology', 'Nature', 'Vehicles', 'Places', 'Professions']
 
 const getCategoryIcon = (cat: string) => {
-  switch (cat) {
+  switch (cat.toLowerCase()) {
     case 'nature': return <HeartIcon size={14} style={{ color: 'hsl(142 70% 55%)' }} className="inline mr-1" />
     case 'animals': return <BotIcon size={14} style={{ color: 'hsl(270 80% 65%)' }} className="inline mr-1" />
     case 'food': return <GiftIcon size={14} style={{ color: 'hsl(350 80% 55%)' }} className="inline mr-1" />
     case 'sports': return <TargetIcon size={14} style={{ color: 'hsl(220 100% 65%)' }} className="inline mr-1" />
-    case 'countries': return <GlobeIcon size={14} style={{ color: 'hsl(180 70% 50%)' }} className="inline mr-1" />
-    case 'science': return <FlaskIcon size={14} style={{ color: 'hsl(280 80% 60%)' }} className="inline mr-1" />
-    case 'movies': return <PlayIcon size={14} style={{ color: 'hsl(340 85% 60%)' }} className="inline mr-1" />
+    case 'places': return <GlobeIcon size={14} style={{ color: 'hsl(180 70% 50%)' }} className="inline mr-1" />
+    case 'technology': return <FlaskIcon size={14} style={{ color: 'hsl(280 80% 60%)' }} className="inline mr-1" />
+    case 'objects': return <PlayIcon size={14} style={{ color: 'hsl(340 85% 60%)' }} className="inline mr-1" />
     case 'vehicles': return <CarIcon size={14} style={{ color: 'hsl(45 100% 55%)' }} className="inline mr-1" />
     default: return <FileTextIcon size={14} className="inline mr-1" />
   }
@@ -37,9 +38,13 @@ export default function WordWizardGame() {
   const particlesRef = useRef<ParticlesRef | null>(null)
 
   // Game setup states
-  const [gameState, setGameState] = useState<'SETUP' | 'PLAYING' | 'GAMEOVER'>('SETUP')
+  const [gameState, setGameState] = useState<'SETUP' | 'INTRO' | 'PLAYING' | 'GAMEOVER'>('SETUP')
   const [mode, setMode] = useState<'classic' | 'endless' | 'daily'>('classic')
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal')
+
+  // Word Engine States
+  const [introCategory, setIntroCategory] = useState<string>('')
+  const [isBoardLoading, setIsBoardLoading] = useState<boolean>(false)
 
   // Board and puzzle states
   const [board, setBoard] = useState<string[][]>([])
@@ -95,7 +100,7 @@ export default function WordWizardGame() {
   useEffect(() => { scoreRef.current = score }, [score])
 
   // Start a fresh game
-  const startGame = useCallback(() => {
+  const startGame = useCallback(async () => {
     totalAttemptsRef.current = 0
     correctAttemptsRef.current = 0
     let localDifficulty = difficulty
@@ -115,93 +120,96 @@ export default function WordWizardGame() {
       }
     }
 
-    const chosenCategory = mode === 'daily' ? 'countries' : QUEST_CATEGORIES[Math.floor(Math.random() * QUEST_CATEGORIES.length)]
+    const chosenCategory = mode === 'daily' ? 'Places' : QUEST_CATEGORIES[Math.floor(Math.random() * QUEST_CATEGORIES.length)]
     
+    setIntroCategory(chosenCategory)
+    setIsBoardLoading(true)
+    setGameState('INTRO')
+
     const size = localDifficulty === 'easy' ? 4 : localDifficulty === 'normal' ? 5 : 6
     const targetCount = localDifficulty === 'hard' ? 8 : 4
     
-    // Choose target words first!
-    const minLength = 3
-    const maxLength = localDifficulty === 'easy' ? 5 : localDifficulty === 'normal' ? 6 : 7
-
-    const catWords = (CATEGORIES[chosenCategory] || []).filter(
-      w => w.length >= minLength && w.length <= maxLength
-    )
-
-    let selectedTargets: string[] = []
-    let boardData: any = null
-    let validWords = new Set<string>()
-
-    let found = false
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const shuffledCatWords = [...catWords].sort(() => Math.random() - 0.5)
-      selectedTargets = shuffledCatWords.slice(0, targetCount)
+    try {
+      // Retrieve words from shared Word Engine
+      const wordsMetadata = await getWordsClient({
+        category: chosenCategory,
+        difficulty: localDifficulty,
+        count: targetCount
+      })
       
-      if (selectedTargets.length < targetCount) {
-        const remaining = targetCount - selectedTargets.length
-        const otherWords = (CATEGORIES[chosenCategory] || []).filter(w => !selectedTargets.includes(w))
-        selectedTargets.push(...otherWords.slice(0, remaining))
+      const selectedTargets = wordsMetadata.map(wm => wm.word.toLowerCase())
+
+      let boardData: any = null
+      let validWords = new Set<string>()
+      let found = false
+
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const attemptSeed = seed + attempt * 12345
+        const tempBoard = generateBoard(size, localDifficulty, attemptSeed, selectedModifier || undefined, selectedTargets)
+        const tempValid = findAllWords(tempBoard.grid)
+
+        const allTraceable = selectedTargets.every(w => findWordPath(w, tempBoard.grid) !== null)
+        if (allTraceable) {
+          boardData = tempBoard
+          validWords = tempValid
+          found = true
+          break
+        }
       }
 
-      const attemptSeed = seed + attempt * 12345
-      const tempBoard = generateBoard(size, localDifficulty, attemptSeed, selectedModifier || undefined, selectedTargets)
-      const tempValid = findAllWords(tempBoard.grid)
-
-      const allTraceable = selectedTargets.every(w => findWordPath(w, tempBoard.grid) !== null)
-      if (allTraceable) {
-        boardData = tempBoard
-        validWords = tempValid
-        found = true
-        break
+      if (!found || !boardData) {
+        boardData = generateBoard(size, localDifficulty, seed, selectedModifier || undefined, selectedTargets)
+        validWords = findAllWords(boardData.grid)
       }
+
+      setBoard(boardData.grid)
+      setSpecialTiles(boardData.specialTiles)
+      setAllValidWords(validWords)
+      setFoundWords(new Set())
+      setWordPath([])
+
+      // Set Objective targets
+      setTargetCategory(chosenCategory)
+      setTargetWords(selectedTargets)
+      setFoundTargetWords(new Set())
+      setObjectiveCompleted(false)
+      setActiveHint(null)
+
+      // Set Time limit
+      let initialTime = 60
+      if (selectedModifier === 'time_attack') {
+        initialTime = 40
+      }
+      
+      setTimeLeft(mode === 'endless' ? null : initialTime)
+      setMaxTime(initialTime)
+
+      // Reset scores/combos
+      setScore(0)
+      setCombo(0)
+      setHintsRemaining(selectedModifier === 'no_hints' ? 0 : 3)
+      setActiveModifier(selectedModifier)
+
+      lastWordTime.current = 0
+      maxComboRef.current = 0
+    } catch (err) {
+      console.error('Error starting game with Word Engine:', err)
+      // Fallback
+      setGameState('SETUP')
+    } finally {
+      setIsBoardLoading(false)
     }
-
-    if (!found || !boardData) {
-      const shuffledCatWords = [...catWords].sort(() => Math.random() - 0.5)
-      selectedTargets = shuffledCatWords.slice(0, targetCount)
-      boardData = generateBoard(size, localDifficulty, seed, selectedModifier || undefined, selectedTargets)
-      validWords = findAllWords(boardData.grid)
-    }
-
-    console.log('[WW TARGET COUNT] ' + JSON.stringify({
-      difficulty: localDifficulty,
-      targetCount: selectedTargets.length,
-      targetWords: selectedTargets
-    }))
-
-    setBoard(boardData.grid)
-    setSpecialTiles(boardData.specialTiles)
-    setAllValidWords(validWords)
-    setFoundWords(new Set())
-    setWordPath([])
-
-    // Set Objective targets
-    setTargetCategory(chosenCategory)
-    setTargetWords(selectedTargets)
-    setFoundTargetWords(new Set())
-    setObjectiveCompleted(false)
-    setActiveHint(null)
-
-    // Set Time limit
-    let initialTime = 60
-    if (selectedModifier === 'time_attack') {
-      initialTime = 40
-    }
-    
-    setTimeLeft(mode === 'endless' ? null : initialTime)
-    setMaxTime(initialTime)
-
-    // Reset scores/combos
-    setScore(0)
-    setCombo(0)
-    setHintsRemaining(selectedModifier === 'no_hints' ? 0 : 3)
-    setActiveModifier(selectedModifier)
-
-    lastWordTime.current = 0
-    maxComboRef.current = 0
-    
-    setGameState('PLAYING')
   }, [difficulty, mode])
+
+  // Automatically transition from INTRO to PLAYING when board completes loading
+  useEffect(() => {
+    if (gameState === 'INTRO' && !isBoardLoading) {
+      const timer = setTimeout(() => {
+        setGameState('PLAYING')
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [gameState, isBoardLoading])
 
   // Handle word submission
   const handleSubmitWord = useCallback((word: string, path: [number, number][]) => {
@@ -572,6 +580,88 @@ export default function WordWizardGame() {
     >
       <WordWizardParticles ref={particlesRef} />
 
+      {/* INTRO STAGE */}
+      {gameState === 'INTRO' && (
+        <div
+          style={{
+            width: '100%',
+            padding: '4rem 2rem',
+            background: 'linear-gradient(135deg, hsl(262, 83%, 12%), hsl(222, 18%, 8%))',
+            border: '1px solid rgba(139, 92, 246, 0.25)',
+            borderRadius: 24,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 30,
+            boxShadow: '0 30px 60px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(139, 92, 246, 0.15)',
+            textAlign: 'center',
+            minHeight: 400,
+            position: 'relative',
+            overflow: 'hidden',
+            animation: 'intro-zoom 0.5s ease-out both',
+          }}
+        >
+          <style>{`
+            @keyframes intro-zoom {
+              from { opacity: 0; transform: scale(0.92); }
+              to { opacity: 1; transform: scale(1); }
+            }
+            @keyframes text-glow {
+              from { text-shadow: 0 0 10px rgba(139, 92, 246, 0.5), 0 0 20px rgba(139, 92, 246, 0.3); }
+              to { text-shadow: 0 0 20px rgba(139, 92, 246, 0.8), 0 0 40px rgba(139, 92, 246, 0.5); }
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          
+          {isBoardLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div
+                style={{
+                  width: 50,
+                  height: 50,
+                  border: '4px solid rgba(139, 92, 246, 0.1)',
+                  borderTop: '4px solid hsl(262, 83%, 62%)',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}
+              />
+              <h3 style={{ fontSize: '1.1rem', color: 'rgba(255, 255, 255, 0.7)', fontWeight: 650 }}>
+                Summoning Words...
+              </h3>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <span style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 800 }}>
+                Category
+              </span>
+              <h1
+                style={{
+                  fontSize: '3rem',
+                  fontWeight: 950,
+                  margin: 0,
+                  color: '#fff',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  animation: 'text-glow 1.5s ease-in-out infinite alternate',
+                  background: 'linear-gradient(135deg, #a78bfa, #818cf8)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                {introCategory}
+              </h1>
+              <p style={{ fontSize: '1.1rem', color: 'rgba(255, 255, 255, 0.75)', fontWeight: 600, marginTop: 8 }}>
+                Find all hidden words.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* SETUP STAGE */}
       {gameState === 'SETUP' && (
         <div
@@ -704,6 +794,7 @@ export default function WordWizardGame() {
             hintsRemaining={hintsRemaining}
             onUseHint={handleUseHint}
             disabled={isLoading}
+            remainingCount={targetWords.length - foundTargetWords.size}
           />
 
           {/* New Objective Progress Panel */}

@@ -9,6 +9,7 @@ import { useToast } from '@/lib/contexts/ToastContext'
 import { isRateLimited } from '@/lib/rateLimit'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import PartyPanel from '@/components/layout/PartyPanel'
+import SessionRecoveryModal from '@/components/layout/SessionRecoveryModal'
 import Avatar from '@/components/shared/Avatar'
 import SocketDiagnostics from '@/components/layout/SocketDiagnostics'
 import GameIcon from '@/components/games/GameIcon'
@@ -175,6 +176,7 @@ export default function MultiplayerPage() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [staleRoom, setStaleRoom] = useState<{ roomCode: string; roomId: string } | null>(null)
   const [hasStuckMatch, setHasStuckMatch] = useState(false)
+  const [recoveredSession, setRecoveredSession] = useState<{ roomCode: string; gameSlug: string; lastActivityAt?: string } | null>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -304,8 +306,13 @@ export default function MultiplayerPage() {
           if (active.roomCode) {
             if (active.status === 'STARTING' || active.status === 'PLAYING') {
               console.log(`[MULTIPLAYER RECONNECT RECOVERY] Active match found: ${active.roomCode}`)
-              addToast('success', 'Restored Active Match', 'Restoring match board automatically...')
-              router.push(`/dashboard/multiplayer/play/${active.roomCode}`)
+              // Show modal — never auto-redirect without user confirmation
+              setRecoveredSession({
+                roomCode: active.roomCode,
+                gameSlug: active.gameSlug || 'unknown',
+                lastActivityAt: active.lastActivityAt,
+              })
+              setDashboardLoading(false)
               return
             } else if (active.status === 'WAITING') {
               setStaleRoom({ roomCode: active.roomCode, roomId: active.roomId })
@@ -423,7 +430,8 @@ export default function MultiplayerPage() {
     if (!socket) return
 
     // Global invite listener across dashboard
-    socket.on('invite-received', (invite: any) => {
+    // Server emits 'lobby-invite-received' (not 'invite-received')
+    socket.on('lobby-invite-received', (invite: any) => {
       const senderName = invite.sender?.displayName || (invite.sender?.username?.includes('@') ? invite.sender.username.split('@')[0] : invite.sender?.username) || 'a friend'
       addToast('info', 'Invite Received', `You received a room invite from ${senderName}`)
       const INVITE_TTL_MS = 10 * 60 * 1000
@@ -432,7 +440,7 @@ export default function MultiplayerPage() {
     })
 
     return () => {
-      socket.off('invite-received')
+      socket.off('lobby-invite-received')
     }
   }, [socket, addToast])
 
@@ -1005,6 +1013,35 @@ export default function MultiplayerPage() {
       data-screen={screen}
       className="animate-fadeIn safe-bottom-padding multiplayer-page-container"
     >
+      {/* ── Session Recovery Modal ── */}
+      {recoveredSession && (
+        <SessionRecoveryModal
+          session={recoveredSession}
+          onContinue={() => {
+            router.push(`/dashboard/multiplayer/play/${recoveredSession.roomCode}`)
+          }}
+          onLeave={async () => {
+            try {
+              await fetch('/api/multiplayer/leave-room', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomCode: recoveredSession.roomCode }),
+              })
+            } catch { /* best-effort */ }
+            // Clear all room recovery keys from localStorage
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+              const key = localStorage.key(i)
+              if (key?.startsWith('gamehub_room_recovery_')) localStorage.removeItem(key)
+            }
+            try {
+              sessionStorage.removeItem('mp_screen')
+              sessionStorage.removeItem('mp_lobby_room_code')
+            } catch { /* ignore */ }
+            setRecoveredSession(null)
+          }}
+        />
+      )}
+
       {/* ── Screen: MENU ── */}
       {screen === 'MENU' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>

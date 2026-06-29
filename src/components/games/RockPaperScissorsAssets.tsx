@@ -6,115 +6,182 @@ interface AssetProps {
   style?: React.CSSProperties
 }
 
-// Sleek neon fist vector representing Rock
-export const RockVector: React.FC<AssetProps> = ({ size = 32, className = '', style = {} }) => (
+// ── ROCK — textured stone illustration ──────────────────────────────────────
+export const RockIllustration: React.FC<AssetProps> = ({ size = 80, className = '', style = {} }) => (
   <svg
     width={size}
     height={size}
-    viewBox="0 0 24 24"
+    viewBox="0 0 80 80"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
-    style={{ display: 'inline-block', verticalAlign: 'middle', filter: 'drop-shadow(0 0 8px hsl(355 85% 55% / 0.5))', ...style }}
+    style={{ display: 'inline-block', verticalAlign: 'middle', filter: 'drop-shadow(0 0 12px hsl(355 85% 55% / 0.6))', ...style }}
   >
     <defs>
-      <linearGradient id="rock-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="hsl(355 85% 55%)" />
-        <stop offset="100%" stopColor="hsl(330 85% 45%)" />
+      <radialGradient id="rock-body" cx="35%" cy="30%" r="70%">
+        <stop offset="0%" stopColor="hsl(355 30% 52%)" />
+        <stop offset="55%" stopColor="hsl(355 25% 38%)" />
+        <stop offset="100%" stopColor="hsl(355 20% 22%)" />
+      </radialGradient>
+      <radialGradient id="rock-sheen" cx="30%" cy="25%" r="50%">
+        <stop offset="0%" stopColor="white" stopOpacity="0.18" />
+        <stop offset="100%" stopColor="white" stopOpacity="0" />
+      </radialGradient>
+      <linearGradient id="rock-crack" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="hsl(355 85% 70%)" stopOpacity="0.6" />
+        <stop offset="100%" stopColor="hsl(355 85% 55%)" stopOpacity="0.2" />
       </linearGradient>
     </defs>
-    {/* Clenched fist silhouette & inner paths */}
+    {/* Main stone body */}
     <path
-      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-      fill="url(#rock-grad)"
-      fillOpacity="0.12"
-      stroke="url(#rock-grad)"
+      d="M16 50 C14 42 18 28 26 20 C32 14 42 12 50 15 C60 18 67 28 66 40 C65 52 58 64 46 67 C34 70 18 62 16 50Z"
+      fill="url(#rock-body)"
+    />
+    {/* Surface sheen */}
+    <path
+      d="M16 50 C14 42 18 28 26 20 C32 14 42 12 50 15 C60 18 67 28 66 40 C65 52 58 64 46 67 C34 70 18 62 16 50Z"
+      fill="url(#rock-sheen)"
+    />
+    {/* Neon outline */}
+    <path
+      d="M16 50 C14 42 18 28 26 20 C32 14 42 12 50 15 C60 18 67 28 66 40 C65 52 58 64 46 67 C34 70 18 62 16 50Z"
+      stroke="hsl(355 85% 65%)"
       strokeWidth="1.5"
+      fill="none"
+      strokeOpacity="0.85"
+    />
+    {/* Rock cracks/texture */}
+    <path d="M32 22 L28 36 L38 42" stroke="url(#rock-crack)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M46 18 L50 32 L42 38" stroke="url(#rock-crack)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M24 46 L34 52 L30 62" stroke="url(#rock-crack)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M54 36 L58 48 L50 55" stroke="url(#rock-crack)" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" />
+    {/* Highlight facet */}
+    <ellipse cx="32" cy="26" rx="6" ry="4" fill="white" fillOpacity="0.1" transform="rotate(-20 32 26)" />
+  </svg>
+)
+
+// ── PAPER — folded paper sheet illustration ─────────────────────────────────
+export const PaperIllustration: React.FC<AssetProps> = ({ size = 80, className = '', style = {} }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 80 80"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    style={{ display: 'inline-block', verticalAlign: 'middle', filter: 'drop-shadow(0 0 12px hsl(220 100% 60% / 0.6))', ...style }}
+  >
+    <defs>
+      <linearGradient id="paper-body" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="hsl(220 40% 40%)" />
+        <stop offset="100%" stopColor="hsl(220 30% 22%)" />
+      </linearGradient>
+      <linearGradient id="paper-fold" x1="100%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="hsl(220 50% 50%)" />
+        <stop offset="100%" stopColor="hsl(220 40% 30%)" />
+      </linearGradient>
+      <linearGradient id="paper-line" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="hsl(220 100% 68%)" stopOpacity="0.8" />
+        <stop offset="100%" stopColor="hsl(270 80% 68%)" stopOpacity="0.4" />
+      </linearGradient>
+    </defs>
+    {/* Paper body */}
+    <rect x="14" y="12" width="42" height="54" rx="3" fill="url(#paper-body)" />
+    {/* Folded corner (top-right) */}
+    <path d="M42 12 L56 12 L56 26 L42 12Z" fill="url(#paper-fold)" />
+    <path d="M42 12 L56 26 L42 26 Z" fill="hsl(220 20% 15%)" fillOpacity="0.5" />
+    {/* Fold crease line */}
+    <path d="M42 12 L56 26" stroke="hsl(220 100% 68%)" strokeWidth="1" strokeOpacity="0.6" />
+    {/* Neon border */}
+    <rect x="14" y="12" width="42" height="54" rx="3" stroke="hsl(220 100% 68%)" strokeWidth="1.5" strokeOpacity="0.9" fill="none" />
+    {/* Text lines on paper */}
+    <line x1="22" y1="34" x2="48" y2="34" stroke="url(#paper-line)" strokeWidth="1.5" strokeLinecap="round" />
+    <line x1="22" y1="42" x2="44" y2="42" stroke="url(#paper-line)" strokeWidth="1.5" strokeLinecap="round" />
+    <line x1="22" y1="50" x2="46" y2="50" stroke="url(#paper-line)" strokeWidth="1.5" strokeLinecap="round" />
+    <line x1="22" y1="58" x2="38" y2="58" stroke="url(#paper-line)" strokeWidth="1.5" strokeLinecap="round" />
+    {/* Sheen */}
+    <rect x="16" y="14" width="18" height="28" rx="2" fill="white" fillOpacity="0.05" />
+  </svg>
+)
+
+// ── SCISSORS — metallic scissors illustration ───────────────────────────────
+export const ScissorsIllustration: React.FC<AssetProps> = ({ size = 80, className = '', style = {} }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 80 80"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    style={{ display: 'inline-block', verticalAlign: 'middle', filter: 'drop-shadow(0 0 12px hsl(45 100% 55% / 0.6))', ...style }}
+  >
+    <defs>
+      <linearGradient id="blade-1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="hsl(45 80% 70%)" />
+        <stop offset="50%" stopColor="hsl(45 60% 50%)" />
+        <stop offset="100%" stopColor="hsl(45 40% 32%)" />
+      </linearGradient>
+      <linearGradient id="blade-2" x1="100%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="hsl(45 80% 70%)" />
+        <stop offset="50%" stopColor="hsl(45 60% 50%)" />
+        <stop offset="100%" stopColor="hsl(45 40% 32%)" />
+      </linearGradient>
+      <radialGradient id="pivot" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stopColor="hsl(45 100% 80%)" />
+        <stop offset="100%" stopColor="hsl(45 100% 55%)" />
+      </radialGradient>
+    </defs>
+    {/* Blade 1 — top-left to bottom-right */}
+    <path
+      d="M18 14 C20 16 38 34 42 40 L48 68 C46 70 42 70 40 68 L34 42 C28 36 14 20 14 18 C14 15 16 12 18 14Z"
+      fill="url(#blade-1)"
+    />
+    {/* Blade 1 edge highlight */}
+    <path
+      d="M18 14 C20 16 38 34 42 40"
+      stroke="hsl(45 100% 78%)"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      fill="none"
+      strokeOpacity="0.7"
+    />
+    {/* Blade 2 — top-right to bottom-left */}
+    <path
+      d="M62 14 C60 16 42 34 38 40 L32 68 C34 70 38 70 40 68 L46 42 C52 36 66 20 66 18 C66 15 64 12 62 14Z"
+      fill="url(#blade-2)"
+    />
+    {/* Blade 2 edge highlight */}
+    <path
+      d="M62 14 C60 16 42 34 38 40"
+      stroke="hsl(45 100% 78%)"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      fill="none"
+      strokeOpacity="0.7"
+    />
+    {/* Pivot screw */}
+    <circle cx="40" cy="40" r="5" fill="url(#pivot)" />
+    <circle cx="40" cy="40" r="5" stroke="hsl(45 100% 85%)" strokeWidth="1" strokeOpacity="0.6" />
+    <circle cx="40" cy="40" r="2" fill="hsl(45 20% 20%)" />
+    {/* Neon outline blades */}
+    <path
+      d="M18 14 C20 16 38 34 42 40 L48 68 C46 70 42 70 40 68 L34 42 C28 36 14 20 14 18 C14 15 16 12 18 14Z"
+      stroke="hsl(45 100% 60%)"
+      strokeWidth="1"
+      fill="none"
+      strokeOpacity="0.7"
     />
     <path
-      d="M12 17H14C15.1046 17 16 16.1046 16 15V13M7.5 12V9.5C7.5 8.67157 8.17157 8 9 8C9.82843 8 10.5 8.67157 10.5 9.5V11.5M10.5 11.5V9C10.5 8.17157 11.1716 7.5 12 7.5C12.8284 7.5 13.5 8.17157 13.5 9V11.5M13.5 11.5V9.5C13.5 8.67157 14.1716 8 15 8C15.8284 8 16.5 8.67157 16.5 9.5V12M7.5 12C6.67157 12 6 12.6716 6 13.5C6 14.3284 6.67157 15 7.5 15H11.5M7.5 12V15M11.5 17H7.5"
-      stroke="url(#rock-grad)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      d="M62 14 C60 16 42 34 38 40 L32 68 C34 70 38 70 40 68 L46 42 C52 36 66 20 66 18 C66 15 64 12 62 14Z"
+      stroke="hsl(45 100% 60%)"
+      strokeWidth="1"
+      fill="none"
+      strokeOpacity="0.7"
     />
   </svg>
 )
 
-// Sleek neon open hand vector representing Paper
-export const PaperVector: React.FC<AssetProps> = ({ size = 32, className = '', style = {} }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    style={{ display: 'inline-block', verticalAlign: 'middle', filter: 'drop-shadow(0 0 8px hsl(220 100% 60% / 0.5))', ...style }}
-  >
-    <defs>
-      <linearGradient id="paper-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="hsl(220 100% 60%)" />
-        <stop offset="100%" stopColor="hsl(270 80% 60%)" />
-      </linearGradient>
-    </defs>
-    <path
-      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-      fill="url(#paper-grad)"
-      fillOpacity="0.12"
-      stroke="url(#paper-grad)"
-      strokeWidth="1.5"
-    />
-    <path
-      d="M18 11V6C18 5.44772 17.5523 5 17 5C16.4477 5 16 5.44772 16 6V11M14 10V4C14 3.44772 13.5523 3 13 3C12.4477 3 12 3.44772 12 4V11M10 11V5C10 4.44772 9.55228 4 9 4C8.44772 4 8 4.44772 8 5V11M6 13V8.5C6 7.94772 5.55228 7.5 5 7.5C4.44772 7.5 4 7.94772 4 8.5V16C4 18.7614 6.23858 21 9 21H12C14.7614 21 17 18.7614 17 16V13"
-      stroke="url(#paper-grad)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)
-
-// Sleek neon scissors vector representing Scissors
-export const ScissorsVector: React.FC<AssetProps> = ({ size = 32, className = '', style = {} }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    style={{ display: 'inline-block', verticalAlign: 'middle', filter: 'drop-shadow(0 0 8px hsl(45 100% 55% / 0.5))', ...style }}
-  >
-    <defs>
-      <linearGradient id="scissors-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="hsl(45 100% 55%)" />
-        <stop offset="100%" stopColor="hsl(38 95% 50%)" />
-      </linearGradient>
-    </defs>
-    <path
-      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-      fill="url(#scissors-grad)"
-      fillOpacity="0.12"
-      stroke="url(#scissors-grad)"
-      strokeWidth="1.5"
-    />
-    <path
-      d="M6 9C7.65685 9 9 7.65685 9 6C9 4.34315 7.65685 3 6 3C4.34315 3 3 4.34315 3 6C3 7.65685 4.34315 9 6 9Z"
-      stroke="url(#scissors-grad)"
-      strokeWidth="2"
-    />
-    <path
-      d="M6 21C7.65685 21 9 19.6569 9 18C9 16.3431 7.65685 15 6 15C4.34315 15 3 16.3431 3 18C3 19.6569 4.34315 21 6 21Z"
-      stroke="url(#scissors-grad)"
-      strokeWidth="2"
-    />
-    <path
-      d="M8.12012 8.12012L20.0001 20M20.0001 4L8.12012 15.8799"
-      stroke="url(#scissors-grad)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)
+// ── Legacy small vectors for backward compat ─────────────────────────────────
+export const RockVector = RockIllustration
+export const PaperVector = PaperIllustration
+export const ScissorsVector = ScissorsIllustration

@@ -5,13 +5,8 @@ import { useSocket } from '@/lib/contexts/SocketContext'
 import { useToast } from '@/lib/contexts/ToastContext'
 import MultiplayerHeader from './MultiplayerHeader'
 import MatchReactions from './MatchReactions'
-import { RockVector, PaperVector, ScissorsVector } from '@/components/games/RockPaperScissorsAssets'
-
-const MOVE_ICONS = {
-  rock: (props: any) => <RockVector {...props} />,
-  paper: (props: any) => <PaperVector {...props} />,
-  scissors: (props: any) => <ScissorsVector {...props} />,
-}
+import RPSChoiceCard from '@/components/games/RPSChoiceCard'
+import RPSBattleArena from '@/components/games/RPSBattleArena'
 
 function playTurnNotificationSound() {
   try {
@@ -181,44 +176,27 @@ export default function MultiplayerRockPaperScissorsGame({ roomCode, session, pl
               <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)', margin: 0 }}>Round {round} of 3</p>
             </div>
 
-            {/* Choice selection */}
+            {/* Choice selection — premium cards */}
             {isPlayer && !myChoice ? (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 {(['rock', 'paper', 'scissors'] as const).map((choice) => (
-                  <button
+                  <RPSChoiceCard
                     key={choice}
-                    onClick={() => handleSelectMove(choice)}
+                    move={choice}
                     disabled={isSubmitting}
-                    style={{
-                      width: 72,
-                      height: 72,
-                      borderRadius: 16,
-                      border: '1px solid hsl(220 15% 22%)',
-                      background: 'hsl(222 20% 9%)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      outline: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                    id={`rps-btn-${choice}`}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'hsl(220 100% 60%)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'hsl(220 15% 22%)'
-                    }}
-                  >
-                    {MOVE_ICONS[choice]({ size: 40 })}
-                  </button>
+                    onClick={() => handleSelectMove(choice)}
+                  />
                 ))}
               </div>
             ) : isPlayer ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', animation: 'pulse 1.5s infinite' }}>
-                {myChoice ? MOVE_ICONS[myChoice as keyof typeof MOVE_ICONS]({ size: 48 }) : null}
-                <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', marginTop: '0.5rem' }}>
-                  Your Move Submitted
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <RPSChoiceCard
+                  move={myChoice as 'rock' | 'paper' | 'scissors'}
+                  selected={true}
+                  disabled={true}
+                />
+                <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', marginTop: '0.25rem' }}>
+                  Waiting for opponent...
                 </div>
               </div>
             ) : (
@@ -229,40 +207,25 @@ export default function MultiplayerRockPaperScissorsGame({ roomCode, session, pl
           </div>
         )}
 
-        {/* Reveal Results transition */}
-        {revealRoundResult && myChoice && opponentChoice && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: 0 }}>
-              Showdown!
-            </h3>
-            
-            <div style={{ display: 'flex', gap: '2.5rem', alignItems: 'center' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
-                  {MOVE_ICONS[myChoice as keyof typeof MOVE_ICONS]({ size: 64 })}
-                </div>
-                <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', fontWeight: 700, marginTop: '0.4rem' }}>
-                  You
-                </div>
-              </div>
-
-              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(220 10% 40%)' }}>vs</div>
-
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
-                  {MOVE_ICONS[opponentChoice as keyof typeof MOVE_ICONS]({ size: 64 })}
-                </div>
-                <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', fontWeight: 700, marginTop: '0.4rem' }}>
-                  {opponent?.username || 'Opponent'}
-                </div>
-              </div>
+        {/* Reveal Results with animation */}
+        {revealRoundResult && myChoice && opponentChoice && opponentChoice !== 'hidden' && (() => {
+          const p1 = myChoice as 'rock' | 'paper' | 'scissors'
+          const p2 = opponentChoice as 'rock' | 'paper' | 'scissors'
+          const beats: Record<string, string> = { rock: 'scissors', paper: 'rock', scissors: 'paper' }
+          const rw = p1 === p2 ? 'draw' : beats[p1] === p2 ? 'p1' : 'p2'
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+              <RPSBattleArena
+                p1Move={p1}
+                p2Move={p2}
+                winner={rw as 'p1' | 'p2' | 'draw'}
+                p1Label="You"
+                p2Label={opponent?.username || 'Opponent'}
+                skippable={false}
+              />
             </div>
-
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(45 100% 55%)', marginTop: '0.5rem' }}>
-              {commentary[0] || 'Evaluating round...'}
-            </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* GameOver View */}
         {isFinished && (

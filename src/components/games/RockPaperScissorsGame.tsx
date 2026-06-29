@@ -1,20 +1,16 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getRPSMove, RPSMove } from '@/lib/gameAI'
-import { RockVector, PaperVector, ScissorsVector } from '@/components/games/RockPaperScissorsAssets'
+import { RockIllustration } from '@/components/games/RockPaperScissorsAssets'
+import RPSChoiceCard from '@/components/games/RPSChoiceCard'
+import RPSBattleArena from '@/components/games/RPSBattleArena'
 import { BotIcon, FlagIcon } from '@/components/shared/Icons'
-
-const MOVE_ICONS: Record<RPSMove, (props: { size?: number; style?: React.CSSProperties }) => React.ReactNode> = {
-  rock: (props) => <RockVector {...props} />,
-  paper: (props) => <PaperVector {...props} />,
-  scissors: (props) => <ScissorsVector {...props} />,
-}
 
 type GameMode = 'vs-ai' | 'local-pvp' | 'lobby-sim'
 type Difficulty = 'moderate' | 'hard'
-type GameState = 'setup' | 'playing' | 'round-reveal' | 'gameover'
+type GameState = 'setup' | 'playing' | 'animating' | 'round-reveal' | 'gameover'
 
 const RPS_RULES: Record<RPSMove, RPSMove> = {
   rock: 'scissors',
@@ -53,6 +49,7 @@ export default function RockPaperScissorsGame() {
   const [roundResultText, setRoundResultText] = useState('')
   const [winner, setWinner] = useState<string | null>(null)
   const [isThinking, setIsThinking] = useState(false)
+  const [roundWinner, setRoundWinner] = useState<'p1' | 'p2' | 'draw'>('draw')
 
   const watchdogRef = useRef<NodeJS.Timeout | null>(null)
   const playerHistoryRef = useRef<RPSMove[]>([])
@@ -72,6 +69,7 @@ export default function RockPaperScissorsGame() {
     setPlayerHistory([])
     setWinner(null)
     setIsThinking(false)
+    setRoundWinner('draw')
     setGameState('playing')
   }
 
@@ -150,23 +148,29 @@ export default function RockPaperScissorsGame() {
   // Determine round outcome
   const evaluateRound = (choice1: RPSMove, choice2: RPSMove) => {
     let outcome = ''
-    let roundWinner: 'p1' | 'p2' | 'tie' = 'tie'
+    let rw: 'p1' | 'p2' | 'draw' = 'draw'
 
     if (choice1 === choice2) {
       outcome = "It's a tie!"
-      roundWinner = 'tie'
+      rw = 'draw'
     } else if (RPS_RULES[choice1] === choice2) {
-      outcome = gameMode === 'vs-ai' ? 'You win the round! 🎉' : 'Player 1 wins the round! 🎉'
-      roundWinner = 'p1'
+      outcome = gameMode === 'vs-ai' ? 'You win the round!' : 'Player 1 wins the round!'
+      rw = 'p1'
     } else {
-      outcome = gameMode === 'vs-ai' ? 'AI wins the round! 🤖' : 'Player 2 wins the round! 🏆'
-      roundWinner = 'p2'
+      outcome = gameMode === 'vs-ai' ? 'AI wins the round!' : 'Player 2 wins the round!'
+      rw = 'p2'
     }
 
     setRoundResultText(outcome)
+    setRoundWinner(rw)
+    // Go through animation phase first
+    setGameState('animating')
+  }
+
+  const handleAnimationComplete = () => {
     setGameState('round-reveal')
 
-    // Update stats after delay
+    // Update stats after animation
     setTimeout(() => {
       let nextP1Score = p1Score
       let nextP2Score = p2Score
@@ -182,7 +186,6 @@ export default function RockPaperScissorsGame() {
       const nextRounds = roundsPlayed + 1
       setRoundsPlayed(nextRounds)
 
-      // Best of 3 check (first to 2 wins, or 3 rounds done)
       if (nextP1Score >= 2 || nextP2Score >= 2 || nextRounds >= 3) {
         let finalWinner = ''
         let gameResult: 'win' | 'loss' | 'draw'
@@ -201,7 +204,6 @@ export default function RockPaperScissorsGame() {
         setWinner(finalWinner)
         setGameState('gameover')
 
-        // Submit to API
         submitGameResult({
           gameSlug: 'rps',
           result: gameResult,
@@ -225,7 +227,7 @@ export default function RockPaperScissorsGame() {
         setPvpTurn('p1')
         setGameState('playing')
       }
-    }, 2200)
+    }, 900)
   }
 
   const handleLobbyAction = (action: 'create' | 'join') => {
@@ -253,7 +255,7 @@ export default function RockPaperScissorsGame() {
         id="rps-setup-menu"
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <RockVector size={64} style={{ marginBottom: '0.5rem' }} />
+          <RockIllustration size={64} style={{ marginBottom: '0.5rem' }} />
           <h2 style={{ fontWeight: 900, fontSize: '1.5rem', margin: 0, color: 'white' }}>Rock Paper Scissors</h2>
           <p style={{ color: 'hsl(220 10% 60%)', fontSize: '0.82rem', marginTop: '0.25rem' }}>
             Classic showdown. Best of 3 rounds wins. Predict your opponent's tendencies!
@@ -551,89 +553,66 @@ export default function RockPaperScissorsGame() {
         }}
         id="rps-interaction-panel"
       >
-        {gameState === 'playing' && (
+        {(gameState === 'playing' || gameState === 'animating') && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', justifyContent: 'center', flex: 1 }}>
             {gameMode === 'vs-ai' ? (
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                   {isThinking && <BotIcon size={16} style={{ color: 'hsl(270 80% 70%)', animation: 'pulse 1.5s infinite' }} />}
-                  <span>{isThinking ? 'AI is choosing...' : 'Make Your Choice'}</span>
+                  <span>{isThinking ? 'AI is choosing...' : gameState === 'animating' ? 'Showdown!' : 'Make Your Choice'}</span>
                 </h3>
                 <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)', margin: 0 }}>Round {roundsPlayed + 1} of 3</p>
               </div>
             ) : (
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: '0 0 0.5rem 0' }}>
-                  {pvpTurn === 'p1' ? '👤 Player 1 Turn' : '👤 Player 2 Turn'}
+                  {pvpTurn === 'p1' ? 'Player 1 Turn' : 'Player 2 Turn'}
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)', margin: 0 }}>
-                  Select your move secretly!
-                </p>
+                <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)', margin: 0 }}>Select your move secretly!</p>
               </div>
             )}
 
-            {/* Selection Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
-              {(['rock', 'paper', 'scissors'] as RPSMove[]).map((move) => (
-                <button
-                  key={move}
-                  onClick={() => handleSelectMove(move)}
-                  disabled={isThinking}
-                  style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: 16,
-                    border: '1px solid hsl(220 15% 22%)',
-                    background: 'hsl(222 20% 9%)',
-                    cursor: isThinking ? 'default' : 'pointer',
-                    transition: 'all 0.15s',
-                    outline: 'none',
-                    opacity: isThinking ? 0.6 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  id={`rps-btn-${move}`}
-                  onMouseEnter={(e) => {
-                    if (!isThinking) e.currentTarget.style.borderColor = 'hsl(220 100% 60%)'
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isThinking) e.currentTarget.style.borderColor = 'hsl(220 15% 22%)'
-                  }}
-                >
-                  {MOVE_ICONS[move]({ size: 40 })}
-                </button>
-              ))}
-            </div>
+            {/* Battle Animation — shown when animating */}
+            {gameState === 'animating' && p1Choice && p2Choice && (
+              <RPSBattleArena
+                p1Move={p1Choice}
+                p2Move={p2Choice}
+                winner={roundWinner}
+                p1Label={gameMode === 'vs-ai' ? 'You' : 'Player 1'}
+                p2Label={gameMode === 'vs-ai' ? 'AI' : 'Player 2'}
+                skippable={true}
+                onAnimationComplete={handleAnimationComplete}
+              />
+            )}
+
+            {/* Choice Cards — shown only when picking */}
+            {gameState === 'playing' && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {(['rock', 'paper', 'scissors'] as RPSMove[]).map((move) => (
+                  <RPSChoiceCard
+                    key={move}
+                    move={move}
+                    disabled={isThinking}
+                    onClick={() => handleSelectMove(move)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {gameState === 'round-reveal' && p1Choice && p2Choice && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-            <div style={{ display: 'flex', gap: '2.5rem', alignItems: 'center' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
-                  {MOVE_ICONS[p1Choice]({ size: 64 })}
-                </div>
-                <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', fontWeight: 700, marginTop: '0.4rem' }}>
-                  Player 1
-                </div>
-              </div>
-
-              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(220 10% 40%)' }}>vs</div>
-
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
-                  {MOVE_ICONS[p2Choice]({ size: 64 })}
-                </div>
-                <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 55%)', fontWeight: 700, marginTop: '0.4rem' }}>
-                  {gameMode === 'vs-ai' ? 'AI' : 'Player 2'}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'hsl(45 100% 55%)', marginTop: '0.5rem' }}>
-              {roundResultText}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+            <RPSBattleArena
+              p1Move={p1Choice}
+              p2Move={p2Choice}
+              winner={roundWinner}
+              p1Label={gameMode === 'vs-ai' ? 'You' : 'Player 1'}
+              p2Label={gameMode === 'vs-ai' ? 'AI' : 'Player 2'}
+              skippable={false}
+            />
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'hsl(220 10% 55%)' }}>
+              Next round starting...
             </div>
           </div>
         )}

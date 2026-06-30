@@ -47,80 +47,106 @@ export interface BoardData {
   specialTiles: Record<string, 'gold' | 'arcane' | 'freeze' | 'combo'>
 }
 
-function tryEmbedWords(words: string[], size: number, prng: SeededRandom): string[][] | null {
-  const grid = Array.from({ length: size }, () => Array(size).fill(''))
-  
-  for (const word of words) {
-    const uppercaseWord = word.toUpperCase()
-    let placed = false
-    
-    // Try up to 100 paths for this word
-    for (let pathAttempt = 0; pathAttempt < 100; pathAttempt++) {
-      let r = prng.range(0, size)
-      let c = prng.range(0, size)
-      
-      const path: [number, number][] = []
-      const visited = new Set<string>()
-      
-      let currR = r
-      let currC = c
-      let fits = true
-      
-      for (let i = 0; i < uppercaseWord.length; i++) {
-        const letter = uppercaseWord[i]
-        const key = `${currR},${currC}`
-        
-        if (visited.has(key)) {
-          fits = false
-          break
-        }
-        
-        if (grid[currR][currC] !== '' && grid[currR][currC] !== letter) {
-          fits = false
-          break
-        }
-        
-        path.push([currR, currC])
-        visited.add(key)
-        
-        if (i < uppercaseWord.length - 1) {
-          const adj = getAdjacentCells(currR, currC, size)
-          // Seeded shuffle using prng
-          const shuffledAdj = adj.slice().sort(() => prng.next() - 0.5)
-          
-          let nextFound = false
-          for (const [nr, nc] of shuffledAdj) {
-            const nextKey = `${nr},${nc}`
-            if (!visited.has(nextKey) && (grid[nr][nc] === '' || grid[nr][nc] === uppercaseWord[i + 1])) {
-              currR = nr
-              currC = nc
-              nextFound = true
-              break
-            }
-          }
-          
-          if (!nextFound) {
-            fits = false
-            break
-          }
-        }
-      }
-      
-      if (fits && path.length === uppercaseWord.length) {
-        for (let i = 0; i < path.length; i++) {
-          const [pr, pc] = path[i]
-          grid[pr][pc] = uppercaseWord[i]
-        }
-        placed = true
-        break
+function shuffle<T>(array: T[], prng: SeededRandom): T[] {
+  const result = [...array]
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = prng.range(0, i + 1)
+    const temp = result[i]
+    result[i] = result[j]
+    result[j] = temp
+  }
+  return result
+}
+
+function canPlaceWord(
+  word: string,
+  grid: string[][],
+  size: number,
+  prng: SeededRandom
+): boolean {
+  const uppercaseWord = word.toUpperCase()
+  const startCells: [number, number][] = []
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      startCells.push([r, c])
+    }
+  }
+  const shuffledStartCells = shuffle(startCells, prng)
+
+  for (const [sr, sc] of shuffledStartCells) {
+    const path: [number, number][] = []
+    const visited = new Set<string>()
+
+    if (dfsPlace(0, sr, sc, path, visited)) {
+      return true
+    }
+  }
+
+  return false
+
+  function dfsPlace(
+    index: number,
+    r: number,
+    c: number,
+    path: [number, number][],
+    visited: Set<string>
+  ): boolean {
+    if (index === uppercaseWord.length) {
+      return true
+    }
+
+    const key = `${r},${c}`
+    if (visited.has(key)) return false
+
+    const cellLetter = grid[r][c]
+    const targetLetter = uppercaseWord[index]
+
+    if (cellLetter !== '' && cellLetter !== targetLetter) {
+      return false
+    }
+
+    const wasEmpty = (cellLetter === '')
+    if (wasEmpty) {
+      grid[r][c] = targetLetter
+    }
+    visited.add(key)
+    path.push([r, c])
+
+    if (index === uppercaseWord.length - 1) {
+      return true
+    }
+
+    const adj = getAdjacentCells(r, c, size)
+    const shuffledAdj = shuffle(adj, prng)
+
+    for (const [nr, nc] of shuffledAdj) {
+      if (dfsPlace(index + 1, nr, nc, path, visited)) {
+        return true
       }
     }
-    
+
+    // Backtrack
+    path.pop()
+    visited.delete(key)
+    if (wasEmpty) {
+      grid[r][c] = ''
+    }
+
+    return false
+  }
+}
+
+function tryEmbedWords(words: string[], size: number, prng: SeededRandom): string[][] | null {
+  const grid = Array.from({ length: size }, () => Array(size).fill(''))
+  const sortedWords = [...words].sort((a, b) => b.length - a.length)
+
+  for (const word of sortedWords) {
+    const placed = canPlaceWord(word, grid, size, prng)
     if (!placed) {
       return null
     }
   }
-  
+
   return grid
 }
 
@@ -151,11 +177,11 @@ export function generateBoard(
         }
       }
 
-      const words = findAllWords(embeddedGrid)
-
       // Verify all target words are present on the board
-      const allTargetsPresent = targetWords.every(w => words.has(w.toLowerCase()))
+      const allTargetsPresent = targetWords.every(w => findWordPath(w.toLowerCase(), embeddedGrid) !== null)
       if (!allTargetsPresent) continue
+
+      const words = findAllWords(embeddedGrid)
 
       // Verify quality rules: minimum additional valid words
       const additionalWordsCount = Array.from(words).filter(w => !targetWords.includes(w.toLowerCase())).length

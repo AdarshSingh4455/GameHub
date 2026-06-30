@@ -138,7 +138,15 @@ const TIMEFRAMES = [
   { value: 'weekly', label: 'Weekly' },
 ]
 
-export default function LeaderboardClient() {
+interface LeaderboardClientProps {
+  initialTab?: 'casual' | 'ranked' | 'hallOfFame' | 'weeklyHistory'
+  autoStartMatchmaking?: boolean
+}
+
+export default function LeaderboardClient({
+  initialTab = 'casual',
+  autoStartMatchmaking = false
+}: LeaderboardClientProps = {}) {
   const { user } = useGameSession()
 
   // Dynamically map from GAMES_REGISTRY
@@ -179,7 +187,7 @@ export default function LeaderboardClient() {
   }, [gameOptions])
   
   // Tabs: 'casual' | 'ranked' | 'hallOfFame' | 'weeklyHistory'
-  const [activeTab, setActiveTab] = useState<'casual' | 'ranked' | 'hallOfFame' | 'weeklyHistory'>('casual')
+  const [activeTab, setActiveTab] = useState<'casual' | 'ranked' | 'hallOfFame' | 'weeklyHistory'>(initialTab)
 
   // Casual state
   const [scope, setScope] = useState<'global' | 'friends'>('global')
@@ -338,6 +346,14 @@ export default function LeaderboardClient() {
     setMatchState('searching')
     setSearchTimer(0)
   }
+
+  const [didAutoStart, setDidAutoStart] = useState(false)
+  useEffect(() => {
+    if (autoStartMatchmaking && activeTab === 'ranked' && !didAutoStart) {
+      setDidAutoStart(true)
+      handleStartMatchmaking()
+    }
+  }, [autoStartMatchmaking, activeTab, didAutoStart])
 
   const handleAcceptMatch = () => {
     setIsSearchingRanked(false)

@@ -393,6 +393,49 @@ export default function Game2048() {
   }, [gameState, challengeStatus, hasReached2048, challengeObjective, submitGameResult, isRanked, targetScore, opponentName])
 
   useEffect(() => {
+    if (isRanked && gameState === 'playing' && score >= targetScore) {
+      setGameState('gameover')
+      if (timerRef.current) clearInterval(timerRef.current)
+
+      const resultPayload = 'win'
+      const customTitle = 'Victory!'
+      const customSubtitle = `Target: ${targetScore} • Score: ${score} • Target Achieved`
+
+      submitGameResult({
+        gameSlug: '2048',
+        result: resultPayload,
+        metadata: {
+          score: score,
+          timeSpent: timerRef2.current,
+          customTitle,
+          customSubtitle,
+        }
+      })
+
+      fetch('/api/ranked/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: resultPayload,
+          opponentName: opponentName
+        })
+      })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json()
+          if (data.revealRank) {
+            localStorage.setItem('gamehub_rank_reveal', 'pending')
+          }
+          if (data.promoted) {
+            localStorage.setItem('gamehub_promotion_celebration', JSON.stringify({ oldRank: data.oldRank, newRank: data.newRank }))
+          }
+        }
+      })
+      .catch(err => console.error('Failed to submit ranked stats:', err))
+    }
+  }, [score, isRanked, gameState, targetScore, submitGameResult, opponentName])
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (gameState !== 'playing') return
       if (['ArrowUp', 'KeyW'].includes(e.code)) { e.preventDefault(); move('up') }

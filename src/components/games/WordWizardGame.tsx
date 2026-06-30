@@ -33,6 +33,16 @@ const getCategoryIcon = (cat: string) => {
   }
 }
 
+const getMediumModeHint = (word: string) => {
+  if (word.length <= 2) {
+    return '_ _'
+  }
+  const first = word[0].toUpperCase()
+  const last = word[word.length - 1].toUpperCase()
+  const middle = '-'.repeat(word.length - 2)
+  return `${first}${middle}${last}`
+}
+
 export default function WordWizardGame() {
   const { submitGameResult, isLoading } = useGameSession()
   const particlesRef = useRef<ParticlesRef | null>(null)
@@ -177,6 +187,9 @@ export default function WordWizardGame() {
 
       // Set Time limit
       let initialTime = 60
+      if (localDifficulty === 'hard') {
+        initialTime = 120
+      }
       if (selectedModifier === 'time_attack') {
         initialTime = 40
       }
@@ -831,7 +844,7 @@ export default function WordWizardGame() {
                   const isFound = foundTargetWords.has(word)
                   const displayWord = difficulty === 'easy' 
                     ? word.toUpperCase()
-                    : word.split('').map(() => '_').join(' ')
+                    : getMediumModeHint(word)
                   
                   return (
                     <div

@@ -144,6 +144,7 @@ export default function BlockBlastGame() {
   const [isRanked, setIsRanked] = useState(false)
   const [opponentName, setOpponentName] = useState('ApexBot')
   const [targetScore, setTargetScore] = useState(1000)
+  const [rankedInitialized, setRankedInitialized] = useState(false)
 
   // Parse query params on mount
   useEffect(() => {
@@ -434,6 +435,13 @@ export default function BlockBlastGame() {
     setInGame(true)
   }, [mode, difficulty])
 
+  useEffect(() => {
+    if (isRanked && inGame && !rankedInitialized) {
+      setRankedInitialized(true)
+      startGame()
+    }
+  }, [isRanked, inGame, rankedInitialized, startGame])
+
   // ─── REFILL SLOTS IF EMPTY ────────────────────────────────────────────────
   const checkRefill = (currentPieces: (BlockShape | null)[]) => {
     if (currentPieces.every((p) => p === null)) {
@@ -654,6 +662,13 @@ export default function BlockBlastGame() {
       .catch(err => console.error('Failed to submit ranked stats:', err))
     }
   }
+
+  useEffect(() => {
+    if (isRanked && inGame && !isGameOverState && score >= targetScore) {
+      setIsGameOverState(true)
+      triggerGameOver(score, linesCleared, maxCombo, placements, false)
+    }
+  }, [score, isRanked, inGame, isGameOverState, targetScore, linesCleared, maxCombo, placements, triggerGameOver])
 
   // ─── HOLD SYSTEM ──────────────────────────────────────────────────────────
   const handleHold = () => {

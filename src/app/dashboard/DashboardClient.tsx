@@ -73,30 +73,99 @@ export default function DashboardClient({ user, username, isGamesLibrary = false
     <>
     <PageWrapper style={{ maxWidth: 1100, marginInline: 'auto', gap: '1.25rem' }} className="animate-fadeIn safe-bottom-padding mobile-centered-wrapper">
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.8rem)', fontWeight: 900, marginBottom: '0.25rem', color: 'white' }}>
-          {user ? `Welcome back, ${username}` : 'Pick a Game, Jump In'}
-        </h1>
-        <p style={{ color: 'hsl(220 10% 55%)', margin: 0, fontSize: '0.85rem' }}>
-          {user ? 'Continue your streak and climb the leaderboards.' : 'Play as guest — or create an account to save your XP.'}
-        </p>
+      {isGamesLibrary ? (
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}>
+          <button
+            onClick={() => router.push('/dashboard/ranked')}
+            className="btn"
+            style={{
+              borderRadius: '14px',
+              padding: '0.8rem 1.8rem',
+              fontSize: '0.9rem',
+              fontWeight: 800,
+              boxShadow: '0 0 20px hsla(260, 100%, 65%, 0.4)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              border: 'none',
+              background: 'linear-gradient(135deg, hsl(260, 100%, 65%), hsl(220, 100%, 60%))',
+              color: 'white',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.boxShadow = '0 0 25px hsla(260, 100%, 65%, 0.6)'
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 0 20px hsla(260, 100%, 65%, 0.4)'
+            }}
+          >
+            <ZapIcon size={16} style={{ color: '#fef08a' }} />
+            <span>Find Ranked Match</span>
+          </button>
+          <button
+            onClick={() => router.push('/dashboard/leaderboard?tab=ranked')}
+            className="btn btn-secondary"
+            style={{
+              borderRadius: '14px',
+              padding: '0.8rem 1.8rem',
+              fontSize: '0.9rem',
+              fontWeight: 850,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              border: '1.5px solid rgba(255, 255, 255, 0.08)',
+              background: 'linear-gradient(135deg, hsl(222, 20%, 9%), hsl(222, 18%, 13%))',
+              color: 'hsl(220, 10%, 85%)',
+              transition: 'transform 0.15s ease, border-color 0.15s ease',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'
+            }}
+          >
+            <span>View Rank</span>
+          </button>
+        </div>
+      ) : (
+        <div>
+          <h1 style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.8rem)', fontWeight: 900, marginBottom: '0.25rem', color: 'white' }}>
+            {user ? `Welcome back, ${username}` : 'Pick a Game, Jump In'}
+          </h1>
+          <p style={{ color: 'hsl(220 10% 55%)', margin: 0, fontSize: '0.85rem' }}>
+            {user ? 'Continue your streak and climb the leaderboards.' : 'Play as guest — or create an account to save your XP.'}
+          </p>
 
-        {!user && (
-          <Card style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <LockIcon size={14} style={{ color: 'hsl(45 100% 55%)' }} />
-                <span>Unlock full features</span>
+          {!user && (
+            <Card style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <LockIcon size={14} style={{ color: 'hsl(45 100% 55%)' }} />
+                  <span>Unlock full features</span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4 }}>Create a free account to earn XP, unlock achievements, and compete on leaderboards.</div>
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4 }}>Create a free account to earn XP, unlock achievements, and compete on leaderboards.</div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-              <Link href="/register" className="btn btn-primary btn-sm" style={{ fontSize: '0.75rem' }}>Create Account</Link>
-              <Link href="/login"    className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }}>Sign In</Link>
-            </div>
-          </Card>
-        )}
-      </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                <Link href="/register" className="btn btn-primary btn-sm" style={{ fontSize: '0.75rem' }}>Create Account</Link>
+                <Link href="/login"    className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }}>Sign In</Link>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Spotlight Featured Game Card */}
       {!isGamesLibrary && (

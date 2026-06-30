@@ -211,6 +211,7 @@ export default function NeonTetrisGame() {
   const [isRanked, setIsRanked] = useState(false)
   const [opponentName, setOpponentName] = useState('ApexBot')
   const [targetScore, setTargetScore] = useState(1000)
+  const [rankedInitialized, setRankedInitialized] = useState(false)
 
   // Parse query parameters
   useEffect(() => {
@@ -623,6 +624,13 @@ export default function NeonTetrisGame() {
     setInGame(true)
   }, [mode, getNextTetromino, refillBag])
 
+  useEffect(() => {
+    if (isRanked && inGame && !rankedInitialized) {
+      setRankedInitialized(true)
+      startGame()
+    }
+  }, [isRanked, inGame, rankedInitialized, startGame])
+
   // ─── SYSTEM CORE LOCK PLACEMENT ─────────────────────────────────────────────
   const lockPiece = useCallback((piece: Tetromino | null, pos: { x: number; y: number }, _rotation: number) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     if (!piece) return
@@ -824,6 +832,14 @@ export default function NeonTetrisGame() {
       .catch(err => console.error('Failed to submit ranked stats:', err))
     }
   }, [saveStats, submitGameResult, mode, piecesPlaced, isRanked, targetScore, opponentName])
+
+  useEffect(() => {
+    if (isRanked && inGame && !gameOver && score >= targetScore) {
+      gameOverRef.current = true
+      setGameOver(true)
+      triggerGameOver(score, linesCleared, combo, level, maxCombo, perfectClears, false)
+    }
+  }, [score, isRanked, inGame, gameOver, targetScore, linesCleared, combo, level, maxCombo, perfectClears, triggerGameOver])
 
   // ─── PIECE ROTATION WITH SRS WALL KICKS ────────────────────────────────────
   const handleRotate = useCallback(

@@ -442,6 +442,24 @@ interface FloatingText {
   life: number
 }
 
+const getNeighbors = (r: number, c: number, rowsCount: number, colsCount: number) => {
+  const neighbors: [number, number][] = []
+  const offsets = r % 2 === 0
+    ? [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]]
+    : [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]]
+  for (const [dr, dc] of offsets) {
+    const nr = r + dr
+    const nc = c + dc
+    if (nr >= 0 && nr < rowsCount) {
+      const colsInRow = nr % 2 === 0 ? colsCount : colsCount - 1
+      if (nc >= 0 && nc < colsInRow) {
+        neighbors.push([nr, nc])
+      }
+    }
+  }
+  return neighbors
+}
+
 export default function BubbleShooterSagaGame() {
   const { submitGameResult } = useGameSession()
   const { addToast } = useToast()
@@ -816,7 +834,8 @@ export default function BubbleShooterSagaGame() {
         for (const [dr, dc] of offsets) {
           const nr = r + dr
           const nc = c + dc
-          if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < COLS_COUNT) {
+          const colsInRow = nr % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+          if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < colsInRow) {
             const neighbor = engine.grid[nr][nc]
             if (neighbor && neighbor.state === 'idle') {
               const key = `${nr},${nc}`
@@ -873,7 +892,8 @@ export default function BubbleShooterSagaGame() {
         for (const [dr, dc] of offsets) {
           const nr = r + dr
           const nc = c + dc
-          if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < COLS_COUNT) {
+          const colsInRow = nr % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+          if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < colsInRow) {
             const neighbor = engine.grid[nr][nc]
             if (neighbor && neighbor.state === 'idle') {
               if (neighbor.colorIndex === 11) {
@@ -921,7 +941,8 @@ export default function BubbleShooterSagaGame() {
       for (const [dr, dc] of offsets) {
         const nr = hitRow + dr
         const nc = hitCol + dc
-        if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < COLS_COUNT) {
+        const colsInRow = nr % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+        if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < colsInRow) {
           const neighbor = engine.grid[nr][nc]
           if (neighbor && neighbor.state === 'idle') {
             if (neighbor.colorIndex === 11) {
@@ -984,7 +1005,8 @@ export default function BubbleShooterSagaGame() {
       for (const [dr, dc] of offsets) {
         const nr = r + dr
         const nc = c + dc
-        if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < COLS_COUNT) {
+        const colsInRow = nr % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+        if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < colsInRow) {
           const neighbor = engine.grid[nr][nc]
           if (neighbor && neighbor.state === 'idle') {
             const key = `${nr},${nc}`
@@ -1328,11 +1350,11 @@ export default function BubbleShooterSagaGame() {
           }
         }
 
-        if (s.x - s.radius <= 0) {
+        if (s.x - s.radius <= 0 && s.vx < 0) {
           s.x = s.radius
           s.vx = -s.vx
           playSound('bounce', isMuted)
-        } else if (s.x + s.radius >= CANVAS_WIDTH) {
+        } else if (s.x + s.radius >= CANVAS_WIDTH && s.vx > 0) {
           s.x = CANVAS_WIDTH - s.radius
           s.vx = -s.vx
           playSound('bounce', isMuted)
@@ -1351,7 +1373,7 @@ export default function BubbleShooterSagaGame() {
               const target = engine.grid[r][c]
               if (target && target.state === 'idle') {
                 const dist = Math.hypot(s.x - target.x, s.y - target.y)
-                if (dist < s.radius + target.radius - 4) {
+                if (dist < s.radius + target.radius - 2) {
                   hitGrid = true
                   break
                 }
@@ -1367,12 +1389,18 @@ export default function BubbleShooterSagaGame() {
             const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
             for (let c = 0; c < colsInRow; c++) {
               if (!engine.grid[r][c]) {
-                const { x: cellX, y: cellY } = getHexCoordinates(r, c)
-                const dist = Math.hypot(s.x - cellX, s.y - cellY)
-                if (dist < minDistance) {
-                  minDistance = dist
-                  hitRow = r
-                  hitCol = c
+                const isCeiling = (r === 0)
+                const hasAdjacentBubble = getNeighbors(r, c, ROWS_COUNT, COLS_COUNT).some(
+                  ([nr, nc]) => engine.grid[nr][nc] && engine.grid[nr][nc].state === 'idle'
+                )
+                if (isCeiling || hasAdjacentBubble) {
+                  const { x: cellX, y: cellY } = getHexCoordinates(r, c)
+                  const dist = Math.hypot(s.x - cellX, s.y - cellY)
+                  if (dist < minDistance) {
+                    minDistance = dist
+                    hitRow = r
+                    hitCol = c
+                  }
                 }
               }
             }

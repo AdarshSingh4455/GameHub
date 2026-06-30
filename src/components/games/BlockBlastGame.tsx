@@ -140,6 +140,53 @@ export default function BlockBlastGame() {
   // History for Undo
   const [previousState, setPreviousState] = useState<GameStateSnapshot | null>(null)
 
+  // Ranked states
+  const [isRanked, setIsRanked] = useState(false)
+  const [opponentName, setOpponentName] = useState('ApexBot')
+  const [targetScore, setTargetScore] = useState(1000)
+
+  // Parse query params on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('mode') === 'ranked') {
+        setIsRanked(true)
+        setMode('classic')
+        const oppName = params.get('opponent') || 'ApexBot'
+        setOpponentName(oppName)
+        const oppMmr = parseInt(params.get('opponentMmr') || '1000', 10)
+
+        // Set target score challenge dynamically
+        // getTargetScoreForGame
+        let target = 1000
+        if (oppMmr < 1167) target = 800      // Bronze
+        else if (oppMmr < 1834) target = 1500 // Silver
+        else if (oppMmr < 3000) target = 2500 // Gold
+        else target = 4000                    // Diamond+
+        setTargetScore(target)
+
+        // Set difficulty according to MMR
+        if (oppMmr < 1167) setDifficulty('easy')
+        else if (oppMmr < 1834) setDifficulty('normal')
+        else setDifficulty('hard')
+
+        // Start game immediately
+        setBoard(createEmptyBoard())
+        setPieces([null, null, null])
+        setHeldPiece(null)
+        setHoldUsedThisTurn(false)
+        setScore(0)
+        setCombo(0)
+        setMaxCombo(0)
+        setPlacements(0)
+        setLinesCleared(0)
+        setPreviousState(null)
+        setIsGameOverState(false)
+        setInGame(true)
+      }
+    }
+  }, [])
+
   // Visuals & Particles
   const [particles, setParticles] = useState<Particle[]>([])
   const [scorePopups, setScorePopups] = useState<ScorePopup[]>([])
@@ -547,9 +594,16 @@ export default function BlockBlastGame() {
     isClean: boolean
   ) => {
     await saveHighScoreStats(finalScore, finalLines, finalCombo)
-    const resultPayload = finalScore >= 1000 ? 'win' : 'loss'
-    const customTitle = resultPayload === 'win' ? 'Victory!' : 'Game Over'
-    const customSubtitle = `Cleared ${finalLines} Line${finalLines !== 1 ? 's' : ''} • Max Combo: ${finalCombo}`
+    
+    // In ranked mode, check if we beat the target score challenge
+    const resultPayload = isRanked 
+      ? (finalScore >= targetScore ? 'win' : 'loss')
+      : (finalScore >= 1000 ? 'win' : 'loss')
+      
+    const customTitle = resultPayload === 'win' ? 'Victory!' : (isRanked ? 'Target Failed' : 'Game Over')
+    const customSubtitle = isRanked
+      ? `Target: ${targetScore} • Score: ${finalScore} • ${resultPayload === 'win' ? 'Target Achieved' : 'Below Target'}`
+      : `Cleared ${finalLines} Line${finalLines !== 1 ? 's' : ''} • Max Combo: ${finalCombo}`
 
     submitGameResult({
       gameSlug: 'block-blast',
@@ -559,10 +613,10 @@ export default function BlockBlastGame() {
         customTitle,
         customSubtitle,
         statistics: [
-          { label: 'Lines Cleared', value: finalLines, color: '#fbbf24' },
+          { label: 'Target Score', value: isRanked ? targetScore : 1000, color: '#fbbf24' },
+          { label: 'Lines Cleared', value: finalLines, color: '#10b981' },
           { label: 'Highest Combo', value: `x${finalCombo}`, color: '#ec4899' },
           { label: 'Final Score', value: finalScore, color: '#38bdf8' },
-          { label: 'Best Move Chain', value: `${finalCombo} Streak`, color: '#a855f7' },
         ],
         gameMetadata: {
           mode,
@@ -571,9 +625,34 @@ export default function BlockBlastGame() {
           linesCleared: finalLines,
           placements: finalPlacements,
           cleanSlate: isClean ? 1 : 0,
+          isRanked,
+          targetScore: isRanked ? targetScore : undefined
         },
       },
     })
+
+    if (isRanked) {
+      fetch('/api/ranked/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: resultPayload,
+          opponentName: opponentName
+        })
+      })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json()
+          if (data.revealRank) {
+            localStorage.setItem('gamehub_rank_reveal', 'pending')
+          }
+          if (data.promoted) {
+            localStorage.setItem('gamehub_promotion_celebration', JSON.stringify({ oldRank: data.oldRank, newRank: data.newRank }))
+          }
+        }
+      })
+      .catch(err => console.error('Failed to submit ranked stats:', err))
+    }
   }
 
   // ─── HOLD SYSTEM ──────────────────────────────────────────────────────────
@@ -1044,6 +1123,23 @@ export default function BlockBlastGame() {
       {/* PLAYING STAGE */}
       {inGame && (
         <>
+          {isRanked && (
+            <div style={{
+              width: '100%',
+              padding: '10px 14px',
+              marginBottom: '10px',
+              borderRadius: '16px',
+              background: 'linear-gradient(90deg, rgba(236, 72, 153, 0.15), rgba(6, 182, 212, 0.15))',
+              border: '1px solid rgba(236, 72, 153, 0.3)',
+              textAlign: 'center',
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+            }}>
+              🏆 Ranked Challenge: Beat <span style={{ color: '#fbbf24', textShadow: '0 0 8px rgba(251, 191, 36, 0.4)' }}>{targetScore}</span> Points to win! (Opponent: {opponentName})
+            </div>
+          )}
           {/* HUD Status Stats Row */}
           <div
             style={{

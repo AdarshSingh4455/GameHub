@@ -526,6 +526,8 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
   if (profile.rankedLosses === undefined) profile.rankedLosses = 0
   if (profile.rankedStreak === undefined) profile.rankedStreak = 0
   if (profile.rankedPeakRank === undefined) profile.rankedPeakRank = 'Bronze'
+  if (profile.placementMatchesRemaining === undefined) profile.placementMatchesRemaining = 5
+  if (profile.rankedProtectionMatches === undefined) profile.rankedProtectionMatches = 0
   if (profile.hangmanMmr === undefined) profile.hangmanMmr = 1000
   if (profile.hangmanWins === undefined) profile.hangmanWins = 0
   if (profile.hangmanLosses === undefined) profile.hangmanLosses = 0
@@ -2172,7 +2174,11 @@ function createModelMock(modelName: string) {
               rank: data.rank,
               wins: data.wins,
               losses: data.losses,
-              winRate: data.winRate
+              winRate: data.winRate,
+              peakTier: data.peakTier || null,
+              rewards: data.rewards || null,
+              seasonNumber: data.seasonNumber || null,
+              completionDate: data.completionDate || null
             }
             if (!db.seasonSnapshots) db.seasonSnapshots = {}
             db.seasonSnapshots[id] = record

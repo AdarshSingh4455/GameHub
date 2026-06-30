@@ -27,6 +27,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'Live',
     componentName: 'cricket',
+    supportsRanked: true,
     supportsLeaderboard: true,
   },
   {
@@ -137,6 +138,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'native',
     badge: 'Puzzle',
     componentName: '2048',
+    supportsRanked: true,
     supportsLeaderboard: true,
   },
   {
@@ -229,6 +231,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'New',
     componentName: 'dotsboxes',
+    supportsRanked: true,
   },
   {
     slug: 'block-blast',
@@ -240,6 +243,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'New',
     componentName: 'blockblast',
+    supportsRanked: true,
     supportsLeaderboard: true,
     leaderboardModes: [
       { value: 'block-blast-classic', label: 'Block Blast (Classic)' },
@@ -256,6 +260,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'New',
     componentName: 'neontetris',
+    supportsRanked: true,
     supportsLeaderboard: true,
     leaderboardModes: [
       { value: 'neon-tetris-classic', label: 'Neon Tetris (Classic)' },
@@ -314,6 +319,7 @@ export const GAMES_REGISTRY: GameInfo[] = [
     type: 'internal',
     badge: 'New',
     componentName: 'bubbleshooter',
+    supportsRanked: true,
     supportsLeaderboard: true,
     leaderboardModes: [
       { value: 'bubble-shooter-classic', label: 'Bubble Shooter Classic' }

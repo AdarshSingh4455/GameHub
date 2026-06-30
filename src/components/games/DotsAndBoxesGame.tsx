@@ -43,6 +43,46 @@ export default function DotsAndBoxesGame() {
   const [loading, setLoading] = useState(false)
   const [isHost, setIsHost] = useState(false)
 
+  // Ranked states
+  const [isRanked, setIsRanked] = useState(false)
+  const [opponentName, setOpponentName] = useState('ApexBot')
+  const [myMmr, setMyMmr] = useState(1000)
+
+  // URL query param parser
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('mode') === 'ranked') {
+        setIsRanked(true)
+        setGameMode('vs-ai')
+        const oppName = params.get('opponent') || 'ApexBot'
+        setOpponentName(oppName)
+        const mmrVal = parseInt(params.get('mmr') || '1000', 10)
+        setMyMmr(mmrVal)
+
+        // Scale difficulty based on MMR
+        if (mmrVal < 1167) {
+          setDifficulty('easy')
+        } else if (mmrVal < 1834) {
+          setDifficulty('medium')
+        } else {
+          setDifficulty('hard') // Dots and Boxes supports easy, medium, hard
+        }
+
+        // Auto start game
+        setBoardSize('6x6')
+        setDotsSize(6)
+        setLines([])
+        setLineOwners({})
+        setBoxes({})
+        setScores({ p1: 0, p2: 0 })
+        setWinner(null)
+        setCurrentTurn('P1')
+        setInGame(true)
+      }
+    }
+  }, [])
+
   // --- Active Game States ---
   const [dotsSize, setDotsSize] = useState(6) // 4, 6, or 8
   const [lines, setLines] = useState<string[]>([]) // list of drawn lines e.g. "h-0-0", "v-1-2"
@@ -512,6 +552,29 @@ export default function DotsAndBoxesGame() {
         }
       }
     })
+
+    if (isRanked) {
+      fetch('/api/ranked/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: resultPayload,
+          opponentName: opponentName
+        })
+      })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json()
+          if (data.revealRank) {
+            localStorage.setItem('gamehub_rank_reveal', 'pending')
+          }
+          if (data.promoted) {
+            localStorage.setItem('gamehub_promotion_celebration', JSON.stringify({ oldRank: data.oldRank, newRank: data.newRank }))
+          }
+        }
+      })
+      .catch(err => console.error('Failed to submit ranked stats:', err))
+    }
   }
 
   // --- Reset/Quit ---

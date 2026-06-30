@@ -220,11 +220,35 @@ export default function LeaderboardClient() {
   const [myProfile, setMyProfile] = useState<any>(null)
   const [selectedRankedGame, setSelectedRankedGame] = useState('snake-arena')
 
+  // Celebration states
+  const [showRankReveal, setShowRankReveal] = useState(false)
+  const [showPromotion, setShowPromotion] = useState(false)
+  const [promoDetails, setPromoDetails] = useState<{ oldRank: string; newRank: string } | null>(null)
+
   useEffect(() => {
     fetch('/api/profile/details')
       .then(res => res.json())
       .then(data => setMyProfile(data))
       .catch(err => console.error(err))
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('gamehub_rank_reveal') === 'pending') {
+        localStorage.removeItem('gamehub_rank_reveal')
+        setShowRankReveal(true)
+      }
+      const storedPromo = localStorage.getItem('gamehub_promotion_celebration')
+      if (storedPromo) {
+        localStorage.removeItem('gamehub_promotion_celebration')
+        try {
+          setPromoDetails(JSON.parse(storedPromo))
+          setShowPromotion(true)
+        } catch (e) {
+          console.error(e)
+        }
+      }
+    }
   }, [])
 
   // Matchmaking radar queue timer
@@ -317,7 +341,7 @@ export default function LeaderboardClient() {
 
   const handleAcceptMatch = () => {
     setIsSearchingRanked(false)
-    window.location.href = `/dashboard/games/${selectedRankedGame}?mode=ranked&opponent=${opponentInfo?.username || 'ApexBot'}`
+    window.location.href = `/dashboard/games/${selectedRankedGame}?mode=ranked&opponent=${opponentInfo?.username || 'ApexBot'}&opponentMmr=${opponentInfo?.mmr || 1000}&mmr=${rankedStats?.mmr || 1000}`
   }
 
   const formatSearchTime = (totalSeconds: number) => {
@@ -781,13 +805,13 @@ export default function LeaderboardClient() {
 
                 <div style={{ position: 'relative', zIndex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                    <RankBadge mmr={myMmr} size="lg" showLabel={true} />
+                    <RankBadge mmr={myMmr} size="lg" showLabel={true} placementRemaining={rankedStats.placementMatchesRemaining} />
                     <div style={{ flex: 1 }}>
                       <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>{myProfile?.displayName || user.email?.split('@')[0]}</h3>
                       
                       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
                         <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 60%)' }}>
-                          Rating: <strong style={{ color: 'white' }}>{myMmr} MMR</strong>
+                          Rating: <strong style={{ color: 'white' }}>{rankedStats.placementMatchesRemaining > 0 ? 'Unranked' : `${myMmr} MMR`}</strong>
                         </span>
                         <span style={{ fontSize: '0.7rem', color: rankedStats.streak >= 3 ? 'hsl(142 70% 50%)' : 'hsl(220 10% 50%)', background: 'rgba(255,255,255,0.04)', padding: '0.15rem 0.45rem', borderRadius: '6px', fontWeight: 700 }}>
                           {rankedStats.streak >= 3 ? `🔥 ${rankedStats.streak} Win Streak` : `Streak: ${rankedStats.streak}`}
@@ -796,6 +820,16 @@ export default function LeaderboardClient() {
 
                       {/* Division Rank Progress */}
                       {(() => {
+                        if (rankedStats.placementMatchesRemaining > 0) {
+                          const matchesLeft = rankedStats.placementMatchesRemaining;
+                          return (
+                            <div style={{ marginTop: '0.75rem', width: '100%', maxWidth: '240px' }}>
+                              <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)', margin: 0, lineHeight: 1.45 }}>
+                                Complete <strong>{matchesLeft}</strong> more placement match{matchesLeft !== 1 ? 'es' : ''} to establish your competitive rank.
+                              </p>
+                            </div>
+                          );
+                        }
                         const divRange = getDivisionRange(myMmr);
                         return (
                           <div style={{ marginTop: '0.75rem', width: '100%', maxWidth: '240px' }}>
@@ -1609,6 +1643,169 @@ export default function LeaderboardClient() {
         isOpen={!!selectedProfileId}
         onClose={() => setSelectedProfileId(null)}
       />
+
+      {/* ── Rank Reveal Modal Overlay ── */}
+      {showRankReveal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(5, 5, 10, 0.95)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            maxWidth: '420px',
+            animation: 'fadeIn 1s ease-out'
+          }}>
+            <h2 style={{
+              fontSize: '1.8rem',
+              fontWeight: 900,
+              color: 'white',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              marginBottom: '1rem',
+              textShadow: '0 0 20px rgba(255,255,255,0.4)'
+            }}>
+              Placements Completed!
+            </h2>
+            <p style={{ color: 'hsl(220 10% 65%)', fontSize: '0.9rem', marginBottom: '2.5rem' }}>
+              Your performance has been evaluated by the seasonal engine.
+            </p>
+
+            {/* Revealed Badge with animation */}
+            <div style={{
+              transform: 'scale(1.3)',
+              marginBottom: '2.5rem',
+              animation: 'scaleUp 1s cubic-bezier(0.34, 1.56, 0.64, 1)'
+            }}>
+              <RankBadge mmr={myMmr} size="lg" showLabel={true} />
+            </div>
+
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fbbf24', marginBottom: '2rem' }}>
+              Starting Rating: {myMmr} MMR
+            </h3>
+
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowRankReveal(false)}
+              style={{
+                padding: '0.6rem 2rem',
+                borderRadius: '12px',
+                fontSize: '0.9rem',
+                fontWeight: 800,
+                boxShadow: '0 0 20px rgba(6, 182, 212, 0.4)'
+              }}
+            >
+              Claim Standing
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Promotion Celebration Modal Overlay ── */}
+      {showPromotion && promoDetails && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(5, 5, 10, 0.95)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            maxWidth: '420px',
+            animation: 'fadeIn 0.8s ease-out'
+          }}>
+            {/* Animated Trophy Icon */}
+            <div style={{
+              display: 'inline-flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              width: '90px',
+              height: '90px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #fbbf24, #d97706)',
+              boxShadow: '0 0 30px rgba(251, 191, 36, 0.5)',
+              marginBottom: '1.5rem',
+              animation: 'bounce 2s infinite'
+            }}>
+              <Trophy size={44} className="text-white" />
+            </div>
+
+            <h2 style={{
+              fontSize: '2rem',
+              fontWeight: 950,
+              background: 'linear-gradient(90deg, #fbbf24, #ffffff)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              margin: 0
+            }}>
+              Rank Promoted!
+            </h2>
+            <p style={{ color: 'hsl(220 10% 65%)', fontSize: '0.9rem', marginTop: '0.5rem', marginBottom: '2.5rem' }}>
+              Congratulations! You have risen to a new competitive tier.
+            </p>
+
+            {/* Transition Display */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '1.5rem',
+              marginBottom: '2.5rem'
+            }}>
+              <div style={{ opacity: 0.6, transform: 'scale(0.85)' }}>
+                <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', display: 'block', marginBottom: '0.25rem', fontWeight: 800 }}>OLD TIER</span>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>{promoDetails.oldRank}</div>
+              </div>
+              
+              <div style={{ fontSize: '1.5rem', color: '#fbbf24', fontWeight: 800 }}>→</div>
+
+              <div style={{ transform: 'scale(1.2)' }}>
+                <span style={{ fontSize: '0.7rem', color: 'hsl(45 100% 60%)', display: 'block', marginBottom: '0.25rem', fontWeight: 900 }}>NEW TIER</span>
+                <RankBadge mmr={myMmr} size="lg" showLabel={true} />
+              </div>
+            </div>
+
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowPromotion(false)}
+              style={{
+                padding: '0.6rem 2.5rem',
+                borderRadius: '12px',
+                fontSize: '0.9rem',
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #fbbf24, #d97706)',
+                border: 'none',
+                color: 'black',
+                boxShadow: '0 0 25px rgba(251, 191, 36, 0.4)',
+                cursor: 'pointer'
+              }}
+            >
+              Excellent
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

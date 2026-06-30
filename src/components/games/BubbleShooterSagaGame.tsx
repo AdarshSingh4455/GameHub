@@ -470,6 +470,42 @@ export default function BubbleShooterSagaGame() {
   const [isPaused, setIsPaused] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
 
+  // Ranked states
+  const [isRanked, setIsRanked] = useState(false)
+  const [opponentName, setOpponentName] = useState('ApexBot')
+  const [myMmr, setMyMmr] = useState(1000)
+
+  // Parse parameters on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('mode') === 'ranked') {
+        setIsRanked(true)
+        const oppName = params.get('opponent') || 'ApexBot'
+        setOpponentName(oppName)
+        const mmrVal = parseInt(params.get('mmr') || '1000', 10)
+        setMyMmr(mmrVal)
+
+        // Select level number dynamically based on player's MMR
+        let lvlNum = 3
+        if (mmrVal < 1167) lvlNum = 3
+        else if (mmrVal < 1834) lvlNum = 8
+        else if (mmrVal < 3000) lvlNum = 15
+        else lvlNum = 25
+
+        const config = generateLevelConfigWithSeed(lvlNum, 1)
+        
+        // Auto start game
+        setActiveLevel(config)
+        setIsPaused(false)
+        setScore(0)
+        setShotsLeft(config.maxShots)
+        setRescuesCount(0)
+        setScreen('game')
+      }
+    }
+  }, [])
+
   // Canvas Refs & Game Engine coordinates
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -1150,6 +1186,7 @@ export default function BubbleShooterSagaGame() {
           level: lvlNum,
           stars,
           accuracy: 100,
+          isRanked
         },
         statistics: [
           { label: 'Level Reached', value: lvlNum, color: '#fbbf24' },
@@ -1158,7 +1195,31 @@ export default function BubbleShooterSagaGame() {
         ],
       },
     })
-  }, [activeLevel, bestScores, starsEarned, unlockedLevels, isMuted, submitGameResult, addToast])
+
+    if (isRanked) {
+      const apiResult = isVictory ? 'win' : 'loss'
+      fetch('/api/ranked/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: apiResult,
+          opponentName: opponentName
+        })
+      })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json()
+          if (data.revealRank) {
+            localStorage.setItem('gamehub_rank_reveal', 'pending')
+          }
+          if (data.promoted) {
+            localStorage.setItem('gamehub_promotion_celebration', JSON.stringify({ oldRank: data.oldRank, newRank: data.newRank }))
+          }
+        }
+      })
+      .catch(err => console.error('Failed to submit ranked stats:', err))
+    }
+  }, [activeLevel, bestScores, starsEarned, unlockedLevels, isMuted, submitGameResult, addToast, isRanked, opponentName])
 
   // Listen for platform-wide replay and next-level events from PostGameXPModal
   useEffect(() => {
@@ -1882,6 +1943,24 @@ export default function BubbleShooterSagaGame() {
 
       {screen === 'game' && activeLevel && (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1, zIndex: 5, overflow: 'hidden', position: 'relative' }}>
+          {isRanked && (
+            <div style={{
+              width: '100%',
+              padding: '10px 14px',
+              marginBottom: '10px',
+              borderRadius: '16px',
+              background: 'linear-gradient(90deg, rgba(236, 72, 153, 0.15), rgba(6, 182, 212, 0.15))',
+              border: '1px solid rgba(236, 72, 153, 0.3)',
+              textAlign: 'center',
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              color: 'white',
+              boxSizing: 'border-box',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+            }}>
+              🏆 Ranked Challenge: Clear the bubbles to win! (Opponent: {opponentName})
+            </div>
+          )}
           <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', background: 'hsl(222 20% 8% / 0.5)', borderRadius: 12, padding: '0.4rem 0.75rem', marginBottom: '0.5rem', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800 }}>Score</span>

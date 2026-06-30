@@ -64,6 +64,8 @@ model Profile {
   rankedLosses         Int                 @default(0)
   rankedStreak         Int                 @default(0)
   rankedPeakRank       String              @default("Bronze")
+  placementMatchesRemaining Int              @default(5)
+  rankedProtectionMatches   Int              @default(0)
   rankedMatches        RankedMatch[]
   seasonSnapshots      SeasonSnapshot[]
   hangmanMmr           Int                 @default(1000)
@@ -603,6 +605,10 @@ model SeasonSnapshot {
   wins      Int
   losses    Int
   winRate   Float
+  peakTier  String?
+  rewards   Json?
+  seasonNumber Int?
+  completionDate DateTime?
   season    RankedSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   profile   Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
 

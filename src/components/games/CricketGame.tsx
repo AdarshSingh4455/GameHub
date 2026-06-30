@@ -46,17 +46,21 @@ export default function CricketGame() {
   const [shakeStumps, setShakeStumps] = useState(false)
   const [sixCoins, setSixCoins] = useState<{ id: number; tx: number; ty: number }[]>([])
 
+  // Ranked states
+  const [isRanked, setIsRanked] = useState(false)
+  const [opponentName, setOpponentName] = useState('ApexBot')
+  const [myMmr, setMyMmr] = useState(1000)
+
   // Reset function
   const handleReset = () => {
-    setOvers(2)
-    setWickets(3)
-    setStep('setup')
-    setTossResult(null)
-    setTossChosenRole(null)
-    setIsTossing(false)
     setMatchState(null)
     setLastBall(null)
     setIsAnimating(false)
+    if (isRanked || new URLSearchParams(window.location.search).get('mode') === 'ranked') {
+      setStep('toss')
+    } else {
+      setStep('setup')
+    }
     setCommentary([])
     setShowSixAnimation(false)
     setShowWicketAnimation(false)
@@ -64,14 +68,38 @@ export default function CricketGame() {
     setSixCoins([])
   }
 
-  // Listen to global replay event
+  // Listen to global replay event & parse query params
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('mode') === 'ranked') {
+        setIsRanked(true)
+        const oppName = params.get('opponent') || 'ApexBot'
+        setOpponentName(oppName)
+        const mmrVal = parseInt(params.get('mmr') || '1000', 10)
+        setMyMmr(mmrVal)
+
+        // Scale difficulty based on MMR
+        if (mmrVal < 1167) {
+          setDifficulty('easy')
+        } else if (mmrVal < 1834) {
+          setDifficulty('medium')
+        } else {
+          setDifficulty('hard') // Hand Cricket supports easy, medium, hard
+        }
+
+        setOvers(2)
+        setWickets(3)
+        setStep('toss')
+      }
+    }
+
     const handleReplay = () => {
       handleReset()
     }
     window.addEventListener('gamehub_replay', handleReplay)
     return () => window.removeEventListener('gamehub_replay', handleReplay)
-  }, [])
+  }, [isRanked])
 
   // Handle Toss Flip
   const handleToss = (call: TossOutcome) => {
@@ -286,9 +314,32 @@ export default function CricketGame() {
           ]
         }
       })
+
+      if (isRanked) {
+        fetch('/api/ranked/stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            result: apiResult,
+            opponentName: opponentName
+          })
+        })
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            if (data.revealRank) {
+              localStorage.setItem('gamehub_rank_reveal', 'pending')
+            }
+            if (data.promoted) {
+              localStorage.setItem('gamehub_promotion_celebration', JSON.stringify({ oldRank: data.oldRank, newRank: data.newRank }))
+            }
+          }
+        })
+        .catch(err => console.error('Failed to submit ranked stats:', err))
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step])
+  }, [step, isRanked, opponentName])
 
   const formatOvers = (balls: number) => {
     const ov = Math.floor(balls / 6)

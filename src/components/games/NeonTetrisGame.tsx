@@ -207,6 +207,49 @@ export default function NeonTetrisGame() {
   const nextPopupId = useRef(0)
   const lastTapRef = useRef<number>(0)
 
+  // Ranked states
+  const [isRanked, setIsRanked] = useState(false)
+  const [opponentName, setOpponentName] = useState('ApexBot')
+  const [targetScore, setTargetScore] = useState(1000)
+
+  // Parse query parameters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('mode') === 'ranked') {
+        setIsRanked(true)
+        setMode('classic')
+        const oppName = params.get('opponent') || 'ApexBot'
+        setOpponentName(oppName)
+        const oppMmr = parseInt(params.get('opponentMmr') || '1000', 10)
+
+        // Set target score challenge dynamically
+        let target = 1000
+        if (oppMmr < 1167) target = 1000      // Bronze
+        else if (oppMmr < 1834) target = 2000 // Silver
+        else if (oppMmr < 3000) target = 3500 // Gold
+        else target = 5000                    // Diamond+
+        setTargetScore(target)
+
+        // Set game settings and auto start
+        setBoard(Array.from({ length: 20 }, () => Array(10).fill(null)))
+        setNextQueue([])
+        setHeldPiece(null)
+        setHoldUsedThisPlacement(false)
+        setScore(0)
+        setLinesCleared(0)
+        setLevel(1)
+        setCombo(0)
+        setMaxCombo(0)
+        setPiecesPlaced(0)
+        setPerfectClears(0)
+        setHasTetrisRecord(false)
+        setGameOver(false)
+        setInGame(true)
+      }
+    }
+  }, [])
+
   // Refs for tracking mutable states in animation loops
   const boardRef = useRef<(string | null)[][]>([])
   const currentPieceRef = useRef<Tetromino | null>(null)
@@ -727,11 +770,23 @@ export default function NeonTetrisGame() {
   ) => {
     await saveStats(finalScore, finalLines, finalMaxCombo, finalLevel, pcCount)
 
+    // In ranked mode, check if we beat the target score challenge
+    const resultPayload = isRanked
+      ? (finalScore >= targetScore ? 'win' : 'loss')
+      : (finalScore >= 1500 ? 'win' : 'loss')
+
+    const customTitle = resultPayload === 'win' ? 'Victory!' : (isRanked ? 'Target Failed' : 'Game Over')
+    const customSubtitle = isRanked
+      ? `Target: ${targetScore} • Score: ${finalScore} • ${resultPayload === 'win' ? 'Target Achieved' : 'Below Target'}`
+      : `Lines: ${finalLines} • Level: ${finalLevel}`
+
     submitGameResult({
       gameSlug: 'neon-tetris',
-      result: finalScore >= 1500 ? 'win' : 'loss',
+      result: resultPayload,
       metadata: {
         score: finalScore,
+        customTitle,
+        customSubtitle,
         gameMetadata: {
           mode,
           linesCleared: finalLines,
@@ -739,11 +794,36 @@ export default function NeonTetrisGame() {
           maxCombo: finalMaxCombo,
           perfectClears: pcCount,
           hasTetris: isTetris,
-          piecesPlaced: piecesPlaced + 1
+          piecesPlaced: piecesPlaced + 1,
+          isRanked,
+          targetScore: isRanked ? targetScore : undefined
         }
       }
     })
-  }, [saveStats, submitGameResult, mode, piecesPlaced])
+
+    if (isRanked) {
+      fetch('/api/ranked/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: resultPayload,
+          opponentName: opponentName
+        })
+      })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json()
+          if (data.revealRank) {
+            localStorage.setItem('gamehub_rank_reveal', 'pending')
+          }
+          if (data.promoted) {
+            localStorage.setItem('gamehub_promotion_celebration', JSON.stringify({ oldRank: data.oldRank, newRank: data.newRank }))
+          }
+        }
+      })
+      .catch(err => console.error('Failed to submit ranked stats:', err))
+    }
+  }, [saveStats, submitGameResult, mode, piecesPlaced, isRanked, targetScore, opponentName])
 
   // ─── PIECE ROTATION WITH SRS WALL KICKS ────────────────────────────────────
   const handleRotate = useCallback(
@@ -1163,6 +1243,23 @@ export default function NeonTetrisGame() {
       }}
       className={`animate-fadeIn ${isScreenShaking ? 'screen-shake' : ''}`}
     >
+      {isRanked && (
+        <div style={{
+          width: '100%',
+          padding: '10px 14px',
+          borderRadius: '16px',
+          background: 'linear-gradient(90deg, rgba(236, 72, 153, 0.15), rgba(6, 182, 212, 0.15))',
+          border: '1px solid rgba(236, 72, 153, 0.3)',
+          textAlign: 'center',
+          fontSize: '0.85rem',
+          fontWeight: 800,
+          color: 'white',
+          boxSizing: 'border-box',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+        }}>
+          🏆 Ranked Challenge: Beat <span style={{ color: '#fbbf24', textShadow: '0 0 8px rgba(251, 191, 36, 0.4)' }}>{targetScore}</span> Points to win! (Opponent: {opponentName})
+        </div>
+      )}
       {/* ── Top HUD strip ── */}
       <div
         style={{

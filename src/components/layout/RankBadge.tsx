@@ -5,14 +5,17 @@ interface RankBadgeProps {
   mmr: number
   size?: 'sm' | 'md' | 'lg'
   showLabel?: boolean
+  placementRemaining?: number
 }
 
 export const RankBadge: React.FC<RankBadgeProps> = ({
   mmr,
   size = 'md',
   showLabel = false,
+  placementRemaining,
 }) => {
   const details = getRankDetails(mmr)
+  const isPlacements = placementRemaining !== undefined && placementRemaining > 0
 
   // Size mapping
   const sizePx = {
@@ -29,6 +32,19 @@ export const RankBadge: React.FC<RankBadgeProps> = ({
 
   // Render specific SVG paths per rank category
   const renderBadgeIcon = () => {
+    if (isPlacements) {
+      return (
+        <g>
+          <path
+            d="M12 2L2 5v6c0 5.5 4.5 10 10 12 5.5-2 10-6.5 10-12V5l-10-3z"
+            fill="url(#badge-placement-grad)"
+            stroke="#475569"
+            strokeWidth="1.5"
+          />
+          <text x="12" y="15" fill="#94a3b8" fontSize="10" fontWeight="900" textAnchor="middle" fontFamily="sans-serif">?</text>
+        </g>
+      )
+    }
     switch (details.rank) {
       case 'Bronze':
         return (
@@ -139,6 +155,11 @@ export const RankBadge: React.FC<RankBadgeProps> = ({
         className="hover:scale-110"
       >
         <defs>
+          <linearGradient id="badge-placement-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#64748b" />
+            <stop offset="50%" stopColor="#475569" />
+            <stop offset="100%" stopColor="#334155" />
+          </linearGradient>
           <linearGradient id="badge-bronze-grad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#b45309" />
             <stop offset="50%" stopColor="#d97706" />
@@ -189,14 +210,14 @@ export const RankBadge: React.FC<RankBadgeProps> = ({
           style={{
             fontSize: labelFontSize,
             fontWeight: 800,
-            color: details.badgeColor,
-            textShadow: `0 0 10px ${details.glowColor}`,
+            color: isPlacements ? '#94a3b8' : details.badgeColor,
+            textShadow: isPlacements ? '0 0 10px rgba(148, 163, 184, 0.4)' : `0 0 10px ${details.glowColor}`,
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
             marginTop: '0.1rem',
           }}
         >
-          {details.label}
+          {isPlacements ? `Placements (${5 - (placementRemaining ?? 5)}/5)` : details.label}
         </span>
       )}
     </div>

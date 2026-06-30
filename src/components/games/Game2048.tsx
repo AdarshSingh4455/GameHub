@@ -123,10 +123,55 @@ export default function Game2048() {
   const timerRef2 = useRef(0)
   const boardRef = useRef(board)
 
+  // Ranked states
+  const [isRanked, setIsRanked] = useState(false)
+  const [opponentName, setOpponentName] = useState('ApexBot')
+  const [targetScore, setTargetScore] = useState(1000)
+
   useEffect(() => { moveCountRef.current = moveCount }, [moveCount])
   useEffect(() => { scoreRef.current = score }, [score])
   useEffect(() => { timerRef2.current = timer }, [timer])
   useEffect(() => { boardRef.current = board }, [board])
+
+  // Parse query parameters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('mode') === 'ranked') {
+        setIsRanked(true)
+        setAppMode('classic')
+        const oppName = params.get('opponent') || 'ApexBot'
+        setOpponentName(oppName)
+        const oppMmr = parseInt(params.get('opponentMmr') || '1000', 10)
+
+        // Set target score challenge dynamically
+        let target = 1000
+        if (oppMmr < 1167) target = 1000      // Bronze
+        else if (oppMmr < 1834) target = 2500 // Silver
+        else if (oppMmr < 3000) target = 5000 // Gold
+        else target = 10000                    // Diamond+
+        setTargetScore(target)
+
+        // Auto start game
+        const initialBoard = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
+        addRandomTile(initialBoard)
+        addRandomTile(initialBoard)
+        setBoard(initialBoard)
+        boardRef.current = initialBoard
+        setScore(0)
+        scoreRef.current = 0
+        setTimer(0)
+        timerRef2.current = 0
+        setMoveCount(0)
+        moveCountRef.current = 0
+        setHasReached2048(false)
+        setChallengeStatus('playing')
+        challengeStatusRef.current = 'playing'
+        setChallengeObjective(null)
+        setGameState('playing')
+      }
+    }
+  }, [])
 
   // Timer
   useEffect(() => {
@@ -282,7 +327,7 @@ export default function Game2048() {
         for (let c = 0; c < 4; c++)
           if (currentBoard[r][c] === 2048) reaches2048 = true
 
-      if (reaches2048 && !hasReached2048 && !challengeObjective) {
+      if (reaches2048 && !hasReached2048 && !challengeObjective && !isRanked) {
         setHasReached2048(true)
         submitGameResult({ gameSlug: '2048', result: 'win', metadata: { score: newScore, timeSpent: timerRef2.current } })
       }
@@ -290,22 +335,62 @@ export default function Game2048() {
       if (checkGameOver(currentBoard)) {
         setGameState('gameover')
         if (timerRef.current) clearInterval(timerRef.current)
-        if (!reaches2048 && !hasReached2048 && !challengeObjective) {
-          submitGameResult({ gameSlug: '2048', result: 'loss', metadata: { score: newScore, timeSpent: timerRef2.current } })
-        }
-        if (challengeObjective) {
-          // Submit result for challenge based on current status
-          const finalChallengeStatus: string = challengeStatusRef.current
+
+        if (isRanked) {
+          const resultPayload = newScore >= targetScore ? 'win' : 'loss'
+          const customTitle = resultPayload === 'win' ? 'Victory!' : 'Target Failed'
+          const customSubtitle = `Target: ${targetScore} • Score: ${newScore} • ${resultPayload === 'win' ? 'Target Achieved' : 'Below Target'}`
+
           submitGameResult({
             gameSlug: '2048',
-            result: finalChallengeStatus === 'success' ? 'win' : 'loss',
-            metadata: { score: newScore, timeSpent: timerRef2.current, customTitle: finalChallengeStatus === 'success' ? 'Challenge Complete!' : 'Board Locked' },
+            result: resultPayload,
+            metadata: {
+              score: newScore,
+              timeSpent: timerRef2.current,
+              customTitle,
+              customSubtitle,
+            }
           })
+
+          fetch('/api/ranked/stats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              result: resultPayload,
+              opponentName: opponentName
+            })
+          })
+          .then(async (res) => {
+            if (res.ok) {
+              const data = await res.json()
+              if (data.revealRank) {
+                localStorage.setItem('gamehub_rank_reveal', 'pending')
+              }
+              if (data.promoted) {
+                localStorage.setItem('gamehub_promotion_celebration', JSON.stringify({ oldRank: data.oldRank, newRank: data.newRank }))
+              }
+            }
+          })
+          .catch(err => console.error('Failed to submit ranked stats:', err))
+
+        } else {
+          if (!reaches2048 && !hasReached2048 && !challengeObjective) {
+            submitGameResult({ gameSlug: '2048', result: 'loss', metadata: { score: newScore, timeSpent: timerRef2.current } })
+          }
+          if (challengeObjective) {
+            // Submit result for challenge based on current status
+            const finalChallengeStatus: string = challengeStatusRef.current
+            submitGameResult({
+              gameSlug: '2048',
+              result: finalChallengeStatus === 'success' ? 'win' : 'loss',
+              metadata: { score: newScore, timeSpent: timerRef2.current, customTitle: finalChallengeStatus === 'success' ? 'Challenge Complete!' : 'Board Locked' },
+            })
+          }
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState, challengeStatus, hasReached2048, challengeObjective, submitGameResult])
+  }, [gameState, challengeStatus, hasReached2048, challengeObjective, submitGameResult, isRanked, targetScore, opponentName])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -429,6 +514,23 @@ export default function Game2048() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+      {isRanked && (
+        <div style={{
+          width: '100%',
+          padding: '10px 14px',
+          borderRadius: '16px',
+          background: 'linear-gradient(90deg, rgba(236, 72, 153, 0.15), rgba(6, 182, 212, 0.15))',
+          border: '1px solid rgba(236, 72, 153, 0.3)',
+          textAlign: 'center',
+          fontSize: '0.85rem',
+          fontWeight: 800,
+          color: 'white',
+          boxSizing: 'border-box',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+        }}>
+          🏆 Ranked Challenge: Beat <span style={{ color: '#fbbf24', textShadow: '0 0 8px rgba(251, 191, 36, 0.4)' }}>{targetScore}</span> Points to win! (Opponent: {opponentName})
+        </div>
+      )}
 
       {/* ── HUD ─────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'hsl(220 20% 7%)', padding: '0.75rem 1.25rem', borderRadius: 16, border: '1px solid hsl(220 20% 14%)' }}>

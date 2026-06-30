@@ -9,7 +9,22 @@ export interface RankDetails {
   glowColor: string
 }
 
-export function getRankDetails(mmr: number): RankDetails {
+export function getRankDetails(mmr: number, placementMatchesRemaining: number = 0): RankDetails {
+  // 1. Placements Override
+  if (placementMatchesRemaining > 0) {
+    const matchesCompleted = Math.max(0, 5 - placementMatchesRemaining)
+    return {
+      rank: "Placements",
+      tier: "",
+      label: `Placements (${matchesCompleted}/5)`,
+      minMmr: 0,
+      maxMmr: 1000,
+      progress: Math.floor((matchesCompleted / 5) * 100),
+      badgeColor: "hsl(220 10% 45%)",
+      glowColor: "hsla(220 10% 45% / 0.2)"
+    }
+  }
+
   // Clamp MMR to positive values
   const val = Math.max(0, mmr)
 
@@ -137,7 +152,6 @@ export function getRankDetails(mmr: number): RankDetails {
 
   // Grandmaster (3500+)
   const subVal = val - 3500
-  // No upper limit, progress represents level of grandmaster rating steps
   const progress = Math.min(100, Math.floor((subVal / 1000) * 100))
 
   return {
@@ -150,4 +164,33 @@ export function getRankDetails(mmr: number): RankDetails {
     badgeColor: "hsl(0 90% 60%)",
     glowColor: "hsla(0 90% 60% / 0.6)"
   }
+}
+
+export function getAIDifficultyForMmr(mmr: number): 'easy' | 'medium' | 'hard' | 'elite' {
+  if (mmr < 1167) return 'easy'
+  if (mmr < 1834) return 'medium'
+  if (mmr < 3000) return 'hard'
+  return 'elite'
+}
+
+export function getTargetScoreForGame(gameSlug: string, mmr: number): number {
+  if (gameSlug === '2048') {
+    if (mmr < 1167) return 1000      // Bronze
+    if (mmr < 1834) return 2500      // Silver
+    if (mmr < 3000) return 5000      // Gold
+    return 10000                     // Diamond+
+  }
+  if (gameSlug === 'neon-tetris') {
+    if (mmr < 1167) return 1000
+    if (mmr < 1834) return 2000
+    if (mmr < 3000) return 3500
+    return 5000
+  }
+  if (gameSlug === 'block-blast') {
+    if (mmr < 1167) return 800
+    if (mmr < 1834) return 1500
+    if (mmr < 3000) return 2500
+    return 4000
+  }
+  return 1000
 }

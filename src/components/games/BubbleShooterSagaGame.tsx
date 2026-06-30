@@ -85,14 +85,9 @@ const LEVELS: BubbleLevelConfig[] = [
   },
 ]
 
-// Procedural Level Generator for Level 4+
-export function getLevelConfig(level: number): BubbleLevelConfig {
-  if (level <= 3) {
-    return LEVELS[level - 1]
-  }
-
-  // Linear feedback pseudo-random generator
-  const seed = level * 13579
+// Procedural Level Generator with Templates & Seed
+function generateLevelConfigWithSeed(level: number, attempt: number): BubbleLevelConfig {
+  const seed = level * 13579 + attempt * 701
   const random = (offset: number) => {
     const x = Math.sin(seed + offset) * 10000
     return x - Math.floor(x)
@@ -100,33 +95,66 @@ export function getLevelConfig(level: number): BubbleLevelConfig {
 
   const name = `Level ${level}`
   const objectives: ('clear' | 'rescue' | 'score')[] = ['clear', 'rescue', 'score']
-  const objective = objectives[(level - 4) % 3]
+  const objective = objectives[(level - 1) % 3]
 
-  // Scale colors and layouts
-  const colorCount = Math.min(6, 3 + Math.floor((level - 4) / 3))
+  // Color count scaling (Levels 1-10 are 3 colors to ease learning)
+  let colorCount = 3
+  if (level <= 10) {
+    colorCount = 3
+  } else if (level <= 25) {
+    colorCount = 4
+  } else if (level <= 50) {
+    colorCount = 5
+  } else {
+    colorCount = 6
+  }
+
   const activeColors = BUBBLE_COLORS.slice(0, colorCount)
-  const baseShots = 22
-  const maxShots = Math.max(12, baseShots + Math.floor(level / 3) - Math.floor(level / 6) * 2)
 
-  const initialRows = Math.min(11, 5 + Math.floor((level - 4) / 2))
-  const initialGridLayout: number[][] = []
+  // Max shots scaling (very easy in levels 1-10)
+  let maxShots = 22
+  if (level <= 10) {
+    maxShots = 32 + Math.floor(random(1) * 6) // 32 to 37 shots
+  } else if (level <= 25) {
+    maxShots = 24 + Math.floor(random(1) * 5) // 24 to 28 shots
+  } else if (level <= 50) {
+    maxShots = 19 + Math.floor(random(1) * 4) // 19 to 22 shots
+  } else {
+    maxShots = Math.max(12, 18 - Math.min(6, Math.floor((level - 50) / 10)))
+  }
+
+  // Board rows size scaling
+  let initialRows = 5
+  if (level <= 10) {
+    initialRows = 4 + Math.floor(random(2) * 2) // 4 to 5 rows
+  } else if (level <= 25) {
+    initialRows = 5 + Math.floor(random(2) * 2) // 5 to 6 rows
+  } else if (level <= 50) {
+    initialRows = 7 + Math.floor(random(2) * 2) // 7 to 8 rows
+  } else {
+    initialRows = Math.min(12, 9 + Math.floor((level - 50) / 15))
+  }
 
   let targetRescues = 0
   let targetScore = 0
   let objectiveText = ''
 
   if (objective === 'rescue') {
-    targetRescues = 2 + Math.floor(level / 4)
+    targetRescues = level <= 10 ? 2 : 2 + Math.floor(level / 5)
     objectiveText = `Rescue the ${targetRescues} trapped kittens!`
   } else if (objective === 'score') {
-    targetScore = 4000 + (level - 4) * 800
+    targetScore = level <= 10 ? 1500 : 3000 + (level * 400)
     objectiveText = `Score ${targetScore.toLocaleString()} points!`
   } else {
     objectiveText = 'Clear all bubbles!'
   }
 
-  let kittenSpotsLeft = targetRescues
+  const initialGridLayout: number[][] = []
   const cols = 8
+  let kittenSpotsLeft = targetRescues
+
+  // Choose a template pattern
+  const patternType = level <= 3 ? 0 : Math.floor(random(3) * 5)
 
   for (let r = 0; r < initialRows; r++) {
     const colsInRow = r % 2 === 0 ? cols : cols - 1
@@ -134,29 +162,97 @@ export function getLevelConfig(level: number): BubbleLevelConfig {
 
     for (let c = 0; c < colsInRow; c++) {
       const randVal = random(r * 100 + c)
+      let val = 0
 
-      if (objective === 'rescue' && kittenSpotsLeft > 0 && r < 3 && randVal < 0.25) {
-        rowData.push(9) // Kitten
-        kittenSpotsLeft--
-      } else if (randVal < 0.05 + Math.min(0.08, level * 0.004)) {
-        // Special bubbles: 7=Rainbow, 8=Fireball
-        rowData.push(random(r * 200 + c) < 0.5 ? 7 : 8)
-      } else if (randVal < 0.82) {
-        const colIdx = 1 + Math.floor(random(r * 300 + c) * colorCount)
-        rowData.push(colIdx)
+      if (patternType === 1) {
+        // Zigzag pattern
+        const isOffset = (r + c) % 3 === 0
+        if (isOffset) {
+          val = 1 + Math.floor(random(r * 300 + c) * colorCount)
+        }
+      } else if (patternType === 2) {
+        // V-shape pattern
+        const distFromCenter = Math.abs(c - colsInRow / 2)
+        if (r === Math.floor(distFromCenter)) {
+          val = 1 + Math.floor(random(r * 300 + c) * colorCount)
+        }
+      } else if (patternType === 3) {
+        // Columns pattern
+        if (c % 2 === 0) {
+          val = 1 + Math.floor(random(r * 300 + c) * colorCount)
+        }
+      } else if (patternType === 4) {
+        // Concentric outlines pattern
+        if (r === 0 || r === initialRows - 1 || c === 0 || c === colsInRow - 1) {
+          val = 1 + Math.floor(random(r * 300 + c) * colorCount)
+        }
       } else {
-        rowData.push(0)
+        // Standard random fill pattern
+        if (randVal < 0.85) {
+          val = 1 + Math.floor(random(r * 300 + c) * colorCount)
+        }
+      }
+
+      // Check if we should inject a kitten
+      if (objective === 'rescue' && kittenSpotsLeft > 0 && r < 3 && val > 0 && randVal < 0.3) {
+        val = 9
+        kittenSpotsLeft--
+      }
+
+      // Special bubble injection (Bomb 10, Ice 11, Cloud 12, Rainbow 7, Fireball 8)
+      if (val > 0 && val !== 9) {
+        const specialRand = random(r * 500 + c)
+        if (level <= 10) {
+          if (specialRand < 0.12) {
+            val = random(r * 200 + c) < 0.5 ? 7 : 8 // only rainbow/fireball in tutorial
+          }
+        } else if (level <= 25) {
+          if (specialRand < 0.08) {
+            val = random(r * 200 + c) < 0.5 ? 7 : 8
+          }
+        } else if (level <= 50) {
+          if (specialRand < 0.10) {
+            const roll = Math.floor(random(r * 200 + c) * 5)
+            if (roll === 0) val = 7
+            else if (roll === 1) val = 8
+            else if (roll === 2) val = 10 // Bomb
+            else if (roll === 3) val = 11 // Ice
+            else val = 12 // Cloud
+          }
+        } else {
+          if (specialRand < 0.15) {
+            const roll = Math.floor(random(r * 200 + c) * 5)
+            if (roll === 0) val = 7
+            else if (roll === 1) val = 8
+            else if (roll === 2) val = 10
+            else if (roll === 3) val = 11
+            else val = 12
+          }
+        }
+      }
+
+      rowData.push(val)
+    }
+
+    // Mirrored / symmetric template application
+    if (patternType === 3 && level % 2 === 0) {
+      for (let i = 0; i < Math.floor(colsInRow / 2); i++) {
+        rowData[colsInRow - 1 - i] = rowData[i]
       }
     }
+
     initialGridLayout.push(rowData)
   }
 
   // Backup placement for kittens if they weren't fully placed
   if (objective === 'rescue' && kittenSpotsLeft > 0) {
-    for (let c = 0; c < cols; c++) {
-      if (kittenSpotsLeft > 0 && initialGridLayout[0][c] !== 9) {
-        initialGridLayout[0][c] = 9
-        kittenSpotsLeft--
+    for (let r = 0; r < 2; r++) {
+      const colsInRow = r % 2 === 0 ? cols : cols - 1
+      for (let c = 0; c < colsInRow; c++) {
+        if (kittenSpotsLeft > 0 && initialGridLayout[r][c] > 0 && initialGridLayout[r][c] !== 9) {
+          initialGridLayout[r][c] = 9
+          kittenSpotsLeft--
+        }
       }
     }
   }
@@ -172,6 +268,47 @@ export function getLevelConfig(level: number): BubbleLevelConfig {
     gridColors: activeColors,
     initialGridLayout,
   }
+}
+
+function validateLevelSolvability(config: BubbleLevelConfig): boolean {
+  const grid = config.initialGridLayout
+  const counts: Record<number, number> = {}
+  let hasKittens = false
+  let totalNormal = 0
+
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      const val = grid[r][c]
+      if (val > 0) {
+        counts[val] = (counts[val] || 0) + 1
+        if (val === 9) hasKittens = true
+        if (val <= 6) totalNormal++
+      }
+    }
+  }
+
+  if (config.objective === 'rescue' && !hasKittens) return false
+
+  // Solvability check: every color present has at least 3 bubbles
+  for (let color = 1; color <= 6; color++) {
+    if (counts[color] && counts[color] < 3) {
+      return false
+    }
+  }
+
+  if (totalNormal < 5) return false
+
+  return true
+}
+
+export function getLevelConfig(level: number): BubbleLevelConfig {
+  let attempt = 0
+  let config: BubbleLevelConfig
+  do {
+    config = generateLevelConfigWithSeed(level, attempt)
+    attempt++
+  } while (!validateLevelSolvability(config) && attempt < 100)
+  return config
 }
 
 // Web Audio API Sound Synthesizer
@@ -319,6 +456,13 @@ export default function BubbleShooterSagaGame() {
   const [starsEarned, setStarsEarned] = useState<Record<number, number>>({})
   const [totalGames, setTotalGames] = useState(0)
   const [highestCombo, setHighestCombo] = useState(0)
+  const [lifetimeStats, setLifetimeStats] = useState({
+    highestLevelReached: 1,
+    totalMilestonesCompleted: 0,
+    totalShotsFired: 0,
+    totalKittensRescued: 0,
+    totalScoreAccumulated: 0
+  })
 
   const [score, setScore] = useState(0)
   const [shotsLeft, setShotsLeft] = useState(0)
@@ -356,6 +500,11 @@ export default function BubbleShooterSagaGame() {
     ceilingOffsetY: 0,
     isShooting: false,
     gameFinishedTriggered: false,
+    obstacleX: 180,
+    obstacleSpeed: 2.2,
+    obstacleWidth: 100,
+    obstacleHeight: 18,
+    obstacleY: 420,
   })
 
   // Load Saved Game Progress
@@ -374,6 +523,9 @@ export default function BubbleShooterSagaGame() {
     if (savedTotalGames) setTotalGames(parseInt(savedTotalGames, 10))
     if (savedHighCombo) setHighestCombo(parseInt(savedHighCombo, 10))
     if (savedMuted) setIsMuted(savedMuted === 'true')
+
+    const savedStats = localStorage.getItem('gamehub_bs_stats')
+    if (savedStats) setLifetimeStats(JSON.parse(savedStats))
   }, [])
 
   // Save Progress Helper
@@ -418,8 +570,14 @@ export default function BubbleShooterSagaGame() {
     engine.localScore = 0
     engine.localRescues = 0
     engine.localShots = config.maxShots
+    engine.ceilingOffsetY = 0
     engine.consecutiveMisses = 0
     engine.comboCount = 0
+    engine.obstacleX = 180
+    engine.obstacleSpeed = 2.2
+    engine.obstacleWidth = 100
+    engine.obstacleHeight = 18
+    engine.obstacleY = 420
     engine.particles = []
     engine.floatingTexts = []
     engine.ceilingOffsetY = 0
@@ -572,13 +730,25 @@ export default function BubbleShooterSagaGame() {
     if (!target) return
 
     const color = target.colorIndex
+    const isBomb = color === 10
     const isFireball = color === 8
     const isRainbow = color === 7
 
     const popped = new Set<string>()
     const queue: [number, number][] = []
 
-    if (isFireball) {
+    if (isBomb) {
+      playSound('explosion', isMuted)
+      addFloatingText('BOMB EXPLOSION!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 35, '#dc2626')
+      for (let r = Math.max(0, hitRow - 2); r <= Math.min(ROWS_COUNT - 1, hitRow + 2); r++) {
+        const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
+        for (let c = 0; c < colsInRow; c++) {
+          if (engine.grid[r][c]) {
+            popped.add(`${r},${c}`)
+          }
+        }
+      }
+    } else if (isFireball) {
       playSound('explosion', isMuted)
       for (let r = Math.max(0, hitRow - 1); r <= Math.min(ROWS_COUNT - 1, hitRow + 1); r++) {
         const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
@@ -615,7 +785,10 @@ export default function BubbleShooterSagaGame() {
             if (neighbor && neighbor.state === 'idle') {
               const key = `${nr},${nc}`
               if (!popped.has(key)) {
-                const isMatch = isRainbow || currColor === 7 || neighbor.colorIndex === 7 || neighbor.colorIndex === currColor || neighbor.colorIndex === 9
+                // Blocker types (10, 11, 12) never match colors directly
+                const isMatch = isRainbow || currColor === 7 || neighbor.colorIndex === 7 || 
+                                (neighbor.colorIndex === currColor && neighbor.colorIndex <= 9) || 
+                                neighbor.colorIndex === 9
                 if (isMatch) {
                   popped.add(key)
                   if (neighbor.colorIndex !== 9) {
@@ -629,12 +802,20 @@ export default function BubbleShooterSagaGame() {
       }
     }
 
-    if (popped.size >= 3 || isFireball) {
+    if (popped.size >= 3 || isFireball || isBomb) {
       engine.comboCount++
       const comboMult = engine.comboCount
       
       let scoreGained = 0
       let rescuedLocal = 0
+
+      // Melt any Ice (11) or Cloud (12) blockers adjacent to popping clusters
+      const neighborsOffsetEven = [
+        [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]
+      ]
+      const neighborsOffsetOdd = [
+        [-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]
+      ]
 
       popped.forEach((key) => {
         const [r, c] = key.split(',').map(Number)
@@ -647,8 +828,27 @@ export default function BubbleShooterSagaGame() {
             rescuedLocal++
           }
 
-          const basePoints = b.colorIndex === 7 ? 200 : b.colorIndex === 8 ? 250 : 100
+          const basePoints = b.colorIndex === 7 ? 200 : b.colorIndex === 8 ? 250 : b.colorIndex === 10 ? 300 : 100
           scoreGained += basePoints * comboMult
+        }
+
+        // Scan neighbors of popped cells to melt ice or blow cloud
+        const offsets = r % 2 === 0 ? neighborsOffsetEven : neighborsOffsetOdd
+        for (const [dr, dc] of offsets) {
+          const nr = r + dr
+          const nc = c + dc
+          if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < COLS_COUNT) {
+            const neighbor = engine.grid[nr][nc]
+            if (neighbor && neighbor.state === 'idle') {
+              if (neighbor.colorIndex === 11) {
+                neighbor.colorIndex = 1 + Math.floor(Math.random() * 6)
+                addFloatingText("Melted!", neighbor.x, neighbor.y, '#60a5fa')
+              } else if (neighbor.colorIndex === 12) {
+                neighbor.colorIndex = 1 + Math.floor(Math.random() * 6)
+                addFloatingText("Revealed!", neighbor.x, neighbor.y, '#e4e4e7')
+              }
+            }
+          }
         }
       })
 
@@ -673,6 +873,33 @@ export default function BubbleShooterSagaGame() {
     } else {
       engine.comboCount = 0
       engine.consecutiveMisses++
+
+      // If no match-3, check if we hit next to Ice/Cloud directly to melt them anyway
+      const neighborsOffsetEven = [
+        [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]
+      ]
+      const neighborsOffsetOdd = [
+        [-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]
+      ]
+      const offsets = hitRow % 2 === 0 ? neighborsOffsetEven : neighborsOffsetOdd
+      for (const [dr, dc] of offsets) {
+        const nr = hitRow + dr
+        const nc = hitCol + dc
+        if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < COLS_COUNT) {
+          const neighbor = engine.grid[nr][nc]
+          if (neighbor && neighbor.state === 'idle') {
+            if (neighbor.colorIndex === 11) {
+              neighbor.colorIndex = 1 + Math.floor(Math.random() * 6)
+              addFloatingText("Melted!", neighbor.x, neighbor.y, '#60a5fa')
+              playSound('bounce', isMuted)
+            } else if (neighbor.colorIndex === 12) {
+              neighbor.colorIndex = 1 + Math.floor(Math.random() * 6)
+              addFloatingText("Revealed!", neighbor.x, neighbor.y, '#e4e4e7')
+              playSound('bounce', isMuted)
+            }
+          }
+        }
+      }
 
       if (engine.consecutiveMisses >= 4) {
         engine.ceilingOffsetY += BUBBLE_RADIUS * 1.5
@@ -852,10 +1079,62 @@ export default function BubbleShooterSagaGame() {
       updatedStars[lvlNum] = Math.max(starsEarned[lvlNum] || 0, stars)
     }
 
+    // Save endless statistics to localStorage
+    let nextStats = {
+      highestLevelReached: 1,
+      totalMilestonesCompleted: 0,
+      totalShotsFired: 0,
+      totalKittensRescued: 0,
+      totalScoreAccumulated: 0
+    }
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gamehub_bs_stats')
+      if (saved) {
+        try {
+          nextStats = JSON.parse(saved)
+        } catch(e) {}
+      }
+      if (isVictory) {
+        nextStats.highestLevelReached = Math.max(nextStats.highestLevelReached, lvlNum + 1)
+        if (lvlNum % 25 === 0) {
+          nextStats.totalMilestonesCompleted += 1
+          addToast('success', 'Milestone Reached!', `Completed Level ${lvlNum}! Claimed Reward Chest: +500 Coins!`)
+        }
+        if (lvlNum % 50 === 0) {
+          addToast('success', 'Cosmetic Unlocked!', 'You unlocked a new profile layout theme!')
+        }
+        if (lvlNum % 100 === 0) {
+          addToast('success', 'Exclusive Badge Unlocked!', 'You unlocked the Legendary Bubble Master badge!')
+        }
+      }
+      nextStats.totalShotsFired += (activeLevel!.maxShots - engine.localShots)
+      nextStats.totalKittensRescued += engine.localRescues
+      nextStats.totalScoreAccumulated += engine.localScore
+      localStorage.setItem('gamehub_bs_stats', JSON.stringify(nextStats))
+      setLifetimeStats(nextStats)
+    }
+
     saveProgress(updatedUnlocked, updatedScores, updatedStars, engine.comboCount)
 
     // Redirect screen immediately back to map so when result modal exits, map is shown
     setScreen('map')
+
+    // Determine gain structure and milestone bonuses
+    let xpGained = isVictory ? 150 + lvlNum * 10 : 30
+    let coinsGained = isVictory ? 50 + lvlNum * 5 : 10
+
+    if (isVictory) {
+      if (lvlNum % 100 === 0) {
+        coinsGained += 1500
+        xpGained += 500
+      } else if (lvlNum % 50 === 0) {
+        coinsGained += 1000
+        xpGained += 300
+      } else if (lvlNum % 25 === 0) {
+        coinsGained += 500
+        xpGained += 150
+      }
+    }
 
     submitGameResult({
       gameSlug: 'bubble-shooter',
@@ -865,6 +1144,8 @@ export default function BubbleShooterSagaGame() {
         level: lvlNum,
         stars,
         hasNextLevel: true, // Endless progression supports level+1 indefinitely
+        coinsGained,
+        xpGained,
         gameMetadata: {
           level: lvlNum,
           stars,
@@ -877,7 +1158,7 @@ export default function BubbleShooterSagaGame() {
         ],
       },
     })
-  }, [activeLevel, bestScores, starsEarned, unlockedLevels, isMuted, submitGameResult])
+  }, [activeLevel, bestScores, starsEarned, unlockedLevels, isMuted, submitGameResult, addToast])
 
   // Listen for platform-wide replay and next-level events from PostGameXPModal
   useEffect(() => {
@@ -947,6 +1228,44 @@ export default function BubbleShooterSagaGame() {
         const s = engine.shot
         s.x += s.vx
         s.y += s.vy
+
+        // Update metallic obstacle position (Levels >= 26)
+        if (activeLevel && activeLevel.level >= 26) {
+          const speed = engine.obstacleSpeed || 2.2
+          const w = engine.obstacleWidth || 100
+          engine.obstacleX = (engine.obstacleX || 180) + speed
+          if (engine.obstacleX <= 10 || engine.obstacleX + w >= CANVAS_WIDTH - 10) {
+            engine.obstacleSpeed = -speed
+          }
+        }
+
+        // Check deflector bumper collision (Levels >= 26)
+        if (activeLevel && activeLevel.level >= 26) {
+          const obsX = engine.obstacleX || 180
+          const obsY = engine.obstacleY || 420
+          const obsW = engine.obstacleWidth || 100
+          const obsH = engine.obstacleHeight || 18
+
+          // Circle-AABB intersection check
+          const closestX = Math.max(obsX, Math.min(s.x, obsX + obsW))
+          const closestY = Math.max(obsY, Math.min(s.y, obsY + obsH))
+          const distanceX = s.x - closestX
+          const distanceY = s.y - closestY
+          const distanceSquared = distanceX * distanceX + distanceY * distanceY
+
+          if (distanceSquared < s.radius * s.radius) {
+            // Reflect physics
+            if (s.y < obsY || s.y > obsY + obsH) {
+              s.vy = -s.vy
+              s.y += s.vy
+            } else {
+              s.vx = -s.vx
+              s.x += s.vx
+            }
+            addFloatingText("DEFLECTED!", s.x, s.y - 10, '#c084fc')
+            playSound('bounce', isMuted)
+          }
+        }
 
         if (s.x - s.radius <= 0) {
           s.x = s.radius
@@ -1092,6 +1411,37 @@ export default function BubbleShooterSagaGame() {
         drawBubbleBall(ctx, engine.shot.x, engine.shot.y, engine.shot.colorIndex)
       }
 
+      // Draw metallic deflector bumper if level >= 26
+      if (activeLevel && activeLevel.level >= 26) {
+        const obsX = engine.obstacleX || 180
+        const obsY = engine.obstacleY || 420
+        const obsW = engine.obstacleWidth || 100
+        const obsH = engine.obstacleHeight || 18
+
+        ctx.save()
+        ctx.shadowColor = '#818cf8'
+        ctx.shadowBlur = 8
+        const metalGrad = ctx.createLinearGradient(obsX, obsY, obsX, obsY + obsH)
+        metalGrad.addColorStop(0, '#e2e8f0')
+        metalGrad.addColorStop(0.5, '#475569')
+        metalGrad.addColorStop(1, '#0f172a')
+        ctx.fillStyle = metalGrad
+        ctx.strokeStyle = '#818cf8'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.roundRect(obsX, obsY, obsW, obsH, 6)
+        ctx.fill()
+        ctx.stroke()
+
+        // Obstacle label
+        ctx.fillStyle = '#ffffff'
+        ctx.font = 'bold 9px Outfit, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('DEFLECTOR', obsX + obsW / 2, obsY + obsH / 2)
+        ctx.restore()
+      }
+
       // Draw Cannon launcher body
       const launcherX = CANVAS_WIDTH / 2
       const launcherY = CANVAS_HEIGHT - 60
@@ -1216,6 +1566,67 @@ export default function BubbleShooterSagaGame() {
       ctx.beginPath()
       ctx.arc(x, y, r, 0, 2 * Math.PI)
       ctx.fill()
+    } else if (colorIndex === 10) {
+      // Bomb Bubble (radius 2 explosion)
+      ctx.shadowColor = '#ef4444'
+      const grad = ctx.createRadialGradient(x - r / 3, y - r / 3, r / 10, x, y, r)
+      grad.addColorStop(0, '#52525b')
+      grad.addColorStop(0.3, '#18181b')
+      grad.addColorStop(1, '#09090b')
+      ctx.fillStyle = grad
+      ctx.beginPath()
+      ctx.arc(x, y, r, 0, 2 * Math.PI)
+      ctx.fill()
+      
+      // Draw fuse
+      ctx.strokeStyle = '#f59e0b'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(x, y - r * 0.7)
+      ctx.quadraticCurveTo(x + r * 0.3, y - r * 1.0, x + r * 0.4, y - r * 1.2)
+      ctx.stroke()
+
+      // Spark
+      ctx.fillStyle = '#f59e0b'
+      ctx.beginPath()
+      ctx.arc(x + r * 0.4, y - r * 1.2, 3, 0, 2 * Math.PI)
+      ctx.fill()
+    } else if (colorIndex === 11) {
+      // Ice Bubble (frozen blocker)
+      ctx.shadowColor = '#60a5fa'
+      const grad = ctx.createRadialGradient(x - r / 3, y - r / 3, r / 10, x, y, r)
+      grad.addColorStop(0, '#eff6ff')
+      grad.addColorStop(0.5, '#bfdbfe')
+      grad.addColorStop(1, '#2563eb')
+      ctx.fillStyle = grad
+      ctx.globalAlpha = 0.8
+      ctx.beginPath()
+      ctx.arc(x, y, r, 0, 2 * Math.PI)
+      ctx.fill()
+      ctx.globalAlpha = 1.0
+
+      // Frost details
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.moveTo(x - r * 0.5, y - r * 0.5)
+      ctx.lineTo(x + r * 0.5, y + r * 0.5)
+      ctx.moveTo(x + r * 0.5, y - r * 0.5)
+      ctx.lineTo(x - r * 0.5, y + r * 0.5)
+      ctx.stroke()
+    } else if (colorIndex === 12) {
+      // Cloud Bubble (dissipating hidden blocker)
+      ctx.shadowColor = '#ffffff'
+      ctx.fillStyle = 'rgba(244, 244, 245, 0.92)'
+      ctx.strokeStyle = '#d4d4d8'
+      ctx.lineWidth = 1.2
+      ctx.beginPath()
+      ctx.arc(x, y + r * 0.1, r * 0.6, 0, 2 * Math.PI)
+      ctx.arc(x - r * 0.4, y + r * 0.1, r * 0.45, 0, 2 * Math.PI)
+      ctx.arc(x + r * 0.4, y + r * 0.1, r * 0.45, 0, 2 * Math.PI)
+      ctx.arc(x, y - r * 0.3, r * 0.5, 0, 2 * Math.PI)
+      ctx.fill()
+      ctx.stroke()
     } else if (colorIndex === 9) {
       // Custom Vector Kitten drawn natively on canvas
       ctx.shadowColor = '#f472b6'
@@ -1352,6 +1763,36 @@ export default function BubbleShooterSagaGame() {
           <p style={{ margin: 0, fontSize: '0.78rem', color: 'hsl(220 10% 55%)', textAlign: 'center', maxWidth: '340px', lineHeight: 1.4 }}>
             Explore Whisper Woods, pop magical bubbles, and rescue trapped kittens! Keep unlocking to play endless procedural levels.
           </p>
+
+          {/* Endless Progression Stats Dashboard */}
+          <div 
+            style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(2, 1fr)', 
+              gap: '0.6rem', 
+              width: '100%', 
+              background: 'hsl(222 25% 8% / 0.8)', 
+              border: '1px dashed hsl(220 15% 20%)', 
+              borderRadius: 16, 
+              padding: '0.75rem',
+              boxSizing: 'border-box'
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+              <span style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', fontWeight: 800, textTransform: 'uppercase' }}>Highest Level</span>
+              <span style={{ fontSize: '1rem', color: 'white', fontWeight: 850 }}>Lvl {lifetimeStats.highestLevelReached}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', alignItems: 'flex-end' }}>
+              <span style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', fontWeight: 800, textTransform: 'uppercase' }}>Milestones</span>
+              <span style={{ fontSize: '1rem', color: '#fbbf24', fontWeight: 850 }}>🏆 {lifetimeStats.totalMilestonesCompleted}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', borderTop: '1px solid hsl(220 15% 15%)', paddingTop: '0.35rem', gridColumn: 'span 2' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'hsl(220 10% 60%)' }}>
+                <span>Kittens Saved: <strong>{lifetimeStats.totalKittensRescued}</strong></span>
+                <span>Total Score: <strong>{lifetimeStats.totalScoreAccumulated.toLocaleString()}</strong></span>
+              </div>
+            </div>
+          </div>
 
           <div
             style={{

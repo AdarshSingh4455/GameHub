@@ -206,6 +206,8 @@ export default function LeaderboardClient() {
   const [nextReset, setNextReset] = useState<Date | null>(null)
   const [countdown, setCountdown] = useState('')
   const [expandedWeeks, setExpandedWeeks] = useState<number[]>([])
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [selectedArchiveId, setSelectedArchiveId] = useState<string>('')
 
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
 
@@ -416,7 +418,7 @@ export default function LeaderboardClient() {
 
   // Fetch weekly history and countdown
   useEffect(() => {
-    if (activeTab === 'weeklyHistory') {
+    if (activeTab === 'weeklyHistory' || (activeTab === 'casual' && timeframe === 'weekly')) {
       setWeeklyLoading(true)
       fetch('/api/leaderboard/weekly-history')
         .then(res => res.ok ? res.json() : null)
@@ -440,7 +442,7 @@ export default function LeaderboardClient() {
         })
         .catch(() => null)
     }
-  }, [activeTab])
+  }, [activeTab, timeframe])
 
   // Live countdown tick
   useEffect(() => {
@@ -601,7 +603,7 @@ export default function LeaderboardClient() {
             )}
 
             {game === 'all' && (
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 {TIMEFRAMES.map((t) => (
                   <button
                     key={t.value}
@@ -611,6 +613,28 @@ export default function LeaderboardClient() {
                     {t.label}
                   </button>
                 ))}
+                {timeframe === 'weekly' && (
+                  <button
+                    onClick={() => {
+                      if (weeklyArchives.length > 0) {
+                        setSelectedArchiveId(weeklyArchives[0].id)
+                      }
+                      setShowHistoryModal(true)
+                    }}
+                    className="btn btn-sm btn-secondary animate-pulse-glow"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(270 80% 60% / 0.15), hsl(220 100% 60% / 0.15))',
+                      borderColor: 'hsl(270 80% 50% / 0.3)',
+                      color: 'hsl(270 80% 85%)',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    📅 History Archive
+                  </button>
+                )}
               </div>
             )}
 
@@ -1401,6 +1425,184 @@ export default function LeaderboardClient() {
           )}
         </div>
       )}
+
+      {/* ────────────────── WEEKLY LEADERBOARD HISTORY MODAL ────────────────── */}
+      {showHistoryModal && (() => {
+        const selectedArchive = weeklyArchives.find(a => a.id === selectedArchiveId)
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(5, 8, 16, 0.88)',
+              backdropFilter: 'blur(12px)',
+              zIndex: 100000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem',
+            }}
+            onClick={() => setShowHistoryModal(false)}
+            id="weekly-history-modal-backdrop"
+          >
+            <div
+              style={{
+                width: '100%',
+                maxWidth: 480,
+                maxHeight: '85vh',
+                overflowY: 'auto',
+                background: 'linear-gradient(135deg, hsl(222 25% 10%), hsl(222 20% 7%))',
+                border: '1px solid hsl(220 15% 18%)',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem',
+                borderRadius: 24,
+                position: 'relative',
+                boxShadow: '0 20px 50px rgba(0, 0, 0, 0.65)'
+              }}
+              onClick={e => e.stopPropagation()}
+              id="weekly-history-modal-body"
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ margin: 0, fontWeight: 900, fontSize: '1.2rem', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📅 Weekly Leaderboard History
+                </h2>
+                <button
+                  onClick={() => setShowHistoryModal(false)}
+                  style={{ background: 'transparent', border: 'none', color: 'hsl(220 10% 55%)', cursor: 'pointer', fontSize: '1.2rem', outline: 'none' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Dropdown to select week */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Select Archive Week:</span>
+                <select
+                  value={selectedArchiveId}
+                  onChange={(e) => setSelectedArchiveId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '10px',
+                    backgroundColor: 'hsl(220 20% 10%)',
+                    border: '1px solid hsl(220 15% 18%)',
+                    color: 'white',
+                    fontSize: '0.82rem',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="" disabled>-- Select Week --</option>
+                  {weeklyArchives.map((a: any) => {
+                    const start = new Date(a.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                    const end = new Date(a.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                    return (
+                      <option key={a.id} value={a.id}>
+                        Week #{a.weekNumber} ({start} – {end})
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
+
+              {selectedArchive ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '0.25rem' }}>
+                  {/* Podium */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
+                    {[0, 1, 2].map((idx) => {
+                      const p = selectedArchive.standings?.find((s: any) => s.rank === idx + 1)
+                      if (!p) return null
+                      const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32']
+                      const medals = ['🏆', '🥈', '🥉']
+                      return (
+                        <div key={idx} style={{
+                          background: `${medalColors[idx]}09`,
+                          border: `1px solid ${medalColors[idx]}25`,
+                          borderRadius: 14,
+                          padding: '0.65rem 0.35rem',
+                          textAlign: 'center',
+                        }}>
+                          <div style={{ fontSize: '1.25rem', marginBottom: '0.1rem' }}>{medals[idx]}</div>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.displayName || p.username}
+                          </div>
+                          <div style={{ fontSize: '0.58rem', color: 'hsl(220 10% 55%)', marginTop: '0.15rem', fontWeight: 600 }}>
+                            {p.score.toLocaleString()} XP
+                          </div>
+                          {p.coinsEarned > 0 && (
+                            <div style={{ fontSize: '0.58rem', color: '#FFD700', fontWeight: 700, marginTop: '0.05rem' }}>
+                              +{p.coinsEarned.toLocaleString()} 🪙
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Rest of Top 10 Table */}
+                  {selectedArchive.standings && selectedArchive.standings.length > 0 ? (
+                    <div style={{ background: 'hsl(222 20% 8% / 0.5)', borderRadius: 14, border: '1px solid hsl(220 20% 13%)', padding: '0.6rem 0.85rem' }}>
+                      <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'hsl(220 10% 45%)', fontWeight: 800, letterSpacing: '0.04em', marginBottom: '0.35rem', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '0.25rem' }}>
+                        Standings Board
+                      </div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <tbody>
+                          {selectedArchive.standings.map((p: any, idx: number) => {
+                            const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32']
+                            const medals = ['🏆', '🥈', '🥉']
+                            return (
+                              <tr key={idx} style={{ borderBottom: idx < selectedArchive.standings.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
+                                <td style={{ padding: '0.35rem 0', width: 28, fontWeight: 800, color: idx < 3 ? medalColors[idx] : 'hsl(220 10% 50%)', fontSize: '0.72rem' }}>
+                                  {idx < 3 ? medals[idx] : `#${idx + 1}`}
+                                </td>
+                                <td style={{ padding: '0.35rem 0.25rem', fontSize: '0.75rem', color: 'white', fontWeight: 600 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Avatar username={p.username} avatarUrl={p.avatarUrl} size={18} />
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                        {p.displayName || p.username}
+                                        {p.selectedFrame && (
+                                          <span style={{ fontSize: '0.55rem', background: 'hsl(270 80% 50% / 0.2)', color: 'hsl(270 80% 75%)', padding: '1px 4px', borderRadius: 4, fontWeight: 700 }}>
+                                            {p.selectedFrame.replace('frame-', '')}
+                                          </span>
+                                        )}
+                                      </span>
+                                      {p.selectedTitle && (
+                                        <span style={{ fontSize: '0.55rem', color: 'hsl(220 100% 75%)', fontWeight: 700 }}>
+                                          {p.selectedTitle}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '0.35rem 0.25rem', fontSize: '0.7rem', color: 'hsl(220 10% 55%)', textAlign: 'right', fontWeight: 600 }}>
+                                  {p.score.toLocaleString()} XP
+                                </td>
+                                <td style={{ padding: '0.35rem 0', fontSize: '0.68rem', color: '#FFD700', fontWeight: 800, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                  {p.coinsEarned > 0 ? `+${p.coinsEarned.toLocaleString()} 🪙` : ''}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'hsl(220 10% 50%)', fontSize: '0.75rem' }}>
+                      No players participated this week.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'hsl(220 10% 50%)', fontSize: '0.78rem' }}>
+                  Select a week from the dropdown to browse historical results.
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       <ProfileCardModal
         profileId={selectedProfileId}

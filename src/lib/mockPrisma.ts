@@ -370,7 +370,74 @@ export function loadDb(): MockDbState {
         })()
       }
     },
-    weeklyLeaderboardArchive: {},
+    weeklyLeaderboardArchive: {
+      'week-1': {
+        id: 'week-1',
+        weekNumber: 1,
+        startDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        endDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        rewardsDistributed: true,
+        distributedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        standings: [
+          {
+            rank: 1,
+            profileId: 'seeded-player-1',
+            username: 'ShadowNinja',
+            displayName: 'Shadow Ninja',
+            avatarUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=ShadowNinja',
+            selectedFrame: 'frame-neon-purple',
+            selectedTitle: 'Weekly Champion',
+            score: 4500,
+            totalGames: 24,
+            coinsEarned: 2500,
+            xpEarned: 500,
+            badgeSlug: 'weekly-champion'
+          },
+          {
+            rank: 2,
+            profileId: 'seeded-player-2',
+            username: 'SpeedRunner',
+            displayName: 'Speed Runner',
+            avatarUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=SpeedRunner',
+            selectedFrame: 'frame-gold',
+            selectedTitle: 'Weekly Runner Up',
+            score: 3800,
+            totalGames: 18,
+            coinsEarned: 1800,
+            xpEarned: 300,
+            badgeSlug: 'weekly-runner-up'
+          },
+          {
+            rank: 3,
+            profileId: 'seeded-player-3',
+            username: 'Puzzler',
+            displayName: 'Puzzler King',
+            avatarUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Puzzler',
+            selectedFrame: null,
+            selectedTitle: 'Weekly Top 3',
+            score: 3100,
+            totalGames: 15,
+            coinsEarned: 1200,
+            xpEarned: 200,
+            badgeSlug: 'weekly-top3'
+          },
+          {
+            rank: 4,
+            profileId: 'seeded-player-4',
+            username: 'AlphaGamer',
+            displayName: 'Alpha Gamer',
+            avatarUrl: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=AlphaGamer',
+            selectedFrame: null,
+            selectedTitle: null,
+            score: 2200,
+            totalGames: 10,
+            coinsEarned: 500,
+            xpEarned: 100,
+            badgeSlug: null
+          }
+        ]
+      }
+    },
     weeklyLeaderboardReward: {}
   }
 

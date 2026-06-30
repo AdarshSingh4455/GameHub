@@ -4,17 +4,37 @@ import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useSocket } from '@/lib/contexts/SocketContext'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { useToast } from '@/lib/contexts/ToastContext'
+import { 
+  Users, 
+  Gamepad, 
+  Mic, 
+  MicOff, 
+  Check, 
+  Copy, 
+  Share2, 
+  LogOut, 
+  Plus, 
+  Crown, 
+  Shield, 
+  Activity, 
+  Volume2, 
+  VolumeX 
+} from 'lucide-react'
 
 interface PartyMember {
   userId: string
   username: string
   socketId: string
   role: 'LEADER' | 'MEMBER'
+  isReady?: boolean
+  currentGame?: string
+  currentActivity?: string
 }
 
 interface PartyState {
   partyCode: string
   members: PartyMember[]
+  capacity?: number
 }
 
 interface ChatMessage {
@@ -39,7 +59,6 @@ export default function PartyPanel() {
 
   const [party, setParty] = useState<PartyState | null>(null)
   const [joinCode, setJoinCode] = useState('')
-  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [receivedInvites, setReceivedInvites] = useState<PartyInvite[]>([])
 
   const [friends, setFriends] = useState<any[]>([])
@@ -47,10 +66,19 @@ export default function PartyPanel() {
   const [loadingFriends, setLoadingFriends] = useState(false)
   const [inviteStatuses, setInviteStatuses] = useState<Record<string, InviteStatus>>({})
 
-  const chatEndRef = useRef<HTMLDivElement>(null)
-  const chatInputRef = useRef<HTMLTextAreaElement>(null)
+  // Local Voice State (Muted/Unmuted)
+  const [isMuted, setIsMuted] = useState(false)
+  const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
+
   const inviteExpireRef = useRef<NodeJS.Timeout | null>(null)
   const currentUserId = user?.id || ''
+
+  // Custom Local Extends for the current user
+  const [myReadyState, setMyReadyState] = useState(false)
+  const [myCurrentGame, setMyCurrentGame] = useState('Idle')
+  const [myCurrentActivity, setMyCurrentActivity] = useState('In Lobby')
+  const [partyCapacity, setPartyCapacity] = useState(4)
 
   useEffect(() => {
     inviteExpireRef.current = setInterval(() => {
@@ -61,15 +89,87 @@ export default function PartyPanel() {
     }
   }, [])
 
+  // Sync our local state changes with other party members
+  const broadcastMyStatus = useCallback((ready: boolean, game: string, activity: string, capacity: number) => {
+    if (!socket || !party) return
+    const statusPayload = {
+      userId: currentUserId,
+      isReady: ready,
+      currentGame: game,
+      currentActivity: activity,
+      capacity: capacity
+    }
+    socket.emit('party-chat', {
+      message: `__SYSTEM_PARTY_UPDATE__:${JSON.stringify(statusPayload)}`
+    })
+  }, [socket, party, currentUserId])
+
+  // Sync state whenever our local settings change
+  useEffect(() => {
+    if (party) {
+      broadcastMyStatus(myReadyState, myCurrentGame, myCurrentActivity, partyCapacity)
+    }
+  }, [myReadyState, myCurrentGame, myCurrentActivity, partyCapacity, party ? party.partyCode : null])
+
   useEffect(() => {
     if (!socket || !isConnected) return
 
+    // Socket listeners
     socket.on('party-updated', (updatedParty: PartyState) => {
-      setParty(updatedParty)
+      setParty(prev => {
+        // Preserve any custom synced states from members if the basic members match
+        const newMembers = updatedParty.members.map(nm => {
+          const prevMem = prev?.members.find(pm => pm.userId === nm.userId)
+          return {
+            ...nm,
+            isReady: prevMem?.isReady ?? (nm.userId === currentUserId ? myReadyState : false),
+            currentGame: prevMem?.currentGame ?? (nm.userId === currentUserId ? myCurrentGame : 'Idle'),
+            currentActivity: prevMem?.currentActivity ?? (nm.userId === currentUserId ? myCurrentActivity : 'In Lobby')
+          }
+        })
+        return {
+          ...updatedParty,
+          members: newMembers,
+          capacity: prev?.capacity ?? updatedParty.capacity ?? partyCapacity
+        }
+      })
     })
 
     socket.on('party-chat-msg', (msg: ChatMessage) => {
-      setMessages(prev => [...prev, msg])
+      // Check if message is a system update
+      if (msg.message.startsWith('__SYSTEM_PARTY_UPDATE__:')) {
+        try {
+          const payloadStr = msg.message.substring('__SYSTEM_PARTY_UPDATE__:'.length)
+          const payload = JSON.parse(payloadStr)
+          
+          setParty(prev => {
+            if (!prev) return null
+            const updatedMembers = prev.members.map(m => {
+              if (m.userId === payload.userId) {
+                return {
+                  ...m,
+                  isReady: payload.isReady,
+                  currentGame: payload.currentGame,
+                  currentActivity: payload.currentActivity
+                }
+              }
+              return m
+            })
+            
+            // If the sender is the leader, also sync party capacity
+            const senderIsLeader = prev.members.find(m => m.userId === payload.userId)?.role === 'LEADER'
+            const newCapacity = senderIsLeader ? payload.capacity : (prev.capacity ?? partyCapacity)
+
+            return {
+              ...prev,
+              members: updatedMembers,
+              capacity: newCapacity
+            }
+          })
+        } catch (e) {
+          console.error('Failed to parse party system update:', e)
+        }
+      }
     })
 
     socket.on('party-invite-received', ({ partyCode, inviterUsername }: { partyCode: string; inviterUsername: string }) => {
@@ -92,11 +192,7 @@ export default function PartyPanel() {
       socket.off('party-invite-received')
       socket.off('party-matchmaking-sync')
     }
-  }, [socket, isConnected, addToast])
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [socket, isConnected, addToast, currentUserId, myReadyState, myCurrentGame, myCurrentActivity, partyCapacity])
 
   const fetchOnlineFriends = async () => {
     try {
@@ -125,14 +221,17 @@ export default function PartyPanel() {
       } else {
         setParty({
           partyCode: res.partyCode,
+          capacity: partyCapacity,
           members: [{
             userId: user?.id || 'me',
             username: user?.email?.split('@')[0] || 'Player',
             socketId: socket.id || '',
-            role: 'LEADER'
+            role: 'LEADER',
+            isReady: myReadyState,
+            currentGame: myCurrentGame,
+            currentActivity: myCurrentActivity
           }]
         })
-        setMessages([])
         setReceivedInvites([])
         addToast('success', 'Party Created!', `Code: ${res.partyCode}`)
       }
@@ -147,7 +246,6 @@ export default function PartyPanel() {
         addToast('error', 'Join Failed', res.error)
       } else {
         setParty(res.party)
-        setMessages([])
         setJoinCode('')
         addToast('success', 'Party Joined!', `Connected to party: ${res.party.partyCode}`)
       }
@@ -170,29 +268,10 @@ export default function PartyPanel() {
         addToast('error', 'Error', res.error)
       } else {
         setParty(null)
-        setMessages([])
+        setMyReadyState(false)
         addToast('info', 'Left Party', 'You disconnected from the party.')
       }
     })
-  }
-
-  const handleSendChat = useCallback((e: React.FormEvent) => {
-    e.preventDefault()
-    const input = chatInputRef.current
-    if (!socket || !input || !input.value.trim()) return
-    socket.emit('party-chat', { message: input.value.trim() })
-    input.value = ''
-  }, [socket])
-
-  const handleChatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      const input = chatInputRef.current
-      if (socket && input && input.value.trim()) {
-        socket.emit('party-chat', { message: input.value.trim() })
-        input.value = ''
-      }
-    }
   }
 
   const handleInviteFriend = (friendId: string, friendName: string) => {
@@ -213,9 +292,38 @@ export default function PartyPanel() {
     })
   }
 
-  const formatTime = (ts: number) => {
-    const d = new Date(ts)
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const copyInviteCode = () => {
+    if (!party) return
+    navigator.clipboard.writeText(party.partyCode)
+    setCopiedCode(true)
+    addToast('success', 'Copied!', 'Party code copied to clipboard.')
+    setTimeout(() => setCopiedCode(false), 2000)
+  }
+
+  const copyShareLink = () => {
+    if (!party) return
+    const link = `${window.location.origin}/dashboard/multiplayer?join=${party.partyCode}`
+    navigator.clipboard.writeText(link)
+    setCopiedLink(true)
+    addToast('success', 'Copied Link!', 'Party invite link copied to clipboard.')
+    setTimeout(() => setCopiedLink(false), 2000)
+  }
+
+  const toggleReady = () => {
+    const nextReady = !myReadyState
+    setMyReadyState(nextReady)
+    addToast('info', nextReady ? 'Ready!' : 'Not Ready', nextReady ? 'You are ready to match.' : 'You marked yourself as not ready.')
+  }
+
+  const toggleMute = () => {
+    const nextMute = !isMuted
+    setIsMuted(nextMute)
+    addToast('info', nextMute ? 'Muted' : 'Unmuted', nextMute ? 'Microphone muted.' : 'Microphone active.')
+  }
+
+  const changeCapacity = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextCap = parseInt(e.target.value, 10)
+    setPartyCapacity(nextCap)
   }
 
   const displayName = (username: string) =>
@@ -223,122 +331,512 @@ export default function PartyPanel() {
 
   if (!user) return null
 
+  const isLeader = party?.members.find(m => m.userId === currentUserId)?.role === 'LEADER'
+  const maxCapacity = party?.capacity ?? partyCapacity
+  const isFull = party ? party.members.length >= maxCapacity : false
+  const partyStatus = !party ? 'Not in Party' : isFull ? 'Party Full' : 'In Party'
+
   return (
     <div
-      className="card glass"
+      className="card glass party-glow-animation"
       style={{
-        borderRadius: 20,
-        background: 'linear-gradient(135deg, hsl(222 20% 12%), hsl(222 18% 8%))',
+        borderRadius: 24,
+        background: 'linear-gradient(135deg, hsl(222 24% 10%), hsl(222 22% 6%))',
         border: '1px solid hsl(220 15% 18%)',
         padding: '1.25rem',
         display: 'flex',
         flexDirection: 'column',
         gap: '1rem',
-        maxHeight: 580,
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'all 0.3s ease',
       }}
     >
+      {/* CSS Styles for Party Redesign Animations */}
+      <style>{`
+        .party-glow-animation:hover {
+          box-shadow: 0 8px 30px rgba(99, 102, 241, 0.15);
+          border-color: hsl(220 100% 60% / 0.2) !important;
+        }
+        .copied-scale {
+          transform: scale(1.15);
+          color: hsl(142 70% 50%) !important;
+        }
+        .member-enter-anim {
+          animation: memberSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        @keyframes memberSlideIn {
+          0% { transform: translateY(8px); opacity: 0; }
+          100% { transform: translateY(0); opacity: 1; }
+        }
+        @media (max-width: 768px) {
+          .party-layout-container {
+            flex-direction: column !important;
+          }
+          .party-members-scroll {
+            flex-direction: row !important;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
+            scrollbar-width: none;
+          }
+          .party-members-scroll::-webkit-scrollbar {
+            display: none;
+          }
+          .party-btn-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.5rem !important;
+          }
+          .party-btn-grid button, .party-btn-grid div {
+            width: 100% !important;
+          }
+        }
+      `}</style>
+
+      {/* Header Info */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 850, color: 'white', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 850, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Shield size={16} className="text-indigo-400" />
           Active Party
-          {party && <span style={{ fontSize: '0.7rem', background: 'hsl(220 100% 60%)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: 4 }}>{party.partyCode}</span>}
         </h3>
-        {party && (
-          <button onClick={handleLeaveParty} style={{ background: 'transparent', border: 'none', color: 'hsl(0 80% 60%)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-            Leave
-          </button>
-        )}
+
+        {/* Party Status Badge */}
+        <span 
+          style={{ 
+            fontSize: '0.68rem', 
+            background: partyStatus === 'Not in Party' ? 'hsl(220 10% 20%)' : partyStatus === 'Party Full' ? 'hsl(38 92% 50% / 0.18)' : 'hsl(220 100% 60% / 0.18)', 
+            color: partyStatus === 'Not in Party' ? 'hsl(220 10% 65%)' : partyStatus === 'Party Full' ? 'hsl(38 95% 60%)' : 'hsl(220 100% 65%)', 
+            border: partyStatus === 'Not in Party' ? '1px solid hsl(220 10% 25%)' : partyStatus === 'Party Full' ? '1px solid hsl(38 95% 50% / 0.3)' : '1px solid hsl(220 100% 60% / 0.3)', 
+            padding: '0.15rem 0.5rem', 
+            borderRadius: 6,
+            fontWeight: 800,
+            letterSpacing: '0.02em',
+            textTransform: 'uppercase'
+          }}
+        >
+          {partyStatus}
+        </span>
       </div>
 
+      {/* Received Invites Notification strip */}
       {receivedInvites.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(45 100% 60%)', marginBottom: '0.1rem' }}>Party Invitations</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'hsl(222 25% 12%)', borderRadius: 14, padding: '0.6rem', border: '1px dashed hsl(220 15% 20%)' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(45 100% 60%)', marginBottom: '0.1rem' }}>Party Invites ({receivedInvites.length})</div>
           {receivedInvites.map(invite => (
-            <div key={invite.partyCode} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', background: 'hsl(45 100% 55% / 0.08)', border: '1px solid hsl(45 100% 55% / 0.25)', borderRadius: 10, padding: '0.5rem 0.75rem' }}>
+            <div key={invite.partyCode} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', background: 'hsl(45 100% 55% / 0.06)', border: '1px solid hsl(45 100% 55% / 0.15)', borderRadius: 10, padding: '0.4rem 0.6rem' }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{invite.inviterUsername}</div>
-                <div style={{ fontSize: '0.66rem', color: 'hsl(220 10% 55%)' }}>Party: <span style={{ fontFamily: 'monospace', color: 'hsl(220 100% 70%)' }}>{invite.partyCode}</span></div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{invite.inviterUsername}</div>
+                <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)' }}>Code: <span style={{ fontFamily: 'monospace', color: 'hsl(220 100% 70%)' }}>{invite.partyCode}</span></div>
               </div>
-              <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
-                <button onClick={() => handleAcceptInvite(invite)} style={{ background: 'hsl(120 60% 40%)', border: 'none', color: 'white', fontSize: '0.7rem', fontWeight: 800, padding: '0.3rem 0.6rem', borderRadius: 7, cursor: 'pointer' }}>Accept</button>
-                <button onClick={() => handleDeclineInvite(invite)} style={{ background: 'transparent', border: '1px solid hsl(0 60% 45%)', color: 'hsl(0 70% 65%)', fontSize: '0.7rem', fontWeight: 700, padding: '0.3rem 0.6rem', borderRadius: 7, cursor: 'pointer' }}>Decline</button>
+              <div style={{ display: 'flex', gap: '0.3rem', flexShrink: 0 }}>
+                <button onClick={() => handleAcceptInvite(invite)} style={{ background: 'hsl(142 70% 45%)', border: 'none', color: 'white', fontSize: '0.65rem', fontWeight: 800, padding: '0.25rem 0.5rem', borderRadius: 6, cursor: 'pointer' }}>Accept</button>
+                <button onClick={() => handleDeclineInvite(invite)} style={{ background: 'transparent', border: '1px solid hsl(0 60% 45%)', color: 'hsl(0 75% 65%)', fontSize: '0.65rem', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: 6, cursor: 'pointer' }}>Decline</button>
               </div>
             </div>
           ))}
         </div>
       )}
 
+      {/* ── EMPTY STATE (Not in Party) ── */}
       {!party ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', padding: '0.5rem 0' }}>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4 }}>Form a party to chat in real-time, invite friends, and join matches together.</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '1rem 0.5rem', gap: '0.85rem' }}>
+          <div 
+            style={{ 
+              width: 54, 
+              height: 54, 
+              borderRadius: 16, 
+              background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.12), hsl(270 80% 60% / 0.12))', 
+              border: '1.5px solid hsl(220 15% 20%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: 'inset 0 0 15px rgba(255,255,255,0.05)',
+              color: 'hsl(220 100% 70%)'
+            }}
+          >
+            <Gamepad size={28} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <h4 style={{ margin: 0, fontSize: '0.85rem', color: 'white', fontWeight: 750 }}>No Active Party</h4>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4, maxWidth: 290 }}>
+              Form a party to coordinate with friends, toggle ready states, and jump into matches together.
+            </p>
+          </div>
+
+          {/* Controls */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', width: '100%', marginTop: '0.25rem' }} className="party-btn-grid">
             <div style={{ display: 'flex', gap: '0.4rem', width: '100%', alignItems: 'center' }}>
-              <input type="text" placeholder="Enter code..." className="input" value={joinCode} onChange={e => setJoinCode(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleJoinParty() }} style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', borderRadius: 10, backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-default))', color: 'hsl(var(--text-primary))', flex: 1, minWidth: 0, outline: 'none' }} />
-              <button onClick={() => handleJoinParty()} className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '0.55rem 0.8rem', borderRadius: 10, fontWeight: 700, flexShrink: 0, width: 'auto', display: 'inline-flex' }}>Join</button>
+              <input 
+                type="text" 
+                placeholder="Enter Invite Code..." 
+                className="input" 
+                value={joinCode} 
+                onChange={e => setJoinCode(e.target.value)} 
+                onKeyDown={e => { if (e.key === 'Enter') handleJoinParty() }} 
+                style={{ 
+                  padding: '0.5rem 0.7rem', 
+                  fontSize: '0.78rem', 
+                  borderRadius: 10, 
+                  backgroundColor: 'hsl(222 25% 10%)', 
+                  border: '1px solid hsl(220 15% 16%)', 
+                  color: 'white', 
+                  flex: 1, 
+                  minWidth: 0, 
+                  outline: 'none',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.4)'
+                }} 
+              />
+              <button 
+                onClick={() => handleJoinParty()} 
+                className="btn btn-secondary" 
+                style={{ fontSize: '0.78rem', padding: '0.5rem 0.8rem', borderRadius: 10, fontWeight: 800, flexShrink: 0, width: 'auto' }}
+              >
+                Join
+              </button>
             </div>
-            <button onClick={handleCreateParty} className="btn btn-primary" style={{ width: '100%', fontSize: '0.82rem', padding: '0.55rem', borderRadius: 10, fontWeight: 700, background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))', color: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-              + Create Party
+            
+            <button 
+              onClick={handleCreateParty} 
+              className="btn btn-primary" 
+              style={{ 
+                width: '100%', 
+                fontSize: '0.78rem', 
+                padding: '0.55rem', 
+                borderRadius: 10, 
+                fontWeight: 800, 
+                background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))', 
+                color: 'white', 
+                border: 'none', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '0.4rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px hsl(220 100% 60% / 0.25)'
+              }}
+            >
+              <Plus size={14} strokeWidth={2.5} /> Create Party
             </button>
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1, overflow: 'hidden' }}>
-          <div>
-            <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 50%)', marginBottom: '0.35rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Members ({party.members.length}/4)</span>
+        /* ── ACTIVE PARTY STATE (In Party) ── */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          
+          {/* Party Card Details */}
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.75rem', 
+              background: 'hsl(222 25% 8% / 0.7)', 
+              borderRadius: 16, 
+              padding: '0.65rem 0.8rem', 
+              border: '1px solid hsl(220 15% 15%)' 
+            }}
+          >
+            {/* Pulsing Avatar */}
+            <div 
+              style={{ 
+                width: 42, 
+                height: 42, 
+                borderRadius: 12, 
+                background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                color: 'white',
+                boxShadow: '0 0 10px hsl(220 100% 60% / 0.35)',
+                flexShrink: 0
+              }}
+            >
+              <Gamepad size={20} />
+            </div>
+
+            {/* Title & Status */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Squad #{party.partyCode}
+                </span>
+                
+                {/* Invite Code click-to-copy */}
+                <button 
+                  onClick={copyInviteCode} 
+                  style={{ background: 'transparent', border: 'none', padding: 2, display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'hsl(220 10% 55%)' }}
+                  title="Copy Invite Code"
+                >
+                  <Copy size={11} className={`transition-transform ${copiedCode ? 'copied-scale' : 'hover:text-white'}`} />
+                </button>
+              </div>
+
+              {/* Dynamic Capacity & Member list count */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.68rem', color: 'hsl(220 10% 55%)' }}>
+                <span>Capacity:</span>
+                {isLeader ? (
+                  <select 
+                    value={maxCapacity} 
+                    onChange={changeCapacity}
+                    style={{ 
+                      background: 'hsl(222 25% 12%)', 
+                      border: '1px solid hsl(220 15% 20%)', 
+                      color: 'white', 
+                      borderRadius: 4, 
+                      fontSize: '0.65rem',
+                      fontWeight: 700, 
+                      padding: '1px 4px', 
+                      outline: 'none',
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8].map(num => (
+                      <option key={num} value={num}>{party.members.length}/{num}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <strong style={{ color: 'white' }}>{party.members.length}/{maxCapacity}</strong>
+                )}
+              </div>
+            </div>
+
+            {/* Voice Mute / Speaker Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+              <button 
+                onClick={toggleMute}
+                style={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: 8, 
+                  background: isMuted ? 'hsl(0 80% 55% / 0.12)' : 'hsl(220 100% 60% / 0.12)', 
+                  border: isMuted ? '1px solid hsl(0 80% 55% / 0.3)' : '1px solid hsl(220 100% 60% / 0.3)', 
+                  color: isMuted ? 'hsl(0 85% 65%)' : 'hsl(220 100% 70%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                title={isMuted ? "Unmute Mic" : "Mute Mic"}
+              >
+                {isMuted ? <MicOff size={14} /> : <Mic size={14} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Quick game/activity update selectors for host/you */}
+          <div style={{ display: 'flex', gap: '0.5rem', background: 'hsl(222 25% 8% / 0.3)', border: '1px dashed hsl(220 15% 16%)', borderRadius: 12, padding: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1 }}>
+              <label style={{ fontSize: '0.6rem', color: 'hsl(220 10% 50%)', fontWeight: 800, textTransform: 'uppercase' }}>Game Activity</label>
+              <select 
+                value={myCurrentGame} 
+                onChange={e => setMyCurrentGame(e.target.value)}
+                style={{ background: 'hsl(222 25% 10%)', border: '1px solid hsl(220 15% 18%)', color: 'white', borderRadius: 6, fontSize: '0.72rem', padding: '0.2rem 0.4rem', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="Idle">💤 Idle</option>
+                <option value="Tic-Tac-Toe">⭕ Tic-Tac-Toe</option>
+                <option value="Bubble Shooter">🔮 Bubble Shooter</option>
+                <option value="Hand Cricket">🏏 Hand Cricket</option>
+                <option value="Who's Spy">🕵️ Who's Spy</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1 }}>
+              <label style={{ fontSize: '0.6rem', color: 'hsl(220 10% 50%)', fontWeight: 800, textTransform: 'uppercase' }}>Match Status</label>
+              <select 
+                value={myCurrentActivity} 
+                onChange={e => setMyCurrentActivity(e.target.value)}
+                style={{ background: 'hsl(222 25% 10%)', border: '1px solid hsl(220 15% 18%)', color: 'white', borderRadius: 6, fontSize: '0.72rem', padding: '0.2rem 0.4rem', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="In Lobby">🏠 In Lobby</option>
+                <option value="In Queue">⏱️ In Queue</option>
+                <option value="In Game">⚔️ In Game</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Members list (horizontal/vertical list) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'hsl(220 10% 50%)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Members ({party.members.length}/{maxCapacity})</span>
+              
+              {/* Online Friends dropdown trigger */}
               <div style={{ position: 'relative' }}>
-                <button onClick={() => { setShowInviteDropdown(!showInviteDropdown); if (!showInviteDropdown) fetchOnlineFriends() }} style={{ background: 'transparent', border: 'none', color: 'hsl(220 100% 70%)', fontSize: '0.68rem', fontWeight: 800, cursor: 'pointer', padding: 0 }}>Invite Friend</button>
+                <button 
+                  onClick={() => { setShowInviteDropdown(!showInviteDropdown); if (!showInviteDropdown) fetchOnlineFriends() }} 
+                  style={{ background: 'transparent', border: 'none', color: 'hsl(220 100% 70%)', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', padding: 0 }}
+                >
+                  <Plus size={11} /> Invite Friend
+                </button>
+                
                 {showInviteDropdown && (
-                  <div style={{ position: 'absolute', right: 0, top: '1.25rem', width: 200, background: 'hsl(222 20% 12%)', border: '1px solid hsl(220 15% 22%)', borderRadius: 10, padding: '0.4rem', zIndex: 1000, boxShadow: '0 8px 24px rgba(0,0,0,0.45)' }}>
+                  <div style={{ position: 'absolute', right: 0, top: '1.25rem', width: 190, background: 'hsl(222 24% 12%)', border: '1px solid hsl(220 15% 22%)', borderRadius: 10, padding: '0.4rem', zIndex: 1000, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
                     <div style={{ fontSize: '0.62rem', fontWeight: 800, padding: '0.2rem 0.4rem', borderBottom: '1px solid hsl(220 15% 18%)', color: 'hsl(220 10% 50%)', marginBottom: '0.2rem' }}>Online Friends</div>
-                    {loadingFriends ? <div style={{ padding: '0.4rem', fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>Loading...</div> : friends.length === 0 ? <div style={{ padding: '0.4rem', fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>No friends online</div> : friends.map(f => {
-                      const st = inviteStatuses[f.id] || 'idle'
-                      return (
-                        <button key={f.id} onClick={() => handleInviteFriend(f.id, displayName(f.username))} disabled={st === 'pending' || st === 'sent'} style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', background: 'transparent', border: 'none', color: st === 'sent' ? 'hsl(120 60% 55%)' : st === 'failed' ? 'hsl(0 70% 60%)' : 'white', fontSize: '0.75rem', padding: '0.35rem 0.4rem', borderRadius: 6, cursor: st === 'pending' || st === 'sent' ? 'default' : 'pointer', opacity: st === 'pending' || st === 'sent' ? 0.7 : 1 }}>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(f.username)}</span>
-                          <span style={{ fontSize: '0.6rem', flexShrink: 0, marginLeft: '0.3rem', color: 'hsl(220 10% 55%)' }}>{st === 'pending' ? 'Sending...' : st === 'sent' ? 'Sent' : st === 'failed' ? 'Failed' : ''}</span>
-                        </button>
-                      )
-                    })}
+                    {loadingFriends ? (
+                      <div style={{ padding: '0.4rem', fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>Loading...</div>
+                    ) : friends.length === 0 ? (
+                      <div style={{ padding: '0.4rem', fontSize: '0.7rem', color: 'hsl(220 10% 50%)' }}>No friends online</div>
+                    ) : (
+                      friends.map(f => {
+                        const st = inviteStatuses[f.id] || 'idle'
+                        return (
+                          <button 
+                            key={f.id} 
+                            onClick={() => handleInviteFriend(f.id, displayName(f.username))} 
+                            disabled={st === 'pending' || st === 'sent'} 
+                            style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', background: 'transparent', border: 'none', color: st === 'sent' ? 'hsl(142 70% 50%)' : st === 'failed' ? 'hsl(0 80% 60%)' : 'white', fontSize: '0.75rem', padding: '0.35rem 0.4rem', borderRadius: 6, cursor: st === 'pending' || st === 'sent' ? 'default' : 'pointer', opacity: st === 'pending' || st === 'sent' ? 0.7 : 1 }}
+                          >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(f.username)}</span>
+                            <span style={{ fontSize: '0.65rem', flexShrink: 0, marginLeft: '0.3rem', color: 'hsl(220 10% 55%)' }}>{st === 'pending' ? '...' : st === 'sent' ? 'Sent' : st === 'failed' ? 'Failed' : 'Invite'}</span>
+                          </button>
+                        )
+                      })
+                    )}
                   </div>
                 )}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              {party.members.map(m => (
-                <div key={m.userId} style={{ fontSize: '0.72rem', background: m.role === 'LEADER' ? 'hsl(45 100% 60% / 0.12)' : 'hsl(220 15% 15%)', border: m.role === 'LEADER' ? '1px solid hsl(45 100% 60% / 0.3)' : '1px solid hsl(220 15% 20%)', color: m.role === 'LEADER' ? 'hsl(45 100% 65%)' : 'white', padding: '0.25rem 0.6rem', borderRadius: 8, fontWeight: 700 }}>
-                  {m.role === 'LEADER' ? '★ ' : ''}{displayName(m.username)}{m.userId === currentUserId ? ' (you)' : ''}
+
+            {/* Horizontal scroll on mobile / vertical stack on desktop */}
+            <div 
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}
+              className="party-members-scroll"
+            >
+              {party.members.map(m => {
+                const isMe = m.userId === currentUserId
+                return (
+                  <div 
+                    key={m.userId} 
+                    className="member-enter-anim"
+                    style={{ 
+                      fontSize: '0.72rem', 
+                      background: m.isReady ? 'hsl(142 70% 45% / 0.08)' : 'hsl(222 25% 10% / 0.6)', 
+                      border: m.isReady ? '1px solid hsl(142 70% 45% / 0.25)' : '1px solid hsl(220 15% 18%)', 
+                      borderRadius: 12, 
+                      padding: '0.5rem 0.7rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem',
+                      minWidth: 160,
+                      flexShrink: 0
+                    }}
+                  >
+                    {/* User Avatar Circle */}
+                    <div style={{ position: 'relative', width: 28, height: 28, borderRadius: '50%', background: m.role === 'LEADER' ? 'hsl(45 100% 60% / 0.15)' : 'hsl(220 15% 20%)', border: m.role === 'LEADER' ? '1.5px solid #fbbf24' : '1.5px solid hsl(220 10% 30%)', display: 'flex', alignItems: 'center', justifySelf: 'center', justifyContent: 'center', fontWeight: 900, color: m.role === 'LEADER' ? '#fbbf24' : 'white', fontSize: '0.75rem' }}>
+                      {m.username.substring(0, 1).toUpperCase()}
+                      {/* Online dot */}
+                      <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#10b981', border: '1.5px solid #000' }} />
+                    </div>
+
+                    {/* Member Information */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span style={{ fontWeight: 800, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {displayName(m.username)}
+                        </span>
+                        {isMe && <span style={{ fontSize: '0.62rem', color: 'hsl(220 100% 70%)', fontWeight: 700 }}>(you)</span>}
+                        {m.role === 'LEADER' && <Crown size={11} className="text-yellow-400 fill-yellow-400" />}
+                      </div>
+                      
+                      {/* Separate Game & Activity */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', color: 'hsl(220 10% 50%)', marginTop: '1px' }}>
+                        <span>🎮 {m.currentGame || 'Idle'}</span>
+                        <span>•</span>
+                        <span>{m.currentActivity || 'In Lobby'}</span>
+                      </div>
+                    </div>
+
+                    {/* Ready state checkbox / indicator */}
+                    <div>
+                      {isMe ? (
+                        <button 
+                          onClick={toggleReady}
+                          style={{ 
+                            background: myReadyState ? 'hsl(142 70% 45%)' : 'transparent', 
+                            border: myReadyState ? 'none' : '1.5px solid hsl(220 10% 30%)', 
+                            color: 'white', 
+                            width: 18, 
+                            height: 18, 
+                            borderRadius: 5, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            cursor: 'pointer' 
+                          }}
+                        >
+                          {myReadyState && <Check size={11} strokeWidth={3} />}
+                        </button>
+                      ) : (
+                        <div 
+                          style={{ 
+                            background: m.isReady ? 'hsl(142 70% 45% / 0.2)' : 'transparent', 
+                            border: m.isReady ? '1.5px solid hsl(142 70% 45%)' : '1.5px solid hsl(220 10% 25%)', 
+                            color: 'hsl(142 75% 65%)', 
+                            width: 18, 
+                            height: 18, 
+                            borderRadius: 5, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center' 
+                          }}
+                        >
+                          {m.isReady ? <Check size={10} strokeWidth={3.5} /> : <span style={{ fontSize: '0.7rem', color: 'hsl(220 10% 40%)' }}>...</span>}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                )
+              })}
+
+              {/* Waiting for players placeholder slot */}
+              {party.members.length < maxCapacity && (
+                <div 
+                  style={{ 
+                    fontSize: '0.7rem', 
+                    background: 'transparent', 
+                    border: '1.5px dashed hsl(220 15% 15%)', 
+                    borderRadius: 12, 
+                    padding: '0.5rem 0.7rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'hsl(220 10% 45%)',
+                    fontWeight: 600,
+                    height: 40,
+                    flexShrink: 0
+                  }}
+                >
+                  ⏳ Waiting for {maxCapacity - party.members.length} players...
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 180, background: 'hsl(220 15% 12% / 0.3)', borderRadius: 12, border: '1px solid hsl(220 15% 16%)', padding: '0.6rem' }}>
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.45rem', paddingRight: '0.2rem' }}>
-              {messages.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'hsl(220 10% 45%)', fontSize: '0.72rem', marginTop: '3rem' }}>Party chat ready. Start the conversation!</div>
-              ) : (
-                messages.map((msg, i) => {
-                  const isOwn = msg.userId === currentUserId
-                  return (
-                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start', gap: '0.15rem' }}>
-                      {!isOwn && <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'hsl(38 95% 65%)', paddingLeft: '0.6rem' }}>{displayName(msg.username)}</div>}
-                      <div style={{ maxWidth: '82%', background: isOwn ? 'hsl(220 100% 55% / 0.22)' : 'hsl(220 15% 20%)', border: isOwn ? '1px solid hsl(220 100% 60% / 0.35)' : '1px solid hsl(220 15% 24%)', borderRadius: isOwn ? '14px 14px 4px 14px' : '14px 14px 14px 4px', padding: '0.35rem 0.65rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        <span style={{ fontSize: '0.78rem', color: 'hsl(220 10% 90%)', lineHeight: 1.4, wordBreak: 'break-word' }}>{msg.message}</span>
-                        <span style={{ fontSize: '0.58rem', color: 'hsl(220 10% 45%)', alignSelf: isOwn ? 'flex-end' : 'flex-start' }}>{formatTime(msg.timestamp)}</span>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-              <div ref={chatEndRef} />
-            </div>
-            <form onSubmit={handleSendChat} style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem', alignItems: 'flex-end', width: '100%' }}>
-              <textarea ref={chatInputRef} placeholder="Type message... (Enter to send)" className="input" onKeyDown={handleChatKeyDown} rows={1} style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.65rem', fontSize: '0.78rem', borderRadius: 10, resize: 'none', lineHeight: 1.4, maxHeight: 72, overflowY: 'auto', backgroundColor: 'hsl(var(--bg-elevated))', border: '1px solid hsl(var(--border-default))', color: 'hsl(var(--text-primary))', outline: 'none' }} />
-              <button type="submit" className="btn btn-primary" style={{ flexShrink: 0, fontSize: '0.78rem', padding: '0.45rem 0.75rem', borderRadius: 10, fontWeight: 700, whiteSpace: 'nowrap', width: 'auto', display: 'inline-flex' }}>Send</button>
-            </form>
+          {/* Action buttons (2-column layout on mobile) */}
+          <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.25rem' }} className="party-btn-grid">
+            <button 
+              onClick={copyShareLink} 
+              className="btn btn-secondary" 
+              style={{ flex: 1.2, fontSize: '0.78rem', padding: '0.5rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+            >
+              <Share2 size={13} /> {copiedLink ? 'Copied!' : 'Share Invite'}
+            </button>
+
+            <button 
+              onClick={handleLeaveParty} 
+              className="btn btn-ghost" 
+              style={{ flex: 0.8, fontSize: '0.78rem', padding: '0.5rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'hsl(0 75% 65%)', border: '1px solid hsl(0 60% 45% / 0.2)' }}
+            >
+              <LogOut size={13} /> Leave
+            </button>
           </div>
+
         </div>
       )}
+
     </div>
   )
 }

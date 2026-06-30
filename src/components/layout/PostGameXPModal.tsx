@@ -346,21 +346,22 @@ export default function PostGameXPModal({ data, onClose }: Props) {
       <div
         className="card glass animate-slideUp"
         style={{
-          width: '100%',
-          maxWidth: 420,
-          maxHeight: '94dvh',
+          width: '92%',
+          maxWidth: 400,
+          maxHeight: 'min(75vh, 600px)',
           overflowY: 'auto',
           background: currentOutcome.bg,
           border: currentOutcome.border,
-          padding: 'clamp(1.25rem, 5vw, 2rem)',
+          padding: '1.1rem',
           display: 'flex',
           flexDirection: 'column',
-          gap: '1.25rem',
+          gap: '0.65rem',
           boxShadow: `0 20px 50px rgba(0, 0, 0, 0.65), ${currentOutcome.glow}`,
           borderRadius: 24,
           position: 'relative',
           zIndex: 100002,
-          paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)',
+          boxSizing: 'border-box',
+          scrollbarWidth: 'thin',
         }}
         id="post-game-modal-body"
       >
@@ -379,55 +380,55 @@ export default function PostGameXPModal({ data, onClose }: Props) {
         )}
 
         {/* Modal Header: Game Icon, Result Title & Subtitle */}
-        <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.25rem' }}>
+        <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.1rem' }}>
             <div style={{
-              padding: '10px',
-              borderRadius: '16px',
+              padding: '8px',
+              borderRadius: '12px',
               background: 'hsl(222 20% 7% / 0.7)',
-              border: '1.5px solid hsl(220 15% 20%)',
-              boxShadow: `0 0 25px ${result === 'win' ? 'hsl(45 100% 55% / 0.18)' : result === 'loss' ? 'hsl(0 80% 55% / 0.18)' : 'hsl(220 100% 65% / 0.18)'}`,
+              border: '1px solid hsl(220 15% 20%)',
+              boxShadow: `0 0 15px ${result === 'win' ? 'hsl(45 100% 55% / 0.15)' : result === 'loss' ? 'hsl(0 80% 55% / 0.15)' : 'hsl(220 100% 65% / 0.15)'}`,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-              <GameIcon slug={gameSlug} size={54} />
+              <GameIcon slug={gameSlug} size={42} />
             </div>
           </div>
 
           {/* Hero Image (Optional) */}
           {(metadata as any)?.heroImage && (
-            <div style={{ width: '100%', borderRadius: 16, overflow: 'hidden', marginBottom: '0.5rem', border: '1.5px solid hsl(220 15% 20%)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+            <div style={{ width: '100%', borderRadius: 12, overflow: 'hidden', marginBottom: '0.25rem', border: '1px solid hsl(220 15% 20%)', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
               <img src={(metadata as any).heroImage} alt="Mission Outcome" style={{ width: '100%', height: 'auto', display: 'block' }} />
             </div>
           )}
 
           <h2
             style={{
-              fontSize: '1.8rem',
+              fontSize: '1.4rem',
               fontWeight: 950,
               color: currentOutcome.text,
-              letterSpacing: '-0.03em',
+              letterSpacing: '-0.02em',
               textTransform: 'uppercase',
               margin: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem'
+              gap: '0.4rem'
             }}
           >
             <span className={currentOutcome.emojiClass}>{currentOutcome.emoji}</span>
             <span>{modalTitle}</span>
           </h2>
-          <p style={{ fontSize: '0.9rem', color: 'white', opacity: 0.95, marginTop: '0.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>
+          <p style={{ fontSize: '0.8rem', color: 'white', opacity: 0.9, marginTop: 0, fontWeight: 700, letterSpacing: '-0.01em' }}>
             {modalSubtitle}
           </p>
         </div>
 
         {/* Level Stars Rating Display */}
         {layoutType === 'level' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', position: 'relative', zIndex: 1, margin: '0.1rem 0' }} id="modal-star-rating-container">
-            <div style={{ display: 'flex', gap: '0.5rem', fontSize: '2.2rem', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', position: 'relative', zIndex: 1 }} id="modal-star-rating-container">
+            <div style={{ display: 'flex', gap: '0.35rem', fontSize: '1.8rem', justifyContent: 'center' }}>
               {[1, 2, 3].map((star) => {
                 const isActive = star <= starsCount
                 return (
@@ -438,7 +439,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
                       color: isActive ? 'hsl(45 100% 55%)' : 'hsl(220 10% 20%)',
                       opacity: isActive ? 1 : 0.2,
                       display: 'inline-block',
-                      animationDelay: isActive ? `${(star - 1) * 0.15}s` : '0s',
+                      animationDelay: isActive ? `${(star - 1) * 0.12}s` : '0s',
                     }}
                   >
                     ★
@@ -446,7 +447,7 @@ export default function PostGameXPModal({ data, onClose }: Props) {
                 )
               })}
             </div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white' }}>
               {starText}
             </div>
           </div>
@@ -459,15 +460,15 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               display: 'inline-flex',
               alignSelf: 'center',
               alignItems: 'center',
-              gap: '0.3rem',
+              gap: '0.25rem',
               background: 'linear-gradient(90deg, hsl(45 100% 55%), hsl(38 95% 45%))',
               color: 'black',
               fontWeight: 900,
-              fontSize: '0.7rem',
-              padding: '4px 14px',
+              fontSize: '0.62rem',
+              padding: '2px 10px',
               borderRadius: '9999px',
-              boxShadow: '0 4px 14px rgba(230, 170, 0, 0.45)',
-              letterSpacing: '0.04em',
+              boxShadow: '0 4px 10px rgba(230, 170, 0, 0.35)',
+              letterSpacing: '0.03em',
               margin: '0 auto',
               position: 'relative',
               zIndex: 1,
@@ -483,34 +484,33 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           <div
             style={{
               background: 'hsl(222 20% 7% / 0.8)',
-              border: '1.5px solid hsl(220 15% 20%)',
-              borderRadius: 20,
-              padding: '1.25rem',
+              border: '1px solid hsl(220 15% 18%)',
+              borderRadius: 16,
+              padding: '0.85rem',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
+              gap: '8px',
               position: 'relative',
               zIndex: 1,
-              boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
+              boxShadow: 'inset 0 0 15px rgba(0,0,0,0.5)',
             }}
             id="custom-statistics-card"
           >
-            {/* Custom Score Row */}
             {score > 0 && !metadata.statistics.some((s: any) => s.label.toLowerCase() === 'score' || s.label.toLowerCase() === 'final score' || s.label.toLowerCase() === 'total score') && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Final Score</span>
-                <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '6px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Final Score</span>
+                <span style={{ fontSize: '1.4rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
                   {score.toLocaleString()}
                 </span>
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 16px', paddingTop: '4px', textAlign: 'left' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 12px', paddingTop: '2px', textAlign: 'left' }}>
               {metadata.statistics.map((stat: any, idx: number) => (
                 <div key={idx} style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {stat.label}
                   </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: stat.color || 'white', fontFamily: 'monospace', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 900, color: stat.color || 'white', fontFamily: 'monospace', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {stat.value}
                   </div>
                 </div>
@@ -522,44 +522,42 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             <div
               style={{
                 background: 'hsl(222 20% 7% / 0.8)',
-                border: '1.5px solid hsl(220 15% 20%)',
-                borderRadius: 20,
-                padding: '1.25rem',
+                border: '1px solid hsl(220 15% 18%)',
+                borderRadius: 16,
+                padding: '0.85rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '12px',
+                gap: '8px',
                 position: 'relative',
                 zIndex: 1,
-                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
+                boxShadow: 'inset 0 0 15px rgba(0,0,0,0.5)',
               }}
             >
-              {/* Final Score Row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Final Score</span>
-                <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '6px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Final Score</span>
+                <span style={{ fontSize: '1.4rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
                   {score.toLocaleString()}
                 </span>
               </div>
 
-              {/* Snake Stats Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 16px', paddingTop: '4px', textAlign: 'left' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 12px', paddingTop: '2px', textAlign: 'left' }}>
                 <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Eliminations</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'hsl(355 85% 65%)', fontFamily: 'monospace', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Eliminations</div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 900, color: 'hsl(355 85% 65%)', fontFamily: 'monospace', marginTop: '1px' }}>
                     {gameMetadata.eliminations ?? 0}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Longest Length</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Longest Length</div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '1px' }}>
                     {gameMetadata.longestLength ?? 3}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Survival Time</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Survival Time</div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '1px' }}>
                     {formatSurvivalTime(timeSecs || gameMetadata.survivalTime || 0)}
                   </div>
                 </div>
@@ -570,90 +568,83 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               <div
                 style={{
                   background: 'hsl(222 20% 7% / 0.8)',
-                  border: '1.5px solid hsl(220 15% 20%)',
-                  borderRadius: 20,
-                  padding: '1.25rem',
+                  border: '1px solid hsl(220 15% 18%)',
+                  borderRadius: 16,
+                  padding: '0.85rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px',
+                  gap: '8px',
                   position: 'relative',
                   zIndex: 1,
-                  boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
+                  boxShadow: 'inset 0 0 15px rgba(0,0,0,0.5)',
                 }}
               >
-                {/* Score row */}
                 {score > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '10px' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Score</span>
-                    <span style={{ fontSize: '1.8rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid hsl(220 15% 16%)', paddingBottom: '6px' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'hsl(220 10% 60%)', textTransform: 'uppercase' }}>Score</span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 950, color: '#fbbf24', fontFamily: 'monospace' }}>
                       {score.toLocaleString()}
                     </span>
                   </div>
                 )}
 
-                {/* Dynamic statistics details */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 16px', paddingTop: '4px', textAlign: 'left' }}>
-                  {/* High Score (Endless) */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 12px', paddingTop: '2px', textAlign: 'left' }}>
                   {layoutType === 'endless' && (
                     <div>
-                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>High Score</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>High Score</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '1px' }}>
                         {Math.max(highScore, score).toLocaleString()}
                       </div>
                     </div>
                   )}
 
-                  {/* Moves (Level) */}
                   {layoutType === 'level' && moves > 0 && (
                     <div>
-                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Moves</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Moves</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '1px' }}>
                         {moves}
                       </div>
                     </div>
                   )}
 
-                  {/* Time taken */}
                   {timeSecs > 0 && (
                     <div>
-                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Time</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Time</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '1px' }}>
                         {timeSecs}s
                       </div>
                     </div>
                   )}
 
-                  {/* Personal best level time */}
                   {layoutType === 'level' && result === 'win' && personalBest !== null && (
                     <div>
-                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Best Time</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Best Time</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace', marginTop: '1px' }}>
                         {personalBest}s
                       </div>
                     </div>
                   )}
 
-                  {/* Game Specific Stats (Block Blast / Neon Tetris / Word Wizard) */}
                   {gameMetadata.linesCleared !== undefined && (
                     <div>
-                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Lines Cleared</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Lines Cleared</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '1px' }}>
                         {gameMetadata.linesCleared}
                       </div>
                     </div>
                   )}
                   {gameMetadata.wordsFound !== undefined && (
                     <div>
-                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Words Found</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Words Found</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: 'white', fontFamily: 'monospace', marginTop: '1px' }}>
                         {gameMetadata.wordsFound}
                       </div>
                     </div>
                   )}
                   {gameMetadata.maxCombo !== undefined && (
                     <div>
-                      <div style={{ fontSize: '0.68rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Max Combo</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ec4899', fontFamily: 'monospace', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 700 }}>Max Combo</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#ec4899', fontFamily: 'monospace', marginTop: '1px' }}>
                         x{gameMetadata.maxCombo}
                       </div>
                     </div>
@@ -668,36 +659,36 @@ export default function PostGameXPModal({ data, onClose }: Props) {
         <div
           style={{
             background: 'hsl(222 20% 7% / 0.7)',
-            borderRadius: 18,
+            borderRadius: 16,
             border: '1px solid hsl(220 15% 16%)',
-            padding: '1.1rem 1.25rem',
+            padding: '0.75rem 1rem',
             display: 'flex',
             position: 'relative',
             zIndex: 1,
-            gap: '0.5rem',
+            gap: '0.4rem',
             justifyContent: 'center',
             alignItems: 'center',
-            minHeight: '80px',
+            minHeight: '60px',
           }}
         >
           {/* Subtle Background Sync Indicator */}
           {(metadata as any)?.syncing && (
             <div style={{
               position: 'absolute',
-              top: '8px',
-              right: '12px',
+              top: '6px',
+              right: '10px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              fontSize: '0.65rem',
+              fontSize: '0.6rem',
               color: 'hsl(220 10% 50%)',
               fontWeight: 600,
             }} id="rewards-syncing-indicator">
               <span className="animate-spin" style={{
                 display: 'inline-block',
-                width: 8,
-                height: 8,
-                border: '1.5px solid hsl(220 100% 65% / 0.2)',
+                width: 6,
+                height: 6,
+                border: '1.2px solid hsl(220 100% 65% / 0.2)',
                 borderTopColor: 'hsl(220 100% 65%)',
                 borderRadius: '50%',
               }} />
@@ -707,25 +698,25 @@ export default function PostGameXPModal({ data, onClose }: Props) {
 
           <>
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'hsl(220 100% 65%)' }}>
                 +{xpDisplay}
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
+              <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>XP Earned</div>
             </div>
             {coinsGained > 0 && (
               <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
+                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'hsl(45 100% 55%)' }}>
                   +{coinsDisplay}
                 </div>
-                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Coins Won</div>
+                <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Coins Won</div>
               </div>
             )}
             {currentStreak > 0 && (
               <div style={{ flex: 1, borderLeft: '1px solid hsl(220 15% 16%)', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'hsl(38 95% 60%)' }}>
+                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'hsl(38 95% 60%)' }}>
                   🔥 {currentStreak}
                 </div>
-                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Streak</div>
+                <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 55%)', fontWeight: 600 }}>Streak</div>
               </div>
             )}
           </>
@@ -738,31 +729,31 @@ export default function PostGameXPModal({ data, onClose }: Props) {
             style={{
               background: 'linear-gradient(135deg, hsl(270 80% 60% / 0.22), hsl(220 100% 60% / 0.22))',
               border: '1px solid hsl(270 80% 50% / 0.5)',
-              borderRadius: 16,
-              padding: '1rem 0.5rem',
+              borderRadius: 12,
+              padding: '0.65rem 0.4rem',
               textAlign: 'center',
               boxShadow: 'var(--shadow-glow-primary)',
               position: 'relative',
               zIndex: 1,
             }}
           >
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.15rem', color: 'white' }}>🎉 LEVEL UP! 🎉</div>
-            <div style={{ fontSize: '0.82rem', color: 'hsl(220 10% 85%)' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.1rem', color: 'white' }}>🎉 LEVEL UP! 🎉</div>
+            <div style={{ fontSize: '0.75rem', color: 'hsl(220 10% 85%)' }}>
               You reached <strong style={{ color: 'hsl(270 80% 70%)' }}>Level {levelDisplay}</strong>!
             </div>
           </div>
         )}
 
         {/* Level Progress Bar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
             <span style={{ color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Level {levelDisplay}</span>
             <span style={{ fontWeight: 700, color: 'hsl(220 100% 75%)' }}>
               {Math.max(0, (levelDisplay === oldLevel ? oldXP : newXP) - xpRequiredForLevel(levelDisplay))} / {xpForNextLevel(levelDisplay)} XP ({barPercent}%)
             </span>
             <span style={{ color: 'hsl(220 10% 60%)', fontWeight: 600 }}>Level {levelDisplay + 1}</span>
           </div>
-          <div className="xp-bar" style={{ height: 10, background: 'hsl(220 20% 9%)', borderRadius: 99 }}>
+          <div className="xp-bar" style={{ height: 8, background: 'hsl(220 20% 9%)', borderRadius: 99 }}>
             <div
               className="xp-bar-fill"
               style={{
@@ -774,172 +765,155 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               }}
             />
           </div>
-          {/* Next Level Unlock Preview */}
-          <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 55%)', background: 'hsl(220 20% 7% / 0.5)', padding: '0.5rem 0.75rem', borderRadius: 10, border: '1px dashed hsl(220 15% 15%)', textAlign: 'left', marginTop: '0.25rem' }}>
-            <strong style={{ color: 'hsl(270 80% 65%)', display: 'block', marginBottom: '0.35rem' }}>🎁 Reward Preview: Next Level Unlocks:</strong>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {['Coins', 'Badge', 'Achievement Progress'].map((item, idx) => (
-                <span
-                  key={idx}
-                  style={{
-                    background: 'hsl(220 20% 12%)',
-                    color: 'hsl(220 100% 80%)',
-                    padding: '0.15rem 0.45rem',
-                    borderRadius: 6,
-                    fontSize: '0.65rem',
-                    fontWeight: 600,
-                    border: '1px solid hsl(220 15% 18%)',
-                  }}
-                >
-                  {item}
-                </span>
-              ))}
+          
+          {/* Compact Next Unlock Preview widget */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: 'hsl(270 80% 50% / 0.08)', border: '1px solid hsl(270 80% 50% / 0.22)', borderRadius: 10, padding: '0.4rem 0.65rem', textAlign: 'left', marginTop: '0.15rem' }}>
+            <div style={{ width: 24, height: 24, borderRadius: 6, background: 'hsl(270 80% 60% / 0.15)', display: 'flex', alignItems: 'center', justifySelf: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>🎁</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'white' }}>Next Unlock Preview</div>
+              <div style={{ fontSize: '0.58rem', color: 'hsl(220 10% 60%)' }}>
+                {xpForNextLevel(levelDisplay) - Math.max(0, (levelDisplay === oldLevel ? oldXP : newXP) - xpRequiredForLevel(levelDisplay))} XP remaining for next Reward Chest!
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Unlocked Achievements Section */}
-        {unlockedAchievements && unlockedAchievements.length > 0 ? (
-          <div
-            className="animate-slideUp"
-            style={{
-              background: 'linear-gradient(135deg, hsl(45 100% 50% / 0.12), hsl(35 90% 50% / 0.12))',
-              border: '1.5px solid hsl(45 100% 55% / 0.35)',
-              borderRadius: 16,
-              padding: '0.85rem 1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
+        {/* Collapsible Unlocked Achievements Section */}
+        {unlockedAchievements && unlockedAchievements.length > 0 && (
+          <details 
+            style={{ 
+              background: 'linear-gradient(135deg, hsl(45 100% 50% / 0.08), hsl(35 90% 50% / 0.08))', 
+              border: '1px solid hsl(45 100% 55% / 0.25)', 
+              borderRadius: 12, 
+              padding: '0.45rem 0.75rem',
               position: 'relative',
-              zIndex: 1,
-              boxShadow: '0 4px 15px hsl(45 100% 50% / 0.1)',
+              zIndex: 1
             }}
+            className="group"
           >
-            <div style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 55%)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              🏅 Badge Unlocked!
+            <summary style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(45 100% 55%)', cursor: 'pointer', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', outline: 'none' }}>
+              <span>🏅 Badges Unlocked ({unlockedAchievements.length})</span>
+              <span style={{ fontSize: '0.55rem', transition: 'transform 0.2s ease' }} className="group-open:rotate-180">▼</span>
+            </summary>
+            <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {unlockedAchievements.map((ach: any, idx: number) => (
+                <div key={idx} style={{ textAlign: 'left', borderTop: idx > 0 ? '1px solid hsl(45 100% 55% / 0.15)' : 'none', paddingTop: idx > 0 ? '4px' : 0 }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'white' }}>{ach.name}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'hsl(220 10% 75%)', marginTop: '1px' }}>{ach.description}</div>
+                </div>
+              ))}
             </div>
-            {unlockedAchievements.map((ach: any, idx: number) => (
-              <div key={idx} style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white' }}>{ach.name}</div>
-                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 75%)', marginTop: '1px' }}>{ach.description}</div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          nextAchievement && (
-            <div
-              style={{
-                background: 'hsl(222 20% 11% / 0.4)',
-                borderRadius: 12,
-                border: '1px solid hsl(220 15% 18%)',
-                padding: '0.75rem 1rem',
-                position: 'relative',
-                zIndex: 1,
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-                <span style={{ color: 'hsl(220 10% 50%)' }}>Next Badge: <strong>{nextAchievement.name}</strong></span>
-                <span style={{ color: 'hsl(220 10% 65%)', fontWeight: 700 }}>{nextAchievement.current} / {nextAchievement.target}</span>
-              </div>
-              <div style={{ height: 4, background: 'hsl(220 20% 8%)', borderRadius: 99, overflow: 'hidden' }}>
-                <div
-                  style={{
-                    width: `${nextAchievement.progress}%`,
-                    height: '100%',
-                    background: 'hsl(45 100% 55%)',
-                    borderRadius: 99,
-                    transition: 'width 0.5s ease',
-                  }}
-                />
-              </div>
-            </div>
-          )
+          </details>
         )}
 
-        {/* Offline Mode Banner or Guest Warning Banner */}
+        {/* Next badge progress widget (if no badges unlocked this match) */}
+        {(!unlockedAchievements || unlockedAchievements.length === 0) && nextAchievement && (
+          <div
+            style={{
+              background: 'hsl(222 20% 11% / 0.4)',
+              borderRadius: 10,
+              border: '1px solid hsl(220 15% 18%)',
+              padding: '0.5rem 0.75rem',
+              position: 'relative',
+              zIndex: 1,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', marginBottom: '0.25rem' }}>
+              <span style={{ color: 'hsl(220 10% 50%)' }}>Next Badge: <strong>{nextAchievement.name}</strong></span>
+              <span style={{ color: 'hsl(220 10% 65%)', fontWeight: 700 }}>{nextAchievement.current} / {nextAchievement.target}</span>
+            </div>
+            <div style={{ height: 4, background: 'hsl(220 20% 8%)', borderRadius: 99, overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${nextAchievement.progress}%`,
+                  height: '100%',
+                  background: 'hsl(45 100% 55%)',
+                  borderRadius: 99,
+                  transition: 'width 0.5s ease',
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Collapsible Offline Mode or Guest Warning Section */}
         {metadata?.offline ? (
           <div
             style={{
               background: 'linear-gradient(135deg, hsl(0 80% 55% / 0.08), hsl(38 95% 55% / 0.08))',
               border: '1px solid hsl(38 95% 50% / 0.25)',
-              borderRadius: 16,
-              padding: '0.85rem 1rem',
+              borderRadius: 12,
+              padding: '0.6rem 0.8rem',
               textAlign: 'center',
               display: 'flex',
               flexDirection: 'column',
-              gap: '0.5rem',
+              gap: '0.25rem',
               position: 'relative',
               zIndex: 1,
             }}
           >
-            <div style={{ fontSize: '0.88rem', fontWeight: 900, color: 'hsl(38 95% 65%)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 900, color: 'hsl(38 95% 65%)', textTransform: 'uppercase' }}>
               Offline Session
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'white', fontWeight: 700, margin: '0.2rem 0' }}>
-              You earned:<br />
-              <span style={{ color: 'hsl(220 100% 70%)', fontSize: '0.95rem' }}>+{xpGained} XP</span><br />
-              <span style={{ color: 'hsl(45 100% 55%)', fontSize: '0.95rem' }}>+{coinsGained} Coins</span>
+            <div style={{ fontSize: '0.72rem', color: 'white', fontWeight: 700 }}>
+              XP Gained: <span style={{ color: 'hsl(220 100% 70%)' }}>+{xpGained}</span> | Coins: <span style={{ color: 'hsl(45 100% 55%)' }}>+{coinsGained}</span>
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 65%)', lineHeight: 1.4, margin: 0 }}>
-              Connect to the internet to save your progress.
-            </p>
           </div>
         ) : isGuest ? (
-          <div
-            className="animate-pulse-glow"
+          <details
             style={{
-              background: 'linear-gradient(135deg, hsl(0 80% 55% / 0.08), hsl(38 95% 55% / 0.08))',
-              border: '1px solid hsl(38 95% 50% / 0.25)',
-              borderRadius: 16,
-              padding: '0.85rem 1rem',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.6rem',
+              background: 'linear-gradient(135deg, hsl(0 80% 55% / 0.04), hsl(38 95% 55% / 0.04))',
+              border: '1px solid hsl(38 95% 50% / 0.2)',
+              borderRadius: 12,
+              padding: '0.45rem 0.75rem',
               position: 'relative',
-              zIndex: 1,
+              zIndex: 1
             }}
+            className="group"
           >
-            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'hsl(38 95% 65%)' }}>
-              ⚠️ Guest Progress is Not Saved!
+            <summary style={{ fontSize: '0.72rem', fontWeight: 900, color: 'hsl(38 95% 65%)', cursor: 'pointer', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', outline: 'none' }}>
+              <span>⚠️ Guest Progress Warning</span>
+              <span style={{ fontSize: '0.55rem' }}>▼</span>
+            </summary>
+            <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.68rem', color: 'hsl(220 10% 70%)', margin: 0, lineHeight: 1.45 }}>
+                Register for a free account to sync your XP, save your {levelDisplay} levels, unlock achievements, and climb local leaderboards!
+              </p>
+              <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    onClose()
+                    router.push('/register')
+                  }}
+                  style={{ fontSize: '0.68rem', padding: '0.25rem 0.5rem' }}
+                >
+                  Sign Up
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    onClose()
+                    router.push('/login')
+                  }}
+                  style={{ fontSize: '0.68rem', padding: '0.25rem 0.5rem' }}
+                >
+                  Sign In
+                </button>
+              </div>
             </div>
-            <p style={{ fontSize: '0.72rem', color: 'hsl(220 10% 65%)', lineHeight: 1.4, margin: 0 }}>
-              Register for a free account to sync your XP, keep your {levelDisplay} levels, unlock achievements, and enter global leaderboards!
-            </p>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => {
-                  onClose()
-                  router.push('/register')
-                }}
-                style={{ fontSize: '0.72rem', padding: '0.35rem 0.65rem' }}
-              >
-                Sign Up
-              </button>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => {
-                  onClose()
-                  router.push('/login')
-                }}
-                style={{ fontSize: '0.72rem', padding: '0.35rem 0.65rem' }}
-              >
-                Sign In
-              </button>
-            </div>
-          </div>
+          </details>
         ) : null}
 
         {/* Optional Game-Specific Footer */}
         {(metadata as any)?.gameSpecificFooter && (
           <div
             style={{
-              fontSize: '0.75rem',
+              fontSize: '0.68rem',
               color: 'hsl(220 10% 65%)',
               textAlign: 'center',
-              padding: '0.5rem 0.75rem',
-              borderRadius: 12,
+              padding: '0.4rem 0.65rem',
+              borderRadius: 10,
               background: 'hsl(222 20% 7% / 0.5)',
               border: '1px solid hsl(220 15% 18%)',
               position: 'relative',
@@ -950,27 +924,27 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           </div>
         )}
 
-        {/* Actions Footer */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+        {/* Actions Footer - entrance slide-in animated */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.15rem', position: 'relative', zIndex: 1 }} className="btn-entrance-anim">
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             {gameSlug === 'snake-arena' ? (
               <>
                 <button
                   className="btn btn-primary"
                   onClick={() => onClose('replay')}
-                  style={{ flex: 1.3, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ flex: 1.3, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.45rem' }}
                   id="modal-replay-btn"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '4px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                   Play Again
                 </button>
                 <button
                   className="btn btn-secondary"
                   onClick={handleBackToLobby}
-                  style={{ flex: 1, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ flex: 1, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.45rem' }}
                   id="modal-lobby-btn"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '4px' }}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
                   Lobby
                 </button>
               </>
@@ -981,21 +955,21 @@ export default function PostGameXPModal({ data, onClose }: Props) {
                   <button
                     className="btn btn-primary"
                     onClick={() => onClose('next')}
-                    style={{ flex: 1.3, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ flex: 1.3, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.45rem' }}
                     id="modal-next-btn"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '4px' }}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     Next Level
                   </button>
                 ) : (
                   <button
                     className="btn btn-primary"
                     onClick={() => onClose('replay')}
-                    style={{ flex: 1.3, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ flex: 1.3, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.45rem' }}
                     id="modal-replay-btn"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                    Play Again
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '4px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    {layoutType === 'endless' ? 'Continue' : 'Play Again'}
                   </button>
                 )}
 
@@ -1004,10 +978,10 @@ export default function PostGameXPModal({ data, onClose }: Props) {
                   <button
                     className="btn btn-secondary"
                     onClick={() => onClose('replay')}
-                    style={{ flex: 1, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ flex: 1, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.45rem' }}
                     id="modal-replay-btn-level-win"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '4px' }}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                     Replay
                   </button>
                 )}
@@ -1016,10 +990,10 @@ export default function PostGameXPModal({ data, onClose }: Props) {
                 <button
                   className="btn btn-secondary"
                   onClick={handleBackToDashboard}
-                  style={{ flex: 1, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ flex: 1, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.45rem' }}
                   id="modal-dashboard-btn"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '6px' }}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ marginRight: '4px' }}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                   Home
                 </button>
               </>
@@ -1030,14 +1004,16 @@ export default function PostGameXPModal({ data, onClose }: Props) {
           {layoutType === 'multiplayer' && (
             <button
               className="btn btn-secondary"
-              onClick={() => onClose('replay')} // Rematch trigger
+              onClick={() => onClose('replay')}
               style={{
                 width: '100%',
-                borderRadius: 12,
+                borderRadius: 10,
                 background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.15), hsl(270 80% 60% / 0.15))',
                 borderColor: 'hsl(220 100% 60% / 0.3)',
                 color: 'white',
-                fontWeight: 700
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                padding: '0.45rem'
               }}
               id="modal-rematch-btn"
             >
@@ -1055,10 +1031,12 @@ export default function PostGameXPModal({ data, onClose }: Props) {
               }}
               style={{
                 width: '100%',
-                borderRadius: 12,
+                borderRadius: 10,
                 background: 'linear-gradient(135deg, hsl(220 100% 60% / 0.1), hsl(270 80% 60% / 0.1))',
                 borderColor: 'hsl(220 100% 60% / 0.25)',
                 color: 'hsl(220 100% 80%)',
+                fontSize: '0.78rem',
+                padding: '0.45rem'
               }}
               id="modal-nextgame-btn"
             >

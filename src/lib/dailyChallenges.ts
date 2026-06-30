@@ -12,6 +12,27 @@ export interface DailyChallenge {
 
 // Generate daily challenges based on date string
 export function getDailyChallenges(dateStr: string): DailyChallenge[] {
+  let hash = 0
+  for (let i = 0; i < dateStr.length; i++) {
+    hash = dateStr.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const seed = Math.abs(hash)
+  
+  // Custom seeded random helper
+  const nextRand = () => {
+    const x = Math.sin(seed + 1) * 10000
+    return x - Math.floor(x)
+  }
+  const pickRange = (min: number, max: number) => {
+    return min + nextRand() * (max - min)
+  }
+
+  const mpScoreGoal = Math.floor(pickRange(1000, 2500) / 100) * 100
+  const mpAccuracyGoal = Math.floor(pickRange(75, 95))
+  const sfDistanceGoal = Math.floor(pickRange(1500, 4000) / 100) * 100
+  const sfCoinsGoal = Math.floor(pickRange(15, 50))
+  const sfScoreGoal = Math.floor(pickRange(2000, 6000) / 100) * 100
+
   return [
     { id: 'daily_play_3', text: 'Play 3 Games', gameSlug: 'all', target: 3, current: 0, completed: false, xpReward: 100, coinReward: 20 },
     { id: 'daily_earn_100_xp', text: 'Earn 100 XP', gameSlug: 'all', target: 100, current: 0, completed: false, xpReward: 100, coinReward: 20 },
@@ -39,6 +60,15 @@ export function getDailyChallenges(dateStr: string): DailyChallenge[] {
     { id: 'daily_match3_play', text: 'Play 1 Match-3 Game', gameSlug: 'ai-infinite-candy-crush', target: 1, current: 0, completed: false, xpReward: 100, coinReward: 20 },
     { id: 'daily_match3_score', text: 'Score 5000 in Match-3', gameSlug: 'ai-infinite-candy-crush', target: 1, current: 0, completed: false, xpReward: 150, coinReward: 30 },
     { id: 'daily_match3_combo', text: 'Reach a 4x Combo in Match-3', gameSlug: 'ai-infinite-candy-crush', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 },
+    // Memory Plate procedural challenges
+    { id: 'daily_mp_play', text: 'Play Memory Plate', gameSlug: 'memory-plate', target: 1, current: 0, completed: false, xpReward: 100, coinReward: 20 },
+    { id: 'daily_mp_score', text: `Score ${mpScoreGoal} in Memory Plate`, gameSlug: 'memory-plate', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 },
+    { id: 'daily_mp_accuracy', text: `Get ${mpAccuracyGoal}% Accuracy in Memory Plate`, gameSlug: 'memory-plate', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 },
+    // Sky Flight procedural challenges
+    { id: 'daily_sf_play', text: 'Play Sky Flight', gameSlug: 'sky-flight', target: 1, current: 0, completed: false, xpReward: 100, coinReward: 20 },
+    { id: 'daily_sf_distance', text: `Fly ${sfDistanceGoal}m in Sky Flight`, gameSlug: 'sky-flight', target: 1, current: 0, completed: false, xpReward: 150, coinReward: 30 },
+    { id: 'daily_sf_coins', text: `Collect ${sfCoinsGoal} Coins in Sky Flight`, gameSlug: 'sky-flight', target: 1, current: 0, completed: false, xpReward: 150, coinReward: 30 },
+    { id: 'daily_sf_score', text: `Score ${sfScoreGoal} in Sky Flight`, gameSlug: 'sky-flight', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 }
   ]
 }
 

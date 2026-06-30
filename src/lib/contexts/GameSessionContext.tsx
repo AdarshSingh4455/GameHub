@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import PostGameXPModal from '@/components/layout/PostGameXPModal'
 import { computeLevel } from '@/lib/xpUtils'
-import { incrementDailyChallengeProgress } from '@/lib/dailyChallenges'
+import { incrementDailyChallengeProgress, getStoredDailyChallenges } from '@/lib/dailyChallenges'
 import { getGameBySlug } from '@/lib/games'
 import { createClient } from '@/lib/supabase/client'
 
@@ -67,6 +67,12 @@ function calculateLocalRewards(gameSlug: string, result: 'win' | 'loss' | 'draw'
     const elims = gameMeta.eliminations ?? 0
     baseCoins = Math.max(5, foods * 2 + elims * 10)
     baseXP = result === 'win' ? 100 : result === 'loss' ? 25 : 50
+  } else if (gameSlug === 'memory-plate') {
+    baseXP = result === 'win' ? 120 : 30
+    baseCoins = Math.max(5, Math.floor(score / 50))
+  } else if (gameSlug === 'sky-flight') {
+    baseXP = result === 'win' ? 120 : 30
+    baseCoins = Math.max(5, Math.floor(score / 100))
   } else {
     // standard config lookup
     const config: Record<string, { win: number; loss: number; draw: number }> = {
@@ -1264,6 +1270,50 @@ async function updateDailyChallengesForMatch(
     const maxCombo = gameMeta.maxCombo ?? 0
     if (maxCombo >= 4) {
       await incrementDailyChallengeProgress('daily_match3_combo', 1, user)
+    }
+  }
+
+  // Memory Plate daily challenges
+  if (gameSlug === 'memory-plate') {
+    await incrementDailyChallengeProgress('daily_mp_play', 1, user)
+    const score = (metadata?.score as number) ?? 0
+    const gameMeta = (metadata?.gameMetadata as Record<string, any>) ?? {}
+    const avgAccuracy = gameMeta.avgAccuracy ?? 0
+
+    const challenges = getStoredDailyChallenges()
+    const scoreChallenge = challenges.find(c => c.id === 'daily_mp_score')
+    if (scoreChallenge && score >= scoreChallenge.target) {
+      await incrementDailyChallengeProgress('daily_mp_score', 1, user)
+    }
+
+    const accChallenge = challenges.find(c => c.id === 'daily_mp_accuracy')
+    if (accChallenge && avgAccuracy >= accChallenge.target) {
+      await incrementDailyChallengeProgress('daily_mp_accuracy', 1, user)
+    }
+  }
+
+  // Sky Flight daily challenges
+  if (gameSlug === 'sky-flight') {
+    await incrementDailyChallengeProgress('daily_sf_play', 1, user)
+    const score = (metadata?.score as number) ?? 0
+    const gameMeta = (metadata?.gameMetadata as Record<string, any>) ?? {}
+    const distance = gameMeta.distance ?? 0
+    const coinsCollected = gameMeta.coinsCollected ?? 0
+
+    const challenges = getStoredDailyChallenges()
+    const distChallenge = challenges.find(c => c.id === 'daily_sf_distance')
+    if (distChallenge && distance >= distChallenge.target) {
+      await incrementDailyChallengeProgress('daily_sf_distance', 1, user)
+    }
+
+    const coinsChallenge = challenges.find(c => c.id === 'daily_sf_coins')
+    if (coinsChallenge && coinsCollected >= coinsChallenge.target) {
+      await incrementDailyChallengeProgress('daily_sf_coins', 1, user)
+    }
+
+    const scoreChallenge = challenges.find(c => c.id === 'daily_sf_score')
+    if (scoreChallenge && score >= scoreChallenge.target) {
+      await incrementDailyChallengeProgress('daily_sf_score', 1, user)
     }
   }
 }

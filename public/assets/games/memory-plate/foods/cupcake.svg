@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Wrapper -->
+  <polygon points="25,55 75,55 65,85 35,85" fill="#FFA726" stroke="#FB8C00" stroke-width="2" />
+  <line x1="40" y1="55" x2="43" y2="85" stroke="#FB8C00" stroke-width="2" />
+  <line x1="50" y1="55" x2="50" y2="85" stroke="#FB8C00" stroke-width="2" />
+  <line x1="60" y1="55" x2="57" y2="85" stroke="#FB8C00" stroke-width="2" />
+  <!-- Cake Base -->
+  <path d="M 22 55 Q 50 45 78 55" stroke="#E2A76F" stroke-width="8" fill="none" stroke-linecap="round" />
+  <!-- Frosting Layers -->
+  <path d="M 20 52 C 20 40, 80 40, 80 52 Z" fill="#E91E63" />
+  <path d="M 28 42 C 28 32, 72 32, 72 42 Z" fill="#F48FB1" />
+  <circle cx="50" cy="30" r="10" fill="#FFF" />
+  <!-- Cherry on Top -->
+  <circle cx="50" cy="20" r="6" fill="#D50000" />
+  <path d="M 50 14 Q 56 6 62 10" fill="none" stroke="#5D4037" stroke-width="2" stroke-linecap="round" />
+</svg>

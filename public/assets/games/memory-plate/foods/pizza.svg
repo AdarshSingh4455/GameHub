@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Crust -->
+  <path d="M50 10 L85 80 A 45 45 0 0 1 15 80 Z" fill="#EAD49E" stroke="#C88E3E" stroke-width="4" />
+  <!-- Sauce & Cheese -->
+  <path d="M50 18 L78 76 A 37 37 0 0 1 22 76 Z" fill="#FF5722" />
+  <path d="M50 22 L75 74 A 32 32 0 0 1 25 74 Z" fill="#FFEB3B" />
+  <!-- Pepperonis -->
+  <circle cx="50" cy="45" r="7" fill="#D32F2F" />
+  <circle cx="38" cy="62" r="7" fill="#D32F2F" />
+  <circle cx="62" cy="62" r="7" fill="#D32F2F" />
+  <!-- Basil leaves -->
+  <path d="M42 30 C38 30 38 36 42 36 C46 36 46 30 42 30 Z" fill="#4CAF50" />
+  <path d="M58 52 C54 52 54 58 58 58 C62 58 62 52 58 52 Z" fill="#4CAF50" />
+</svg>

@@ -247,6 +247,109 @@ export const ACHIEVEMENT_RULES: AchievementRule[] = [
     },
   },
   {
+    slug: 'memory-plate-bronze',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'memory-plate') return false
+      const count = await tx.score.count({
+        where: { game: { slug: 'memory-plate' }, profileId }
+      })
+      return count >= 10
+    }
+  },
+  {
+    slug: 'memory-plate-silver',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'memory-plate') return false
+      const count = await tx.score.count({
+        where: { game: { slug: 'memory-plate' }, profileId }
+      })
+      return count >= 30
+    }
+  },
+  {
+    slug: 'memory-plate-gold',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'memory-plate') return false
+      const count = await tx.score.count({
+        where: { game: { slug: 'memory-plate' }, profileId }
+      })
+      return count >= 100
+    }
+  },
+  {
+    slug: 'memory-plate-perfect',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'memory-plate') return false
+      const scores = await tx.score.findMany({
+        where: { game: { slug: 'memory-plate' }, profileId }
+      })
+      return scores.some(s => {
+        const meta = (s.metadata as Record<string, any>) || {}
+        const gameMeta = (meta.gameMetadata as Record<string, any>) || {}
+        return gameMeta.difficulty === 'hard' && gameMeta.avgAccuracy === 100
+      })
+    }
+  },
+  {
+    slug: 'sky-flight-bronze',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'sky-flight') return false
+      const scores = await tx.score.findMany({
+        where: { game: { slug: 'sky-flight' }, profileId }
+      })
+      const totalDist = scores.reduce((sum, s) => {
+        const meta = (s.metadata as Record<string, any>) || {}
+        const gameMeta = (meta.gameMetadata as Record<string, any>) || {}
+        return sum + (gameMeta.distance ?? 0)
+      }, 0)
+      return totalDist >= 5000
+    }
+  },
+  {
+    slug: 'sky-flight-silver',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'sky-flight') return false
+      const scores = await tx.score.findMany({
+        where: { game: { slug: 'sky-flight' }, profileId }
+      })
+      const totalDist = scores.reduce((sum, s) => {
+        const meta = (s.metadata as Record<string, any>) || {}
+        const gameMeta = (meta.gameMetadata as Record<string, any>) || {}
+        return sum + (gameMeta.distance ?? 0)
+      }, 0)
+      return totalDist >= 15000
+    }
+  },
+  {
+    slug: 'sky-flight-gold',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'sky-flight') return false
+      const scores = await tx.score.findMany({
+        where: { game: { slug: 'sky-flight' }, profileId }
+      })
+      const totalDist = scores.reduce((sum, s) => {
+        const meta = (s.metadata as Record<string, any>) || {}
+        const gameMeta = (meta.gameMetadata as Record<string, any>) || {}
+        return sum + (gameMeta.distance ?? 0)
+      }, 0)
+      return totalDist >= 50000
+    }
+  },
+  {
+    slug: 'sky-flight-perfect',
+    check: async ({ profileId, gameSlug, tx }) => {
+      if (gameSlug !== 'sky-flight') return false
+      const scores = await tx.score.findMany({
+        where: { game: { slug: 'sky-flight' }, profileId }
+      })
+      return scores.some(s => {
+        const meta = (s.metadata as Record<string, any>) || {}
+        const gameMeta = (meta.gameMetadata as Record<string, any>) || {}
+        return (gameMeta.distance ?? 0) >= 1500 && (meta.collisions ?? 0) === 0
+      })
+    }
+  },
+  {
     slug: 'level-5',
     check: async ({ profileId, tx }) => {
       const profile = await tx.profile.findUnique({
@@ -1565,6 +1668,65 @@ export async function getAchievementProgress(profileId: string): Promise<Achieve
         }
         current = maxLength
         target = 50
+        break
+      case 'memory-plate-bronze':
+        current = getMemPlayCount('memory-plate')
+        target = 10
+        break
+      case 'memory-plate-silver':
+        current = getMemPlayCount('memory-plate')
+        target = 30
+        break
+      case 'memory-plate-gold':
+        current = getMemPlayCount('memory-plate')
+        target = 100
+        break
+      case 'memory-plate-perfect':
+        current = isUnlocked ? 1 : 0
+        target = 1
+        break
+      case 'sky-flight-bronze': {
+        let totalFlightDist = 0
+        for (const s of (scoresByGame['sky-flight'] || [])) {
+          const meta = s.metadata as Record<string, any> | null
+          const gameMeta = meta?.gameMetadata as Record<string, any> | null
+          if (gameMeta && typeof gameMeta.distance === 'number') {
+            totalFlightDist += gameMeta.distance
+          }
+        }
+        current = totalFlightDist
+        target = 5000
+        break
+      }
+      case 'sky-flight-silver': {
+        let totalFlightDist = 0
+        for (const s of (scoresByGame['sky-flight'] || [])) {
+          const meta = s.metadata as Record<string, any> | null
+          const gameMeta = meta?.gameMetadata as Record<string, any> | null
+          if (gameMeta && typeof gameMeta.distance === 'number') {
+            totalFlightDist += gameMeta.distance
+          }
+        }
+        current = totalFlightDist
+        target = 15000
+        break
+      }
+      case 'sky-flight-gold': {
+        let totalFlightDist = 0
+        for (const s of (scoresByGame['sky-flight'] || [])) {
+          const meta = s.metadata as Record<string, any> | null
+          const gameMeta = meta?.gameMetadata as Record<string, any> | null
+          if (gameMeta && typeof gameMeta.distance === 'number') {
+            totalFlightDist += gameMeta.distance
+          }
+        }
+        current = totalFlightDist
+        target = 50000
+        break
+      }
+      case 'sky-flight-perfect':
+        current = isUnlocked ? 1 : 0
+        target = 1
         break
       default:
         current = isUnlocked ? 1 : 0

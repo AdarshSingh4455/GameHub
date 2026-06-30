@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Egg White -->
+  <path d="M 25 50 C 15 35, 45 15, 65 25 C 85 35, 85 65, 65 75 C 45 85, 35 65, 25 50 Z" fill="#ECEFF1" stroke="#CFD8DC" stroke-width="2" />
+  <!-- Yolk -->
+  <circle cx="52" cy="48" r="16" fill="#FFC107" stroke="#FFA000" stroke-width="2" />
+  <!-- Highlight on yolk -->
+  <circle cx="47" cy="43" r="4" fill="#FFF" opacity="0.6" />
+</svg>

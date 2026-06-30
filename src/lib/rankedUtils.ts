@@ -192,5 +192,17 @@ export function getTargetScoreForGame(gameSlug: string, mmr: number): number {
     if (mmr < 3000) return 2500
     return 4000
   }
+  if (gameSlug === 'memory-plate') {
+    if (mmr < 1167) return 1000      // Bronze
+    if (mmr < 1834) return 1800      // Silver
+    if (mmr < 3000) return 2500      // Gold/Platinum
+    return 3500                      // Diamond+
+  }
+  if (gameSlug === 'sky-flight') {
+    if (mmr < 1167) return 1000
+    if (mmr < 1834) return 3000
+    if (mmr < 3000) return 6000
+    return 10000
+  }
   return 1000
 }

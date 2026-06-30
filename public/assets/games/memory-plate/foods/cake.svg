@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Cake Slice Layers -->
+  <polygon points="50,15 15,75 85,75" fill="#E2A76F" />
+  <polygon points="50,15 15,75 50,75" fill="#C68A4C" opacity="0.3" />
+  <!-- Cream Layers -->
+  <polygon points="46,22 19,70 81,70" fill="#FFF" />
+  <polygon points="48,18 17,72 83,72" fill="#9C27B0" opacity="0.8" />
+  <polygon points="50,15 15,75 85,75" fill="none" stroke="#E2A76F" stroke-width="2" />
+  <!-- Frosting Top -->
+  <path d="M50 15 L85 75 Q50 78 15 75 Z" fill="#9C27B0" />
+  <!-- Cream Dollop -->
+  <circle cx="50" cy="28" r="8" fill="#FFF" />
+  <circle cx="48" cy="26" r="4" fill="#E91E63" />
+  <!-- Chocolate flakes -->
+  <circle cx="34" cy="50" r="2" fill="#5D4037" />
+  <circle cx="66" cy="50" r="2" fill="#5D4037" />
+  <circle cx="50" cy="60" r="2" fill="#5D4037" />
+</svg>

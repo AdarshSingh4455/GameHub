@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Croissant Crescent -->
+  <path d="M 15 50 C 15 20, 85 20, 85 50 C 75 42, 60 38, 50 38 C 40 38, 25 42, 15 50 Z" fill="#ECA54C" stroke="#D37E28" stroke-width="2" />
+  <!-- Crust Layers / Ridges -->
+  <path d="M 32 30 C 34 38, 38 42, 40 45" stroke="#D37E28" stroke-width="3" fill="none" stroke-linecap="round" />
+  <path d="M 50 25 C 50 35, 50 42, 50 48" stroke="#D37E28" stroke-width="3" fill="none" stroke-linecap="round" />
+  <path d="M 68 30 C 66 38, 62 42, 60 45" stroke="#D37E28" stroke-width="3" fill="none" stroke-linecap="round" />
+  <!-- Gloss highlights -->
+  <path d="M 22 34 C 30 25, 45 22, 50 22" stroke="#FFF" stroke-width="2" fill="none" opacity="0.4" stroke-linecap="round" />
+</svg>

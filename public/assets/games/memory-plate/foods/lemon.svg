@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Lemon Body -->
+  <path d="M20 50 C20 25, 80 25, 80 50 C80 75, 20 75, 20 50 Z" fill="#FFEE58" stroke="#FDD835" stroke-width="3" />
+  <!-- Lemon Tips -->
+  <path d="M15 50 Q20 45 22 50 Q20 55 15 50 Z" fill="#FDD835" />
+  <path d="M85 50 Q80 45 78 50 Q80 55 85 50 Z" fill="#FDD835" />
+  <!-- Texture dots -->
+  <circle cx="34" cy="42" r="1" fill="#FDD835" />
+  <circle cx="50" cy="36" r="1" fill="#FDD835" />
+  <circle cx="66" cy="44" r="1" fill="#FDD835" />
+  <circle cx="44" cy="62" r="1" fill="#FDD835" />
+  <circle cx="60" cy="58" r="1" fill="#FDD835" />
+</svg>

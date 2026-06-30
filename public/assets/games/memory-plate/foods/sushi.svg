@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Seaweed Wrap (Nori) -->
+  <rect x="20" y="30" width="60" height="40" rx="10" fill="#263238" />
+  <!-- Rice Inside -->
+  <rect x="25" y="35" width="50" height="30" rx="5" fill="#ECEFF1" />
+  <!-- Fillings in center -->
+  <circle cx="50" cy="50" r="10" fill="#FF5722" /> <!-- Salmon -->
+  <rect x="44" y="44" width="6" height="12" fill="#8BC34A" /> <!-- Cucumber -->
+  <rect x="52" y="44" width="8" height="8" fill="#FFEB3B" /> <!-- Egg -->
+</svg>

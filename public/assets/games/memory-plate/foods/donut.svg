@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Dough with evenodd transparent hole -->
+  <path d="M 50 10 A 40 40 0 1 0 50 90 A 40 40 0 1 0 50 10 Z M 50 34 A 16 16 0 1 1 50 66 A 16 16 0 1 1 50 34 Z" fill="#E2A76F" stroke="#C68A4C" stroke-width="2" fill-rule="evenodd" />
+  <!-- Glaze with evenodd transparent hole -->
+  <path d="M 50 14 C 70 14 86 30 86 50 C 86 65 74 86 50 86 C 26 86 14 65 14 50 C 14 30 30 14 50 14 Z M 50 34 A 16 16 0 1 1 50 66 A 16 16 0 1 1 50 34 Z" fill="#E91E63" fill-rule="evenodd" />
+  <!-- Sprinkles -->
+  <rect x="32" y="28" width="6" height="2.5" rx="1" transform="rotate(30 32 28)" fill="#FFEB3B" />
+  <rect x="62" y="28" width="6" height="2.5" rx="1" transform="rotate(-45 62 28)" fill="#00E676" />
+  <rect x="24" y="50" width="6" height="2.5" rx="1" transform="rotate(15 24 50)" fill="#00B0FF" />
+  <rect x="70" y="50" width="6" height="2.5" rx="1" transform="rotate(70 70 50)" fill="#FF9100" />
+  <rect x="48" y="22" width="6" height="2.5" rx="1" transform="rotate(110 48 22)" fill="#AA00FF" />
+  <rect x="48" y="74" width="6" height="2.5" rx="1" transform="rotate(-20 48 74)" fill="#FFFFFF" />
+</svg>

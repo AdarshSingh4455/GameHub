@@ -2225,7 +2225,15 @@ function createModelMock(modelName: string) {
               { id: 'first-game', slug: 'first-game', name: 'First Move', description: 'Play your first game.', xpReward: 50, coinReward: 10, category: 'Gameplay' },
               { id: 'first-win', slug: 'first-win', name: 'Winner Winner', description: 'Win your first match.', xpReward: 100, coinReward: 25, category: 'Wins' },
               { id: 'level-5', slug: 'level-5', name: 'Rising Star', description: 'Reach level 5.', xpReward: 150, coinReward: 50, category: 'Streaks' },
-              { id: 'streak-3', slug: 'streak-3', name: 'On Fire', description: 'Maintain a 3-day active streak.', xpReward: 150, coinReward: 50, category: 'Streaks' }
+              { id: 'streak-3', slug: 'streak-3', name: 'On Fire', description: 'Maintain a 3-day active streak.', xpReward: 150, coinReward: 50, category: 'Streaks' },
+              { id: 'memory-plate-bronze', slug: 'memory-plate-bronze', name: 'Memory Apprentice', description: 'Recreate 10 plates in Memory Plate.', xpReward: 100, coinReward: 25, category: 'Gameplay' },
+              { id: 'memory-plate-silver', slug: 'memory-plate-silver', name: 'Memory Expert', description: 'Recreate 30 plates in Memory Plate.', xpReward: 200, coinReward: 50, category: 'Gameplay' },
+              { id: 'memory-plate-gold', slug: 'memory-plate-gold', name: 'Memory Master', description: 'Recreate 100 plates in Memory Plate.', xpReward: 500, coinReward: 150, category: 'Gameplay' },
+              { id: 'memory-plate-perfect', slug: 'memory-plate-perfect', name: 'Flawless Plate', description: 'Recreate a plate with 100% accuracy on Hard difficulty.', xpReward: 300, coinReward: 100, category: 'Special' },
+              { id: 'sky-flight-bronze', slug: 'sky-flight-bronze', name: 'Rookie Flyer', description: 'Fly a total of 5,000 meters in Sky Flight.', xpReward: 100, coinReward: 25, category: 'Gameplay' },
+              { id: 'sky-flight-silver', slug: 'sky-flight-silver', name: 'Captain Flyer', description: 'Fly a total of 15,000 meters in Sky Flight.', xpReward: 200, coinReward: 50, category: 'Gameplay' },
+              { id: 'sky-flight-gold', slug: 'sky-flight-gold', name: 'Sonic Jet', description: 'Fly a total of 50,000 meters in Sky Flight.', xpReward: 500, coinReward: 150, category: 'Gameplay' },
+              { id: 'sky-flight-perfect', slug: 'sky-flight-perfect', name: 'Flawless Flight', description: 'Complete a 1,500m+ run with no collisions in Sky Flight.', xpReward: 350, coinReward: 100, category: 'Special' }
             ]
           }
         }

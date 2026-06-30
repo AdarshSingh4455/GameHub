@@ -325,6 +325,38 @@ export const GAMES_REGISTRY: GameInfo[] = [
       { value: 'bubble-shooter-classic', label: 'Bubble Shooter Classic' }
     ],
   },
+  {
+    slug: 'memory-plate',
+    name: 'Memory Plate',
+    category: 'Puzzle',
+    emoji: '🍽️',
+    description: 'Memorize the plate arrangements and recreate them exactly. Watch out for similar food patterns and rotations!',
+    multiplayer: false,
+    type: 'internal',
+    badge: 'New',
+    componentName: 'memoryplate',
+    supportsRanked: true,
+    supportsLeaderboard: true,
+    leaderboardModes: [
+      { value: 'memory-plate-classic', label: 'Memory Plate (Classic)' }
+    ],
+  },
+  {
+    slug: 'sky-flight',
+    name: 'Sky Flight',
+    category: 'Arcade',
+    emoji: '✈️',
+    description: 'Steer your plane through lanes to dodge storm clouds, lightning, and birds. Collect powerups and keep going!',
+    multiplayer: false,
+    type: 'internal',
+    badge: 'New',
+    componentName: 'skyflight',
+    supportsRanked: true,
+    supportsLeaderboard: true,
+    leaderboardModes: [
+      { value: 'sky-flight-classic', label: 'Sky Flight (Classic)' }
+    ],
+  },
 ]
 
 export function getGameBySlug(slug: string): GameInfo | undefined {

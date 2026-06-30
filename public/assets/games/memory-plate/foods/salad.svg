@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Bowl -->
+  <path d="M15 45 L85 45 C80 80, 20 80, 15 45 Z" fill="#78909C" stroke="#455A64" stroke-width="3" />
+  <!-- Salad Leaves -->
+  <path d="M18 42 C12 35, 30 25, 32 42 Z" fill="#66BB6A" />
+  <path d="M30 42 C24 30, 48 20, 46 42 Z" fill="#4CAF50" />
+  <path d="M44 42 C40 32, 62 25, 60 42 Z" fill="#81C784" />
+  <path d="M58 42 C54 28, 78 28, 74 42 Z" fill="#4CAF50" />
+  <path d="M70 42 C68 35, 88 35, 82 42 Z" fill="#66BB6A" />
+  <!-- Cherry Tomatoes -->
+  <circle cx="34" cy="38" r="5" fill="#E53935" />
+  <circle cx="66" cy="36" r="5" fill="#E53935" />
+  <!-- Cucumber slices -->
+  <circle cx="50" cy="35" r="6" fill="#81C784" stroke="#388E3C" stroke-width="2" />
+  <circle cx="50" cy="35" r="2" fill="#388E3C" />
+</svg>

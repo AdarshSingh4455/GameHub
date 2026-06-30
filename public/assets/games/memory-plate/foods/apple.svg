@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Apple Body -->
+  <path d="M50 30 Q35 15 22 30 Q10 44 22 66 Q35 85 50 78 Q65 85 78 66 Q90 44 78 30 Q65 15 50 30 Z" fill="#E53935" />
+  <!-- Stem -->
+  <path d="M50 25 Q52 12 60 10" fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" />
+  <!-- Leaf -->
+  <path d="M54 20 Q66 12 62 24 Q56 26 54 20 Z" fill="#4CAF50" />
+</svg>

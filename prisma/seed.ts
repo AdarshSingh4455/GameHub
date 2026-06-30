@@ -52,6 +52,9 @@ const games = [
   { slug: 'hangman',         name: 'Hangman',             description: 'Guess the hidden word letter by letter. Play solo or challenge opponents online!', type: 'REWRITTEN', isMultiplay: true,  category: 'social' },
   { slug: 'four-in-a-row',   name: '4 In A Row',          description: 'Drop discs into the grid and be the first to connect four in a row horizontally, vertically, or diagonally.', type: 'REWRITTEN', isMultiplay: true,  category: 'dual-player' },
   { slug: 'snake-arena',     name: 'Snake Arena',         description: 'Control your snake, eat food, use powerups, grow, and outlast other players in a real-time multiplayer arena!', type: 'REWRITTEN', isMultiplay: true,  category: 'strategy' },
+  { slug: 'bubble-shooter',  name: 'Bubble Shooter Saga', description: 'Pop matching bubbles, drop floating clusters, and complete magical saga objectives!', type: 'REWRITTEN', isMultiplay: false, category: 'puzzle' },
+  { slug: 'memory-plate',    name: 'Memory Plate',        description: 'Memorize the plate arrangements and recreate them exactly. Watch out for similar food patterns and rotations!', type: 'REWRITTEN', isMultiplay: false, category: 'puzzle' },
+  { slug: 'sky-flight',      name: 'Sky Flight',          description: 'Steer your plane through lanes to dodge storm clouds, lightning, and birds. Collect powerups and keep going!', type: 'REWRITTEN', isMultiplay: false, category: 'arcade' },
 ]
 
 const achievements = [
@@ -159,6 +162,16 @@ const achievements = [
   { slug: 'bubble-shooter-apprentice', name: 'Saga Apprentice', description: 'Complete Level 2 in the Bubble Shooter Saga.', xpReward: 150, coinReward: 30, category: 'gameplay', gameSlug: 'bubble-shooter' },
   { slug: 'bubble-shooter-master', name: 'Saga Master', description: 'Complete Level 3 (Finish the Saga) in Bubble Shooter.', xpReward: 300, coinReward: 75, category: 'gameplay', gameSlug: 'bubble-shooter' },
   { slug: 'bubble-shooter-perfect', name: 'Perfect Aim', description: 'Earn 3 stars on any Bubble Shooter Saga level.', xpReward: 200, coinReward: 50, category: 'special', gameSlug: 'bubble-shooter' },
+  // Memory Plate tiered achievements
+  { slug: 'memory-plate-bronze', name: 'Memory Apprentice', description: 'Recreate 10 plates in Memory Plate.', xpReward: 100, coinReward: 25, category: 'gameplay', gameSlug: 'memory-plate' },
+  { slug: 'memory-plate-silver', name: 'Memory Expert', description: 'Recreate 30 plates in Memory Plate.', xpReward: 200, coinReward: 50, category: 'gameplay', gameSlug: 'memory-plate' },
+  { slug: 'memory-plate-gold', name: 'Memory Master', description: 'Recreate 100 plates in Memory Plate.', xpReward: 500, coinReward: 150, category: 'gameplay', gameSlug: 'memory-plate' },
+  { slug: 'memory-plate-perfect', name: 'Flawless Plate', description: 'Recreate a plate with 100% accuracy on Hard difficulty.', xpReward: 300, coinReward: 100, category: 'special', gameSlug: 'memory-plate' },
+  // Sky Flight tiered achievements
+  { slug: 'sky-flight-bronze', name: 'Rookie Flyer', description: 'Fly a total of 5,000 meters in Sky Flight.', xpReward: 100, coinReward: 25, category: 'gameplay', gameSlug: 'sky-flight' },
+  { slug: 'sky-flight-silver', name: 'Captain Flyer', description: 'Fly a total of 15,000 meters in Sky Flight.', xpReward: 200, coinReward: 50, category: 'gameplay', gameSlug: 'sky-flight' },
+  { slug: 'sky-flight-gold', name: 'Sonic Jet', description: 'Fly a total of 50,000 meters in Sky Flight.', xpReward: 500, coinReward: 150, category: 'gameplay', gameSlug: 'sky-flight' },
+  { slug: 'sky-flight-perfect', name: 'Flawless Flight', description: 'Complete a 1,500m+ run with no collisions in Sky Flight.', xpReward: 350, coinReward: 100, category: 'special', gameSlug: 'sky-flight' },
 ]
 
 async function main() {

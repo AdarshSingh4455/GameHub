@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Bottom Pancake -->
+  <ellipse cx="50" cy="70" rx="38" ry="12" fill="#E2A76F" stroke="#B07A43" stroke-width="2" />
+  <!-- Middle Pancake -->
+  <ellipse cx="50" cy="58" rx="37" ry="12" fill="#F3BE8B" stroke="#B07A43" stroke-width="2" />
+  <!-- Top Pancake -->
+  <ellipse cx="50" cy="46" rx="36" ry="12" fill="#F3BE8B" stroke="#B07A43" stroke-width="2" />
+  <!-- Butter Square -->
+  <polygon points="44,38 56,34 60,42 48,46" fill="#FFEB3B" stroke="#F57F17" stroke-width="1.5" />
+  <!-- Maple Syrup Dripping -->
+  <path d="M42 46 Q50 56 50 64 Q54 54 58 48 Q64 54 68 47" fill="none" stroke="#FFA000" stroke-width="4" stroke-linecap="round" />
+</svg>

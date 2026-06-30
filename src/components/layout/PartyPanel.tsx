@@ -474,8 +474,15 @@ export default function PartyPanel() {
                 placeholder="Enter Invite Code..." 
                 className="input" 
                 value={joinCode} 
-                onChange={e => setJoinCode(e.target.value)} 
-                onKeyDown={e => { if (e.key === 'Enter') handleJoinParty() }} 
+                onChange={e => {
+                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6)
+                  setJoinCode(cleaned)
+                }} 
+                onKeyDown={e => { 
+                  if (e.key === 'Enter' && joinCode.length === 6) {
+                    handleJoinParty() 
+                  }
+                }} 
                 style={{ 
                   padding: '0.5rem 0.7rem', 
                   fontSize: '0.78rem', 
@@ -486,13 +493,26 @@ export default function PartyPanel() {
                   flex: 1, 
                   minWidth: 0, 
                   outline: 'none',
-                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.4)'
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.4)',
+                  letterSpacing: joinCode.length > 0 ? '0.1em' : 'normal',
+                  fontFamily: joinCode.length > 0 ? 'monospace' : 'inherit'
                 }} 
               />
               <button 
-                onClick={() => handleJoinParty()} 
+                onClick={() => joinCode.length === 6 && handleJoinParty()} 
+                disabled={joinCode.length !== 6}
                 className="btn btn-secondary" 
-                style={{ fontSize: '0.78rem', padding: '0.5rem 0.8rem', borderRadius: 10, fontWeight: 800, flexShrink: 0, width: 'auto' }}
+                style={{ 
+                  fontSize: '0.78rem', 
+                  padding: '0.5rem 0.8rem', 
+                  borderRadius: 10, 
+                  fontWeight: 800, 
+                  flexShrink: 0, 
+                  width: 'auto',
+                  opacity: joinCode.length === 6 ? 1 : 0.4,
+                  cursor: joinCode.length === 6 ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.15s ease'
+                }}
               >
                 Join
               </button>

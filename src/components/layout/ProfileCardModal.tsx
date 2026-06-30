@@ -78,6 +78,14 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
   const [showInviteMenu, setShowInviteMenu] = useState(false)
   const [showChallengeMenu, setShowChallengeMenu] = useState(false)
 
+  const onCloseRef = React.useRef(onClose)
+  const addToastRef = React.useRef(addToast)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+    addToastRef.current = addToast
+  })
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -89,22 +97,43 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
     }
 
     setLoading(true)
+    let active = true
+
     fetch(`/api/profile/${profileId}`)
       .then((res) => {
         if (res.ok) return res.json()
         throw new Error('Failed to fetch profile')
       })
       .then((resData) => {
-        setData(resData)
-        setLoading(false)
+        if (active) {
+          setData(resData)
+          setLoading(false)
+        }
       })
       .catch((err) => {
         console.error(err)
-        addToast('error', 'Error', 'Failed to load profile details.')
-        setLoading(false)
-        onClose()
+        if (active) {
+          addToastRef.current('error', 'Error', 'Failed to load profile details.')
+          setLoading(false)
+          onCloseRef.current()
+        }
       })
-  }, [profileId, isOpen, onClose, addToast])
+
+    return () => {
+      active = false
+    }
+  }, [profileId, isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseRef.current()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
 
   if (!mounted || !isOpen || !profileId) return null
 
@@ -264,7 +293,11 @@ export default function ProfileCardModal({ profileId, isOpen, onClose }: Props) 
         justifyContent: 'center',
       }}
       className="animate-fadeIn"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
     >
       <style>{`
         .profile-card-container {

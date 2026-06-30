@@ -1,6 +1,6 @@
 import { getGameSessionFromCache, saveGameSessionToCache, deleteGameSessionFromCache, persistSnapshotAsync, handleMatchCompletion } from './framework'
 import { logger } from '../utils/logger'
-import type { Position, SnakePlayer, FoodItem, PowerupItem, SnakeArenaState } from '../../../src/lib/snakeArenaTypes'
+import type { Position, SnakePlayer, FoodItem, PowerupItem, SnakeArenaState } from '../types/snakeArenaTypes'
 
 export type { Position, SnakePlayer, FoodItem, PowerupItem, SnakeArenaState }
 

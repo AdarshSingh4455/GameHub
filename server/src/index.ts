@@ -1531,7 +1531,7 @@ io.on('connection', async (rawSocket) => {
       const nextState = processSnakeDirectionChange(state, userId, direction)
       await saveSnakeArenaSession(roomCode, nextState)
     } catch (err) {
-      logger.error(`Error processing snake-steer for user=${userId} room=${roomCode}:`, err)
+      logger.error({ err }, `Error processing snake-steer for user=${userId} room=${roomCode}`)
     }
   })
 
@@ -1548,7 +1548,7 @@ io.on('connection', async (rawSocket) => {
       const nextState = processSnakeBoost(state, userId, isBoosting)
       await saveSnakeArenaSession(roomCode, nextState)
     } catch (err) {
-      logger.error(`Error processing snake-boost for user=${userId} room=${roomCode}:`, err)
+      logger.error({ err }, `Error processing snake-boost for user=${userId} room=${roomCode}`)
     }
   })
 
@@ -2003,6 +2003,18 @@ io.on('connection', async (rawSocket) => {
             }
 
           } else if (room.status === 'WAITING') {
+            // Check if user is still active on the platform via heartbeat before removing
+            const userProfile = await prisma.profile.findUnique({
+              where: { userId }
+            })
+            const lastSeen = userProfile?.lastSeenAt ? new Date(userProfile.lastSeenAt).getTime() : 0
+            const isStillActive = (Date.now() - lastSeen) < 180000 // 3 minutes
+
+            if (isStillActive) {
+              logger.info(`[GRACE PERIOD] Preserving player membership for active user: ${username} (${userId})`)
+              continue
+            }
+
             // Player abandoned waiting lobby -> Clean remove
             await prisma.multiplayerRoomPlayer.delete({
               where: { id: playerProfile.id }

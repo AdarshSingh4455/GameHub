@@ -535,6 +535,21 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
   return profile
 }
 
+function matchValue(itemVal: any, queryVal: any): boolean {
+  if (queryVal && typeof queryVal === 'object') {
+    if ('not' in queryVal) {
+      return itemVal !== queryVal.not
+    }
+    if ('in' in queryVal && Array.isArray(queryVal.in)) {
+      return queryVal.in.includes(itemVal)
+    }
+    if ('notIn' in queryVal && Array.isArray(queryVal.notIn)) {
+      return !queryVal.notIn.includes(itemVal)
+    }
+  }
+  return itemVal === queryVal
+}
+
 // ─── Model Mock Factory ──────────────────────────────────────────────────────
 
 function createModelMock(modelName: string) {
@@ -951,9 +966,17 @@ function createModelMock(modelName: string) {
             const db = loadDb()
             const where = params.where || {}
             for (const room of Object.values(db.rooms)) {
-              const p = (room.players || []).find((p: any) =>
-                Object.entries(where).every(([k, v]) => (p as any)[k] === v || room[k] === v)
-              )
+              const p = (room.players || []).find((p: any) => {
+                return Object.entries(where).every(([k, v]) => {
+                  if (k === 'room') {
+                    if (v && typeof v === 'object' && 'status' in v) {
+                      return matchValue(room.status, (v as any).status)
+                    }
+                    return true
+                  }
+                  return matchValue(p[k], v) || matchValue(room[k], v)
+                })
+              })
               if (p) return { ...p, room }
             }
             return null

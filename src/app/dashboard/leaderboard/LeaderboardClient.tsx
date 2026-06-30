@@ -760,7 +760,10 @@ export default function LeaderboardClient({
                             />
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                               <button
-                                onClick={() => setSelectedProfileId(row.profileId)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedProfileId(row.profileId)
+                                }}
                                 style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: isMe ? 'hsl(220 100% 60%)' : 'white', cursor: 'pointer', textAlign: 'left' }}
                                 className="hover-underline"
                               >
@@ -1082,7 +1085,10 @@ export default function LeaderboardClient({
                                 />
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                   <button
-                                    onClick={() => setSelectedProfileId(row.profileId)}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedProfileId(row.profileId)
+                                    }}
                                     style={{ background: 'transparent', border: 'none', padding: 0, margin: 0, fontWeight: 600, color: isMe ? '#e11d48' : 'white', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >

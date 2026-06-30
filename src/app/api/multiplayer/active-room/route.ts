@@ -40,8 +40,7 @@ export async function GET(request: Request) {
     }
 
     const room = activePlayerRoom.room
-    const fiveMinutesAgo = new Date(Date.now() - 300000)
-    let isAbandoned = room.updatedAt < fiveMinutesAgo
+    let isAbandoned = false
 
     if (room.status === 'PLAYING') {
       const roomPlayers = await prisma.multiplayerRoomPlayer.findMany({
@@ -56,6 +55,19 @@ export async function GET(request: Request) {
       })
 
       if (activePlayers.length <= 1 && room.updatedAt < oneMinuteAgo) {
+        isAbandoned = true
+      }
+    } else if (room.status === 'WAITING') {
+      // For waiting lobbies, only consider abandoned if it's older than 30 minutes, 
+      // or if the host is no longer active (lastSeenAt is older than 5 minutes)
+      const hostProfile = await prisma.profile.findUnique({
+        where: { userId: room.hostUserId }
+      })
+      const hostLastSeen = hostProfile?.lastSeenAt ? new Date(hostProfile.lastSeenAt).getTime() : 0
+      const isHostActive = (Date.now() - hostLastSeen) < 300000 // 5 minutes
+      
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000)
+      if (room.createdAt < thirtyMinutesAgo && !isHostActive) {
         isAbandoned = true
       }
     }

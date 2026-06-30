@@ -786,7 +786,10 @@ export default function MultiplayerScribbleGame({
                         {isCurDrawer ? '✏️' : isLeader ? '👑' : didGuess ? '✅' : '👤'}
                       </span>
                       <button
-                        onClick={() => p.profileId && setSelectedProfileId(p.profileId)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          p.profileId && setSelectedProfileId(p.profileId)
+                        }}
                         style={{
                           background: 'none', border: 'none', padding: 0, cursor: p.profileId ? 'pointer' : 'default',
                           color: isMe ? 'hsl(220 100% 75%)' : 'white',

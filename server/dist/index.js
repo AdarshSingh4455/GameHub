@@ -38,6 +38,7 @@ const numberGuessing_1 = require("./games/numberGuessing");
 const scribble_1 = require("./games/scribble");
 const hangman_1 = require("./games/hangman");
 const whosSpy_1 = require("./games/whosSpy");
+const snakeArena_1 = require("./games/snakeArena");
 const framework_1 = require("./games/framework");
 // Initialize Sentry SDK
 (0, logger_1.initSentry)();
@@ -81,6 +82,7 @@ function clearTurnTimer(roomCode) {
         clearTimeout(timeout);
         exports.roomTurnTimeouts.delete(roomCode);
     }
+    (0, snakeArena_1.stopSnakeArenaTick)(roomCode);
 }
 function startTurnTimer(roomCode) {
     clearTurnTimer(roomCode);
@@ -1071,10 +1073,16 @@ io.on('connection', async (rawSocket) => {
             else if (room.gameSlug === 'hangman') {
                 await (0, hangman_1.saveHangmanSession)(room.roomCode, initialGameState);
             }
+            else if (room.gameSlug === 'snake-arena') {
+                await (0, snakeArena_1.saveSnakeArenaSession)(room.roomCode, initialGameState);
+            }
             await broadcastRoomUpdate(room.roomCode);
             io.to(`room:${room.roomCode}`).emit('game-started', { roomCode: room.roomCode });
             if (room.gameSlug === 'dots-boxes' || room.gameSlug === 'memory' || room.gameSlug === 'rps' || room.gameSlug === 'number-guessing') {
                 startTurnTimer(room.roomCode);
+            }
+            else if (room.gameSlug === 'snake-arena') {
+                (0, snakeArena_1.startSnakeArenaTick)(room.roomCode, io, exports.prisma);
             }
             logger_1.logger.info(`[GAME STARTING] room=${room.roomCode} game=${room.gameSlug}`);
             if (callback)
@@ -1438,6 +1446,41 @@ io.on('connection', async (rawSocket) => {
             if (callback)
                 callback({ error: err.message });
         });
+    });
+    // Snake Arena Steering Inputs
+    socket.on('snake-steer', async ({ roomCode, direction }) => {
+        try {
+            const room = await exports.prisma.multiplayerRoom.findUnique({
+                where: { roomCode }
+            });
+            if (!room || room.status !== 'PLAYING')
+                return;
+            const state = await (0, snakeArena_1.getSnakeArenaSession)(roomCode, room.id, exports.prisma);
+            if (!state || state.status !== 'PLAYING')
+                return;
+            const nextState = (0, snakeArena_1.processSnakeDirectionChange)(state, userId, direction);
+            await (0, snakeArena_1.saveSnakeArenaSession)(roomCode, nextState);
+        }
+        catch (err) {
+            logger_1.logger.error({ err }, `Error processing snake-steer for user=${userId} room=${roomCode}`);
+        }
+    });
+    socket.on('snake-boost', async ({ roomCode, isBoosting }) => {
+        try {
+            const room = await exports.prisma.multiplayerRoom.findUnique({
+                where: { roomCode }
+            });
+            if (!room || room.status !== 'PLAYING')
+                return;
+            const state = await (0, snakeArena_1.getSnakeArenaSession)(roomCode, room.id, exports.prisma);
+            if (!state || state.status !== 'PLAYING')
+                return;
+            const nextState = (0, snakeArena_1.processSnakeBoost)(state, userId, isBoosting);
+            await (0, snakeArena_1.saveSnakeArenaSession)(roomCode, nextState);
+        }
+        catch (err) {
+            logger_1.logger.error({ err }, `Error processing snake-boost for user=${userId} room=${roomCode}`);
+        }
     });
     // Vote Replay
     socket.on('vote-replay', async ({ roomCode }, callback) => {
@@ -1878,6 +1921,16 @@ io.on('connection', async (rawSocket) => {
                         }
                     }
                     else if (room.status === 'WAITING') {
+                        // Check if user is still active on the platform via heartbeat before removing
+                        const userProfile = await exports.prisma.profile.findUnique({
+                            where: { userId }
+                        });
+                        const lastSeen = userProfile?.lastSeenAt ? new Date(userProfile.lastSeenAt).getTime() : 0;
+                        const isStillActive = (Date.now() - lastSeen) < 180000; // 3 minutes
+                        if (isStillActive) {
+                            logger_1.logger.info(`[GRACE PERIOD] Preserving player membership for active user: ${username} (${userId})`);
+                            continue;
+                        }
                         // Player abandoned waiting lobby -> Clean remove
                         await exports.prisma.multiplayerRoomPlayer.delete({
                             where: { id: playerProfile.id }

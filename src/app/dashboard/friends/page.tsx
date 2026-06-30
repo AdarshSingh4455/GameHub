@@ -570,7 +570,10 @@ export default function FriendsPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <button
-                                  onClick={() => setSelectedProfileId(friend.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedProfileId(friend.id)
+                                  }}
                                   style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.92rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                   className="hover-underline"
                                 >
@@ -670,7 +673,10 @@ export default function FriendsPage() {
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                                   <button
-                                    onClick={() => setSelectedProfileId(req.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedProfileId(req.id)
+                                    }}
                                     style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >
@@ -721,7 +727,10 @@ export default function FriendsPage() {
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                                   <button
-                                    onClick={() => setSelectedProfileId(req.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedProfileId(req.id)
+                                    }}
                                     style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'hsl(220 10% 80%)', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >
@@ -787,7 +796,10 @@ export default function FriendsPage() {
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                                   <button
-                                    onClick={() => setSelectedProfileId(p.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedProfileId(p.id)
+                                    }}
                                     style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                     className="hover-underline"
                                   >
@@ -878,7 +890,10 @@ export default function FriendsPage() {
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                               <button
-                                onClick={() => setSelectedProfileId(player.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedProfileId(player.id)
+                                }}
                                 style={{ background: 'transparent', border: 'none', padding: 0, fontWeight: 750, fontSize: '0.9rem', color: 'white', cursor: 'pointer', textAlign: 'left' }}
                                 className="hover-underline"
                               >

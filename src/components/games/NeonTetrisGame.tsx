@@ -810,14 +810,15 @@ export default function NeonTetrisGame() {
     })
 
     if (isRanked) {
-      fetch('/api/ranked/stats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          result: resultPayload,
-          opponentName: opponentName
-        })
-      })
+       fetch('/api/ranked/stats', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           result: resultPayload,
+           opponentName: opponentName,
+           gameSlug: 'neon-tetris'
+         })
+       })
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json()

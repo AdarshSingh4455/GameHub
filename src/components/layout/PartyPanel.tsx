@@ -59,6 +59,7 @@ export default function PartyPanel() {
 
   const [party, setParty] = useState<PartyState | null>(null)
   const [joinCode, setJoinCode] = useState('')
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
   const [receivedInvites, setReceivedInvites] = useState<PartyInvite[]>([])
 
   const [friends, setFriends] = useState<any[]>([])
@@ -247,6 +248,7 @@ export default function PartyPanel() {
       } else {
         setParty(res.party)
         setJoinCode('')
+        setIsJoinModalOpen(false)
         addToast('success', 'Party Joined!', `Connected to party: ${res.party.partyCode}`)
       }
     })
@@ -468,55 +470,31 @@ export default function PartyPanel() {
 
           {/* Controls */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', width: '100%', marginTop: '0.25rem' }} className="party-btn-grid">
-            <div style={{ display: 'flex', gap: '0.4rem', width: '100%', alignItems: 'center' }}>
-              <input 
-                type="text" 
-                placeholder="Enter Invite Code..." 
-                className="input" 
-                value={joinCode} 
-                onChange={e => {
-                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6)
-                  setJoinCode(cleaned)
-                }} 
-                onKeyDown={e => { 
-                  if (e.key === 'Enter' && joinCode.length === 6) {
-                    handleJoinParty() 
-                  }
-                }} 
-                style={{ 
-                  padding: '0.5rem 0.7rem', 
-                  fontSize: '0.78rem', 
-                  borderRadius: 10, 
-                  backgroundColor: 'hsl(222 25% 10%)', 
-                  border: '1px solid hsl(220 15% 16%)', 
-                  color: 'white', 
-                  flex: 1, 
-                  minWidth: 0, 
-                  outline: 'none',
-                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.4)',
-                  letterSpacing: joinCode.length > 0 ? '0.1em' : 'normal',
-                  fontFamily: joinCode.length > 0 ? 'monospace' : 'inherit'
-                }} 
-              />
-              <button 
-                onClick={() => joinCode.length === 6 && handleJoinParty()} 
-                disabled={joinCode.length !== 6}
-                className="btn btn-secondary" 
-                style={{ 
-                  fontSize: '0.78rem', 
-                  padding: '0.5rem 0.8rem', 
-                  borderRadius: 10, 
-                  fontWeight: 800, 
-                  flexShrink: 0, 
-                  width: 'auto',
-                  opacity: joinCode.length === 6 ? 1 : 0.4,
-                  cursor: joinCode.length === 6 ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                Join
-              </button>
-            </div>
+            <button
+              onClick={() => setIsJoinModalOpen(true)}
+              className="btn btn-secondary"
+              style={{
+                width: '100%',
+                fontSize: '0.78rem',
+                padding: '0.55rem',
+                borderRadius: 10,
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                border: '1px solid hsl(220 15% 18%)',
+                background: 'hsl(222 20% 10%)',
+                color: 'white',
+                transition: 'transform 0.1s ease',
+              }}
+              onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <span>🔑</span>
+              <span>Enter Code</span>
+            </button>
             
             <button 
               onClick={handleCreateParty} 
@@ -854,6 +832,127 @@ export default function PartyPanel() {
             </button>
           </div>
 
+        </div>
+      )}
+
+      {isJoinModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(2, 6, 23, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsJoinModalOpen(false)
+          }}
+        >
+          <div
+            style={{
+              width: '90%',
+              maxWidth: '320px',
+              background: 'linear-gradient(135deg, hsl(222, 22%, 8%), hsl(222, 18%, 12%))',
+              border: '1px solid hsl(220, 15%, 16%)',
+              borderRadius: '24px',
+              padding: '2rem 1.75rem',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.5), 0 0 40px rgba(168, 85, 247, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+              position: 'relative',
+              boxSizing: 'border-box'
+            }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setIsJoinModalOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1.2rem',
+                background: 'transparent',
+                border: 'none',
+                color: 'hsl(220 10% 50%)',
+                fontSize: '1.2rem',
+                cursor: 'pointer',
+                padding: '0.2rem',
+              }}
+            >
+              ✕
+            </button>
+
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'white', fontWeight: 800, letterSpacing: '-0.01em' }}>
+                Join Party
+              </h3>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'hsl(220 10% 55%)', lineHeight: 1.4 }}>
+                Enter the 6-character party invite code to join your friends.
+              </p>
+            </div>
+
+            {/* Input */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <input
+                type="text"
+                placeholder="INVITE CODE"
+                value={joinCode}
+                onChange={e => {
+                  const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6)
+                  setJoinCode(cleaned)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && joinCode.length === 6) {
+                    handleJoinParty()
+                  }
+                }}
+                autoFocus
+                style={{
+                  padding: '0.8rem 1rem',
+                  fontSize: '1.1rem',
+                  borderRadius: '14px',
+                  backgroundColor: 'hsl(222, 25%, 6%)',
+                  border: '1.5px solid hsl(220 15% 16%)',
+                  color: 'white',
+                  textAlign: 'center',
+                  outline: 'none',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)',
+                  letterSpacing: '0.25em',
+                  fontFamily: 'monospace',
+                  fontWeight: 700,
+                  transition: 'border-color 0.15s ease',
+                  width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <button
+              onClick={() => joinCode.length === 6 && handleJoinParty()}
+              disabled={joinCode.length !== 6}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                borderRadius: '14px',
+                fontWeight: 800,
+                fontSize: '0.88rem',
+                background: 'linear-gradient(135deg, hsl(220 100% 60%), hsl(270 80% 60%))',
+                boxShadow: '0 4px 14px rgba(168, 85, 247, 0.25)',
+                opacity: joinCode.length === 6 ? 1 : 0.5,
+                cursor: joinCode.length === 6 ? 'pointer' : 'not-allowed',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Join Party Room
+            </button>
+          </div>
         </div>
       )}
 

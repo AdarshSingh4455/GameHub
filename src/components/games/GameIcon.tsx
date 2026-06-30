@@ -590,6 +590,119 @@ export const GameIcon: React.FC<GameIconProps> = ({ slug, size = 40, className }
     )
   }
 
+  // 21. Bubble Shooter Saga Icon
+  if (slug === 'bubble-shooter') {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 40 40"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={className}
+        style={{ display: 'inline-block', verticalAlign: 'middle' }}
+      >
+        <rect width="40" height="40" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        {/* Colorful Bubble Cluster */}
+        <defs>
+          <radialGradient id="bubble-pink" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#ff9ebb" />
+            <stop offset="50%" stopColor="#f43f5e" />
+            <stop offset="100%" stopColor="#9f1239" />
+          </radialGradient>
+          <radialGradient id="bubble-blue" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#93c5fd" />
+            <stop offset="50%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#1e3a8a" />
+          </radialGradient>
+          <radialGradient id="bubble-green" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#86efac" />
+            <stop offset="50%" stopColor="#10b981" />
+            <stop offset="100%" stopColor="#064e3b" />
+          </radialGradient>
+        </defs>
+        {/* Bubbles */}
+        <circle cx="15" cy="15" r="7" fill="url(#bubble-pink)" stroke="#ffffff" strokeWidth="0.5" />
+        <circle cx="15" cy="15" r="7" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+        
+        <circle cx="26" cy="18" r="8" fill="url(#bubble-blue)" stroke="#ffffff" strokeWidth="0.5" />
+        <circle cx="26" cy="18" r="8" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+        
+        <circle cx="18" cy="27" r="7.5" fill="url(#bubble-green)" stroke="#ffffff" strokeWidth="0.5" />
+        <circle cx="18" cy="27" r="7.5" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+        
+        {/* Glow dots / highlights */}
+        <circle cx="13" cy="13" r="1.5" fill="#ffffff" opacity="0.8" />
+        <circle cx="24" cy="16" r="1.8" fill="#ffffff" opacity="0.8" />
+        <circle cx="16" cy="25" r="1.6" fill="#ffffff" opacity="0.8" />
+      </svg>
+    )
+  }
+
+  // 22. Memory Plate Icon
+  if (slug === 'memory-plate') {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 40 40"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={className}
+        style={{ display: 'inline-block', verticalAlign: 'middle' }}
+      >
+        <rect width="40" height="40" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        {/* Premium Food Plate */}
+        <circle cx="20" cy="20" r="13" fill="rgba(255,255,255,0.03)" stroke="#e2e8f0" strokeWidth="1.5" />
+        <circle cx="20" cy="20" r="9" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+        {/* Fork on Left */}
+        <path d="M4 14 L4 26" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M2 14 L2 18 M4 14 L4 18 M6 14 L6 18" stroke="#94a3b8" strokeWidth="1" />
+        {/* Knife on Right */}
+        <path d="M36 14 L36 26" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M36 14 C35 15, 34 17, 34 20 L36 20 Z" fill="#94a3b8" />
+        {/* Food Items arranged on Plate */}
+        <circle cx="17" cy="17" r="2.5" fill="#f43f5e" /> {/* Cherry */}
+        <path d="M23 17 L25 21 L21 21 Z" fill="#facc15" /> {/* Cheese / Cake Slice */}
+        <circle cx="20" cy="24" r="3" fill="#a855f7" /> {/* Macaron / Cake */}
+        <circle cx="20" cy="24" r="1.5" fill="#ffffff" opacity="0.7" />
+      </svg>
+    )
+  }
+
+  // 23. Sky Flight Icon
+  if (slug === 'sky-flight') {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 40 40"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={className}
+        style={{ display: 'inline-block', verticalAlign: 'middle' }}
+      >
+        <rect width="40" height="40" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        {/* Colorful Airplane & Flight Trails */}
+        {/* Wind Trails */}
+        <path d="M6 25 L16 23 M4 17 L14 15 M8 11 L18 10" stroke="rgba(56, 189, 248, 0.4)" strokeWidth="1.5" strokeLinecap="round" />
+        {/* Airplane flying diagonally up-right */}
+        <g transform="translate(4, -4) rotate(15 20 20)">
+          {/* Flame Tail */}
+          <path d="M12 21 L6 21 L10 19 Z" fill="#ea580c" />
+          <path d="M12 21 L8 21 L11 20 Z" fill="#facc15" />
+          {/* Wings */}
+          <path d="M20 9 L15 25 L21 21 Z" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.5" />
+          <path d="M20 29 L15 25 L21 21 Z" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.5" />
+          {/* Fuselage / Main Body */}
+          <path d="M28 21 L12 17 L12 25 Z" fill="#a855f7" stroke="#ffffff" strokeWidth="0.75" />
+          {/* Cockpit Canopy */}
+          <path d="M24 20 L21 19 L21 22 Z" fill="#ffffff" />
+        </g>
+      </svg>
+    )
+  }
+
   // Fallback to vector icon if no SVG defined
   return (
     <Gamepad2

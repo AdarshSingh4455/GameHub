@@ -1225,7 +1225,8 @@ export default function BubbleShooterSagaGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: apiResult,
-          opponentName: opponentName
+          opponentName: opponentName,
+          gameSlug: 'bubble-shooter'
         })
       })
       .then(async (res) => {

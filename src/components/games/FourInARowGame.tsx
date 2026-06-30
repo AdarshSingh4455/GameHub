@@ -294,7 +294,8 @@ export default function FourInARowGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: resultOutcome,
-          opponentName: opponentName
+          opponentName: opponentName,
+          gameSlug: 'four-in-a-row'
         })
       }).catch(err => console.error('Failed to submit ranked stats:', err))
     }

@@ -6,7 +6,22 @@ import Link from 'next/link'
 import { useGameSession } from '@/lib/contexts/GameSessionContext'
 import { getLevelProgress } from '@/lib/xpUtils'
 import { GAMES_REGISTRY, getGameBySlug } from '@/lib/games'
+import GameIcon from '@/components/games/GameIcon'
 import { prefetchProfileDetails } from '@/lib/prefetch'
+
+function formatRecentMatchTime(playedAt: string | Date): string {
+  const date = new Date(playedAt)
+  const diffMs = Date.now() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+
+  if (diffMs > 0 && diffMs < 24 * 60 * 60 * 1000) {
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins} min ago`
+    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+  }
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
 import { RankBadge } from '@/components/layout/RankBadge'
 import { getRankDetails } from '@/lib/rankedUtils'
 import Avatar from '@/components/shared/Avatar'
@@ -267,6 +282,7 @@ export default function ProfilePage() {
       result: 'win' | 'loss' | 'draw'
       mmrChange: number
       playedAt: string
+      gameSlug?: string
     }>
   } | null>(null)
   const [rankedLoading, setRankedLoading] = useState(false)
@@ -1549,12 +1565,14 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {rankedStats.recentMatches.map((match) => {
+                    {rankedStats.recentMatches.slice(0, 5).map((match) => {
                       const won = match.result === 'win'
                       const draw = match.result === 'draw'
                       const badgeBg = draw ? 'hsl(45 100% 55% / 0.12)' : won ? 'hsl(142 70% 45% / 0.12)' : 'hsl(0 80% 55% / 0.12)'
                       const badgeColor = draw ? 'hsl(45 100% 65%)' : won ? 'hsl(142 70% 55%)' : 'hsl(0 80% 65%)'
                       const resultLabel = draw ? 'Draw' : won ? 'Win' : 'Loss'
+                      const gameInfo = GAMES_REGISTRY.find(g => g.slug === (match.gameSlug || 'snake-arena'))
+                      const gameName = gameInfo?.name || 'Snake Arena'
 
                       return (
                         <div
@@ -1574,12 +1592,15 @@ export default function ProfilePage() {
                             <div style={{ background: badgeBg, color: badgeColor, fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', padding: '0.35rem 0.6rem', borderRadius: 8, minWidth: 50, textAlign: 'center' }}>
                               {resultLabel}
                             </div>
-                            <div>
-                              <div style={{ fontWeight: 750, fontSize: '0.9rem', color: 'white' }}>
-                                vs {match.opponentName}
-                              </div>
-                              <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', marginTop: '0.15rem' }}>
-                                {new Date(match.playedAt).toLocaleDateString()}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <GameIcon slug={match.gameSlug || 'snake-arena'} size={32} />
+                              <div>
+                                <div style={{ fontWeight: 750, fontSize: '0.9rem', color: 'white' }}>
+                                  vs {match.opponentName} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'hsl(220 10% 50%)' }}>({gameName})</span>
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: 'hsl(220 10% 50%)', marginTop: '0.15rem' }}>
+                                  {formatRecentMatchTime(match.playedAt)}
+                                </div>
                               </div>
                             </div>
                           </div>

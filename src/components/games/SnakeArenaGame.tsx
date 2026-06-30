@@ -744,7 +744,8 @@ export default function SnakeArenaGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: resultOutcome,
-          opponentName: 'ApexBot'
+          opponentName: 'ApexBot',
+          gameSlug: 'snake-arena'
         })
       }).catch(err => console.error('Failed to submit ranked stats:', err))
     }

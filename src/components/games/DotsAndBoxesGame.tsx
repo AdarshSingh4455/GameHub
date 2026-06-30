@@ -559,7 +559,8 @@ export default function DotsAndBoxesGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: resultPayload,
-          opponentName: opponentName
+          opponentName: opponentName,
+          gameSlug: 'dots-and-boxes'
         })
       })
       .then(async (res) => {

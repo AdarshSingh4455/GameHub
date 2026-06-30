@@ -645,7 +645,8 @@ export default function BlockBlastGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: resultPayload,
-          opponentName: opponentName
+          opponentName: opponentName,
+          gameSlug: 'block-blast'
         })
       })
       .then(async (res) => {

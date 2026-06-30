@@ -2232,6 +2232,7 @@ function createModelMock(modelName: string) {
               opponentName: data.opponentName,
               result: data.result,
               mmrChange: data.mmrChange,
+              gameSlug: data.gameSlug || 'snake-arena',
               playedAt: new Date().toISOString()
             }
             if (!db.rankedMatches) db.rankedMatches = {}

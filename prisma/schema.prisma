@@ -622,6 +622,7 @@ model RankedMatch {
   result       String   // "win", "loss", "draw"
   mmrChange    Int
   playedAt     DateTime @default(now())
+  gameSlug     String   @default("snake-arena")
   profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 

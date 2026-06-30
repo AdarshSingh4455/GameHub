@@ -79,6 +79,8 @@ export default function SkyFlightGame() {
     particles: [] as { x: number; y: number; speed: number; size: number }[],
     clouds: [] as { x: number; y: number; scale: number; speed: number }[],
     
+    isRanked: false,
+    targetScore: 1000,
     keys: {} as Record<string, boolean>
   })
 
@@ -109,6 +111,8 @@ export default function SkyFlightGame() {
     
     // Setup state
     const state = stateRef.current
+    state.isRanked = isRanked
+    state.targetScore = targetScore
     state.seed = seed
     state.gameState = 'playing'
     state.difficulty = nextDifficulty
@@ -291,26 +295,43 @@ export default function SkyFlightGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: finalResult,
-          opponentName
+          opponentName,
+          gameSlug: 'sky-flight'
         })
       }).catch(err => console.error('Failed to submit ranked stats:', err))
     }
   }, [isRanked, targetScore, opponentName, submitGameResult])
 
+  const triggerGameOverRef = useRef(triggerGameOver)
+  useEffect(() => {
+    triggerGameOverRef.current = triggerGameOver
+  }, [triggerGameOver])
+
   // Canvas Main Loop
   useEffect(() => {
+    if (gameState !== 'playing') return
+
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+
+    // devicePixelRatio setup for high-DPI displays
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+    const logicalWidth = 380
+    const logicalHeight = 480
+    
+    canvas.width = logicalWidth * dpr
+    canvas.height = logicalHeight * dpr
+    ctx.scale(dpr, dpr)
 
     let animId: number
     
     // Draw elements
     const draw = () => {
       const state = stateRef.current
-      const width = canvas.width
-      const height = canvas.height
+      const width = logicalWidth
+      const height = logicalHeight
 
       // ── Background Sky Gradient ──
       const grad = ctx.createLinearGradient(0, 0, 0, height)
@@ -718,7 +739,7 @@ export default function SkyFlightGame() {
             const dy = item.distance - state.distanceTraveled
             // If close vertically
             if (dy < 600) {
-              const laneX = item.lane * (canvas.width / 3) + (canvas.width / 6)
+              const laneX = item.lane * (logicalWidth / 3) + (logicalWidth / 6)
               const dx = state.playerX - laneX
               // pull coordinates
               if (Math.abs(dx) > 10) {
@@ -734,8 +755,6 @@ export default function SkyFlightGame() {
 
       // ── Collisions & Collects checking ──
       const playerLane = state.playerLane
-      // Player vertical bounds: 0.85 * canvasHeight
-      // Let's project player bounds into distance unit coords:
       const playerDistPos = state.distanceTraveled
 
       // check collectible grabs
@@ -743,11 +762,9 @@ export default function SkyFlightGame() {
         if (item.lane === playerLane) {
           // If Y position of player matches item
           const distDiff = Math.abs(item.distance - playerDistPos)
-          // height of item is 40-50, checking offset overlap
           if (distDiff < 45) {
             // Picked up!
             audioSynth.playPop()
-            // Remove from list
             state.collectibles.splice(idx, 1)
 
             if (item.type === 'coin') {
@@ -784,7 +801,6 @@ export default function SkyFlightGame() {
         state.obstacles.forEach((obs, idx) => {
           if (obs.lane === playerLane) {
             const distDiff = Math.abs(obs.distance - playerDistPos)
-            // height of obstacle is 80, checking overlap
             if (distDiff < 55) {
               // Collided!
               state.obstacles.splice(idx, 1)
@@ -798,7 +814,7 @@ export default function SkyFlightGame() {
                 audioSynth.playBuzzer()
               } else {
                 // Game Over!
-                triggerGameOver(Math.round(state.score), 'loss')
+                triggerGameOverRef.current(Math.round(state.score), 'loss')
               }
             }
           }
@@ -806,8 +822,8 @@ export default function SkyFlightGame() {
       }
 
       // Check early ranked win criteria
-      if (isRanked && state.score >= targetScore) {
-        triggerGameOver(Math.round(state.score), 'win')
+      if (state.isRanked && state.score >= state.targetScore) {
+        triggerGameOverRef.current(Math.round(state.score), 'win')
       }
     }
 
@@ -826,7 +842,7 @@ export default function SkyFlightGame() {
     return () => {
       cancelAnimationFrame(animId)
     }
-  }, [startGame, triggerGameOver, isRanked, targetScore])
+  }, [gameState])
 
   // Start run automatically in ranked mode
   useEffect(() => {

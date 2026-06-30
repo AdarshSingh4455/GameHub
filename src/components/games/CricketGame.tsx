@@ -321,7 +321,8 @@ export default function CricketGame() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             result: apiResult,
-            opponentName: opponentName
+            opponentName: opponentName,
+            gameSlug: 'cricket'
           })
         })
         .then(async (res) => {

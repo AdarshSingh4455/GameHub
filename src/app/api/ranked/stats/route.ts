@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
 
     const result = body.result || 'win'
     const opponentName = body.opponentName || 'BlitzBot'
+    const gameSlug = body.gameSlug || 'snake-arena'
 
     if (!['win', 'loss', 'draw'].includes(result)) {
       return NextResponse.json({ error: 'Invalid result' }, { status: 400 })
@@ -161,6 +162,7 @@ export async function POST(request: NextRequest) {
           opponentName,
           result,
           mmrChange,
+          gameSlug,
         }
       })
     })

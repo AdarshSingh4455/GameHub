@@ -357,7 +357,8 @@ export default function Game2048() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               result: resultPayload,
-              opponentName: opponentName
+              opponentName: opponentName,
+              gameSlug: '2048'
             })
           })
           .then(async (res) => {
@@ -417,7 +418,8 @@ export default function Game2048() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: resultPayload,
-          opponentName: opponentName
+          opponentName: opponentName,
+          gameSlug: '2048'
         })
       })
       .then(async (res) => {

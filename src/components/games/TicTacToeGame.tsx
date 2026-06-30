@@ -110,7 +110,8 @@ export default function TicTacToeGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: resultPayload,
-          opponentName: opponentName
+          opponentName: opponentName,
+          gameSlug: 'tic-tac-toe'
         })
       }).catch(err => console.error('Failed to submit ranked stats:', err))
     }

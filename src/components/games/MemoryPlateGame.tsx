@@ -277,7 +277,8 @@ export default function MemoryPlateGame() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result: finalResult,
-          opponentName
+          opponentName,
+          gameSlug: 'memory-plate'
         })
       }).catch(err => console.error('Failed to submit ranked stats:', err))
     }

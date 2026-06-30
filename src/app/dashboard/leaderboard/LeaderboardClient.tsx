@@ -8,7 +8,22 @@ import RankBadge from '@/components/layout/RankBadge'
 import { getRankDetails } from '@/lib/rankedUtils'
 import Avatar from '@/components/shared/Avatar'
 import { GAMES_REGISTRY } from '@/lib/games'
+import GameIcon from '@/components/games/GameIcon'
 import { Swords, Lock, Trophy, Zap, AlertTriangle, Users, Gift, Image, Tag, Target } from 'lucide-react'
+
+function formatRecentMatchTime(playedAt: string | Date): string {
+  const date = new Date(playedAt)
+  const diffMs = Date.now() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+
+  if (diffMs > 0 && diffMs < 24 * 60 * 60 * 1000) {
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins} min ago`
+    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+  }
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 export interface DivisionRange {
   current: string
@@ -997,15 +1012,19 @@ export default function LeaderboardClient({
                       </tr>
                     </thead>
                     <tbody>
-                      {rankedStats.recentMatches.map((match: any) => {
+                      {rankedStats.recentMatches.slice(0, 5).map((match: any) => {
                         const isWin = match.result === 'win'
                         const isLoss = match.result === 'loss'
+                        const gameName = GAMES_REGISTRY.find(g => g.slug === (match.gameSlug || 'snake-arena'))?.name || 'Snake Arena'
                         return (
                           <tr key={match.id} style={{ borderBottom: '1px solid hsl(220 15% 15%)', fontSize: '0.82rem', color: 'hsl(220 10% 80%)' }}>
                             <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>
-                              <span style={{ background: 'hsl(220 20% 12%)', border: '1px solid hsl(220 15% 18%)', borderRadius: '6px', padding: '0.15rem 0.4rem', fontSize: '0.7rem', color: 'hsl(220 100% 80%)' }}>
-                                Snake Arena
-                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <GameIcon slug={match.gameSlug || 'snake-arena'} size={20} />
+                                <span style={{ background: 'hsl(220 20% 12%)', border: '1px solid hsl(220 15% 18%)', borderRadius: '6px', padding: '0.15rem 0.4rem', fontSize: '0.7rem', color: 'hsl(220 100% 80%)' }}>
+                                  {gameName}
+                                </span>
+                              </div>
                             </td>
                             <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{match.opponentName}</td>
                             <td style={{ padding: '0.75rem 1rem' }}>
@@ -1025,7 +1044,7 @@ export default function LeaderboardClient({
                               {match.mmrChange > 0 ? `+${match.mmrChange}` : match.mmrChange}
                             </td>
                             <td style={{ padding: '0.75rem 1rem', color: 'hsl(220 10% 55%)' }}>
-                              {new Date(match.playedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {formatRecentMatchTime(match.playedAt)}
                             </td>
                           </tr>
                         )

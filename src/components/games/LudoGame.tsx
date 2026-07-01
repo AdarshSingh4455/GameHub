@@ -5,7 +5,7 @@ import { LudoState, PlayerColor, Coordinate, Move, Token } from './ludo/types';
 import { ludoEngine, createLogEntry } from './ludo/engine';
 import { LudoBoard } from './ludo/board';
 import { Dice } from './ludo/dice';
-import { getCoordinate, isSafeCell } from './ludo/rules';
+import { getCoordinate } from './ludo/rules';
 import { ludoAudio } from './ludo/audio';
 
 const colorNames: Record<PlayerColor, string> = {
@@ -29,6 +29,13 @@ const colorThemeBg: Record<PlayerColor, string> = {
   GREEN: 'rgba(0, 204, 102, 0.08)',
 };
 
+const colorStatusIcon: Record<PlayerColor, string> = {
+  RED: '🔴',
+  BLUE: '🔵',
+  YELLOW: '🟡',
+  GREEN: '🟢',
+};
+
 export default function LudoGame() {
   const [gameState, setGameState] = useState<LudoState>(() => ludoEngine.initializeGame(true));
   
@@ -44,6 +51,9 @@ export default function LudoGame() {
 
   // Yard Stats Popup State
   const [selectedYardColor, setSelectedYardColor] = useState<PlayerColor | null>(null);
+
+  // Expandable controls toggle for advanced/debug features
+  const [showExtraControls, setShowExtraControls] = useState(false);
 
   // Auto-move configuration (Preparation for AI / Local Automation)
   const [isAutoPlayer, setIsAutoPlayer] = useState<Record<PlayerColor, boolean>>({
@@ -144,7 +154,6 @@ export default function LudoGame() {
     if (gameState.phase === 'DICE_ROLL' && !diceRolling) {
       handleRollDice();
     } else if (gameState.phase === 'TOKEN_MOVE' && gameState.availableMoves.length > 0 && isMovingTokenId === null) {
-      // Pick a random valid move
       const randMove = gameState.availableMoves[Math.floor(Math.random() * gameState.availableMoves.length)];
       handleTokenClick(randMove.tokenId, gameState.currentTurn);
     }
@@ -220,18 +229,6 @@ export default function LudoGame() {
     return paths;
   };
 
-  const triggerFutureAlert = (featureName: string) => {
-    setGameState((prev) => ({
-      ...prev,
-      logs: [
-        createLogEntry(`[Sprint 3 Adapter] Connected ${featureName} adapter hook!`),
-        ...prev.logs,
-      ],
-    }));
-    alert(`${featureName} is connected to the Ludo core and ready for deployment!`);
-  };
-
-  // Yard Click Handler
   const handleYardClick = (color: PlayerColor) => {
     setSelectedYardColor(color);
   };
@@ -254,26 +251,31 @@ export default function LudoGame() {
 
   const yardStats = selectedYardColor ? getYardStats(selectedYardColor) : null;
 
+  // Render recent 5 log entries
+  const recentLogs = useMemo(() => {
+    return gameState.logs.slice(0, 5);
+  }, [gameState.logs]);
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '1rem',
-        padding: '1rem',
-        background: 'linear-gradient(135deg, #101012 0%, #1a1a1f 100%)',
+        gap: '0.5rem',
+        padding: '0.75rem',
+        background: 'linear-gradient(135deg, #0d0d0f 0%, #151518 100%)',
         color: '#fff',
-        borderRadius: '24px',
-        boxShadow: '0 30px 60px rgba(0, 0, 0, 0.65)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
+        borderRadius: '20px',
+        boxShadow: '0 25px 50px rgba(0, 0, 0, 0.6)',
+        border: '1px solid rgba(255, 255, 255, 0.04)',
         width: '100%',
         margin: '0 auto',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      <div className="bg-glow" style={{ border: `1px solid ${colorHex[gameState.currentTurn]}1a` }} />
+      <div className="bg-glow" style={{ border: `1px solid ${colorHex[gameState.currentTurn]}12` }} />
 
       {/* Confetti canvas overlay on Victory */}
       {showWinnerConfetti && (
@@ -286,7 +288,7 @@ export default function LudoGame() {
             height: '100%',
             pointerEvents: 'none',
             zIndex: 150,
-            background: 'rgba(0,0,0,0.55)',
+            background: 'rgba(0,0,0,0.6)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -295,33 +297,32 @@ export default function LudoGame() {
         >
           <div
             style={{
-              padding: '2.5rem',
-              background: 'rgba(25, 25, 30, 0.9)',
+              padding: '2rem',
+              background: 'rgba(20, 20, 24, 0.95)',
               borderRadius: '24px',
               border: `2px solid ${colorHex[gameState.winner!]}`,
               textAlign: 'center',
-              boxShadow: `0 0 45px ${colorHex[gameState.winner!]}aa`,
+              boxShadow: `0 0 40px ${colorHex[gameState.winner!]}aa`,
               backdropFilter: 'blur(20px)',
-              animation: 'confetti-popup 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
             }}
           >
-            <div style={{ fontSize: '4.5rem', marginBottom: '1rem' }}>🏆</div>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: colorHex[gameState.winner!], margin: '0 0 0.5rem 0' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '0.75rem' }}>🏆</div>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: colorHex[gameState.winner!], margin: '0 0 0.5rem 0' }}>
               {colorNames[gameState.winner!]} Wins!
             </h2>
-            <p style={{ color: '#ccc', margin: '0 0 1.5rem 0' }}>All tokens successfully arrived home!</p>
+            <p style={{ color: '#ccc', margin: '0 0 1.25rem 0' }}>All tokens successfully arrived home!</p>
             <button
               onClick={handleRestart}
               style={{
                 background: colorHex[gameState.winner!],
                 color: '#fff',
                 border: 'none',
-                padding: '12px 30px',
-                borderRadius: '12px',
-                fontSize: '1rem',
+                padding: '10px 24px',
+                borderRadius: '10px',
+                fontSize: '0.9rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: `0 4px 15px ${colorHex[gameState.winner!]}66`,
+                boxShadow: `0 4px 12px ${colorHex[gameState.winner!]}66`,
               }}
             >
               Play Again
@@ -340,87 +341,87 @@ export default function LudoGame() {
             left: 0,
             width: '100%',
             height: '100%',
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.6)',
             backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 100,
-            animation: 'fade-in 0.2s ease-out',
+            animation: 'fade-in 0.15s ease-out',
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: '90%',
-              maxWidth: '360px',
-              background: 'rgba(30, 30, 35, 0.9)',
-              borderRadius: '24px',
-              border: `2px solid ${colorHex[selectedYardColor]}88`,
-              boxShadow: `0 20px 40px rgba(0,0,0,0.5), 0 0 25px ${colorHex[selectedYardColor]}33`,
-              padding: '1.75rem',
+              width: '88%',
+              maxWidth: '340px',
+              background: 'rgba(25, 25, 30, 0.95)',
+              borderRadius: '20px',
+              border: `2px solid ${colorHex[selectedYardColor]}aa`,
+              boxShadow: `0 15px 30px rgba(0,0,0,0.5), 0 0 20px ${colorHex[selectedYardColor]}44`,
+              padding: '1.5rem',
               textAlign: 'center',
-              animation: 'popup-spring 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+              animation: 'popup-spring 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
             }}
           >
             <div
               style={{
-                width: '48px',
-                height: '48px',
+                width: '42px',
+                height: '42px',
                 borderRadius: '50%',
                 backgroundColor: colorHex[selectedYardColor],
-                boxShadow: `0 0 15px ${colorHex[selectedYardColor]}`,
-                margin: '0 auto 12px auto',
+                boxShadow: `0 0 12px ${colorHex[selectedYardColor]}`,
+                margin: '0 auto 10px auto',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '1.25rem',
+                fontSize: '1.1rem',
                 color: '#fff',
                 fontWeight: 800,
               }}
             >
               {selectedYardColor[0]}
             </div>
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 1rem 0', color: colorHex[selectedYardColor] }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.75rem 0', color: colorHex[selectedYardColor] }}>
               {yardStats.name}
             </h3>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
-                <span style={{ color: '#888', fontSize: '0.85rem' }}>Controller Type</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>{yardStats.type}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
+                <span style={{ color: '#888', fontSize: '0.8rem' }}>Controller</span>
+                <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.85rem' }}>{yardStats.type}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
-                <span style={{ color: '#888', fontSize: '0.85rem' }}>Tokens in Yard</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>🏠 {yardStats.base} / 4</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
+                <span style={{ color: '#888', fontSize: '0.8rem' }}>Tokens in Yard</span>
+                <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.85rem' }}>🏠 {yardStats.base} / 4</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
-                <span style={{ color: '#888', fontSize: '0.85rem' }}>Tokens on Track</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>🛣️ {yardStats.active}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
+                <span style={{ color: '#888', fontSize: '0.8rem' }}>Tokens on Track</span>
+                <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.85rem' }}>🛣️ {yardStats.active}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
-                <span style={{ color: '#888', fontSize: '0.85rem' }}>Tokens Finished</span>
-                <span style={{ fontWeight: 700, color: colorHex[selectedYardColor] }}>👑 {yardStats.finished} / 4</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
+                <span style={{ color: '#888', fontSize: '0.8rem' }}>Tokens Finished</span>
+                <span style={{ fontWeight: 700, color: colorHex[selectedYardColor], fontSize: '0.85rem' }}>👑 {yardStats.finished} / 4</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
-                <span style={{ color: '#888', fontSize: '0.85rem' }}>Current Turn Status</span>
-                <span style={{ fontWeight: 700, color: yardStats.isTurn ? colorHex[selectedYardColor] : '#ff5555' }}>
-                  {yardStats.isTurn ? 'ACTIVE TURN' : 'WAITING'}
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
+                <span style={{ color: '#888', fontSize: '0.8rem' }}>Turn Status</span>
+                <span style={{ fontWeight: 700, color: yardStats.isTurn ? colorHex[selectedYardColor] : '#ff4444', fontSize: '0.85rem' }}>
+                  {yardStats.isTurn ? 'ACTIVE' : 'WAITING'}
                 </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => toggleAutoPlayer(selectedYardColor)}
                 style={{
                   flex: 1,
                   background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   color: '#fff',
-                  padding: '10px',
-                  borderRadius: '10px',
-                  fontSize: '0.85rem',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                 }}
@@ -434,12 +435,11 @@ export default function LudoGame() {
                   background: colorHex[selectedYardColor],
                   color: '#fff',
                   border: 'none',
-                  padding: '10px',
-                  borderRadius: '10px',
-                  fontSize: '0.85rem',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: `0 4px 10px ${colorHex[selectedYardColor]}44`,
                 }}
               >
                 Close
@@ -449,57 +449,50 @@ export default function LudoGame() {
         </div>
       )}
 
-      {/* Ludo Game HUD Header */}
+      {/* Compact Top Header */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           width: '100%',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          paddingBottom: '0.75rem',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          paddingBottom: '0.4rem',
           zIndex: 10,
         }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.4rem' }}>🎲</span>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, background: 'linear-gradient(to right, #ffcc00, #ff3366)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Classic Ludo
-            </h1>
-          </div>
-          <p style={{ fontSize: '0.75rem', color: '#888', margin: '2px 0 0 0', fontWeight: 500 }}>
-            Classic Indian Ludo Board • Tap Base Yards for Statistics
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '1.2rem' }}>🎲</span>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, background: 'linear-gradient(to right, #ffcc00, #ff3366)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Ludo Classic
+          </h1>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '6px' }}>
           <button
-            onClick={handleTriggerAutoPlay}
-            disabled={isMovingTokenId !== null || gameState.phase === 'FINISHED'}
+            onClick={() => setShowExtraControls((prev) => !prev)}
             style={{
-              background: 'rgba(255,214,0,0.12)',
-              border: '1px solid rgba(255,214,0,0.25)',
-              color: '#ffd600',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontSize: '0.75rem',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: '#888',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '0.7rem',
               fontWeight: 700,
               cursor: 'pointer',
             }}
           >
-            ⚡ Auto-Step
+            ⚙️ Controls
           </button>
-          
           <button
             onClick={handleRestart}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               color: '#fff',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontSize: '0.75rem',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '0.7rem',
               fontWeight: 700,
               cursor: 'pointer',
             }}
@@ -509,21 +502,111 @@ export default function LudoGame() {
         </div>
       </div>
 
-      {/* Main Layout containing Board with 4 outer-positioned corner Dice */}
+      {/* Expandable Extra Controls */}
+      {showExtraControls && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            background: 'rgba(0,0,0,0.25)',
+            padding: '6px 10px',
+            borderRadius: '8px',
+            width: '100%',
+            justifyContent: 'center',
+            zIndex: 11,
+          }}
+        >
+          <button
+            onClick={handleTriggerAutoPlay}
+            disabled={isMovingTokenId !== null || gameState.phase === 'FINISHED'}
+            style={{
+              background: 'rgba(255,214,0,0.12)',
+              border: '1px solid rgba(255,214,0,0.25)',
+              color: '#ffd600',
+              padding: '5px 10px',
+              borderRadius: '6px',
+              fontSize: '0.7rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+            }}
+          >
+            ⚡ Auto-Step
+          </button>
+          <button
+            onClick={() => toggleAutoPlayer('RED')}
+            style={{
+              background: isAutoPlayer.RED ? 'rgba(255,51,102,0.15)' : 'transparent',
+              border: '1px solid rgba(255,51,102,0.3)',
+              color: '#ff3366',
+              fontSize: '0.65rem',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            Red AI
+          </button>
+          <button
+            onClick={() => toggleAutoPlayer('GREEN')}
+            style={{
+              background: isAutoPlayer.GREEN ? 'rgba(0,204,102,0.15)' : 'transparent',
+              border: '1px solid rgba(0,204,102,0.3)',
+              color: '#00cc66',
+              fontSize: '0.65rem',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            Green AI
+          </button>
+          <button
+            onClick={() => toggleAutoPlayer('YELLOW')}
+            style={{
+              background: isAutoPlayer.YELLOW ? 'rgba(255,170,0,0.15)' : 'transparent',
+              border: '1px solid rgba(255,170,0,0.3)',
+              color: '#ffaa00',
+              fontSize: '0.65rem',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            Yellow AI
+          </button>
+          <button
+            onClick={() => toggleAutoPlayer('BLUE')}
+            style={{
+              background: isAutoPlayer.BLUE ? 'rgba(51,136,255,0.15)' : 'transparent',
+              border: '1px solid rgba(51,136,255,0.3)',
+              color: '#3388ff',
+              fontSize: '0.65rem',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            Blue AI
+          </button>
+        </div>
+      )}
+
+      {/* Main Layout Area: Vertically Centered Ludo Board with Outside Corner Dice */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          justifyContent: 'center',
           width: '100%',
-          maxWidth: '540px',
-          margin: '0 auto',
+          flex: '1 1 auto',
           position: 'relative',
+          padding: '24px 0',
           zIndex: 10,
         }}
       >
-        {/* Relative board wrapper enabling corner overlay positioning for all 4 dice */}
-        <div style={{ position: 'relative', width: '100%' }}>
+        {/* Core Board Container with 12% margins to hold the outer corner dice */}
+        <div style={{ position: 'relative', width: '74%', maxWidth: '380px' }}>
           <LudoBoard
             tokens={allTokens}
             onTokenClick={handleTokenClick}
@@ -536,12 +619,13 @@ export default function LudoGame() {
             onYardClick={handleYardClick}
           />
 
-          {/* RED Dice: Top-Left corner */}
-          <div style={{ position: 'absolute', top: '2.5%', left: '2.5%', pointerEvents: 'auto', zIndex: 12 }}>
+          {/* RED Dice: Top-Left outside */}
+          <div style={{ position: 'absolute', top: '1%', left: '-18%', zIndex: 12 }}>
             <div
               style={{
-                opacity: gameState.currentTurn === 'RED' ? 1.0 : 0.28,
-                transition: 'opacity 0.3s ease',
+                opacity: gameState.currentTurn === 'RED' ? 1.0 : 0.4,
+                pointerEvents: gameState.currentTurn === 'RED' ? 'auto' : 'none',
+                transition: 'opacity 0.2s ease',
               }}
             >
               <Dice
@@ -554,12 +638,13 @@ export default function LudoGame() {
             </div>
           </div>
 
-          {/* GREEN Dice: Top-Right corner */}
-          <div style={{ position: 'absolute', top: '2.5%', right: '2.5%', pointerEvents: 'auto', zIndex: 12 }}>
+          {/* GREEN Dice: Top-Right outside */}
+          <div style={{ position: 'absolute', top: '1%', right: '-18%', zIndex: 12 }}>
             <div
               style={{
-                opacity: gameState.currentTurn === 'GREEN' ? 1.0 : 0.28,
-                transition: 'opacity 0.3s ease',
+                opacity: gameState.currentTurn === 'GREEN' ? 1.0 : 0.4,
+                pointerEvents: gameState.currentTurn === 'GREEN' ? 'auto' : 'none',
+                transition: 'opacity 0.2s ease',
               }}
             >
               <Dice
@@ -572,12 +657,13 @@ export default function LudoGame() {
             </div>
           </div>
 
-          {/* YELLOW Dice: Bottom-Right corner */}
-          <div style={{ position: 'absolute', bottom: '2.5%', right: '2.5%', pointerEvents: 'auto', zIndex: 12 }}>
+          {/* YELLOW Dice: Bottom-Right outside */}
+          <div style={{ position: 'absolute', bottom: '1%', right: '-18%', zIndex: 12 }}>
             <div
               style={{
-                opacity: gameState.currentTurn === 'YELLOW' ? 1.0 : 0.28,
-                transition: 'opacity 0.3s ease',
+                opacity: gameState.currentTurn === 'YELLOW' ? 1.0 : 0.4,
+                pointerEvents: gameState.currentTurn === 'YELLOW' ? 'auto' : 'none',
+                transition: 'opacity 0.2s ease',
               }}
             >
               <Dice
@@ -590,12 +676,13 @@ export default function LudoGame() {
             </div>
           </div>
 
-          {/* BLUE Dice: Bottom-Left corner */}
-          <div style={{ position: 'absolute', bottom: '2.5%', left: '2.5%', pointerEvents: 'auto', zIndex: 12 }}>
+          {/* BLUE Dice: Bottom-Left outside */}
+          <div style={{ position: 'absolute', bottom: '1%', left: '-18%', zIndex: 12 }}>
             <div
               style={{
-                opacity: gameState.currentTurn === 'BLUE' ? 1.0 : 0.28,
-                transition: 'opacity 0.3s ease',
+                opacity: gameState.currentTurn === 'BLUE' ? 1.0 : 0.4,
+                pointerEvents: gameState.currentTurn === 'BLUE' ? 'auto' : 'none',
+                transition: 'opacity 0.2s ease',
               }}
             >
               <Dice
@@ -610,121 +697,115 @@ export default function LudoGame() {
         </div>
       </div>
 
-      {/* Control Panel: Standings & Console Logs */}
+      {/* Redesigned Compact Player Chips */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '8px',
+          width: '100%',
+          flexWrap: 'wrap',
+          marginBottom: '0.4rem',
+        }}
+      >
+        {gameState.players.map((p) => {
+          const isTurn = gameState.currentTurn === p.color;
+          const finished = p.tokens.filter((t) => t.position === 57).length;
+          const inPlay = p.tokens.filter((t) => t.position > 0 && t.position < 57).length;
+          
+          return (
+            <div
+              key={p.color}
+              onClick={() => handleYardClick(p.color)}
+              style={{
+                padding: '6px 12px',
+                background: isTurn ? `${colorHex[p.color]}1a` : 'rgba(255,255,255,0.03)',
+                border: `1.5px solid ${isTurn ? colorHex[p.color] : 'rgba(255,255,255,0.06)'}`,
+                borderRadius: '20px',
+                fontSize: '0.72rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: isTurn ? `0 0 10px ${colorHex[p.color]}22` : 'none',
+              }}
+              className="player-chip-hover"
+            >
+              <span>{colorStatusIcon[p.color]}</span>
+              <span style={{ fontWeight: 800, color: isTurn ? colorHex[p.color] : '#ddd' }}>
+                {colorNames[p.color]}
+              </span>
+              <span style={{ opacity: 0.6, fontSize: '0.65rem' }}>
+                ({finished}👑 / {inPlay}🛣️)
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Redesigned Compact Controls and Console Log Panel */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.75rem',
-          background: 'rgba(25, 25, 30, 0.45)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '20px',
-          padding: '1rem',
-          backdropFilter: 'blur(16px)',
+          gap: '0.4rem',
+          background: 'rgba(15, 15, 18, 0.45)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          borderRadius: '14px',
+          padding: '0.75rem',
+          backdropFilter: 'blur(10px)',
           width: '100%',
-          maxWidth: '540px',
+          maxWidth: '450px',
         }}
       >
-        {/* Dynamic active status header */}
+        {/* Turn status and recent roll indicator */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             background: colorThemeBg[gameState.currentTurn],
-            padding: '8px 12px',
-            borderRadius: '10px',
-            border: `1px solid ${colorHex[gameState.currentTurn]}32`,
+            padding: '6px 10px',
+            borderRadius: '8px',
+            border: `1px solid ${colorHex[gameState.currentTurn]}25`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div
-              style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                backgroundColor: colorHex[gameState.currentTurn],
-                boxShadow: `0 0 10px ${colorHex[gameState.currentTurn]}`,
-              }}
-            />
-            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: colorHex[gameState.currentTurn] }}>
-              Active: {colorNames[gameState.currentTurn]}
-            </span>
-          </div>
-          <span style={{ fontSize: '0.7rem', color: '#888', fontWeight: 700, textTransform: 'uppercase' }}>
-            {gameState.phase.replace('_', ' ')}
+          <span style={{ fontWeight: 700, fontSize: '0.8rem', color: colorHex[gameState.currentTurn] }}>
+            👉 Turn: {colorNames[gameState.currentTurn]}
+          </span>
+          <span style={{ fontSize: '0.8rem', color: '#ffd600', fontWeight: 800 }}>
+            🎲 Roll: {gameState.diceValue}
           </span>
         </div>
 
-        {/* Small Standings overview */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {gameState.players.map((p) => {
-            const isTurn = gameState.currentTurn === p.color;
-            const finished = p.tokens.filter((t) => t.position === 57).length;
-            return (
-              <div
-                key={p.color}
-                onClick={() => handleYardClick(p.color)}
-                style={{
-                  flex: '1 0 auto',
-                  padding: '6px 12px',
-                  background: isTurn ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.15)',
-                  border: `1.5px solid ${isTurn ? colorHex[p.color] : 'rgba(255,255,255,0.06)'}`,
-                  borderRadius: '10px',
-                  fontSize: '0.72rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: colorHex[p.color] }} />
-                <span style={{ fontWeight: 700, color: '#eee' }}>{colorNames[p.color]}</span>
-                <span style={{ opacity: 0.6 }}>👑 {finished}/4</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Gameplay Logs */}
+        {/* Compact Game Logs (last 4 entries only) */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '4px',
-            height: '100px',
-            background: 'rgba(0,0,0,0.2)',
-            borderRadius: '12px',
-            padding: '8px 12px',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            overflowY: 'auto',
+            gap: '3px',
+            maxHeight: '68px',
+            overflowY: 'hidden',
           }}
         >
-          {gameState.logs.map((log) => (
+          {recentLogs.map((log) => (
             <div
               key={log.id}
               style={{
-                fontSize: '0.75rem',
+                fontSize: '0.7rem',
                 lineHeight: '1.3',
-                color: log.color ? colorHex[log.color] : '#aaa',
+                color: log.color ? colorHex[log.color] : '#888',
                 display: 'flex',
                 justifyContent: 'space-between',
                 gap: '8px',
               }}
             >
               <span style={{ fontWeight: log.color ? 600 : 400 }}>{log.message}</span>
-              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.7rem' }}>{log.timestamp}</span>
+              <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.65rem' }}>{log.timestamp}</span>
             </div>
           ))}
           <div ref={logEndRef} />
-        </div>
-
-        {/* Sprint 3 Connective Adaptation Triggers */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
-          <button onClick={() => triggerFutureAlert('Matchmaker')} className="s3-btn">Ranked MMR</button>
-          <button onClick={() => triggerFutureAlert('Spectate Hub')} className="s3-btn">Spectate Mode</button>
-          <button onClick={() => triggerFutureAlert('Replays')} className="s3-btn">Replays</button>
-          <button onClick={() => triggerFutureAlert('Room Lobby')} className="s3-btn">Lobby UI</button>
         </div>
       </div>
 
@@ -740,34 +821,18 @@ export default function LudoGame() {
           pointer-events: none;
           z-index: 1;
         }
-        @keyframes confetti-popup {
-          0% { transform: scale(0.65); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
         @keyframes popup-spring {
-          0% { transform: scale(0.5); opacity: 0; }
-          80% { transform: scale(1.08); opacity: 0.9; }
+          0% { transform: scale(0.65); opacity: 0; }
+          80% { transform: scale(1.05); }
           100% { transform: scale(1); opacity: 1; }
         }
         @keyframes fade-in {
           0% { opacity: 0; }
           100% { opacity: 1; }
         }
-        .s3-btn {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.06);
-          color: rgba(255,255,255,0.5);
-          font-size: 0.65rem;
-          font-weight: 700;
-          padding: 5px 10px;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .s3-btn:hover {
-          background: rgba(255,255,255,0.08);
-          color: #fff;
-          border-color: rgba(255,255,255,0.15);
+        .player-chip-hover:hover {
+          background: rgba(255,255,255,0.08) !important;
+          transform: translateY(-1px);
         }
       `}</style>
     </div>

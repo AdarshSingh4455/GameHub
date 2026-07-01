@@ -26,10 +26,10 @@ const colorMap: Record<PlayerColor, string> = {
 };
 
 const colorGlow: Record<PlayerColor, string> = {
-  RED: 'rgba(255, 51, 102, 0.5)',
-  BLUE: 'rgba(51, 136, 255, 0.5)',
-  YELLOW: 'rgba(255, 170, 0, 0.5)',
-  GREEN: 'rgba(0, 204, 102, 0.5)',
+  RED: 'rgba(255, 51, 102, 0.65)',
+  BLUE: 'rgba(51, 136, 255, 0.65)',
+  YELLOW: 'rgba(255, 170, 0, 0.65)',
+  GREEN: 'rgba(0, 204, 102, 0.65)',
 };
 
 export const Dice: React.FC<DiceProps> = ({
@@ -44,25 +44,21 @@ export const Dice: React.FC<DiceProps> = ({
 
   useEffect(() => {
     if (isRolling) {
-      // Rapid multiple rotations (inertia)
-      const randX = (Math.floor(Math.random() * 3) + 4) * 360; // 1440, 1800, etc.
+      const randX = (Math.floor(Math.random() * 3) + 4) * 360; 
       const randY = (Math.floor(Math.random() * 3) + 4) * 360;
       setRotation(`rotateX(${randX + 45}deg) rotateY(${randY + 45}deg)`);
     } else {
-      // Snap to target face
       setRotation(faceRotations[value] || faceRotations[1]);
     }
   }, [isRolling, value]);
 
   const handleRollClick = () => {
     if (disabled || isRolling) return;
-    
-    // Trigger roll anticipation effect
     setAnticipating(true);
     setTimeout(() => {
       setAnticipating(false);
       onRoll();
-    }, 150);
+    }, 120);
   };
 
   const getDots = (face: number) => {
@@ -79,11 +75,11 @@ export const Dice: React.FC<DiceProps> = ({
       <div
         key={i}
         style={{
-          width: 8,
-          height: 8,
+          width: 5,
+          height: 5,
           borderRadius: '50%',
           backgroundColor: activeDots.includes(i) ? 'white' : 'transparent',
-          boxShadow: activeDots.includes(i) ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
+          boxShadow: activeDots.includes(i) ? '0 0.5px 1px rgba(0,0,0,0.5)' : 'none',
           transition: 'background-color 0.2s',
         }}
       />
@@ -96,28 +92,30 @@ export const Dice: React.FC<DiceProps> = ({
     <div
       style={{
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '1.25rem',
-        background: 'rgba(255, 255, 255, 0.03)',
-        borderRadius: '20px',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
-        backdropFilter: 'blur(16px)',
-        minWidth: '130px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+        padding: '0.4rem',
+        background: 'rgba(255, 255, 255, 0.02)',
+        borderRadius: '12px',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(10px)',
+        width: '54px',
+        height: '54px',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+        position: 'relative',
       }}
     >
       <div
         onClick={handleRollClick}
         style={{
           position: 'relative',
-          width: '60px',
-          height: '60px',
+          width: '36px',
+          height: '36px',
           cursor: isPlayable ? 'pointer' : 'not-allowed',
-          perspective: '600px',
-          transform: anticipating ? 'scale(1.2) rotate(15deg)' : isPlayable ? 'scale(1.05)' : 'scale(1)',
-          transition: 'transform 0.15s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+          perspective: '400px',
+          transform: anticipating ? 'scale(1.15) rotate(10deg)' : isPlayable ? 'scale(1.04)' : 'scale(1)',
+          transition: 'transform 0.12s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+          zIndex: 5,
         }}
         className={isPlayable ? 'dice-interactive' : ''}
       >
@@ -126,15 +124,15 @@ export const Dice: React.FC<DiceProps> = ({
           <div
             style={{
               position: 'absolute',
-              top: '-5px',
-              left: '-5px',
-              right: '-5px',
-              bottom: '-5px',
+              top: '-3px',
+              left: '-3px',
+              right: '-3px',
+              bottom: '-3px',
               background: colorGlow[playerColor],
-              borderRadius: '12px',
-              filter: 'blur(12px)',
+              borderRadius: '8px',
+              filter: 'blur(10px)',
               zIndex: 0,
-              animation: 'active-dice-glow 2s infinite ease-in-out',
+              animation: 'active-dice-glow 1.8s infinite ease-in-out',
             }}
           />
         )}
@@ -147,34 +145,34 @@ export const Dice: React.FC<DiceProps> = ({
             position: 'absolute',
             transformStyle: 'preserve-3d',
             transform: rotation,
-            transition: isRolling ? 'transform 0.8s cubic-bezier(0.1, 0.8, 0.35, 1)' : 'transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.15)',
-            animation: isRolling ? 'dice-roll-bounce 0.8s ease-in-out infinite' : 'none',
+            transition: isRolling ? 'transform 0.75s cubic-bezier(0.1, 0.8, 0.35, 1)' : 'transform 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.15)',
+            animation: isRolling ? 'dice-roll-bounce 0.75s ease-in-out infinite' : 'none',
             zIndex: 1,
           }}
         >
           {([1, 6, 2, 5, 3, 4] as const).map((face) => {
             const rot = faceRotations[face];
-            const translateZ = '30px';
+            const translateZ = '18px'; // half of 36px
             return (
               <div
                 key={face}
                 style={{
                   position: 'absolute',
-                  width: '60px',
-                  height: '60px',
+                  width: '36px',
+                  height: '36px',
                   background: colorMap[playerColor],
-                  border: '2px solid rgba(255,255,255,0.25)',
-                  borderRadius: '12px',
+                  border: '1.5px solid rgba(255,255,255,0.22)',
+                  borderRadius: '8px',
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
                   gridTemplateRows: 'repeat(3, 1fr)',
-                  padding: '7px',
+                  padding: '4px',
                   boxSizing: 'border-box',
                   alignItems: 'center',
                   justifyItems: 'center',
                   backfaceVisibility: 'hidden',
                   transform: `${rot} translateZ(${translateZ})`,
-                  boxShadow: `inset 0 0 12px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0,0,0,0.3)`,
+                  boxShadow: `inset 0 0 8px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0,0,0,0.35)`,
                 }}
               >
                 {getDots(face)}
@@ -184,55 +182,35 @@ export const Dice: React.FC<DiceProps> = ({
         </div>
       </div>
 
-      {/* Styled shadow beneath dice */}
+      {/* Dynamic dice roll shadow scaling */}
       <div
         style={{
-          width: '50px',
-          height: '6px',
-          background: 'rgba(0,0,0,0.5)',
+          position: 'absolute',
+          bottom: '2px',
+          width: '26px',
+          height: '4px',
+          background: 'rgba(0,0,0,0.6)',
           borderRadius: '50%',
-          marginTop: '18px',
-          filter: 'blur(3px)',
-          transform: isRolling ? 'scale(0.55)' : 'scale(1)',
-          opacity: isRolling ? 0.25 : 0.8,
-          transition: 'all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          filter: 'blur(2px)',
+          transform: isRolling ? 'scale(0.5)' : 'scale(1)',
+          opacity: isRolling ? 0.2 : 0.85,
+          transition: 'all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          zIndex: 1,
+          pointerEvents: 'none',
         }}
       />
 
-      {/* Instructions label */}
-      <span
-        style={{
-          fontSize: '0.72rem',
-          color: isPlayable ? '#fff' : 'rgba(255,255,255,0.4)',
-          marginTop: '12px',
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '1px',
-          textAlign: 'center',
-          textShadow: isPlayable ? `0 0 8px ${colorGlow[playerColor]}` : 'none',
-          animation: isPlayable ? 'text-glow 1.5s infinite alternate' : 'none',
-        }}
-      >
-        {isRolling ? 'Rolling...' : disabled ? `${playerColor}'s Turn` : 'Tap to Roll'}
-      </span>
-
-      {/* Keyframe animations */}
       <style>{`
         @keyframes dice-roll-bounce {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-24px); }
+          50% { transform: translateY(-16px); }
         }
         @keyframes active-dice-glow {
-          0%, 100% { opacity: 0.4; filter: blur(10px); }
-          50% { opacity: 0.9; filter: blur(14px); }
-        }
-        @keyframes text-glow {
-          0% { opacity: 0.8; }
-          100% { opacity: 1.0; }
+          0%, 100% { opacity: 0.5; filter: blur(8px); }
+          50% { opacity: 1.0; filter: blur(12px); }
         }
         .dice-interactive:hover {
-          transform: scale(1.12) !important;
-          box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+          transform: scale(1.1) !important;
         }
       `}</style>
     </div>

@@ -25,6 +25,7 @@ import SnakeArenaGame from '@/components/games/SnakeArenaGame'
 import WhosSpyLandingPage from '@/components/games/WhosSpyLandingPage'
 import BubbleShooterSagaGame from '@/components/games/BubbleShooterSagaGame'
 import MemoryPlateGame from '@/components/games/MemoryPlateGame'
+import LudoGame from '@/components/games/LudoGame'
 
 import GameChromeWrapper from '@/components/games/GameChromeWrapper'
 import type { GameInfo } from '@/lib/games'
@@ -79,6 +80,7 @@ export default function GamePageClient({ game, username, slug }: Props) {
             {game.componentName === 'spy'        && <WhosSpyLandingPage />}
             {game.componentName === 'bubbleshooter' && <BubbleShooterSagaGame />}
             {game.componentName === 'memoryplate' && <MemoryPlateGame />}
+            {game.componentName === 'ludo'        && <LudoGame />}
 
             {/* Legacy Iframe Games */}
             {game.componentName === 'iframe'     && (
@@ -92,7 +94,7 @@ export default function GamePageClient({ game, username, slug }: Props) {
             )}
 
             {/* Placeholder for games not yet implemented */}
-            {!['cricket', 'scribble', 'ttt', 'memory', 'fighter', '2048', 'iframe', 'rps', 'numguess', 'arrowpuzzle', 'colorsort', 'unblocktraffic', 'waterconnect', 'dotsboxes', 'blockblast', 'neontetris', 'wordwizard', 'candycrush', 'hangman', 'fourinarow', 'snakearena', 'spy', 'bubbleshooter', 'memoryplate', 'skyflight'].includes(game.componentName) && (
+            {!['cricket', 'scribble', 'ttt', 'memory', 'fighter', '2048', 'iframe', 'rps', 'numguess', 'arrowpuzzle', 'colorsort', 'unblocktraffic', 'waterconnect', 'dotsboxes', 'blockblast', 'neontetris', 'wordwizard', 'candycrush', 'hangman', 'fourinarow', 'snakearena', 'spy', 'bubbleshooter', 'memoryplate', 'skyflight', 'ludo'].includes(game.componentName) && (
               <div className="card" style={{ padding: '3rem', textAlign: 'center', width: '100%' }}>
                 <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>{game.emoji}</div>
                 <h2 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Coming Soon</h2>

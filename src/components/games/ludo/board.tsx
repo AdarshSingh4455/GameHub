@@ -505,7 +505,7 @@ export const LudoBoard: React.FC<BoardProps> = ({
                 onClick={() => isPlayable && onTokenClick(token.id, token.color)}
                 style={{
                   cursor: isPlayable ? 'pointer' : 'default',
-                  transition: isMoving ? 'none' : 'transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+                  transition: isMoving ? 'transform 0.16s linear' : 'transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
                 }}
                 transform={`translate(${cx}, ${cy + hopOffset}) scale(${scale})`}
                 className={isPlayable ? 'active-token-hover' : ''}

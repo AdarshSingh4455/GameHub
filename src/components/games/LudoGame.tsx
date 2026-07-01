@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { LudoState, PlayerColor, Coordinate, GameConfig } from './ludo/types';
+import { LudoState, PlayerColor, Coordinate, GameConfig, Move } from './ludo/types';
 import { ludoEngine, createLogEntry } from './ludo/engine';
 import { LudoBoard } from './ludo/board';
 import { Dice } from './ludo/dice';
 import { getCoordinate } from './ludo/rules';
 import { ludoAudio } from './ludo/audio';
+import { ludoAI } from './ludo/ai';
 import GameSetup from './ludo/GameSetup';
 
 // ─── Display constants ──────────────────────────────────────────────────────
@@ -23,40 +24,59 @@ const COLOR_EMOJI: Record<PlayerColor, string> = {
   RED: '🔴', BLUE: '🔵', YELLOW: '🟡', GREEN: '🟢',
 };
 
+// ─── AI helpers ─────────────────────────────────────────────────────────────
+
+const getAIDifficulty = (name: string): 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT' => {
+  if (name.includes('EASY')) return 'EASY';
+  if (name.includes('HARD')) return 'HARD';
+  if (name.includes('EXPERT')) return 'EXPERT';
+  return 'MEDIUM';
+};
+
+const getThinkingDelay = (difficulty: 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT'): number => {
+  const ranges = {
+    EASY: [700, 1200],
+    MEDIUM: [900, 1500],
+    HARD: [1200, 1800],
+    EXPERT: [1500, 2200],
+  };
+  const [min, max] = ranges[difficulty];
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export default function LudoGame() {
-  // ── Setup gate: null = show setup screen, non-null = game in progress ──
   const [gameConfig, setGameConfig] = useState<GameConfig | null>(null);
-
-  // ── Single authoritative game state ────────────────────────────────────
   const [gameState, setGameState] = useState<LudoState | null>(null);
 
-  // ── Animation state (local only — NOT duplicated in gameState) ──────────
-  // These track the CURRENTLY ANIMATING token. The game state commit happens
-  // only AFTER the animation finishes (Track 5: animation synchronization).
+  // Animation states (local only — coordinates and indices are not duplicated)
   const [isMovingTokenId, setIsMovingTokenId] = useState<number | null>(null);
   const [movingTokenColor, setMovingTokenColor] = useState<PlayerColor | null>(null);
   const [movingCoordinate, setMovingCoordinate] = useState<Coordinate | null>(null);
 
-  // ── UI state ────────────────────────────────────────────────────────────
+  // UI state
   const [diceRolling, setDiceRolling] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerColor | null>(null);
   const [showControls, setShowControls] = useState(false);
 
-  // ── AI auto-play override per color (only for non-AI colors, for debugging) ─
+  // AI thinking state
+  const [aiThinking, setAiThinking] = useState(false);
+  const [thinkingText, setThinkingText] = useState('');
+
+  // Debug AI overrides
   const [isAutoPlayer, setIsAutoPlayer] = useState<Record<PlayerColor, boolean>>({
     RED: false, GREEN: false, YELLOW: false, BLUE: false,
   });
 
   const animationCleanupRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastTurnRef = useRef<PlayerColor | null>(null);
 
   // ── Start game from setup ───────────────────────────────────────────────
   const handleStart = useCallback((config: GameConfig) => {
     setGameConfig(config);
     const initialState = ludoEngine.initializeGame(config);
-    // Initialize auto-play flags based on AI roles
     const auto: Record<PlayerColor, boolean> = { RED: false, GREEN: false, YELLOW: false, BLUE: false };
     config.playerConfigs.forEach(pc => {
       if (pc.role === 'AI') auto[pc.color] = true;
@@ -68,6 +88,8 @@ export default function LudoGame() {
     setMovingTokenColor(null);
     setMovingCoordinate(null);
     setDiceRolling(false);
+    setAiThinking(false);
+    lastTurnRef.current = initialState.currentTurn;
   }, []);
 
   // ── Roll dice ───────────────────────────────────────────────────────────
@@ -75,13 +97,20 @@ export default function LudoGame() {
     if (!gameState) return;
     if (gameState.phase !== 'DICE_ROLL' || diceRolling || isMovingTokenId !== null) return;
 
-    ludoAudio.playRoll();
+    ludoAudio.playRollBegin();
     setDiceRolling(true);
 
-    // Wait for dice animation, then commit the roll to state
     setTimeout(() => {
+      ludoAudio.playRollImpact();
       setDiceRolling(false);
-      setGameState(prev => prev ? ludoEngine.rollDice(prev) : prev);
+      
+      setGameState(prev => {
+        if (!prev) return prev;
+        const next = ludoEngine.rollDice(prev);
+        // Play reveal sound on successful roll
+        ludoAudio.playRollReveal();
+        return next;
+      });
     }, 850);
   }, [gameState, diceRolling, isMovingTokenId]);
 
@@ -90,7 +119,7 @@ export default function LudoGame() {
     if (!gameState) return;
     if (gameState.phase !== 'TOKEN_MOVE' || isMovingTokenId !== null) return;
 
-    // Verify move is legal (double-check against availableMoves)
+    // Verify move is legal
     const isLegal = gameState.availableMoves.some(
       m => m.tokenId === tokenId && gameState.currentTurn === color,
     );
@@ -103,13 +132,12 @@ export default function LudoGame() {
     // Compute the full transition BEFORE starting animation
     const { nextState, animatedPath } = ludoEngine.moveToken(gameState, tokenId);
 
-    // If no path (shouldn't happen for legal moves, but guard)
     if (animatedPath.length === 0) {
       setGameState(nextState);
       return;
     }
 
-    // ── Begin animation ───────────────────────────────────────────────────
+    // ── Begin step-by-step animation ──────────────────────────────────────
     setIsMovingTokenId(tokenId);
     setMovingTokenColor(color);
     setMovingCoordinate(animatedPath[0]);
@@ -119,7 +147,6 @@ export default function LudoGame() {
       pathIndex++;
 
       if (pathIndex < animatedPath.length) {
-        // Step-by-step movement
         setMovingCoordinate(animatedPath[pathIndex]);
         if (startPos === 0 && pathIndex === 1) {
           ludoAudio.playDeploy();
@@ -127,13 +154,12 @@ export default function LudoGame() {
           ludoAudio.playMove();
         }
       } else {
-        // ── Animation complete — NOW commit state ─────────────────────────
+        // ── Animation complete ──
         if (animationCleanupRef.current) clearInterval(animationCleanupRef.current);
         setIsMovingTokenId(null);
         setMovingTokenColor(null);
         setMovingCoordinate(null);
 
-        // Determine what sound to play based on resulting state
         const endPos = nextState.players.find(p => p.color === color)!.tokens.find(t => t.id === tokenId)!.position;
 
         if (nextState.phase === 'FINISHED' && nextState.winner) {
@@ -142,7 +168,7 @@ export default function LudoGame() {
         } else if (endPos === 57) {
           ludoAudio.playHome();
         } else {
-          // Check if a capture occurred
+          // Check if capture occurred
           const captureOccurred = gameState.players.some(p => {
             if (p.color === color) return false;
             return p.tokens.some(t => {
@@ -155,35 +181,66 @@ export default function LudoGame() {
           else ludoAudio.playMove();
         }
 
-        // ── Commit state AFTER animation and sound ────────────────────────
+        // Commit engine state AFTER animation
         setGameState(nextState);
       }
     }, 160);
   }, [gameState, isMovingTokenId]);
 
-  // ── Auto-step (for AI / debug) ──────────────────────────────────────────
+  // ── Auto-step (for AI/Debug execution) ──────────────────────────────────
   const handleAutoStep = useCallback(() => {
     if (!gameState || gameState.phase === 'FINISHED') return;
+
     if (gameState.phase === 'DICE_ROLL' && !diceRolling) {
       handleRollDice();
     } else if (gameState.phase === 'TOKEN_MOVE' && gameState.availableMoves.length > 0 && isMovingTokenId === null) {
-      const rnd = gameState.availableMoves[Math.floor(Math.random() * gameState.availableMoves.length)];
-      handleTokenClick(rnd.tokenId, gameState.currentTurn);
+      // Determine strategy based on player name difficulty tags
+      const player = gameState.players.find(p => p.color === gameState.currentTurn)!;
+      const diff = getAIDifficulty(player.name);
+      
+      const bestMove = ludoAI.selectMove(gameState, diff);
+      if (bestMove) {
+        handleTokenClick(bestMove.tokenId, gameState.currentTurn);
+      } else {
+        // Fallback to random if AI yields null
+        const rnd = gameState.availableMoves[Math.floor(Math.random() * gameState.availableMoves.length)];
+        handleTokenClick(rnd.tokenId, gameState.currentTurn);
+      }
     }
   }, [gameState, diceRolling, isMovingTokenId, handleRollDice, handleTokenClick]);
 
-  // ── Auto-play effect ────────────────────────────────────────────────────
+  // ── Turn change audio trigger ───────────────────────────────────────────
+  useEffect(() => {
+    if (!gameState) return;
+    if (lastTurnRef.current && lastTurnRef.current !== gameState.currentTurn) {
+      ludoAudio.playTurnChange();
+    }
+    lastTurnRef.current = gameState.currentTurn;
+  }, [gameState?.currentTurn]);
+
+  // ── AI thinking and execution controller ────────────────────────────────
   useEffect(() => {
     if (!gameState || gameState.phase === 'FINISHED') return;
 
-    const isCurrentAuto =
-      isAutoPlayer[gameState.currentTurn] ||
-      gameState.players.find(p => p.color === gameState.currentTurn)?.isAuto;
+    const activePlayer = gameState.players.find(p => p.color === gameState.currentTurn)!;
+    const isCurrentAuto = isAutoPlayer[gameState.currentTurn] || activePlayer.isAuto;
 
-    if (!isCurrentAuto) return;
+    if (!isCurrentAuto || diceRolling || isMovingTokenId !== null) {
+      setAiThinking(false);
+      return;
+    }
 
-    const delay = gameState.phase === 'DICE_ROLL' ? 900 : 700;
-    const timer = setTimeout(handleAutoStep, delay);
+    const diff = getAIDifficulty(activePlayer.name);
+    const delay = getThinkingDelay(diff);
+
+    setAiThinking(true);
+    setThinkingText(`${COLOR_NAMES[gameState.currentTurn]} is thinking...`);
+
+    const timer = setTimeout(() => {
+      setAiThinking(false);
+      handleAutoStep();
+    }, delay);
+
     return () => clearTimeout(timer);
   }, [
     gameState?.phase,
@@ -199,7 +256,7 @@ export default function LudoGame() {
     setIsAutoPlayer(prev => ({ ...prev, [color]: !prev[color] }));
   };
 
-  // ── Restart ─────────────────────────────────────────────────────────────
+  // ── Restart / Exit to Menu ──────────────────────────────────────────────
   const handleRestart = () => {
     if (animationCleanupRef.current) clearInterval(animationCleanupRef.current);
     setGameConfig(null);
@@ -210,6 +267,7 @@ export default function LudoGame() {
     setDiceRolling(false);
     setShowWinnerModal(false);
     setSelectedPlayer(null);
+    setAiThinking(false);
   };
 
   // ── Highlighted path (cells a token could reach) ────────────────────────
@@ -241,7 +299,6 @@ export default function LudoGame() {
     [gameState?.logs],
   );
 
-  // ── Player stats helper ─────────────────────────────────────────────────
   const getStats = (color: PlayerColor) => {
     if (!gameState) return { finished: 0, active: 0, base: 0 };
     const p = gameState.players.find(pl => pl.color === color)!;
@@ -291,6 +348,35 @@ export default function LudoGame() {
           zIndex: 0,
         }}
       />
+
+      {/* ── AI Thinking Dot Animation Banner ─────────────────────────────────── */}
+      {aiThinking && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '56px',
+            background: 'rgba(20, 20, 26, 0.9)',
+            border: `1.5px solid ${currentColor}66`,
+            boxShadow: `0 8px 24px ${currentColor}22`,
+            padding: '8px 18px',
+            borderRadius: '50px',
+            fontSize: '0.78rem',
+            fontWeight: 800,
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'fadeIn 0.25s ease',
+          }}
+        >
+          <span>🤖 {thinkingText}</span>
+          <div className="thinking-dots">
+            <span className="dot" style={{ backgroundColor: currentColor }} />
+            <span className="dot" style={{ backgroundColor: currentColor, animationDelay: '0.2s' }} />
+            <span className="dot" style={{ backgroundColor: currentColor, animationDelay: '0.4s' }} />
+          </div>
+        </div>
+      )}
 
       {/* ── Winner Overlay ───────────────────────────────────────────────── */}
       {showWinnerModal && gameState.winner && (
@@ -527,7 +613,7 @@ export default function LudoGame() {
         }}>
           <button
             onClick={handleAutoStep}
-            disabled={!gameState || gameState.phase === 'FINISHED'}
+            disabled={!gameState || gameState.phase === 'FINISHED' || aiThinking}
             style={{
               background: 'rgba(255,214,0,0.12)', border: '1px solid rgba(255,214,0,0.3)',
               color: '#ffd600', padding: '5px 12px', borderRadius: '8px',
@@ -661,12 +747,12 @@ export default function LudoGame() {
               value={gameState.diceValue}
               isRolling={diceRolling}
               onRoll={handleRollDice}
-              disabled={gameState.phase !== 'DICE_ROLL' || diceRolling || isMovingTokenId !== null}
+              disabled={gameState.phase !== 'DICE_ROLL' || diceRolling || isMovingTokenId !== null || aiThinking}
               playerColor={gameState.currentTurn}
             />
 
             {/* Tap to roll badge */}
-            {gameState.phase === 'DICE_ROLL' && !diceRolling && isMovingTokenId === null && (
+            {gameState.phase === 'DICE_ROLL' && !diceRolling && isMovingTokenId === null && !aiThinking && (
               <div style={{
                 position: 'absolute', bottom: '-11px', left: '50%',
                 transform: 'translateX(-50%)',
@@ -680,7 +766,7 @@ export default function LudoGame() {
             )}
 
             {/* Pick token badge */}
-            {gameState.phase === 'TOKEN_MOVE' && isMovingTokenId === null && (
+            {gameState.phase === 'TOKEN_MOVE' && isMovingTokenId === null && !aiThinking && (
               <div style={{
                 position: 'absolute', bottom: '-11px', left: '50%',
                 transform: 'translateX(-50%)',
@@ -753,6 +839,26 @@ export default function LudoGame() {
         @keyframes popIn    { 0% { transform: scale(0.7); opacity: 0; } 80% { transform: scale(1.04); } 100% { transform: scale(1); opacity: 1; } }
         @keyframes slideDown{ from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes bounceY  { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-3px); } }
+
+        .thinking-dots {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          margin-left: 4px;
+        }
+
+        .thinking-dots .dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          display: inline-block;
+          animation: dotKey 1.4s infinite ease-in-out both;
+        }
+
+        @keyframes dotKey {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1.0); }
+        }
       `}</style>
     </div>
   );

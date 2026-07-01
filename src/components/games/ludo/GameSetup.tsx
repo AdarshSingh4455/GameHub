@@ -13,166 +13,95 @@ const COLOR_HEX: Record<PlayerColor, string> = {
   RED: '#ff3366', BLUE: '#3388ff', YELLOW: '#ffaa00', GREEN: '#00cc66',
 };
 
+const COLOR_EMOJI: Record<PlayerColor, string> = {
+  RED: '🔴', BLUE: '🔵', YELLOW: '🟡', GREEN: '🟢',
+};
+
 // Indian Ludo clockwise order
 const ALL_COLORS: PlayerColor[] = ['RED', 'GREEN', 'YELLOW', 'BLUE'];
-
-// ─── Types ────────────────────────────────────────────────────────────────
-
-type SetupStep = 'MODE' | 'CONFIG';
 
 interface GameSetupProps {
   onStart: (config: GameConfig) => void;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────
-
-function ModeCard({
-  icon,
-  title,
-  description,
-  badge,
-  selected,
-  onClick,
-}: {
-  icon: string;
-  title: string;
-  description: string;
-  badge?: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: selected
-          ? 'linear-gradient(135deg, rgba(255,204,0,0.12), rgba(255,51,102,0.10))'
-          : 'rgba(255,255,255,0.03)',
-        border: `2px solid ${selected ? '#ffcc00' : 'rgba(255,255,255,0.08)'}`,
-        borderRadius: '18px',
-        padding: '1.5rem 1.25rem',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.25s ease',
-        position: 'relative',
-        flex: '1 1 0',
-        minWidth: '120px',
-        boxShadow: selected ? '0 0 24px rgba(255,204,0,0.18)' : 'none',
-        color: '#fff',
-        outline: 'none',
-      }}
-    >
-      {badge && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: '50px',
-            fontSize: '0.6rem',
-            fontWeight: 800,
-            padding: '2px 8px',
-            color: '#aaa',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {badge}
-        </div>
-      )}
-      <div style={{ fontSize: '2.25rem', marginBottom: '0.6rem', lineHeight: 1 }}>{icon}</div>
-      <div style={{ fontWeight: 800, fontSize: '1rem', marginBottom: '0.3rem' }}>{title}</div>
-      <div style={{ fontSize: '0.75rem', color: '#888', lineHeight: '1.4' }}>{description}</div>
-      {selected && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '10px',
-            right: '12px',
-            fontSize: '1rem',
-          }}
-        >
-          ✓
-        </div>
-      )}
-    </button>
-  );
-}
-
-function ColorToken({ color, size = 40 }: { color: PlayerColor; size?: number }) {
-  const hex = COLOR_HEX[color];
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40">
-      <defs>
-        <radialGradient id={`token-${color}`} cx="38%" cy="32%" r="60%">
-          <stop offset="0%" stopColor={hex} stopOpacity="1" />
-          <stop offset="100%" stopColor={hex} stopOpacity="0.55" />
-        </radialGradient>
-      </defs>
-      <circle cx="20" cy="22" r="13" fill="rgba(0,0,0,0.35)" />
-      <circle cx="20" cy="20" r="16" fill={`url(#token-${color})`} stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-      <circle cx="20" cy="20" r="9" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
-      <circle cx="20" cy="20" r="5" fill={hex} opacity={0.6} />
-      <circle cx="14" cy="14" r="4" fill="rgba(255,255,255,0.5)" />
-    </svg>
-  );
-}
-
-// ─── Main Setup Component ──────────────────────────────────────────────────
+type AIDifficulty = 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
 
 export default function GameSetup({ onStart }: GameSetupProps) {
-  const [step, setStep] = useState<SetupStep>('MODE');
-  const [selectedMode, setSelectedMode] = useState<GameMode | null>(null);
+  // Mode selection state
+  const [selectedMode, setSelectedMode] = useState<GameMode>('LOCAL');
 
-  // LOCAL / VS_AI configuration
-  const [playerCount, setPlayerCount] = useState<2 | 3 | 4>(4);
-  const [humanColor, setHumanColor] = useState<PlayerColor>('RED');
+  // Local config
+  const [localPlayersCount, setLocalPlayersCount] = useState<2 | 3 | 4>(4);
+
+  // AI config
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('MEDIUM');
   const [aiCount, setAiCount] = useState<1 | 2 | 3>(3);
+  const [humanColor, setHumanColor] = useState<PlayerColor>('RED');
 
-  // Online
-  const [onlineAction, setOnlineAction] = useState<'CREATE' | 'JOIN' | null>(null);
+  // Online config
+  const [onlineAction, setOnlineAction] = useState<'NONE' | 'CREATE' | 'JOIN'>('NONE');
   const [roomCode, setRoomCode] = useState('');
 
-  // ── Handlers ──────────────────────────────────────────────────────────
+  // ── Helper generators ──────────────────────────────────────────────────────
 
-  const selectMode = (mode: GameMode) => {
-    setSelectedMode(mode);
-    setStep('CONFIG');
-  };
+  const getAIConfigs = (): { activeColors: PlayerColor[]; configs: PlayerConfig[]; turnOrder: PlayerColor[] } => {
+    // Determine which colors are active based on human color and AI count
+    const remainingColors = ALL_COLORS.filter(c => c !== humanColor);
+    const assignedAIColors = remainingColors.slice(0, aiCount);
 
-  const buildLocalConfig = (): GameConfig => {
-    const count = playerCount;
-    // Select `count` colors from the clockwise order
-    const activeColors = ALL_COLORS.slice(0, count);
-    const playerConfigs: PlayerConfig[] = ALL_COLORS.map((color, i) => ({
-      color,
-      role: i < count ? 'HUMAN' : 'NONE',
-      name: `Player ${COLOR_NAMES[color]}`,
-    }));
-    return { mode: 'LOCAL', activeColors, playerConfigs };
-  };
+    const activeColors = [humanColor, ...assignedAIColors];
+    
+    // Sort active colors in clockwise order to establish true turn order
+    const turnOrder = ALL_COLORS.filter(c => activeColors.includes(c));
 
-  const buildAIConfig = (): GameConfig => {
-    const aiColors = ALL_COLORS.filter(c => c !== humanColor).slice(0, aiCount);
-    const activeColors = [humanColor, ...aiColors];
-    const playerConfigs: PlayerConfig[] = ALL_COLORS.map(color => {
-      if (color === humanColor) return { color, role: 'HUMAN', name: 'You' };
-      if (aiColors.includes(color)) return { color, role: 'AI', name: `AI ${COLOR_NAMES[color]}` };
+    const configs: PlayerConfig[] = ALL_COLORS.map(color => {
+      if (color === humanColor) {
+        return { color, role: 'HUMAN', name: 'You (Human)' };
+      }
+      if (assignedAIColors.includes(color)) {
+        return { color, role: 'AI', name: `AI ${COLOR_NAMES[color]} (${aiDifficulty.toLowerCase()})` };
+      }
       return { color, role: 'NONE', name: COLOR_NAMES[color] };
     });
-    return { mode: 'VS_AI', activeColors, playerConfigs };
+
+    return { activeColors, configs, turnOrder };
   };
 
-  const handleStart = () => {
-    if (!selectedMode) return;
-    if (selectedMode === 'LOCAL') onStart(buildLocalConfig());
-    else if (selectedMode === 'VS_AI') onStart(buildAIConfig());
-    // Online: placeholder — handled by join/create UI
+  const handleStartGame = () => {
+    if (selectedMode === 'LOCAL') {
+      const activeColors = ALL_COLORS.slice(0, localPlayersCount);
+      const playerConfigs: PlayerConfig[] = ALL_COLORS.map((color, i) => ({
+        color,
+        role: i < localPlayersCount ? 'HUMAN' : 'NONE',
+        name: `Player ${COLOR_NAMES[color]}`,
+      }));
+      onStart({
+        mode: 'LOCAL',
+        activeColors,
+        playerConfigs,
+      });
+    } else if (selectedMode === 'VS_AI') {
+      const { activeColors, configs } = getAIConfigs();
+      // Embed difficulty state inside configuration name string so the game engine is informed
+      const customConfigs = configs.map(c => {
+        if (c.role === 'AI') {
+          return {
+            ...c,
+            name: `🤖 AI ${COLOR_NAMES[c.color]} (${aiDifficulty})`
+          };
+        }
+        return c;
+      });
+
+      onStart({
+        mode: 'VS_AI',
+        activeColors,
+        playerConfigs: customConfigs,
+      });
+    }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────
+  const { turnOrder: aiTurnOrder } = getAIConfigs();
 
   return (
     <div
@@ -181,380 +110,433 @@ export default function GameSetup({ onStart }: GameSetupProps) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100%',
         width: '100%',
-        padding: '2rem 1.25rem',
-        background: 'linear-gradient(160deg, #0c0c10 0%, #141418 60%, #0f0f14 100%)',
+        minHeight: '100%',
+        padding: '2rem 1.5rem',
+        background: 'radial-gradient(circle at 50% 10%, #15151c 0%, #09090c 100%)',
         color: '#fff',
-        fontFamily: "'Inter', -apple-system, sans-serif",
+        fontFamily: "'Inter', sans-serif",
         boxSizing: 'border-box',
         position: 'relative',
-        overflow: 'hidden',
+        overflowY: 'auto',
       }}
     >
-      {/* Ambient top glow */}
+      {/* Animated glow background */}
+      <div className="setup-glow" />
+
+      {/* Glassmorphic setup box */}
       <div
         style={{
-          position: 'absolute',
-          top: '-20%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '70%',
-          height: '50%',
-          background: 'radial-gradient(ellipse, rgba(255,204,0,0.07) 0%, transparent 70%)',
-          pointerEvents: 'none',
+          width: '100%',
+          maxWidth: '460px',
+          background: 'rgba(20, 20, 26, 0.65)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '24px',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          padding: '2rem 1.75rem',
+          boxSizing: 'border-box',
+          position: 'relative',
+          zIndex: 5,
         }}
-      />
-
-      {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2rem' }}>
-        <span style={{ fontSize: '2.5rem' }}>🎲</span>
-        <div>
+      >
+        {/* Banner with Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+          <div style={{ fontSize: '3rem', animation: 'float 4s infinite ease-in-out', display: 'inline-block' }}>🎲</div>
           <h1
             style={{
-              margin: 0,
-              fontSize: '2rem',
+              margin: '0.5rem 0 0.2rem 0',
+              fontSize: '1.85rem',
               fontWeight: 900,
               background: 'linear-gradient(90deg, #ffcc00, #ff3366)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              letterSpacing: '-0.03em',
+              letterSpacing: '-0.02em',
             }}
           >
             Ludo Classic
           </h1>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: '#555', fontWeight: 600 }}>
-            The authentic Indian board game
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#5e616c', fontWeight: 600 }}>
+            Premium Board Game Arena
           </p>
         </div>
-      </div>
 
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '480px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.5rem',
-        }}
-      >
-        {/* ── Step 1: Mode Selection ──────────────────────────────────────── */}
-        <div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#555', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-            {step === 'MODE' ? 'Select game mode' : 'Game mode'}
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <ModeCard
-              icon="👥"
-              title="Local Play"
-              description="Pass & play on one device"
-              selected={selectedMode === 'LOCAL'}
-              onClick={() => selectMode('LOCAL')}
-            />
-            <ModeCard
-              icon="🤖"
-              title="vs AI"
-              description="Practice against bot players"
-              badge="Beta"
-              selected={selectedMode === 'VS_AI'}
-              onClick={() => selectMode('VS_AI')}
-            />
-            <ModeCard
-              icon="🌐"
-              title="Online"
-              description="Play with friends online"
-              badge="Soon"
-              selected={selectedMode === 'ONLINE'}
-              onClick={() => selectMode('ONLINE')}
-            />
-          </div>
+        {/* ── MODE TABS (In-place Transition Cards) ───────────────────────── */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '8px',
+            background: 'rgba(0, 0, 0, 0.25)',
+            padding: '6px',
+            borderRadius: '16px',
+            marginBottom: '1.5rem',
+          }}
+        >
+          {(['LOCAL', 'VS_AI', 'ONLINE'] as const).map(mode => {
+            const isSel = selectedMode === mode;
+            const labels = { LOCAL: 'Local', VS_AI: 'vs AI', ONLINE: 'Online' };
+            const icons = { LOCAL: '👥', VS_AI: '🤖', ONLINE: '🌍' };
+            return (
+              <button
+                key={mode}
+                onClick={() => {
+                  setSelectedMode(mode);
+                  setOnlineAction('NONE');
+                }}
+                style={{
+                  background: isSel
+                    ? 'linear-gradient(135deg, rgba(255, 204, 0, 0.15), rgba(255, 51, 102, 0.15))'
+                    : 'transparent',
+                  border: `1.5px solid ${isSel ? 'rgba(255, 204, 0, 0.4)' : 'transparent'}`,
+                  color: isSel ? '#ffd600' : '#8c8e9d',
+                  borderRadius: '12px',
+                  padding: '10px 4px',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  transition: 'all 0.25s ease',
+                  outline: 'none',
+                }}
+              >
+                <div style={{ fontSize: '1.1rem', marginBottom: '2px' }}>{icons[mode]}</div>
+                {labels[mode]}
+              </button>
+            );
+          })}
         </div>
 
-        {/* ── Step 2: Config ──────────────────────────────────────────────── */}
-        {step === 'CONFIG' && selectedMode === 'LOCAL' && (
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: '16px',
-              padding: '1.25rem',
-              animation: 'slideDown 0.25s ease',
-            }}
-          >
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#555', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '1rem' }}>
-              Number of players
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {([2, 3, 4] as const).map(n => (
-                <button
-                  key={n}
-                  onClick={() => setPlayerCount(n)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    borderRadius: '12px',
-                    border: `2px solid ${playerCount === n ? '#ffcc00' : 'rgba(255,255,255,0.08)'}`,
-                    background: playerCount === n ? 'rgba(255,204,0,0.12)' : 'rgba(255,255,255,0.03)',
-                    color: playerCount === n ? '#ffcc00' : '#888',
-                    fontWeight: 800,
-                    fontSize: '1.1rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
+        {/* ── MODE CONFIGURATION (In-place Transition Panels) ─────────────── */}
+        <div style={{ minHeight: '190px' }}>
+          {/* LOCAL PLAY PANEL */}
+          {selectedMode === 'LOCAL' && (
+            <div className="fade-in-panel">
+              <h3 style={{ margin: '0 0 0.8rem 0', fontSize: '0.9rem', fontWeight: 800, color: '#ffcc00', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                Local Match Setup
+              </h3>
+              <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.78rem', color: '#888', lineHeight: 1.4 }}>
+                Pass and play with friends on the same screen. No connection required.
+              </p>
 
-            {/* Show which colors will play */}
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.72rem', color: '#555', fontWeight: 600 }}>Playing:</span>
-              {ALL_COLORS.slice(0, playerCount).map(color => (
-                <div key={color} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <ColorToken color={color} size={28} />
-                  <span style={{ fontSize: '0.7rem', color: COLOR_HEX[color], fontWeight: 700 }}>{COLOR_NAMES[color]}</span>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', color: '#5e616c', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Total Players
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {([2, 3, 4] as const).map(num => {
+                    const activeColors = ALL_COLORS.slice(0, num);
+                    return (
+                      <button
+                        key={num}
+                        onClick={() => setLocalPlayersCount(num)}
+                        style={{
+                          flex: 1,
+                          padding: '12px 6px',
+                          borderRadius: '12px',
+                          border: `1px solid ${localPlayersCount === num ? '#ff3366' : 'rgba(255,255,255,0.06)'}`,
+                          background: localPlayersCount === num ? 'rgba(255, 51, 102, 0.1)' : 'rgba(255, 255, 255, 0.02)',
+                          color: localPlayersCount === num ? '#ff3366' : '#8c8e9d',
+                          fontWeight: 900,
+                          fontSize: '1rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        {num} Players
+                      </button>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {step === 'CONFIG' && selectedMode === 'VS_AI' && (
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: '16px',
-              padding: '1.25rem',
-              animation: 'slideDown 0.25s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            {/* Color picker */}
-            <div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#555', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-                Your color
-              </div>
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                {ALL_COLORS.map(color => (
-                  <button
-                    key={color}
-                    onClick={() => setHumanColor(color)}
-                    style={{
-                      background: 'none',
-                      border: `2.5px solid ${humanColor === color ? COLOR_HEX[color] : 'transparent'}`,
-                      borderRadius: '50%',
-                      padding: '4px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      boxShadow: humanColor === color ? `0 0 16px ${COLOR_HEX[color]}66` : 'none',
-                    }}
-                    title={COLOR_NAMES[color]}
-                  >
-                    <ColorToken color={color} size={44} />
-                  </button>
-                ))}
-              </div>
-              <div style={{ textAlign: 'center', marginTop: '6px', fontSize: '0.75rem', color: COLOR_HEX[humanColor], fontWeight: 700 }}>
-                Playing as {COLOR_NAMES[humanColor]}
-              </div>
-            </div>
-
-            {/* AI count */}
-            <div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#555', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-                AI opponents
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {([1, 2, 3] as const).map(n => (
-                  <button
-                    key={n}
-                    onClick={() => setAiCount(n)}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      borderRadius: '12px',
-                      border: `2px solid ${aiCount === n ? '#a855f7' : 'rgba(255,255,255,0.08)'}`,
-                      background: aiCount === n ? 'rgba(168,85,247,0.12)' : 'rgba(255,255,255,0.03)',
-                      color: aiCount === n ? '#a855f7' : '#888',
-                      fontWeight: 800,
-                      fontSize: '1rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {n} 🤖
-                  </button>
-                ))}
               </div>
 
-              {/* Show opponent assignment */}
-              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {ALL_COLORS.filter(c => c !== humanColor).slice(0, aiCount).map(color => (
-                  <div
-                    key={color}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      background: `${COLOR_HEX[color]}15`,
-                      border: `1px solid ${COLOR_HEX[color]}33`,
-                      borderRadius: '50px',
-                      padding: '4px 10px',
-                    }}
-                  >
-                    <ColorToken color={color} size={20} />
-                    <span style={{ fontSize: '0.7rem', color: COLOR_HEX[color], fontWeight: 700 }}>
-                      AI {COLOR_NAMES[color]}
-                    </span>
-                    <span style={{ fontSize: '0.65rem' }}>🤖</span>
+              {/* Player assignments preview */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'rgba(0,0,0,0.15)', padding: '8px 12px', borderRadius: '12px' }}>
+                <span style={{ fontSize: '0.68rem', color: '#4c4e56', fontWeight: 700 }}>COLORS:</span>
+                {ALL_COLORS.slice(0, localPlayersCount).map(color => (
+                  <div key={color} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: COLOR_HEX[color] }}>
+                    <span>{COLOR_EMOJI[color]}</span>
+                    <span>{COLOR_NAMES[color]}</span>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {step === 'CONFIG' && selectedMode === 'ONLINE' && (
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              animation: 'slideDown 0.25s ease',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🌐</div>
-            <div style={{ fontWeight: 800, fontSize: '1rem', marginBottom: '0.4rem' }}>Online Multiplayer</div>
-            <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-              Real-time online play is coming soon. For now, try Local Play or vs AI!
-            </div>
+          {/* PLAY VS AI PANEL */}
+          {selectedMode === 'VS_AI' && (
+            <div className="fade-in-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <h3 style={{ margin: '0 0 0.8rem 0', fontSize: '0.9rem', fontWeight: 800, color: '#ffcc00', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  AI Practice Match
+                </h3>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button
-                disabled
+                {/* Difficulty selector */}
+                <label style={{ display: 'block', fontSize: '0.7rem', color: '#5e616c', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  AI Difficulty
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                  {(['EASY', 'MEDIUM', 'HARD', 'EXPERT'] as const).map(diff => (
+                    <button
+                      key={diff}
+                      onClick={() => setAiDifficulty(diff)}
+                      style={{
+                        padding: '8px 2px',
+                        borderRadius: '8px',
+                        border: `1.5px solid ${aiDifficulty === diff ? '#ffcc00' : 'rgba(255,255,255,0.06)'}`,
+                        background: aiDifficulty === diff ? 'rgba(255,204,0,0.1)' : 'rgba(255,255,255,0.02)',
+                        color: aiDifficulty === diff ? '#ffcc00' : '#8c8e9d',
+                        fontSize: '0.68rem',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {diff}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color Picker & AI Count Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', color: '#5e616c', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Your Color
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {ALL_COLORS.map(color => {
+                      const isSel = humanColor === color;
+                      return (
+                        <button
+                          key={color}
+                          onClick={() => setHumanColor(color)}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: COLOR_HEX[color],
+                            border: `3px solid ${isSel ? '#fff' : 'transparent'}`,
+                            cursor: 'pointer',
+                            boxShadow: isSel ? `0 0 12px ${COLOR_HEX[color]}` : 'none',
+                            transition: 'all 0.2s',
+                          }}
+                          title={COLOR_NAMES[color]}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', color: '#5e616c', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                    AI Opponents
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {([1, 2, 3] as const).map(num => (
+                      <button
+                        key={num}
+                        onClick={() => setAiCount(num)}
+                        style={{
+                          flex: 1,
+                          padding: '6px 2px',
+                          borderRadius: '8px',
+                          border: `1.5px solid ${aiCount === num ? '#3388ff' : 'rgba(255,255,255,0.06)'}`,
+                          background: aiCount === num ? 'rgba(51, 136, 255, 0.1)' : 'rgba(255, 255, 255, 0.02)',
+                          color: aiCount === num ? '#3388ff' : '#8c8e9d',
+                          fontWeight: 800,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Pre-game Setup Preview Card */}
+              <div
                 style={{
-                  padding: '12px 20px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(255,255,255,0.04)',
-                  color: '#555',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  cursor: 'not-allowed',
+                  background: 'rgba(0,0,0,0.22)',
+                  borderRadius: '14px',
+                  padding: '10px 14px',
+                  border: '1px solid rgba(255,255,255,0.04)',
                 }}
               >
-                ➕ Create Room
-              </button>
-              <button
-                disabled
-                style={{
-                  padding: '12px 20px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(255,255,255,0.04)',
-                  color: '#555',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  cursor: 'not-allowed',
-                }}
-              >
-                🔑 Join Room
-              </button>
+                <div style={{ fontSize: '0.65rem', color: '#5e616c', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                  Match Preview & Turn Order
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {aiTurnOrder.map((color, idx) => {
+                    const isHuman = color === humanColor;
+                    return (
+                      <div key={color} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ color: '#555', fontWeight: 800 }}>{idx + 1}.</span>
+                          <span style={{ color: COLOR_HEX[color], fontWeight: 800 }}>{COLOR_EMOJI[color]} {COLOR_NAMES[color]}</span>
+                        </div>
+                        <span style={{ color: isHuman ? '#fff' : '#666', fontWeight: 700, fontSize: '0.7rem' }}>
+                          {isHuman ? '👤 You' : `🤖 AI Opponent`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
+          )}
 
-            <div
-              style={{
-                display: 'inline-block',
-                marginTop: '1rem',
-                background: 'rgba(255,170,0,0.12)',
-                border: '1px solid rgba(255,170,0,0.25)',
-                borderRadius: '8px',
-                padding: '6px 14px',
-                fontSize: '0.7rem',
-                color: '#ffaa00',
-                fontWeight: 700,
-              }}
-            >
-              🚧 Coming in next sprint
+          {/* ONLINE MULTIPLAYER PANEL */}
+          {selectedMode === 'ONLINE' && (
+            <div className="fade-in-panel" style={{ textAlign: 'center', padding: '12px 0' }}>
+              <h3 style={{ margin: '0 0 0.8rem 0', fontSize: '0.9rem', fontWeight: 800, color: '#ffcc00', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                Online Arena
+              </h3>
+              <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.78rem', color: '#888', lineHeight: 1.4 }}>
+                Real-time online multiplayer lobby. Play with players worldwide.
+              </p>
+
+              {onlineAction === 'NONE' && (
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <button
+                    onClick={() => setOnlineAction('CREATE')}
+                    style={{
+                      padding: '12px 18px',
+                      borderRadius: '12px',
+                      border: '1.5px solid #a855f7',
+                      background: 'rgba(168, 85, 247, 0.1)',
+                      color: '#c084fc',
+                      fontWeight: 800,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.25s',
+                    }}
+                  >
+                    ➕ Create Room
+                  </button>
+                  <button
+                    onClick={() => setOnlineAction('JOIN')}
+                    style={{
+                      padding: '12px 18px',
+                      borderRadius: '12px',
+                      border: '1.5px solid #00cc66',
+                      background: 'rgba(0, 204, 102, 0.1)',
+                      color: '#4ade80',
+                      fontWeight: 800,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.25s',
+                    }}
+                  >
+                    🔑 Join Room
+                  </button>
+                </div>
+              )}
+
+              {onlineAction === 'CREATE' && (
+                <div style={{ background: 'rgba(0,0,0,0.15)', padding: '12px', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#888', marginBottom: '8px' }}>Creating private server lobby...</div>
+                  <div style={{ display: 'inline-block', background: 'rgba(255,170,0,0.12)', border: '1px solid rgba(255,170,0,0.25)', borderRadius: '8px', padding: '6px 12px', fontSize: '0.7rem', color: '#ffaa00', fontWeight: 700 }}>
+                    🚧 Service Under Maintenance
+                  </div>
+                  <button onClick={() => setOnlineAction('NONE')} style={{ display: 'block', margin: '8px auto 0 auto', background: 'none', border: 'none', color: '#555', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 700 }}>← Back</button>
+                </div>
+              )}
+
+              {onlineAction === 'JOIN' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '280px', margin: '0 auto' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter Room Code"
+                    value={roomCode}
+                    onChange={e => setRoomCode(e.target.value.toUpperCase())}
+                    maxLength={6}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'rgba(0,0,0,0.2)',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      textAlign: 'center',
+                      outline: 'none',
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => setOnlineAction('NONE')} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: 'none', background: 'rgba(255,255,255,0.05)', color: '#888', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                    <button disabled style={{ flex: 1, padding: '8px', borderRadius: '8px', border: 'none', background: '#555', color: '#888', fontSize: '0.72rem', fontWeight: 700, cursor: 'not-allowed' }}>Join</button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* ── Start Button ─────────────────────────────────────────────────── */}
-        {step === 'CONFIG' && selectedMode !== 'ONLINE' && (
+        {/* ── PRIMARY CTA ACTION BUTTON ──────────────────────────────────── */}
+        {selectedMode !== 'ONLINE' && (
           <button
-            onClick={handleStart}
+            onClick={handleStartGame}
             style={{
               width: '100%',
-              padding: '16px',
+              padding: '15px',
               borderRadius: '16px',
               border: 'none',
               background: 'linear-gradient(135deg, #ffcc00, #ff3366)',
               color: '#fff',
               fontWeight: 900,
-              fontSize: '1.1rem',
+              fontSize: '1.05rem',
               cursor: 'pointer',
-              letterSpacing: '-0.01em',
-              boxShadow: '0 8px 32px rgba(255,51,102,0.35), 0 4px 16px rgba(255,204,0,0.2)',
+              letterSpacing: '0.02em',
+              boxShadow: '0 8px 32px rgba(255, 51, 102, 0.3), 0 4px 16px rgba(255, 204, 0, 0.15)',
               transition: 'all 0.2s ease',
-              animation: 'slideUp 0.3s ease',
+              marginTop: '0.5rem',
             }}
+            className="setup-cta"
           >
-            🎲 Start Game
+            🎲 Start Match
           </button>
         )}
-
-        {/* Back to mode selection */}
-        {step === 'CONFIG' && (
-          <button
-            onClick={() => { setStep('MODE'); setSelectedMode(null); }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#555',
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-              fontWeight: 600,
-              textAlign: 'center',
-              padding: '4px',
-            }}
-          >
-            ← Change mode
-          </button>
-        )}
-      </div>
-
-      {/* Token decoration (bottom corners) */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '16px',
-          left: '0',
-          right: '0',
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '12px',
-          opacity: 0.3,
-          pointerEvents: 'none',
-        }}
-      >
-        {ALL_COLORS.map(c => <ColorToken key={c} color={c} size={28} />)}
       </div>
 
       <style>{`
-        @keyframes slideDown {
-          from { transform: translateY(-10px); opacity: 0; }
-          to   { transform: translateY(0);     opacity: 1; }
+        .setup-glow {
+          position: absolute;
+          top: -20%;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 80%;
+          height: 60%;
+          background: radial-gradient(ellipse at center, rgba(255, 204, 0, 0.08) 0%, rgba(255, 51, 102, 0.04) 50%, transparent 70%);
+          pointer-events: none;
+          z-index: 1;
         }
-        @keyframes slideUp {
-          from { transform: translateY(10px); opacity: 0; }
-          to   { transform: translateY(0);    opacity: 1; }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-8px) rotate(4deg); }
+        }
+
+        .fade-in-panel {
+          animation: slideIn 0.25s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .setup-cta:hover {
+          transform: translateY(-2px);
+          filter: brightness(1.1);
+          box-shadow: 0 10px 32px rgba(255, 51, 102, 0.4), 0 5px 20px rgba(255, 204, 0, 0.25);
+        }
+        
+        .setup-cta:active {
+          transform: translateY(0);
         }
       `}</style>
     </div>

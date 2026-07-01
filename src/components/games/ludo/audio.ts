@@ -26,37 +26,131 @@ class LudoAudioManager {
   }
 
   playRoll() {
+    // Deprecated in favor of step-by-step rolling sounds, but kept for compatibility
+    this.playRollBegin();
+  }
+
+  playRollBegin() {
     try {
       this.initContext();
       if (!this.ctx) return;
       const now = this.ctx.currentTime;
 
-      // Realistic dice cup shake: rapid sequence of filtered clicks
-      for (let i = 0; i < 8; i++) {
-        const time = now + i * 0.08 + Math.random() * 0.02;
+      // Realistic dice cup shake: sequence of rapid filtered impulses
+      for (let i = 0; i < 9; i++) {
+        const time = now + i * 0.07 + Math.random() * 0.02;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         const filter = this.ctx.createBiquadFilter();
 
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(120 + Math.random() * 40, time);
-        
+        osc.frequency.setValueAtTime(100 + Math.random() * 60, time);
+
         filter.type = 'bandpass';
-        filter.frequency.setValueAtTime(300, time);
-        filter.Q.setValueAtTime(3, time);
+        filter.frequency.setValueAtTime(320, time);
+        filter.Q.setValueAtTime(4, time);
 
         gain.gain.setValueAtTime(0.12, time);
-        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.005, time + 0.05);
 
         osc.connect(filter);
         filter.connect(gain);
         gain.connect(this.ctx.destination);
 
         osc.start(time);
-        osc.stop(time + 0.07);
+        osc.stop(time + 0.06);
       }
     } catch (e) {
-      console.warn('Audio playRoll failed:', e);
+      console.warn('Audio playRollBegin failed:', e);
+    }
+  }
+
+  playRollImpact() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+
+      // Plastic impact click
+      const osc = this.ctx.createOscillator();
+      const click = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+
+      click.type = 'sine';
+      click.frequency.setValueAtTime(900, now);
+      click.frequency.exponentialRampToValueAtTime(200, now + 0.02);
+
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.08);
+
+      osc.connect(gain);
+      click.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      click.start(now);
+      osc.stop(now + 0.09);
+      click.stop(now + 0.03);
+    } catch (e) {
+      console.warn('Audio playRollImpact failed:', e);
+    }
+  }
+
+  playRollReveal() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+
+      // Short subtle confirmation chime
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(660, now + 0.12);
+
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.12);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.13);
+    } catch (e) {
+      console.warn('Audio playRollReveal failed:', e);
+    }
+  }
+
+  playTurnChange() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+
+      // Quick soft turn switch ping
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, now); // D5
+      osc.frequency.exponentialRampToValueAtTime(293.66, now + 0.1); // D4
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.1);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.11);
+    } catch (e) {
+      console.warn('Audio playTurnChange failed:', e);
     }
   }
 

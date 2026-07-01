@@ -12,10 +12,10 @@ interface DiceProps {
 const faceRotations: Record<number, string> = {
   1: 'rotateX(0deg) rotateY(0deg)',
   6: 'rotateX(180deg) rotateY(0deg)',
-  2: 'rotateX(-90deg) rotateY(0deg)',
-  5: 'rotateX(90deg) rotateY(0deg)',
-  3: 'rotateX(0deg) rotateY(90deg)',
-  4: 'rotateX(0deg) rotateY(-90deg)',
+  2: 'rotateX(90deg) rotateY(0deg)',
+  5: 'rotateX(-90deg) rotateY(0deg)',
+  3: 'rotateX(0deg) rotateY(-90deg)',
+  4: 'rotateX(0deg) rotateY(90deg)',
 };
 
 const colorGradient: Record<PlayerColor, { face: string; glow: string; dot: string }> = {

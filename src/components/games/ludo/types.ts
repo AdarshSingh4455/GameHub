@@ -1,19 +1,20 @@
+// ─── Core Token & Board Types ──────────────────────────────────────────────
+
 export type PlayerColor = 'RED' | 'BLUE' | 'YELLOW' | 'GREEN';
 
 export interface Token {
-  id: number; // 0, 1, 2, 3
+  id: number;       // 0, 1, 2, 3
   color: PlayerColor;
-  position: number; // 0 = Base, 1..51 = Outer Track steps, 52..56 = Home Column steps, 57 = Home/Finished
-  // We track "step" (0 to 57) because it's local to the token, making movement logic trivial.
-  // We can compute the actual (x, y) coordinates of the board based on the step.
+  position: number; // 0=Base, 1..51=Outer Track, 52..56=Home Column, 57=Finished
 }
 
 export interface Player {
   color: PlayerColor;
   name: string;
   tokens: Token[];
-  isActive: boolean;
-  isAuto: boolean; // For auto-moves if timed out or local play settings
+  isActive: boolean;  // false for NONE-role (not playing this game)
+  isAuto: boolean;    // true for AI-controlled
+  role: PlayerRole;
 }
 
 export interface Move {
@@ -31,16 +32,48 @@ export interface GameLogEntry {
   timestamp: string;
 }
 
+// ─── Game Configuration (Pre-game Setup) ──────────────────────────────────
+
+export type PlayerRole = 'HUMAN' | 'AI' | 'NONE';
+export type GameMode = 'LOCAL' | 'VS_AI' | 'ONLINE';
+
+export interface PlayerConfig {
+  color: PlayerColor;
+  role: PlayerRole;
+  name: string;
+}
+
+export interface GameConfig {
+  mode: GameMode;
+  playerConfigs: PlayerConfig[];
+  /** Ordered list of colors that are actually playing (excludes NONE) */
+  activeColors: PlayerColor[];
+}
+
+// ─── Full Game State ───────────────────────────────────────────────────────
+
 export interface LudoState {
   players: Player[];
-  currentTurn: PlayerColor;
+
+  /** Single immutable dice value for the current turn — the one source of truth */
   diceValue: number;
   diceState: 'IDLE' | 'ROLLING' | 'ROLLED';
+
+  currentTurn: PlayerColor;
   phase: GamePhase;
+
+  /** Only colors that are participating in this game session */
+  activeColors: PlayerColor[];
+  gameMode: GameMode;
+
   consecutiveSixes: number;
   hasMovedThisTurn: boolean;
   extraTurnsRemaining: number;
+
   winner: PlayerColor | null;
+  /** All finished colors in order (for ranking) */
+  finishOrder: PlayerColor[];
+
   logs: GameLogEntry[];
   availableMoves: Move[];
   isOffline: boolean;
@@ -51,7 +84,8 @@ export interface Coordinate {
   y: number; // 0..14 grid y
 }
 
-// Particle type for visual effects like capture explosions
+// ─── Particle Effects ─────────────────────────────────────────────────────
+
 export interface LudoParticle {
   id: string;
   x: number;
@@ -65,7 +99,7 @@ export interface LudoParticle {
   maxLife: number;
 }
 
-// --- Future Extension Hooks & Interfaces (Sprint 2 Preparation Only) ---
+// ─── Future Extension Hooks (Sprint 3+) ───────────────────────────────────
 
 export interface LudoAIStrategy {
   name: string;
@@ -95,4 +129,3 @@ export interface LudoTournamentHooks {
   onMatchComplete: (winnerId: string, score: number) => void;
   onRewardClaim: (rewardId: string) => void;
 }
-

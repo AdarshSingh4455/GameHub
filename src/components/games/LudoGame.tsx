@@ -1,12 +1,15 @@
-'use client'
+'use client';
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { LudoState, PlayerColor, Coordinate, Move, Token } from './ludo/types';
+import { LudoState, PlayerColor, Coordinate, GameConfig } from './ludo/types';
 import { ludoEngine, createLogEntry } from './ludo/engine';
 import { LudoBoard } from './ludo/board';
 import { Dice } from './ludo/dice';
 import { getCoordinate } from './ludo/rules';
 import { ludoAudio } from './ludo/audio';
+import GameSetup from './ludo/GameSetup';
+
+// ─── Display constants ──────────────────────────────────────────────────────
 
 const COLOR_NAMES: Record<PlayerColor, string> = {
   RED: 'Red', BLUE: 'Blue', YELLOW: 'Yellow', GREEN: 'Green',
@@ -20,58 +23,103 @@ const COLOR_EMOJI: Record<PlayerColor, string> = {
   RED: '🔴', BLUE: '🔵', YELLOW: '🟡', GREEN: '🟢',
 };
 
-export default function LudoGame() {
-  const [gameState, setGameState] = useState<LudoState>(() => ludoEngine.initializeGame(true));
+// ─── Component ─────────────────────────────────────────────────────────────
 
+export default function LudoGame() {
+  // ── Setup gate: null = show setup screen, non-null = game in progress ──
+  const [gameConfig, setGameConfig] = useState<GameConfig | null>(null);
+
+  // ── Single authoritative game state ────────────────────────────────────
+  const [gameState, setGameState] = useState<LudoState | null>(null);
+
+  // ── Animation state (local only — NOT duplicated in gameState) ──────────
+  // These track the CURRENTLY ANIMATING token. The game state commit happens
+  // only AFTER the animation finishes (Track 5: animation synchronization).
   const [isMovingTokenId, setIsMovingTokenId] = useState<number | null>(null);
   const [movingTokenColor, setMovingTokenColor] = useState<PlayerColor | null>(null);
   const [movingCoordinate, setMovingCoordinate] = useState<Coordinate | null>(null);
 
-  const [showWinnerModal, setShowWinnerModal] = useState(false);
+  // ── UI state ────────────────────────────────────────────────────────────
   const [diceRolling, setDiceRolling] = useState(false);
-
-  const [isAutoPlayer, setIsAutoPlayer] = useState<Record<PlayerColor, boolean>>({
-    RED: false, BLUE: false, YELLOW: false, GREEN: false,
-  });
-  const [showControls, setShowControls] = useState(false);
+  const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerColor | null>(null);
+  const [showControls, setShowControls] = useState(false);
 
-  // ── Dice roll handler ──────────────────────────────────────────────────────
+  // ── AI auto-play override per color (only for non-AI colors, for debugging) ─
+  const [isAutoPlayer, setIsAutoPlayer] = useState<Record<PlayerColor, boolean>>({
+    RED: false, GREEN: false, YELLOW: false, BLUE: false,
+  });
+
+  const animationCleanupRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Start game from setup ───────────────────────────────────────────────
+  const handleStart = useCallback((config: GameConfig) => {
+    setGameConfig(config);
+    const initialState = ludoEngine.initializeGame(config);
+    // Initialize auto-play flags based on AI roles
+    const auto: Record<PlayerColor, boolean> = { RED: false, GREEN: false, YELLOW: false, BLUE: false };
+    config.playerConfigs.forEach(pc => {
+      if (pc.role === 'AI') auto[pc.color] = true;
+    });
+    setIsAutoPlayer(auto);
+    setGameState(initialState);
+    setShowWinnerModal(false);
+    setIsMovingTokenId(null);
+    setMovingTokenColor(null);
+    setMovingCoordinate(null);
+    setDiceRolling(false);
+  }, []);
+
+  // ── Roll dice ───────────────────────────────────────────────────────────
   const handleRollDice = useCallback(() => {
+    if (!gameState) return;
     if (gameState.phase !== 'DICE_ROLL' || diceRolling || isMovingTokenId !== null) return;
+
     ludoAudio.playRoll();
     setDiceRolling(true);
+
+    // Wait for dice animation, then commit the roll to state
     setTimeout(() => {
       setDiceRolling(false);
-      setGameState(prev => ludoEngine.rollDice(prev));
+      setGameState(prev => prev ? ludoEngine.rollDice(prev) : prev);
     }, 850);
-  }, [gameState.phase, diceRolling, isMovingTokenId]);
+  }, [gameState, diceRolling, isMovingTokenId]);
 
-  // ── Token move handler ─────────────────────────────────────────────────────
+  // ── Token move — animation-synchronized state commit ────────────────────
   const handleTokenClick = useCallback((tokenId: number, color: PlayerColor) => {
+    if (!gameState) return;
     if (gameState.phase !== 'TOKEN_MOVE' || isMovingTokenId !== null) return;
 
-    const currentToken = gameState.players
-      .find(p => p.color === color)!
-      .tokens.find(t => t.id === tokenId)!;
+    // Verify move is legal (double-check against availableMoves)
+    const isLegal = gameState.availableMoves.some(
+      m => m.tokenId === tokenId && gameState.currentTurn === color,
+    );
+    if (!isLegal) return;
 
-    const startPos = currentToken.position;
+    const startPos = gameState.players
+      .find(p => p.color === color)!
+      .tokens.find(t => t.id === tokenId)!.position;
+
+    // Compute the full transition BEFORE starting animation
     const { nextState, animatedPath } = ludoEngine.moveToken(gameState, tokenId);
 
+    // If no path (shouldn't happen for legal moves, but guard)
     if (animatedPath.length === 0) {
       setGameState(nextState);
       return;
     }
 
+    // ── Begin animation ───────────────────────────────────────────────────
     setIsMovingTokenId(tokenId);
     setMovingTokenColor(color);
-
-    let pathIndex = 0;
     setMovingCoordinate(animatedPath[0]);
 
-    const stepInterval = setInterval(() => {
+    let pathIndex = 0;
+    animationCleanupRef.current = setInterval(() => {
       pathIndex++;
+
       if (pathIndex < animatedPath.length) {
+        // Step-by-step movement
         setMovingCoordinate(animatedPath[pathIndex]);
         if (startPos === 0 && pathIndex === 1) {
           ludoAudio.playDeploy();
@@ -79,60 +127,83 @@ export default function LudoGame() {
           ludoAudio.playMove();
         }
       } else {
-        clearInterval(stepInterval);
+        // ── Animation complete — NOW commit state ─────────────────────────
+        if (animationCleanupRef.current) clearInterval(animationCleanupRef.current);
         setIsMovingTokenId(null);
         setMovingTokenColor(null);
         setMovingCoordinate(null);
 
-        let captureOccurred = false;
-        nextState.players.forEach(p => {
-          if (p.color === color) return;
-          p.tokens.forEach(t => {
-            const oldT = gameState.players.find(op => op.color === p.color)!.tokens.find(ot => ot.id === t.id)!;
-            if (oldT.position > 0 && t.position === 0) captureOccurred = true;
-          });
-        });
-
+        // Determine what sound to play based on resulting state
         const endPos = nextState.players.find(p => p.color === color)!.tokens.find(t => t.id === tokenId)!.position;
+
         if (nextState.phase === 'FINISHED' && nextState.winner) {
           ludoAudio.playVictory();
           setShowWinnerModal(true);
         } else if (endPos === 57) {
           ludoAudio.playHome();
-        } else if (captureOccurred) {
-          ludoAudio.playCapture();
         } else {
-          ludoAudio.playMove();
+          // Check if a capture occurred
+          const captureOccurred = gameState.players.some(p => {
+            if (p.color === color) return false;
+            return p.tokens.some(t => {
+              const oldT = gameState.players.find(op => op.color === p.color)!.tokens.find(ot => ot.id === t.id)!;
+              const newT = nextState.players.find(op => op.color === p.color)!.tokens.find(nt => nt.id === t.id);
+              return oldT.position > 0 && newT?.position === 0;
+            });
+          });
+          if (captureOccurred) ludoAudio.playCapture();
+          else ludoAudio.playMove();
         }
 
+        // ── Commit state AFTER animation and sound ────────────────────────
         setGameState(nextState);
       }
     }, 160);
   }, [gameState, isMovingTokenId]);
 
-  // ── Auto-play trigger ──────────────────────────────────────────────────────
+  // ── Auto-step (for AI / debug) ──────────────────────────────────────────
   const handleAutoStep = useCallback(() => {
+    if (!gameState || gameState.phase === 'FINISHED') return;
     if (gameState.phase === 'DICE_ROLL' && !diceRolling) {
       handleRollDice();
     } else if (gameState.phase === 'TOKEN_MOVE' && gameState.availableMoves.length > 0 && isMovingTokenId === null) {
-      const randMove = gameState.availableMoves[Math.floor(Math.random() * gameState.availableMoves.length)];
-      handleTokenClick(randMove.tokenId, gameState.currentTurn);
+      const rnd = gameState.availableMoves[Math.floor(Math.random() * gameState.availableMoves.length)];
+      handleTokenClick(rnd.tokenId, gameState.currentTurn);
     }
   }, [gameState, diceRolling, isMovingTokenId, handleRollDice, handleTokenClick]);
 
-  // Auto-play effect loop
+  // ── Auto-play effect ────────────────────────────────────────────────────
   useEffect(() => {
-    if (gameState.phase === 'FINISHED') return;
-    const isCurrentAuto = isAutoPlayer[gameState.currentTurn];
+    if (!gameState || gameState.phase === 'FINISHED') return;
+
+    const isCurrentAuto =
+      isAutoPlayer[gameState.currentTurn] ||
+      gameState.players.find(p => p.color === gameState.currentTurn)?.isAuto;
+
     if (!isCurrentAuto) return;
+
     const delay = gameState.phase === 'DICE_ROLL' ? 900 : 700;
     const timer = setTimeout(handleAutoStep, delay);
     return () => clearTimeout(timer);
-  }, [gameState.phase, gameState.currentTurn, diceRolling, isMovingTokenId, isAutoPlayer, handleAutoStep]);
+  }, [
+    gameState?.phase,
+    gameState?.currentTurn,
+    diceRolling,
+    isMovingTokenId,
+    isAutoPlayer,
+    handleAutoStep,
+  ]);
 
-  // ── Restart handler ────────────────────────────────────────────────────────
+  // ── Toggle AI for a color ───────────────────────────────────────────────
+  const toggleAutoPlayer = (color: PlayerColor) => {
+    setIsAutoPlayer(prev => ({ ...prev, [color]: !prev[color] }));
+  };
+
+  // ── Restart ─────────────────────────────────────────────────────────────
   const handleRestart = () => {
-    setGameState(ludoEngine.initializeGame(true));
+    if (animationCleanupRef.current) clearInterval(animationCleanupRef.current);
+    setGameConfig(null);
+    setGameState(null);
     setIsMovingTokenId(null);
     setMovingTokenColor(null);
     setMovingCoordinate(null);
@@ -141,15 +212,9 @@ export default function LudoGame() {
     setSelectedPlayer(null);
   };
 
-  // Toggle AI control per color
-  const toggleAutoPlayer = (color: PlayerColor) => {
-    setIsAutoPlayer(prev => ({ ...prev, [color]: !prev[color] }));
-  };
-
-  // ── Derived values ─────────────────────────────────────────────────────────
-  const allTokens = useMemo(() => gameState.players.flatMap(p => p.tokens), [gameState.players]);
-
+  // ── Highlighted path (cells a token could reach) ────────────────────────
   const highlightedPath = useMemo((): Coordinate[] => {
+    if (!gameState) return [];
     if (gameState.phase !== 'TOKEN_MOVE' || isMovingTokenId !== null) return [];
     const paths: Coordinate[] = [];
     const activePlayer = gameState.players.find(p => p.color === gameState.currentTurn)!;
@@ -164,19 +229,21 @@ export default function LudoGame() {
       }
     });
     return paths;
-  }, [gameState.phase, gameState.availableMoves, gameState.currentTurn, gameState.players, isMovingTokenId]);
+  }, [gameState?.phase, gameState?.availableMoves, gameState?.currentTurn, isMovingTokenId]);
 
-  const recentLogs = useMemo(() => gameState.logs.slice(0, 4), [gameState.logs]);
+  const allTokens = useMemo(
+    () => gameState?.players.flatMap(p => p.tokens) ?? [],
+    [gameState?.players],
+  );
 
-  const currentPlayer = gameState.players.find(p => p.color === gameState.currentTurn)!;
-  const currentColor = COLOR_HEX[gameState.currentTurn];
+  const recentLogs = useMemo(
+    () => (gameState?.logs ?? []).slice(0, 5),
+    [gameState?.logs],
+  );
 
-  const isActionable =
-    (gameState.phase === 'DICE_ROLL' && !diceRolling && isMovingTokenId === null) ||
-    (gameState.phase === 'TOKEN_MOVE' && gameState.availableMoves.length > 0 && isMovingTokenId === null);
-
-  // ── Player stats for info panel ────────────────────────────────────────────
-  const getPlayerStats = (color: PlayerColor) => {
+  // ── Player stats helper ─────────────────────────────────────────────────
+  const getStats = (color: PlayerColor) => {
+    if (!gameState) return { finished: 0, active: 0, base: 0 };
     const p = gameState.players.find(pl => pl.color === color)!;
     return {
       finished: p.tokens.filter(t => t.position === 57).length,
@@ -185,7 +252,14 @@ export default function LudoGame() {
     };
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Guard: show setup if no config ──────────────────────────────────────
+  if (!gameConfig || !gameState) {
+    return <GameSetup onStart={handleStart} />;
+  }
+
+  const currentColor = COLOR_HEX[gameState.currentTurn];
+  const activeColors = gameState.activeColors;
+
   return (
     <div
       style={{
@@ -202,7 +276,7 @@ export default function LudoGame() {
         userSelect: 'none',
       }}
     >
-      {/* Ambient gradient glow tied to current player */}
+      {/* Ambient glow tied to current player */}
       <div
         style={{
           position: 'absolute',
@@ -211,21 +285,21 @@ export default function LudoGame() {
           transform: 'translateX(-50%)',
           width: '80%',
           height: '60%',
-          background: `radial-gradient(ellipse at center, ${currentColor}15 0%, transparent 70%)`,
+          background: `radial-gradient(ellipse, ${currentColor}15 0%, transparent 70%)`,
           pointerEvents: 'none',
           transition: 'background 1s ease',
           zIndex: 0,
         }}
       />
 
-      {/* ── Winner overlay ──────────────────────────────────────────────────── */}
+      {/* ── Winner Overlay ───────────────────────────────────────────────── */}
       {showWinnerModal && gameState.winner && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(0,0,0,0.75)',
-            backdropFilter: 'blur(12px)',
+            background: 'rgba(0,0,0,0.78)',
+            backdropFilter: 'blur(14px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -236,65 +310,73 @@ export default function LudoGame() {
           <div
             style={{
               padding: '2.5rem 2rem',
-              background: 'rgba(16, 16, 20, 0.96)',
+              background: 'rgba(14, 14, 18, 0.97)',
               borderRadius: '28px',
               border: `2px solid ${COLOR_HEX[gameState.winner]}`,
               textAlign: 'center',
-              boxShadow: `0 0 60px ${COLOR_HEX[gameState.winner]}60, 0 40px 80px rgba(0,0,0,0.6)`,
+              boxShadow: `0 0 60px ${COLOR_HEX[gameState.winner]}55, 0 40px 80px rgba(0,0,0,0.6)`,
               maxWidth: '320px',
               width: '90%',
               animation: 'popIn 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
             }}
           >
             <div style={{ fontSize: '4.5rem', lineHeight: 1, marginBottom: '0.75rem' }}>🏆</div>
-            <div
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                letterSpacing: '0.15em',
-                textTransform: 'uppercase',
-                color: COLOR_HEX[gameState.winner],
-                marginBottom: '0.25rem',
-                opacity: 0.8,
-              }}
-            >
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: COLOR_HEX[gameState.winner], marginBottom: '0.25rem', opacity: 0.8 }}>
               Winner
             </div>
-            <h2
-              style={{
-                fontSize: '2rem',
-                fontWeight: 900,
-                color: '#fff',
-                margin: '0 0 0.4rem 0',
-              }}
-            >
+            <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', margin: '0 0 0.5rem 0' }}>
               {COLOR_NAMES[gameState.winner]}
             </h2>
-            <p style={{ color: '#888', fontSize: '0.85rem', margin: '0 0 1.75rem 0' }}>
-              All tokens safely reached home!
+            {gameState.finishOrder.length > 1 && (
+              <div style={{ fontSize: '0.75rem', color: '#555', marginBottom: '0.75rem' }}>
+                {gameState.finishOrder.slice(1).map((c, i) => (
+                  <span key={c} style={{ color: COLOR_HEX[c] }}>
+                    {i > 0 ? ' · ' : ''}#{i + 2} {COLOR_NAMES[c]}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p style={{ color: '#666', fontSize: '0.82rem', margin: '0 0 1.75rem 0' }}>
+              All tokens arrived home safely!
             </p>
-            <button
-              onClick={handleRestart}
-              style={{
-                background: `linear-gradient(135deg, ${COLOR_HEX[gameState.winner]}, ${COLOR_HEX[gameState.winner]}99)`,
-                color: '#fff',
-                border: 'none',
-                padding: '14px 32px',
-                borderRadius: '14px',
-                fontSize: '1rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                letterSpacing: '0.02em',
-                boxShadow: `0 6px 24px ${COLOR_HEX[gameState.winner]}55`,
-              }}
-            >
-              Play Again
-            </button>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                onClick={() => handleStart(gameConfig)}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  border: `1px solid ${COLOR_HEX[gameState.winner]}44`,
+                  background: 'rgba(255,255,255,0.05)',
+                  color: '#ccc',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Rematch
+              </button>
+              <button
+                onClick={handleRestart}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: `linear-gradient(135deg, ${COLOR_HEX[gameState.winner]}, ${COLOR_HEX[gameState.winner]}99)`,
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  boxShadow: `0 6px 20px ${COLOR_HEX[gameState.winner]}44`,
+                }}
+              >
+                New Game
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── Player Stats Modal ─────────────────────────────────────────────── */}
+      {/* ── Player Info Modal ────────────────────────────────────────────── */}
       {selectedPlayer && (
         <div
           onClick={() => setSelectedPlayer(null)}
@@ -314,75 +396,70 @@ export default function LudoGame() {
             onClick={e => e.stopPropagation()}
             style={{
               width: '88%',
-              maxWidth: '320px',
-              background: 'rgba(18, 18, 23, 0.98)',
-              borderRadius: '22px',
-              border: `2px solid ${COLOR_HEX[selectedPlayer]}66`,
-              boxShadow: `0 20px 50px rgba(0,0,0,0.5), 0 0 30px ${COLOR_HEX[selectedPlayer]}33`,
-              padding: '1.75rem 1.5rem',
+              maxWidth: '300px',
+              background: 'rgba(16, 16, 22, 0.98)',
+              borderRadius: '20px',
+              border: `2px solid ${COLOR_HEX[selectedPlayer]}55`,
+              boxShadow: `0 20px 50px rgba(0,0,0,0.5), 0 0 30px ${COLOR_HEX[selectedPlayer]}22`,
+              padding: '1.5rem',
               animation: 'popIn 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
               <div
                 style={{
-                  width: '44px',
-                  height: '44px',
+                  width: '40px',
+                  height: '40px',
                   borderRadius: '50%',
-                  background: `radial-gradient(circle at 35% 35%, ${COLOR_HEX[selectedPlayer]}, ${COLOR_HEX[selectedPlayer]}88)`,
-                  boxShadow: `0 0 16px ${COLOR_HEX[selectedPlayer]}66`,
+                  background: `radial-gradient(circle at 35% 35%, ${COLOR_HEX[selectedPlayer]}, ${COLOR_HEX[selectedPlayer]}77)`,
+                  boxShadow: `0 0 14px ${COLOR_HEX[selectedPlayer]}66`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.2rem',
                   fontWeight: 900,
+                  fontSize: '1rem',
                   color: '#fff',
                 }}
               >
                 {selectedPlayer[0]}
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{COLOR_NAMES[selectedPlayer]} Player</div>
-                <div style={{ fontSize: '0.72rem', color: '#666', marginTop: '2px' }}>
-                  {isAutoPlayer[selectedPlayer] ? '🤖 AI Bot' : '👤 Human'}
+                <div style={{ fontWeight: 800, fontSize: '1rem' }}>{COLOR_NAMES[selectedPlayer]}</div>
+                <div style={{ fontSize: '0.68rem', color: '#555', marginTop: '1px' }}>
+                  {isAutoPlayer[selectedPlayer]
+                    ? '🤖 AI'
+                    : gameState.players.find(p => p.color === selectedPlayer)?.isAuto
+                      ? '🤖 AI'
+                      : '👤 Human'}
                 </div>
               </div>
             </div>
 
             {[
-              { label: 'In Yard', value: `🏠 ${getPlayerStats(selectedPlayer).base}/4`, color: '#888' },
-              { label: 'On Track', value: `🛣️ ${getPlayerStats(selectedPlayer).active}`, color: '#888' },
-              { label: 'Finished', value: `👑 ${getPlayerStats(selectedPlayer).finished}/4`, color: COLOR_HEX[selectedPlayer] },
-              { label: 'Turn', value: gameState.currentTurn === selectedPlayer ? 'ACTIVE' : 'WAITING', color: gameState.currentTurn === selectedPlayer ? COLOR_HEX[selectedPlayer] : '#555' },
+              { label: 'In Yard',   val: `🏠 ${getStats(selectedPlayer).base}/4`,   col: '#555' },
+              { label: 'On Track',  val: `🛣️ ${getStats(selectedPlayer).active}`,     col: '#888' },
+              { label: 'Finished',  val: `👑 ${getStats(selectedPlayer).finished}/4`, col: COLOR_HEX[selectedPlayer] },
+              {
+                label: 'Status',
+                val: gameState.currentTurn === selectedPlayer ? 'ACTIVE' : 'WAITING',
+                col: gameState.currentTurn === selectedPlayer ? COLOR_HEX[selectedPlayer] : '#444',
+              },
             ].map(row => (
-              <div
-                key={row.label}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 0',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                }}
-              >
-                <span style={{ color: '#666', fontSize: '0.82rem' }}>{row.label}</span>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: row.color }}>{row.value}</span>
+              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <span style={{ color: '#555', fontSize: '0.8rem' }}>{row.label}</span>
+                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: row.col }}>{row.val}</span>
               </div>
             ))}
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem' }}>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '1rem' }}>
               <button
                 onClick={() => toggleAutoPlayer(selectedPlayer)}
                 style={{
-                  flex: 1,
-                  padding: '10px',
-                  borderRadius: '10px',
-                  border: `1px solid ${COLOR_HEX[selectedPlayer]}44`,
-                  background: isAutoPlayer[selectedPlayer] ? `${COLOR_HEX[selectedPlayer]}22` : 'rgba(255,255,255,0.04)',
-                  color: isAutoPlayer[selectedPlayer] ? COLOR_HEX[selectedPlayer] : '#aaa',
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
+                  flex: 1, padding: '9px', borderRadius: '10px',
+                  border: `1px solid ${COLOR_HEX[selectedPlayer]}33`,
+                  background: isAutoPlayer[selectedPlayer] ? `${COLOR_HEX[selectedPlayer]}18` : 'rgba(255,255,255,0.04)',
+                  color: isAutoPlayer[selectedPlayer] ? COLOR_HEX[selectedPlayer] : '#666',
+                  fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer',
                 }}
               >
                 {isAutoPlayer[selectedPlayer] ? '🤖 AI ON' : '👤 Manual'}
@@ -390,16 +467,11 @@ export default function LudoGame() {
               <button
                 onClick={() => setSelectedPlayer(null)}
                 style={{
-                  flex: 1,
-                  padding: '10px',
-                  borderRadius: '10px',
+                  flex: 1, padding: '9px', borderRadius: '10px',
                   border: 'none',
                   background: COLOR_HEX[selectedPlayer],
-                  color: '#fff',
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  boxShadow: `0 4px 16px ${COLOR_HEX[selectedPlayer]}44`,
+                  color: '#fff', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer',
+                  boxShadow: `0 4px 14px ${COLOR_HEX[selectedPlayer]}44`,
                 }}
               >
                 Close
@@ -409,191 +481,125 @@ export default function LudoGame() {
         </div>
       )}
 
-      {/* ── TOP HEADER ────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div
         style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px 8px 16px',
-          zIndex: 10,
-          position: 'relative',
-          boxSizing: 'border-box',
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px 6px', zIndex: 10, position: 'relative', boxSizing: 'border-box',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '1.4rem' }}>🎲</span>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: '1.3rem',
-              fontWeight: 900,
-              background: 'linear-gradient(90deg, #ffcc00, #ff3366)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '-0.02em',
-            }}
-          >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '1.3rem' }}>🎲</span>
+          <h1 style={{
+            margin: 0, fontSize: '1.2rem', fontWeight: 900,
+            background: 'linear-gradient(90deg, #ffcc00, #ff3366)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>
             Ludo Classic
           </h1>
         </div>
-
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '6px' }}>
           <button
             onClick={() => setShowControls(p => !p)}
             style={{
               background: showControls ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: '#aaa',
-              padding: '6px 10px',
-              borderRadius: '8px',
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              cursor: 'pointer',
+              border: '1px solid rgba(255,255,255,0.1)', color: '#aaa',
+              padding: '5px 9px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
             }}
-          >
-            ⚙️
-          </button>
+          >⚙️</button>
           <button
             onClick={handleRestart}
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: '#ccc',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              cursor: 'pointer',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#ccc', padding: '5px 11px', borderRadius: '8px', fontSize: '0.7rem',
+              fontWeight: 700, cursor: 'pointer',
             }}
-          >
-            ↺ Reset
-          </button>
+          >← Menu</button>
         </div>
       </div>
 
-      {/* ── CONTROLS PANEL (collapsible) ───────────────────────────────────── */}
+      {/* ── Collapsible controls ────────────────────────────────────────── */}
       {showControls && (
-        <div
-          style={{
-            width: '100%',
-            padding: '6px 16px',
-            display: 'flex',
-            gap: '6px',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            zIndex: 10,
-            boxSizing: 'border-box',
-            animation: 'slideDown 0.2s ease',
-          }}
-        >
+        <div style={{
+          width: '100%', padding: '4px 16px', display: 'flex', gap: '6px',
+          flexWrap: 'wrap', justifyContent: 'center', zIndex: 10,
+          boxSizing: 'border-box', animation: 'slideDown 0.2s ease',
+        }}>
           <button
             onClick={handleAutoStep}
-            disabled={gameState.phase === 'FINISHED'}
+            disabled={!gameState || gameState.phase === 'FINISHED'}
             style={{
-              background: 'rgba(255,214,0,0.12)',
-              border: '1px solid rgba(255,214,0,0.3)',
-              color: '#ffd600',
-              padding: '5px 12px',
-              borderRadius: '8px',
-              fontSize: '0.7rem',
-              fontWeight: 800,
-              cursor: 'pointer',
+              background: 'rgba(255,214,0,0.12)', border: '1px solid rgba(255,214,0,0.3)',
+              color: '#ffd600', padding: '5px 12px', borderRadius: '8px',
+              fontSize: '0.68rem', fontWeight: 800, cursor: 'pointer',
             }}
-          >
-            ⚡ Auto-Step
-          </button>
-          {(['RED', 'GREEN', 'YELLOW', 'BLUE'] as PlayerColor[]).map(color => (
-            <button
-              key={color}
+          >⚡ Auto-Step</button>
+          {activeColors.map(color => (
+            <button key={color}
               onClick={() => toggleAutoPlayer(color)}
               style={{
                 background: isAutoPlayer[color] ? `${COLOR_HEX[color]}20` : 'transparent',
-                border: `1px solid ${COLOR_HEX[color]}55`,
-                color: COLOR_HEX[color],
-                padding: '5px 10px',
-                borderRadius: '8px',
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                cursor: 'pointer',
+                border: `1px solid ${COLOR_HEX[color]}55`, color: COLOR_HEX[color],
+                padding: '5px 10px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer',
               }}
-            >
-              {isAutoPlayer[color] ? '🤖' : '👤'} {COLOR_NAMES[color]}
-            </button>
+            >{isAutoPlayer[color] ? '🤖' : '👤'} {COLOR_NAMES[color]}</button>
           ))}
         </div>
       )}
 
-      {/* ── PLAYER STATUS STRIP ───────────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '6px',
-          padding: '4px 16px 6px',
-          width: '100%',
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          zIndex: 10,
-          position: 'relative',
-          boxSizing: 'border-box',
-        }}
-      >
-        {gameState.players.map(p => {
-          const isTurn = gameState.currentTurn === p.color;
-          const stats = getPlayerStats(p.color);
+      {/* ── Player status strip ──────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', gap: '5px', padding: '4px 16px 4px',
+        width: '100%', justifyContent: 'center', flexWrap: 'wrap',
+        zIndex: 10, position: 'relative', boxSizing: 'border-box',
+      }}>
+        {activeColors.map(color => {
+          const isTurn = gameState.currentTurn === color;
+          const stats = getStats(color);
+          const isFinished = gameState.finishOrder.includes(color);
           return (
-            <button
-              key={p.color}
-              onClick={() => setSelectedPlayer(p.color)}
+            <button key={color}
+              onClick={() => setSelectedPlayer(color)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '5px 11px',
-                borderRadius: '50px',
-                background: isTurn ? `${COLOR_HEX[p.color]}1a` : 'rgba(255,255,255,0.03)',
-                border: `1.5px solid ${isTurn ? COLOR_HEX[p.color] : 'rgba(255,255,255,0.08)'}`,
-                color: isTurn ? COLOR_HEX[p.color] : '#888',
-                fontSize: '0.7rem',
-                fontWeight: isTurn ? 800 : 600,
-                cursor: 'pointer',
-                transition: 'all 0.25s ease',
-                boxShadow: isTurn ? `0 0 14px ${COLOR_HEX[p.color]}30` : 'none',
-                animation: isTurn ? 'chipGlow 2s infinite ease-in-out' : 'none',
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '4px 10px', borderRadius: '50px',
+                background: isTurn ? `${COLOR_HEX[color]}1a` : isFinished ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.03)',
+                border: `1.5px solid ${isTurn ? COLOR_HEX[color] : isFinished ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.07)'}`,
+                color: isTurn ? COLOR_HEX[color] : isFinished ? '#333' : '#777',
+                fontSize: '0.68rem', fontWeight: isTurn ? 800 : 500,
+                cursor: 'pointer', transition: 'all 0.2s ease',
+                boxShadow: isTurn ? `0 0 12px ${COLOR_HEX[color]}28` : 'none',
+                opacity: isFinished ? 0.5 : 1,
               }}
             >
-              <span style={{ fontSize: '0.75rem' }}>{COLOR_EMOJI[p.color]}</span>
-              <span>{COLOR_NAMES[p.color]}</span>
+              <span style={{ fontSize: '0.72rem' }}>{COLOR_EMOJI[color]}</span>
+              <span>{COLOR_NAMES[color]}</span>
               {stats.finished > 0 && (
-                <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>{'👑'.repeat(stats.finished)}</span>
+                <span style={{ fontSize: '0.6rem', opacity: 0.9 }}>
+                  {'👑'.repeat(stats.finished)}
+                </span>
               )}
-              {isAutoPlayer[p.color] && <span style={{ fontSize: '0.65rem' }}>🤖</span>}
+              {(isAutoPlayer[color] || gameState.players.find(p => p.color === color)?.isAuto) && (
+                <span style={{ fontSize: '0.6rem' }}>🤖</span>
+              )}
+              {isFinished && (
+                <span style={{ fontSize: '0.6rem' }}>✓</span>
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* ── BOARD (HERO ELEMENT) ──────────────────────────────────────────── */}
-      <div
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flex: '1 1 auto',
-          padding: '6px 0',
-          zIndex: 10,
+      {/* ── BOARD (Hero Element) ─────────────────────────────────────────── */}
+      <div style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flex: '1 1 auto', padding: '4px 0', zIndex: 10, position: 'relative',
+      }}>
+        <div style={{
+          width: 'min(90vw, calc(90vh - 210px), 500px)',
+          aspectRatio: '1 / 1',
           position: 'relative',
-        }}
-      >
-        <div
-          style={{
-            width: 'min(90vw, 90vh - 200px, 500px)',
-            aspectRatio: '1 / 1',
-            position: 'relative',
-          }}
-        >
+        }}>
           <LudoBoard
             tokens={allTokens}
             onTokenClick={handleTokenClick}
@@ -603,91 +609,54 @@ export default function LudoGame() {
             movingTokenColor={movingTokenColor}
             movingCoordinate={movingCoordinate}
             highlightedPath={highlightedPath}
-            onYardClick={color => setSelectedPlayer(color)}
+            onYardClick={setSelectedPlayer}
           />
         </div>
       </div>
 
-      {/* ── DICE + ACTION AREA ────────────────────────────────────────────── */}
-      <div
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '20px',
-          padding: '8px 16px',
-          zIndex: 10,
-          position: 'relative',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* Turn indicator left */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '4px',
-            minWidth: '72px',
-          }}
-        >
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              background: `radial-gradient(circle at 35% 35%, ${currentColor}, ${currentColor}88)`,
-              boxShadow: `0 0 14px ${currentColor}88`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '0.9rem',
-              fontWeight: 900,
-              color: '#fff',
-              animation: 'pulseRing 1.8s infinite ease-in-out',
-            }}
-          >
+      {/* ── Dice + Turn Area ─────────────────────────────────────────────── */}
+      <div style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: '16px', padding: '6px 16px 4px', zIndex: 10, position: 'relative',
+        boxSizing: 'border-box',
+      }}>
+        {/* Left: Turn indicator */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', minWidth: '70px' }}>
+          <div style={{
+            width: '30px', height: '30px', borderRadius: '50%',
+            background: `radial-gradient(circle at 35% 35%, ${currentColor}, ${currentColor}77)`,
+            boxShadow: `0 0 14px ${currentColor}77`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.85rem', fontWeight: 900, color: '#fff',
+          }}>
             {gameState.currentTurn[0]}
           </div>
-          <span style={{ fontSize: '0.65rem', color: '#666', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            {COLOR_NAMES[gameState.currentTurn]}&apos;s Turn
+          <span style={{ fontSize: '0.6rem', color: '#555', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+            {COLOR_NAMES[gameState.currentTurn]}&apos;s turn
           </span>
-          <span style={{ fontSize: '0.65rem', color: '#555', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.6rem', color: '#444', fontWeight: 600 }}>
             {gameState.phase === 'DICE_ROLL'
-              ? 'Roll dice'
+              ? (diceRolling ? 'Rolling…' : 'Roll dice')
               : gameState.phase === 'TOKEN_MOVE'
-                ? `Move token`
+                ? (isMovingTokenId !== null ? 'Moving…' : 'Pick token')
                 : 'Game over'}
           </span>
         </div>
 
-        {/* Central dice */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          {/* Dice container with glow platform */}
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              borderRadius: '22px',
-              border: `1px solid ${isActionable && gameState.phase === 'DICE_ROLL' ? currentColor + '44' : 'rgba(255,255,255,0.06)'}`,
-              padding: '14px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: isActionable && gameState.phase === 'DICE_ROLL'
-                ? `0 0 24px ${currentColor}30, 0 8px 24px rgba(0,0,0,0.3)`
-                : '0 8px 24px rgba(0,0,0,0.3)',
-              transition: 'all 0.35s ease',
-              position: 'relative',
-            }}
-          >
+        {/* Center: Dice */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+          <div style={{
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: '20px',
+            border: `1px solid ${gameState.phase === 'DICE_ROLL' && !diceRolling ? currentColor + '44' : 'rgba(255,255,255,0.06)'}`,
+            padding: '12px 18px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: gameState.phase === 'DICE_ROLL' && !diceRolling
+              ? `0 0 20px ${currentColor}25, 0 8px 20px rgba(0,0,0,0.3)`
+              : '0 8px 20px rgba(0,0,0,0.3)',
+            transition: 'all 0.3s ease',
+            position: 'relative',
+          }}>
             <Dice
               value={gameState.diceValue}
               isRolling={diceRolling}
@@ -696,187 +665,94 @@ export default function LudoGame() {
               playerColor={gameState.currentTurn}
             />
 
-            {/* Roll prompt badge */}
-            {gameState.phase === 'DICE_ROLL' && !diceRolling && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '-12px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: currentColor,
-                  color: '#fff',
-                  fontSize: '0.6rem',
-                  fontWeight: 800,
-                  padding: '3px 10px',
-                  borderRadius: '50px',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                  boxShadow: `0 3px 10px ${currentColor}55`,
-                  animation: 'bounceY 1.2s infinite ease-in-out',
-                }}
-              >
-                Tap to Roll
-              </div>
+            {/* Tap to roll badge */}
+            {gameState.phase === 'DICE_ROLL' && !diceRolling && isMovingTokenId === null && (
+              <div style={{
+                position: 'absolute', bottom: '-11px', left: '50%',
+                transform: 'translateX(-50%)',
+                background: currentColor, color: '#fff',
+                fontSize: '0.58rem', fontWeight: 800,
+                padding: '2px 9px', borderRadius: '50px',
+                letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+                boxShadow: `0 2px 8px ${currentColor}55`,
+                animation: 'bounceY 1.2s infinite ease-in-out',
+              }}>Tap to roll</div>
             )}
-            {gameState.phase === 'TOKEN_MOVE' && !isMovingTokenId && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '-12px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: 'rgba(255,255,255,0.1)',
-                  color: '#fff',
-                  fontSize: '0.6rem',
-                  fontWeight: 800,
-                  padding: '3px 10px',
-                  borderRadius: '50px',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              >
-                Pick token
-              </div>
+
+            {/* Pick token badge */}
+            {gameState.phase === 'TOKEN_MOVE' && isMovingTokenId === null && (
+              <div style={{
+                position: 'absolute', bottom: '-11px', left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(255,255,255,0.08)', color: '#fff',
+                fontSize: '0.58rem', fontWeight: 800,
+                padding: '2px 9px', borderRadius: '50px',
+                letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}>Pick token</div>
             )}
           </div>
-
-          {/* Last roll value */}
-          <div
-            style={{
-              fontSize: '0.7rem',
-              color: '#555',
-              fontWeight: 600,
-              marginTop: '6px',
-            }}
-          >
-            Last roll: <span style={{ color: '#ffd600', fontWeight: 800 }}>{gameState.diceValue}</span>
+          <div style={{ fontSize: '0.65rem', color: '#444', fontWeight: 600, marginTop: '4px' }}>
+            Last: <span style={{ color: '#ffd600', fontWeight: 800 }}>{gameState.diceValue}</span>
           </div>
         </div>
 
-        {/* Consecutive sixes badge right */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '4px',
-            minWidth: '72px',
-          }}
-        >
-          {gameState.consecutiveSixes > 0 && (
-            <div
-              style={{
-                background: 'rgba(255,100,0,0.15)',
-                border: '1px solid rgba(255,100,0,0.3)',
-                borderRadius: '10px',
-                padding: '6px 10px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: '1.1rem' }}>{'🎲'.repeat(gameState.consecutiveSixes)}</div>
-              <div style={{ fontSize: '0.6rem', color: '#ff6400', fontWeight: 800, marginTop: '2px' }}>
-                {gameState.consecutiveSixes}x SIX!
+        {/* Right: Consecutive sixes + roll count */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', minWidth: '70px' }}>
+          {gameState.consecutiveSixes > 0 ? (
+            <div style={{
+              background: 'rgba(255,100,0,0.12)', border: '1px solid rgba(255,100,0,0.25)',
+              borderRadius: '10px', padding: '5px 8px', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '0.9rem' }}>{'🎲'.repeat(gameState.consecutiveSixes)}</div>
+              <div style={{ fontSize: '0.58rem', color: '#ff6400', fontWeight: 800, marginTop: '1px', textTransform: 'uppercase' }}>
+                {gameState.consecutiveSixes}× six!
               </div>
             </div>
-          )}
-          {gameState.consecutiveSixes === 0 && (
-            <div style={{ textAlign: 'center', opacity: 0.25 }}>
-              <div style={{ fontSize: '0.65rem', color: '#aaa' }}>Consecutive</div>
-              <div style={{ fontSize: '0.65rem', color: '#aaa' }}>Sixes: 0</div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── GAME LOG ─────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          width: '100%',
-          padding: '4px 16px 12px',
-          zIndex: 10,
-          position: 'relative',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div
-          style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: '14px',
-            padding: '10px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            maxWidth: '480px',
-            margin: '0 auto',
-          }}
-        >
-          {recentLogs.length === 0 ? (
-            <div style={{ fontSize: '0.72rem', color: '#333', textAlign: 'center' }}>Game started — roll to begin!</div>
           ) : (
-            recentLogs.map((log, idx) => (
-              <div
-                key={log.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '8px',
-                  opacity: idx === 0 ? 1 : Math.max(0.25, 1 - idx * 0.22),
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: idx === 0 ? 700 : 400,
-                    color: log.color ? COLOR_HEX[log.color] : '#666',
-                    lineHeight: '1.3',
-                  }}
-                >
-                  {log.message}
-                </span>
-                <span style={{ fontSize: '0.6rem', color: '#333', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  {log.timestamp}
-                </span>
-              </div>
-            ))
+            <div style={{ textAlign: 'center', opacity: 0.2 }}>
+              <div style={{ fontSize: '0.6rem', color: '#aaa', lineHeight: '1.4' }}>Consec.<br/>sixes: 0</div>
+            </div>
           )}
         </div>
       </div>
 
-      {/* ── STYLES ────────────────────────────────────────────────────────── */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+      {/* ── Game log ────────────────────────────────────────────────────── */}
+      <div style={{
+        width: '100%', padding: '4px 16px 10px',
+        zIndex: 10, position: 'relative', boxSizing: 'border-box',
+      }}>
+        <div style={{
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid rgba(255,255,255,0.04)',
+          borderRadius: '12px', padding: '8px 12px',
+          display: 'flex', flexDirection: 'column', gap: '3px',
+          maxWidth: '460px', margin: '0 auto',
+        }}>
+          {recentLogs.map((log, idx) => (
+            <div key={log.id} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              gap: '8px', opacity: idx === 0 ? 1 : Math.max(0.18, 1 - idx * 0.22),
+            }}>
+              <span style={{
+                fontSize: '0.7rem', fontWeight: idx === 0 ? 700 : 400,
+                color: log.color ? COLOR_HEX[log.color] : '#555', lineHeight: '1.3',
+              }}>
+                {log.message}
+              </span>
+              <span style={{ fontSize: '0.58rem', color: '#2a2a2a', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {log.timestamp}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes popIn {
-          0% { transform: scale(0.7); opacity: 0; }
-          80% { transform: scale(1.04); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes slideDown {
-          from { transform: translateY(-8px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes chipGlow {
-          0%, 100% { box-shadow: 0 0 10px var(--chip-color, rgba(255,255,255,0.1)); }
-          50% { box-shadow: 0 0 20px var(--chip-color, rgba(255,255,255,0.1)); }
-        }
-        @keyframes pulseRing {
-          0%, 100% { box-shadow: 0 0 10px currentColor; transform: scale(1); }
-          50% { box-shadow: 0 0 20px currentColor; transform: scale(1.08); }
-        }
-        @keyframes bounceY {
-          0%, 100% { transform: translateX(-50%) translateY(0); }
-          50% { transform: translateX(-50%) translateY(-3px); }
-        }
+      <style>{`
+        @keyframes fadeIn   { from { opacity: 0; }                      to { opacity: 1; } }
+        @keyframes popIn    { 0% { transform: scale(0.7); opacity: 0; } 80% { transform: scale(1.04); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes slideDown{ from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes bounceY  { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-3px); } }
       `}</style>
     </div>
   );

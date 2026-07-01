@@ -24,10 +24,6 @@ export default function PostGameXPModal({ data, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   const {
     gameSlug,
     result,
@@ -45,6 +41,14 @@ export default function PostGameXPModal({ data, onClose }: Props) {
     highScore = 0,
     metadata = {},
   } = data
+
+  useEffect(() => {
+    setMounted(true)
+    const isRankedMatch = metadata?.mode === 'ranked' || metadata?.gameMetadata?.mode === 'ranked' || (metadata?.gameMetadata as any)?.mode === 'ranked'
+    if (isRankedMatch) {
+      window.dispatchEvent(new CustomEvent('gamehub_ranked_match_complete'))
+    }
+  }, [metadata])
 
   const oldProg = getLevelProgress(oldXP)
   const newProg = getLevelProgress(newXP)

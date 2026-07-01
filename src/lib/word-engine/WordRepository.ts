@@ -22,7 +22,7 @@ export class WordRepository {
       userData.pools[catKey][diffKey] = []
     }
 
-    let pool = userData.pools[catKey][diffKey]
+    const pool = userData.pools[catKey][diffKey]
     const genKey = `${userId}-${catKey}-${diffKey}`
 
     // If cache has fewer than count words, do a synchronous fetch (or reuse an active one)

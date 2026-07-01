@@ -136,8 +136,10 @@ export default function WordWizardGame() {
     setIsBoardLoading(true)
     setGameState('INTRO')
 
-    const size = localDifficulty === 'easy' ? 4 : localDifficulty === 'normal' ? 5 : 6
-    const targetCount = localDifficulty === 'hard' ? 8 : 4
+    // Board sizes: Easy=8×8, Normal=10×10, Hard=12×12
+    const size = localDifficulty === 'easy' ? 8 : localDifficulty === 'normal' ? 10 : 12
+    // Target word counts scale with difficulty
+    const targetCount = localDifficulty === 'hard' ? 10 : localDifficulty === 'normal' ? 6 : 5
     
     try {
       // Retrieve words from shared Word Engine
@@ -149,28 +151,10 @@ export default function WordWizardGame() {
       
       const selectedTargets = wordsMetadata.map(wm => wm.word.toLowerCase())
 
-      let boardData: any = null
-      let validWords = new Set<string>()
-      let found = false
-
-      for (let attempt = 0; attempt < 100; attempt++) {
-        const attemptSeed = seed + attempt * 12345
-        const tempBoard = generateBoard(size, localDifficulty, attemptSeed, selectedModifier || undefined, selectedTargets)
-        const tempValid = findAllWords(tempBoard.grid)
-
-        const allTraceable = selectedTargets.every(w => findWordPath(w, tempBoard.grid) !== null)
-        if (allTraceable) {
-          boardData = tempBoard
-          validWords = tempValid
-          found = true
-          break
-        }
-      }
-
-      if (!found || !boardData) {
-        boardData = generateBoard(size, localDifficulty, seed, selectedModifier || undefined, selectedTargets)
-        validWords = findAllWords(boardData.grid)
-      }
+      // The engine handles up to 200 internal attempts and guarantees H/V placement.
+      // A single call is sufficient — no need for an outer retry loop.
+      const boardData = generateBoard(size, localDifficulty, seed, selectedModifier || undefined, selectedTargets)
+      const validWords = findAllWords(boardData.grid)
 
       setBoard(boardData.grid)
       setSpecialTiles(boardData.specialTiles)

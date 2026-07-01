@@ -214,10 +214,13 @@ export default function LeaderboardClient({
   // Ranked State
   const [rankedRows, setRankedRows] = useState<RankedRow[]>([])
   const [rankedStats, setRankedStats] = useState<any>(null)
+  const [rankedStatsLoading, setRankedStatsLoading] = useState(true)
+  const [rankedStatsError, setRankedStatsError] = useState(false)
   const [activeSeason, setActiveSeason] = useState<any>(null)
   const [rankedLoading, setRankedLoading] = useState(true)
-  
-
+  // Track separate loading/error for match history
+  const [matchHistoryLoading, setMatchHistoryLoading] = useState(true)
+  const [matchHistoryError, setMatchHistoryError] = useState(false)
 
   // Hall of Fame State
   const [hallOfFame, setHallOfFame] = useState<HallOfFameEntry[]>([])
@@ -424,13 +427,34 @@ export default function LeaderboardClient({
   const loadRankedData = () => {
     setRankedLoading(true)
     const timestamp = Date.now()
-    // Fetch stats
-    fetch('/api/ranked/stats?t=' + timestamp)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setRankedStats(data))
-      .catch((err) => console.error(err))
 
-    // Fetch seasons
+    // --- Fetch player stats ---
+    setRankedStatsLoading(true)
+    setRankedStatsError(false)
+    setMatchHistoryLoading(true)
+    setMatchHistoryError(false)
+    fetch('/api/ranked/stats?t=' + timestamp)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then((data) => {
+        setRankedStats(data)
+        setRankedStatsLoading(false)
+        setRankedStatsError(false)
+        setMatchHistoryLoading(false)
+        setMatchHistoryError(false)
+      })
+      .catch((err) => {
+        console.error('[ranked/stats] fetch failed:', err)
+        setRankedStatsLoading(false)
+        setRankedStatsError(true)
+        setMatchHistoryLoading(false)
+        setMatchHistoryError(true)
+        // Do NOT set rankedStats to null — preserve previous data if any
+      })
+
+    // --- Fetch seasons ---
     fetch('/api/ranked/seasons?t=' + timestamp)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -439,9 +463,9 @@ export default function LeaderboardClient({
           setHallOfFame(data.hallOfFame || [])
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => console.error('[ranked/seasons] fetch failed:', err))
 
-    // Fetch leaderboard
+    // --- Fetch leaderboard ---
     fetch('/api/ranked/leaderboard?t=' + timestamp)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -449,7 +473,7 @@ export default function LeaderboardClient({
         setRankedLoading(false)
       })
       .catch((err) => {
-        console.error(err)
+        console.error('[ranked/leaderboard] fetch failed:', err)
         setRankedLoading(false)
       })
   }
@@ -474,6 +498,17 @@ export default function LeaderboardClient({
         })
     }
   }, [activeTab, user])
+
+  // Auto-refresh ranked stats when a ranked match completes (event from game page)
+  useEffect(() => {
+    const handleRankedMatchComplete = () => {
+      if (activeTab === 'ranked') {
+        loadRankedData()
+      }
+    }
+    window.addEventListener('gamehub_ranked_match_complete', handleRankedMatchComplete)
+    return () => window.removeEventListener('gamehub_ranked_match_complete', handleRankedMatchComplete)
+  }, [activeTab])
 
   // Fetch weekly history and countdown
   useEffect(() => {
@@ -823,11 +858,11 @@ export default function LeaderboardClient({
           
           <div className="ranked-flex-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             
-            {/* Column 1: Player Card */}
-            {user && rankedStats && (
+            {/* Column 1: Player Card — always render when on ranked tab and user is signed in */}
+            {user && (
               <div className="card animate-scaleUp" style={{
                 background: 'linear-gradient(135deg, hsl(222 25% 10%), hsl(222 20% 7%))',
-                border: '1px solid hsl(220 20% 16%)',
+                border: rankedStatsError ? '1px solid hsl(0 70% 30%)' : '1px solid hsl(220 20% 16%)',
                 borderRadius: '24px',
                 padding: '1.5rem',
                 position: 'relative',
@@ -839,85 +874,132 @@ export default function LeaderboardClient({
                 minHeight: '260px'
               }}>
                 {/* Backglow element */}
-                <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '160px', height: '160px', borderRadius: '50%', background: myDetails.glowColor, filter: 'blur(45px)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '160px', height: '160px', borderRadius: '50%', background: rankedStatsLoading || rankedStatsError ? 'hsl(220 20% 5%)' : myDetails.glowColor, filter: 'blur(45px)', pointerEvents: 'none' }} />
 
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                    {/* Avatar with Overlay RankBadge */}
-                    <div style={{ position: 'relative', display: 'inline-block' }}>
-                      <Avatar
-                        username={myProfile?.username || user?.email?.split('@')[0]}
-                        avatarUrl={myProfile?.avatarUrl}
-                        size={56}
-                      />
-                      <div style={{ position: 'absolute', bottom: -6, right: -6, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' }}>
-                        <RankBadge mmr={myMmr} size="sm" showLabel={false} placementRemaining={rankedStats.placementMatchesRemaining} />
+                {rankedStatsLoading ? (
+                  /* ── Loading Skeleton ── */
+                  <div style={{ position: 'relative', zIndex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                      <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'hsl(220 20% 14%)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ height: 18, width: '55%', borderRadius: 8, background: 'hsl(220 20% 14%)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                        <div style={{ height: 13, width: '40%', borderRadius: 8, background: 'hsl(220 20% 12%)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                        <div style={{ height: 8, width: '70%', borderRadius: 99, background: 'hsl(220 20% 12%)', marginTop: 4, animation: 'pulse 1.5s ease-in-out infinite' }} />
                       </div>
                     </div>
-
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'white' }}>
-                        {myProfile?.displayName || myProfile?.username || user.email?.split('@')[0]}
-                      </h3>
-                      
-                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                        <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 60%)' }}>
-                          Rating: <strong style={{ color: 'white' }}>{rankedStats.placementMatchesRemaining > 0 ? 'Unranked' : `${myMmr} MMR`}</strong>
-                        </span>
-                        <span style={{ fontSize: '0.7rem', color: rankedStats.streak >= 3 ? 'hsl(142 70% 50%)' : 'hsl(220 10% 50%)', background: 'rgba(255,255,255,0.04)', padding: '0.15rem 0.45rem', borderRadius: '6px', fontWeight: 700 }}>
-                          {rankedStats.streak >= 3 ? `🔥 ${rankedStats.streak} Win Streak` : `Streak: ${rankedStats.streak}`}
-                        </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.25rem', gap: '0.75rem' }}>
+                      {['Wins', 'Losses', 'Peak'].map(label => (
+                        <div key={label} style={{ flex: 1, textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 40%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', marginBottom: 4 }}>{label}</div>
+                          <div style={{ height: 24, borderRadius: 8, background: 'hsl(220 20% 12%)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: '1.25rem', height: 36, borderRadius: 12, background: 'hsl(220 20% 12%)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  </div>
+                ) : rankedStatsError ? (
+                  /* ── Error State ── */
+                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flex: 1, textAlign: 'center', padding: '1rem 0' }}>
+                    <AlertTriangle size={36} style={{ color: 'hsl(0 70% 55%)' }} />
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'hsl(0 60% 70%)' }}>Failed to load ranked profile</div>
+                    <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 50%)', margin: 0 }}>Unable to reach the ranked server. Check your connection and try again.</p>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={loadRankedData}
+                      style={{ padding: '0.5rem 1.25rem', fontSize: '0.8rem', fontWeight: 700, borderRadius: 12, marginTop: '0.25rem' }}
+                    >
+                      ↺ Retry
+                    </button>
+                  </div>
+                ) : rankedStats ? (
+                  /* ── Real Data ── */
+                  <div style={{ position: 'relative', zIndex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                      {/* Avatar with Overlay RankBadge */}
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                        <Avatar
+                          username={myProfile?.username || user?.email?.split('@')[0]}
+                          avatarUrl={myProfile?.avatarUrl}
+                          size={56}
+                        />
+                        <div style={{ position: 'absolute', bottom: -6, right: -6, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' }}>
+                          <RankBadge mmr={myMmr} size="sm" showLabel={false} placementRemaining={rankedStats.placementMatchesRemaining} />
+                        </div>
                       </div>
 
-                      {/* Division Rank Progress */}
-                      {(() => {
-                        if (rankedStats.placementMatchesRemaining > 0) {
-                          const matchesLeft = rankedStats.placementMatchesRemaining;
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'white' }}>
+                          {myProfile?.displayName || myProfile?.username || user.email?.split('@')[0]}
+                        </h3>
+                        
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                          <span style={{ fontSize: '0.85rem', color: 'hsl(220 10% 60%)' }}>
+                            Rating: <strong style={{ color: 'white' }}>{rankedStats.placementMatchesRemaining > 0 ? 'Unranked' : `${myMmr} MMR`}</strong>
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: rankedStats.streak >= 3 ? 'hsl(142 70% 50%)' : 'hsl(220 10% 50%)', background: 'rgba(255,255,255,0.04)', padding: '0.15rem 0.45rem', borderRadius: '6px', fontWeight: 700 }}>
+                            {rankedStats.streak >= 3 ? `🔥 ${rankedStats.streak} Win Streak` : `Streak: ${rankedStats.streak}`}
+                          </span>
+                        </div>
+
+                        {/* Division Rank Progress */}
+                        {(() => {
+                          if (rankedStats.placementMatchesRemaining > 0) {
+                            const matchesLeft = rankedStats.placementMatchesRemaining;
+                            return (
+                              <div style={{ marginTop: '0.75rem', width: '100%', maxWidth: '240px' }}>
+                                <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)', margin: 0, lineHeight: 1.45 }}>
+                                  Complete <strong>{matchesLeft}</strong> more placement match{matchesLeft !== 1 ? 'es' : ''} to establish your competitive rank.
+                                </p>
+                              </div>
+                            );
+                          }
+                          const divRange = getDivisionRange(myMmr);
                           return (
                             <div style={{ marginTop: '0.75rem', width: '100%', maxWidth: '240px' }}>
-                              <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)', margin: 0, lineHeight: 1.45 }}>
-                                Complete <strong>{matchesLeft}</strong> more placement match{matchesLeft !== 1 ? 'es' : ''} to establish your competitive rank.
-                              </p>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'hsl(220 10% 55%)', marginBottom: '0.2rem', fontWeight: 600 }}>
+                                <span style={{ color: myDetails.badgeColor }}>{divRange.current}</span>
+                                <span>{myMmr} / {divRange.max === 99999 ? 'MAX' : `${divRange.max}`} MMR</span>
+                              </div>
+                              <div style={{ height: '7px', background: 'hsl(220 20% 12%)', borderRadius: '99px', overflow: 'hidden', border: '1px solid hsl(220 15% 15%)' }}>
+                                <div style={{ height: '100%', width: `${divRange.percent}%`, background: `linear-gradient(90deg, ${myDetails.badgeColor}, #ffffff)`, borderRadius: '99px', boxShadow: `0 0 10px ${myDetails.badgeColor}`, transition: 'width 0.5s ease-in-out' }} />
+                              </div>
+                              <div style={{ fontSize: '0.58rem', color: 'hsl(220 10% 50%)', marginTop: '0.15rem', textAlign: 'right' }}>
+                                {divRange.next !== 'Top GM' ? `Next: ${divRange.next}` : 'Peak rating reached'}
+                              </div>
                             </div>
                           );
-                        }
-                        const divRange = getDivisionRange(myMmr);
-                        return (
-                          <div style={{ marginTop: '0.75rem', width: '100%', maxWidth: '240px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'hsl(220 10% 55%)', marginBottom: '0.2rem', fontWeight: 600 }}>
-                              <span style={{ color: myDetails.badgeColor }}>{divRange.current}</span>
-                              <span>{myMmr} / {divRange.max === 99999 ? 'MAX' : `${divRange.max}`} MMR</span>
-                            </div>
-                            <div style={{ height: '7px', background: 'hsl(220 20% 12%)', borderRadius: '99px', overflow: 'hidden', border: '1px solid hsl(220 15% 15%)' }}>
-                              <div style={{ height: '100%', width: `${divRange.percent}%`, background: `linear-gradient(90deg, ${myDetails.badgeColor}, #ffffff)`, borderRadius: '99px', boxShadow: `0 0 10px ${myDetails.badgeColor}`, transition: 'width 0.5s ease-in-out' }} />
-                            </div>
-                            <div style={{ fontSize: '0.58rem', color: 'hsl(220 10% 50%)', marginTop: '0.15rem', textAlign: 'right' }}>
-                              {divRange.next !== 'Top GM' ? `Next: ${divRange.next}` : 'Peak rating reached'}
-                            </div>
-                          </div>
-                        );
-                      })()}
+                        })()}
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* ── Empty State (brand-new player, stats loaded but all zeroes) ── */
+                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', flex: 1, textAlign: 'center', padding: '0.5rem 0' }}>
+                    <Swords size={32} style={{ color: 'hsl(220 10% 35%)' }} />
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'hsl(220 10% 60%)' }}>No Ranked Profile Yet</div>
+                    <p style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)', margin: 0 }}>Play your first ranked match to establish your placement!</p>
+                  </div>
+                )}
 
-                {/* Wins, Losses, Peak Rank stats strip */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'hsl(222 20% 6% / 0.4)', borderRadius: 16, padding: '0.75rem 1rem', marginTop: '1rem', border: '1px solid hsl(220 15% 15%)', position: 'relative', zIndex: 1 }}>
-                  <div>
-                    <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Wins</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(142 70% 55%)', marginTop: '2px' }}>{rankedStats.wins}</div>
+                {/* Wins, Losses, Peak Rank stats strip — only when data is available */}
+                {!rankedStatsLoading && !rankedStatsError && rankedStats && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'hsl(222 20% 6% / 0.4)', borderRadius: 16, padding: '0.75rem 1rem', marginTop: '1rem', border: '1px solid hsl(220 15% 15%)', position: 'relative', zIndex: 1 }}>
+                    <div>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Wins</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(142 70% 55%)', marginTop: '2px' }}>{rankedStats.wins}</div>
+                    </div>
+                    <div style={{ height: '24px', width: '1px', background: 'hsl(220 15% 15%)' }} />
+                    <div>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Losses</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(0 80% 60%)', marginTop: '2px' }}>{rankedStats.losses}</div>
+                    </div>
+                    <div style={{ height: '24px', width: '1px', background: 'hsl(220 15% 15%)' }} />
+                    <div>
+                      <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Peak Rank</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 900, color: 'hsl(45 100% 60%)', marginTop: '2px' }}>{rankedStats.peakRank}</div>
+                    </div>
                   </div>
-                  <div style={{ height: '24px', width: '1px', background: 'hsl(220 15% 15%)' }} />
-                  <div>
-                    <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Losses</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'hsl(0 80% 60%)', marginTop: '2px' }}>{rankedStats.losses}</div>
-                  </div>
-                  <div style={{ height: '24px', width: '1px', background: 'hsl(220 15% 15%)' }} />
-                  <div>
-                    <div style={{ fontSize: '0.62rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Peak Rank</div>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 900, color: 'hsl(45 100% 60%)', marginTop: '2px' }}>{rankedStats.peakRank}</div>
-                  </div>
-                </div>
+                )}
 
                 {/* Matchmaking Queue Trigger */}
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem', marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', position: 'relative', zIndex: 1 }}>
@@ -1010,7 +1092,20 @@ export default function LeaderboardClient({
               <Swords size={16} /> Recent Ranked Matches
             </h3>
             <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid hsl(220 20% 16%)' }}>
-              {(!rankedStats?.recentMatches || rankedStats.recentMatches.length === 0) ? (
+              {/* Match history: Loading → Real Data → Empty State → Error */}
+              {matchHistoryLoading ? (
+                <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: 'hsl(220 10% 50%)' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid hsl(220 10% 30%)', borderTopColor: 'hsl(220 100% 60%)', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '0.85rem' }}>Loading match history...</span>
+                </div>
+              ) : matchHistoryError ? (
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'hsl(220 10% 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                  <AlertTriangle size={32} style={{ color: 'hsl(0 70% 50%)' }} />
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'hsl(0 60% 65%)' }}>Failed to load match history</div>
+                  <p style={{ fontSize: '0.75rem', color: 'hsl(220 10% 55%)', margin: 0 }}>Could not connect to the ranked server.</p>
+                  <button className="btn btn-secondary" onClick={loadRankedData} style={{ fontSize: '0.78rem', fontWeight: 700, padding: '0.4rem 1rem', borderRadius: 10, marginTop: '0.25rem' }}>↺ Retry</button>
+                </div>
+              ) : (!rankedStats?.recentMatches || rankedStats.recentMatches.length === 0) ? (
                 <div style={{ padding: '2.5rem', textAlign: 'center', color: 'hsl(220 10% 50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                   <Swords size={32} style={{ color: 'hsl(220 10% 30%)' }} />
                   <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>No ranked matches played yet</div>

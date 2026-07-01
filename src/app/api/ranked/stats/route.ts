@@ -17,11 +17,11 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({
-      mmr: profile.rankedMmr,
-      wins: profile.rankedWins,
-      losses: profile.rankedLosses,
-      streak: profile.rankedStreak,
-      peakRank: profile.rankedPeakRank,
+      mmr: profile.rankedMmr ?? 1000,
+      wins: profile.rankedWins ?? 0,
+      losses: profile.rankedLosses ?? 0,
+      streak: profile.rankedStreak ?? 0,
+      peakRank: profile.rankedPeakRank ?? 'Bronze',
       placementMatchesRemaining: profile.placementMatchesRemaining ?? 5,
       rankedProtectionMatches: profile.rankedProtectionMatches ?? 0,
       recentMatches: colorSortedMatches,

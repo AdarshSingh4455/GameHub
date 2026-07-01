@@ -257,7 +257,7 @@ export default function WordWizardBoard({
           display: 'grid',
           gridTemplateColumns: `repeat(${size}, 1fr)`,
           gridTemplateRows: `repeat(${size}, 1fr)`,
-          gap: 10,
+          gap: size >= 12 ? 4 : size >= 10 ? 6 : 8,
           width: '100%',
           height: '100%',
           touchAction: 'none',
@@ -352,7 +352,7 @@ export default function WordWizardBoard({
 
                 <div
                   style={{
-                    fontSize: size === 4 ? '2.5rem' : size === 5 ? '2rem' : '1.6rem',
+                    fontSize: size >= 12 ? '0.75rem' : size >= 10 ? '0.9rem' : size >= 8 ? '1.1rem' : size === 5 ? '2rem' : '2.5rem',
                     fontWeight: 800,
                     color: isSelected ? 'white' : 'rgba(255, 255, 255, 0.85)',
                     textShadow: isSelected ? '0 0 10px rgba(99, 102, 241, 0.5)' : 'none',

@@ -265,6 +265,7 @@ code, pre, .mono {
   0%, 100% { transform: translateY(0); }
   50%       { transform: translateY(-6px); }
 }
+@keyframes spin      { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes slideInRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes shimmer {

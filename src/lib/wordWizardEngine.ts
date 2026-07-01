@@ -1,5 +1,6 @@
 // Word Wizard Game Engine
 // Pure logic, no React, highly performant
+// Generator: straight-line Horizontal/Vertical placement only (no diagonals)
 
 import { WORD_SET, getWordCategory } from './wordWizardDictionary'
 
@@ -58,96 +59,139 @@ function shuffle<T>(array: T[], prng: SeededRandom): T[] {
   return result
 }
 
-function canPlaceWord(
+// Directions: right, left, down, up (no diagonals)
+const DIRECTIONS: [number, number][] = [
+  [0, 1],   // right →
+  [0, -1],  // left  ←
+  [1, 0],   // down  ↓
+  [-1, 0],  // up    ↑
+]
+
+/**
+ * Attempt to place a single word in the grid using a straight line.
+ * Allows intersection only when the existing letter matches.
+ * Returns true if placed successfully, false otherwise.
+ */
+function placeWordLinear(
   word: string,
   grid: string[][],
   size: number,
   prng: SeededRandom
 ): boolean {
-  const uppercaseWord = word.toUpperCase()
-  const startCells: [number, number][] = []
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      startCells.push([r, c])
-    }
-  }
-  const shuffledStartCells = shuffle(startCells, prng)
+  const upper = word.toUpperCase()
+  const len = upper.length
 
-  for (const [sr, sc] of shuffledStartCells) {
-    const path: [number, number][] = []
-    const visited = new Set<string>()
+  // Build all valid (row, col, dir) start positions for this word
+  const candidates: Array<[number, number, [number, number]]> = []
 
-    if (dfsPlace(0, sr, sc, path, visited)) {
-      return true
-    }
-  }
+  for (let dr_dc of DIRECTIONS) {
+    const [dr, dc] = dr_dc
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        // Check if the word fits in this direction from (r, c)
+        const endR = r + dr * (len - 1)
+        const endC = c + dc * (len - 1)
+        if (endR < 0 || endR >= size || endC < 0 || endC >= size) continue
 
-  return false
+        // Check for conflicts with existing letters
+        let canPlace = true
+        for (let i = 0; i < len; i++) {
+          const gr = r + dr * i
+          const gc = c + dc * i
+          const existing = grid[gr][gc]
+          if (existing !== '' && existing !== upper[i]) {
+            canPlace = false
+            break
+          }
+        }
 
-  function dfsPlace(
-    index: number,
-    r: number,
-    c: number,
-    path: [number, number][],
-    visited: Set<string>
-  ): boolean {
-    if (index === uppercaseWord.length) {
-      return true
-    }
-
-    const key = `${r},${c}`
-    if (visited.has(key)) return false
-
-    const cellLetter = grid[r][c]
-    const targetLetter = uppercaseWord[index]
-
-    if (cellLetter !== '' && cellLetter !== targetLetter) {
-      return false
-    }
-
-    const wasEmpty = (cellLetter === '')
-    if (wasEmpty) {
-      grid[r][c] = targetLetter
-    }
-    visited.add(key)
-    path.push([r, c])
-
-    if (index === uppercaseWord.length - 1) {
-      return true
-    }
-
-    const adj = getAdjacentCells(r, c, size)
-    const shuffledAdj = shuffle(adj, prng)
-
-    for (const [nr, nc] of shuffledAdj) {
-      if (dfsPlace(index + 1, nr, nc, path, visited)) {
-        return true
+        if (canPlace) {
+          candidates.push([r, c, dr_dc])
+        }
       }
     }
-
-    // Backtrack
-    path.pop()
-    visited.delete(key)
-    if (wasEmpty) {
-      grid[r][c] = ''
-    }
-
-    return false
   }
+
+  if (candidates.length === 0) return false
+
+  // Shuffle candidates and pick one
+  const shuffled = shuffle(candidates, prng)
+  const [startR, startC, [dr, dc]] = shuffled[0]
+
+  // Place the word
+  for (let i = 0; i < len; i++) {
+    grid[startR + dr * i][startC + dc * i] = upper[i]
+  }
+
+  return true
 }
 
+/**
+ * Try to embed all words into the grid.
+ * Returns the completed grid or null if any word could not be placed.
+ */
 function tryEmbedWords(words: string[], size: number, prng: SeededRandom): string[][] | null {
-  const grid = Array.from({ length: size }, () => Array(size).fill(''))
-  const sortedWords = [...words].sort((a, b) => b.length - a.length)
+  const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(''))
+  // Sort longest-first to maximize intersection opportunities
+  const sorted = [...words].sort((a, b) => b.length - a.length)
 
-  for (const word of sortedWords) {
-    const placed = canPlaceWord(word, grid, size, prng)
-    if (!placed) {
-      return null
-    }
+  for (const word of sorted) {
+    const placed = placeWordLinear(word, grid, size, prng)
+    if (!placed) return null
   }
 
   return grid
+}
+
+/**
+ * Count how many distinct straight-line (H/V) occurrences of a word exist in the grid.
+ * Palindromes placed in a single path are correctly counted as 1 occurrence.
+ */
+export function countWordOccurrences(word: string, board: string[][]): number {
+  const size = board.length
+  const upper = word.toUpperCase()
+  const len = upper.length
+  const matchedCoordinateSets: string[] = []
+
+  for (const [dr, dc] of DIRECTIONS) {
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const endR = r + dr * (len - 1)
+        const endC = c + dc * (len - 1)
+        if (endR < 0 || endR >= size || endC < 0 || endC >= size) continue
+
+        let match = true
+        const coords: string[] = []
+        for (let i = 0; i < len; i++) {
+          const gr = r + dr * i
+          const gc = c + dc * i
+          if (board[gr][gc].toUpperCase() !== upper[i]) {
+            match = false
+            break
+          }
+          coords.push(`${gr},${gc}`)
+        }
+
+        if (match) {
+          coords.sort()
+          const key = coords.join('|')
+          if (!matchedCoordinateSets.includes(key)) {
+            matchedCoordinateSets.push(key)
+          }
+        }
+      }
+    }
+  }
+
+  return matchedCoordinateSets.length
+}
+
+/**
+ * Verify that every target word exists exactly once in the grid
+ * (readable left→right or top→bottom in a straight H/V line).
+ */
+function verifyAllWordsExist(words: string[], grid: string[][]): boolean {
+  return words.every(w => countWordOccurrences(w, grid) === 1)
 }
 
 export function generateBoard(
@@ -157,116 +201,105 @@ export function generateBoard(
   dailyModifier?: string,
   targetWords?: string[]
 ): BoardData {
+  // Override size to match new board spec: Easy=8, Normal=10, Hard=12
+  const boardSize = difficulty === 'easy' ? 8 : difficulty === 'normal' ? 10 : 12
+
   const prng = new SeededRandom(seed !== undefined ? seed : Math.floor(Math.random() * 1000000))
   const pool = getLetterPool(difficulty, dailyModifier)
 
-  const minAdditional = difficulty === 'easy' ? 10 : difficulty === 'normal' ? 15 : 25
-
   if (targetWords && targetWords.length > 0) {
-    // Target-first generation
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const embeddedGrid = tryEmbedWords(targetWords, size, prng)
+    const MAX_ATTEMPTS = 200
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const attemptSeed = (seed !== undefined ? seed : 0) + attempt * 37
+      const attemptPrng = new SeededRandom(attemptSeed)
+
+      const embeddedGrid = tryEmbedWords(targetWords, boardSize, attemptPrng)
       if (!embeddedGrid) continue
 
-      // Fill remaining empty cells
-      for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
+      // Fill remaining empty cells with random letters
+      for (let r = 0; r < boardSize; r++) {
+        for (let c = 0; c < boardSize; c++) {
           if (embeddedGrid[r][c] === '') {
-            embeddedGrid[r][c] = prng.choose(pool.split('')).toUpperCase()
+            embeddedGrid[r][c] = attemptPrng.choose(pool.split('')).toUpperCase()
           }
         }
       }
 
-      // Verify all target words are present on the board
-      const allTargetsPresent = targetWords.every(w => findWordPath(w.toLowerCase(), embeddedGrid) !== null)
-      if (!allTargetsPresent) continue
-
-      const words = findAllWords(embeddedGrid)
-
-      // Verify quality rules: minimum additional valid words
-      const additionalWordsCount = Array.from(words).filter(w => !targetWords.includes(w.toLowerCase())).length
-      if (additionalWordsCount < minAdditional) continue
+      // Validate every target word is present (H/V only)
+      if (!verifyAllWordsExist(targetWords, embeddedGrid)) continue
 
       // Generate special tiles
-      const specialTiles: Record<string, 'gold' | 'arcane' | 'freeze' | 'combo'> = {}
-      const tileTypes: ('gold' | 'arcane' | 'freeze' | 'combo')[] = ['gold', 'arcane', 'freeze', 'combo']
-      const specialCount = size === 4 ? 1 : size === 5 ? 2 : 3
-      const placed = new Set<string>()
-      
-      for (let i = 0; i < specialCount; i++) {
-        let r = prng.range(0, size)
-        let c = prng.range(0, size)
-        let key = `${r},${c}`
-        let retries = 0
-        while (placed.has(key) && retries < 10) {
-          r = prng.range(0, size)
-          c = prng.range(0, size)
-          key = `${r},${c}`
-          retries++
-        }
-        placed.add(key)
-        specialTiles[key] = prng.choose(tileTypes)
-      }
+      const specialTiles = generateSpecialTiles(boardSize, attemptPrng)
 
       return { grid: embeddedGrid, specialTiles }
     }
+
+    // If all 200 attempts failed, generate a best-effort board without
+    // target words rather than showing a broken puzzle
+    console.warn('[WordWizard] Failed to embed all target words after 200 attempts — generating fallback board')
   }
 
-  // Fallback to random board if targetWords not passed or all 100 attempts failed
-  let bestGrid: string[][] = []
-  let bestSpecialTiles: Record<string, 'gold' | 'arcane' | 'freeze' | 'combo'> = {}
-  let maxWordsCount = -1
-
+  // Fallback: purely random board (also used when no targetWords provided)
   for (let attempt = 0; attempt < 10; attempt++) {
-    const grid: string[][] = Array.from({ length: size }, () =>
-      Array.from({ length: size }, () => prng.choose(pool.split('')).toUpperCase())
+    const grid: string[][] = Array.from({ length: boardSize }, () =>
+      Array.from({ length: boardSize }, () => prng.choose(pool.split('')).toUpperCase())
     )
 
-    const specialTiles: Record<string, 'gold' | 'arcane' | 'freeze' | 'combo'> = {}
-    const tileTypes: ('gold' | 'arcane' | 'freeze' | 'combo')[] = ['gold', 'arcane', 'freeze', 'combo']
-    const specialCount = size === 4 ? 1 : size === 5 ? 2 : 3
-    const placed = new Set<string>()
-    
-    for (let i = 0; i < specialCount; i++) {
-      let r = prng.range(0, size)
-      let c = prng.range(0, size)
-      let key = `${r},${c}`
-      let retries = 0
-      while (placed.has(key) && retries < 10) {
-        r = prng.range(0, size)
-        c = prng.range(0, size)
-        key = `${r},${c}`
-        retries++
-      }
-      placed.add(key)
-      specialTiles[key] = prng.choose(tileTypes)
-    }
-
     const words = findAllWords(grid)
-    if (words.size >= 25) {
+    if (words.size >= 15) {
+      const specialTiles = generateSpecialTiles(boardSize, prng)
       return { grid, specialTiles }
-    }
-
-    if (words.size > maxWordsCount) {
-      maxWordsCount = words.size
-      bestGrid = grid
-      bestSpecialTiles = specialTiles
     }
   }
 
-  return { grid: bestGrid, specialTiles: bestSpecialTiles }
+  // Last resort: return whatever we have
+  const grid: string[][] = Array.from({ length: boardSize }, () =>
+    Array.from({ length: boardSize }, () => prng.choose(pool.split('')).toUpperCase())
+  )
+  const specialTiles = generateSpecialTiles(boardSize, prng)
+  return { grid, specialTiles }
 }
 
+function generateSpecialTiles(
+  size: number,
+  prng: SeededRandom
+): Record<string, 'gold' | 'arcane' | 'freeze' | 'combo'> {
+  const specialTiles: Record<string, 'gold' | 'arcane' | 'freeze' | 'combo'> = {}
+  const tileTypes: ('gold' | 'arcane' | 'freeze' | 'combo')[] = ['gold', 'arcane', 'freeze', 'combo']
+  const specialCount = size <= 8 ? 2 : size <= 10 ? 3 : 4
+  const placed = new Set<string>()
+
+  for (let i = 0; i < specialCount; i++) {
+    let r = prng.range(0, size)
+    let c = prng.range(0, size)
+    let key = `${r},${c}`
+    let retries = 0
+    while (placed.has(key) && retries < 20) {
+      r = prng.range(0, size)
+      c = prng.range(0, size)
+      key = `${r},${c}`
+      retries++
+    }
+    placed.add(key)
+    specialTiles[key] = prng.choose(tileTypes)
+  }
+
+  return specialTiles
+}
+
+/**
+ * Returns the 4 orthogonal (non-diagonal) neighbors of a cell.
+ * Used for player path validation (dragging through adjacent cells).
+ */
 export function getAdjacentCells(row: number, col: number, size: number): [number, number][] {
   const adj: [number, number][] = []
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      if (dr === 0 && dc === 0) continue
-      const nr = row + dr
-      const nc = col + dc
-      if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
-        adj.push([nr, nc])
-      }
+  const offsets: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+  for (const [dr, dc] of offsets) {
+    const nr = row + dr
+    const nc = col + dc
+    if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+      adj.push([nr, nc])
     }
   }
   return adj
@@ -280,37 +313,35 @@ for (const word of WORD_SET) {
   }
 }
 
+/**
+ * Find all valid dictionary words readable in the grid.
+ * Only scans Horizontal (left→right, right→left) and Vertical (top→bottom, bottom→top).
+ * No diagonals.
+ */
 export function findAllWords(board: string[][]): Set<string> {
   const size = board.length
   const foundWords = new Set<string>()
 
-  const pathSet = new Set<string>()
+  for (const [dr, dc] of DIRECTIONS) {
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        // Walk from (r, c) in direction (dr, dc)
+        let current = ''
+        let nr = r
+        let nc = c
+        while (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+          current += board[nr][nc].toLowerCase()
 
-  function dfs(r: number, c: number, currentStr: string) {
-    const key = `${r},${c}`
-    if (pathSet.has(key)) return
+          if (!PREFIX_SET.has(current)) break
 
-    const newStr = (currentStr + board[r][c]).toLowerCase()
-    
-    // Prune if not a prefix of any word in dictionary
-    if (!PREFIX_SET.has(newStr)) return
+          if (WORD_SET.has(current) && current.length >= 3) {
+            foundWords.add(current)
+          }
 
-    // Add if it's a valid word
-    if (WORD_SET.has(newStr) && newStr.length >= 3) {
-      foundWords.add(newStr)
-    }
-
-    pathSet.add(key)
-    const adj = getAdjacentCells(r, c, size)
-    for (const [nr, nc] of adj) {
-      dfs(nr, nc, newStr)
-    }
-    pathSet.delete(key)
-  }
-
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      dfs(r, c, '')
+          nr += dr
+          nc += dc
+        }
+      }
     }
   }
 
@@ -330,13 +361,14 @@ export function isValidPath(path: [number, number][], board: string[][]): boolea
     seen.add(key)
   }
 
-  // Check adjacency
+  // Check adjacency (only orthogonal — no diagonals)
   for (let i = 0; i < path.length - 1; i++) {
     const [r1, c1] = path[i]
     const [r2, c2] = path[i + 1]
     const dr = Math.abs(r1 - r2)
     const dc = Math.abs(c1 - c2)
-    if (dr > 1 || dc > 1 || (dr === 0 && dc === 0)) {
+    // Must be exactly 1 step in exactly one axis (no diagonals)
+    if (!((dr === 1 && dc === 0) || (dr === 0 && dc === 1))) {
       return false
     }
   }
@@ -409,40 +441,40 @@ export function calculateScore(
   }
 }
 
+/**
+ * Find a word in the board scanning only Horizontal and Vertical directions.
+ * Returns the path of [row, col] pairs if found, or null.
+ */
 export function findWordPath(word: string, board: string[][]): [number, number][] | null {
   const size = board.length
-  const w = word.toLowerCase()
-  
-  function dfs(r: number, c: number, idx: number, visited: Set<string>, currentPath: [number, number][]): [number, number][] | null {
-    if (idx === w.length) return currentPath
-    
-    const key = `${r},${c}`
-    if (visited.has(key)) return null
-    if (board[r][c].toLowerCase() !== w[idx]) return null
-    
-    visited.add(key)
-    const nextPath = [...currentPath, [r, c] as [number, number]]
-    
-    if (idx === w.length - 1) {
-      return nextPath
+  const upper = word.toUpperCase()
+  const len = upper.length
+
+  for (const [dr, dc] of DIRECTIONS) {
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        // Check bounds for full word in this direction
+        const endR = r + dr * (len - 1)
+        const endC = c + dc * (len - 1)
+        if (endR < 0 || endR >= size || endC < 0 || endC >= size) continue
+
+        // Match each character
+        let match = true
+        const path: [number, number][] = []
+        for (let i = 0; i < len; i++) {
+          const gr = r + dr * i
+          const gc = c + dc * i
+          if (board[gr][gc].toUpperCase() !== upper[i]) {
+            match = false
+            break
+          }
+          path.push([gr, gc])
+        }
+
+        if (match) return path
+      }
     }
-    
-    const adj = getAdjacentCells(r, c, size)
-    for (const [nr, nc] of adj) {
-      const path = dfs(nr, nc, idx + 1, visited, nextPath)
-      if (path) return path
-    }
-    
-    visited.delete(key)
-    return null
   }
 
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      const path = dfs(r, c, 0, new Set(), [])
-      if (path) return path
-    }
-  }
   return null
 }
-

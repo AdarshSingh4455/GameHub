@@ -98,7 +98,7 @@ Do not include abstract terms, phrases, or verbs. Use difficulty: '${difficulty}
     const categoryLower = category.toLowerCase()
     
     // Check if we have a curated list in CATEGORIES or FALLBACK_LISTS
-    let wordsSource: string[] = FALLBACK_LISTS[categoryLower] || CATEGORIES[categoryLower] || CATEGORIES.nature
+    const wordsSource: string[] = FALLBACK_LISTS[categoryLower] || CATEGORIES[categoryLower] || CATEGORIES.nature
     
     const words: WordMetadata[] = []
     const used = new Set<string>()

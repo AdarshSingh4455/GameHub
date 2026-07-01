@@ -43,3 +43,4 @@ next-env.d.ts
 **/node_modules/
 /test-proofs/
 /scratch/
+/prisma/mock_db_state.json

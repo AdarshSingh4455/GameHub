@@ -1,7 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 
-const DB_PATH = path.join(process.cwd(), 'node_modules', '.cache', 'mock_db_state.json')
+const DB_PATH = path.join(process.cwd(), 'prisma', 'mock_db_state.json')
 
 export interface MockDbState {
   profiles: Record<string, any>
@@ -111,6 +111,19 @@ export const MOCK_COSMETIC_ITEMS = [
 let cachedDb: MockDbState | null = null
 
 export function loadDb(): MockDbState {
+  const fallbackPath = path.join(process.cwd(), 'node_modules', '.cache', 'mock_db_state.json')
+
+  // Migration logic: if primary persistent path is missing, but compatibility fallback exists, copy it
+  if (!fs.existsSync(DB_PATH) && fs.existsSync(fallbackPath)) {
+    try {
+      const dir = path.dirname(DB_PATH)
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      fs.copyFileSync(fallbackPath, DB_PATH)
+    } catch (e) {
+      console.error('[mockPrisma] loadDb: failed to migrate compat database to persistent path:', e)
+    }
+  }
+
   let retries = 15
   while (retries > 0) {
     try {
@@ -189,9 +202,9 @@ export function loadDb(): MockDbState {
       username: 'TestUserA',
       avatarUrl: null,
       friendCode: 'GH-AAAAA0001',
-      xp: 2450,
-      level: 8,
-      coins: 320,
+      xp: 5000,
+      level: 15,
+      coins: 99999,
       isGuest: false,
       lastSeenAt: new Date().toISOString(),
       createdAt: new Date('2024-01-01').toISOString(),
@@ -216,9 +229,9 @@ export function loadDb(): MockDbState {
       username: 'TestUserB',
       avatarUrl: null,
       friendCode: 'GH-BBBBB0002',
-      xp: 1800,
-      level: 6,
-      coins: 180,
+      xp: 4000,
+      level: 12,
+      coins: 99999,
       isGuest: false,
       lastSeenAt: new Date().toISOString(),
       createdAt: new Date('2024-01-02').toISOString(),
@@ -455,14 +468,29 @@ export function loadDb(): MockDbState {
 
 export function saveDb(state: MockDbState) {
   cachedDb = state
+  const fallbackPath = path.join(process.cwd(), 'node_modules', '.cache', 'mock_db_state.json')
+
   let retries = 15
   while (retries > 0) {
     try {
+      // 1. Save to primary persistent DB
       const tmpPath = DB_PATH + '.tmp'
       const dir = path.dirname(DB_PATH)
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
       fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8')
       fs.renameSync(tmpPath, DB_PATH)
+
+      // 2. Save to compatibility fallback DB for test runners
+      try {
+        const fbTmpPath = fallbackPath + '.tmp'
+        const fbDir = path.dirname(fallbackPath)
+        if (!fs.existsSync(fbDir)) fs.mkdirSync(fbDir, { recursive: true })
+        fs.writeFileSync(fbTmpPath, JSON.stringify(state, null, 2), 'utf8')
+        fs.renameSync(fbTmpPath, fallbackPath)
+      } catch (e) {
+        // Silent catch for secondary compat path in case directory locks or doesn't exist
+      }
+
       return
     } catch (err) {
       retries--
@@ -566,7 +594,15 @@ function createModelMock(modelName: string) {
             const db = loadDb()
             const { userId, id, username, friendCode } = params.where || {}
             const key = userId || id
-            if (key) return getOrCreateProfile(db, key)
+            if (key) {
+              const existing = db.profiles[key]
+              if (existing) return existing
+              // Only auto-create for default mock-user-id if it's missing, otherwise return null
+              if (key === 'mock-user-id') {
+                return getOrCreateProfile(db, key)
+              }
+              return null
+            }
             if (username) return Object.values(db.profiles).find(p => p.username === username) || null
             if (friendCode) return Object.values(db.profiles).find(p => p.friendCode === friendCode) || null
             return null

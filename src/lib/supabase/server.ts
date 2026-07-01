@@ -5,16 +5,20 @@ export async function createClient() {
   const cookieStore = await cookies()
 
   if (process.env.MOCK_AUTH === 'true') {
+    const mockUserId = cookieStore.get('mock_user_id')?.value || 'mock-user-id'
+    const mockUsername = cookieStore.get('mock_username')?.value || 'Adarsh'
+    const mockEmail = cookieStore.get('mock_email')?.value || `${mockUsername.toLowerCase()}@example.com`
+
     return {
       auth: {
         getUser: async () => {
           return {
             data: {
               user: {
-                id: 'mock-user-id',
-                email: 'adarsh004455@gmail.com',
+                id: mockUserId,
+                email: mockEmail,
                 user_metadata: {
-                  username: 'Adarsh',
+                  username: mockUsername,
                 },
               },
             },

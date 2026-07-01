@@ -66,10 +66,23 @@ export async function getAuthenticatedProfile(request: Request) {
     return null
   }
 
-  // Find or create the profile in the database
+  // Find the profile in the database
   let profile = await prisma.profile.findUnique({
     where: { userId }
   })
+
+  if (!profile && username && process.env.MOCK_AUTH === 'true') {
+    // Stale cookie: the userId doesn't match any profile.
+    // Try to recover the correct profile by username before creating a new one.
+    const profileByUsername = await prisma.profile.findUnique({
+      where: { username }
+    })
+    if (profileByUsername) {
+      // Found by username — return it. The stale cookie will be corrected on next login.
+      console.warn(`[getAuthenticatedProfile] Stale cookie userId="${userId}" resolved to profile "${profileByUsername.userId}" by username "${username}"`)
+      return profileByUsername
+    }
+  }
 
   if (!profile) {
     // Generate unique username if needed

@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   try {
     let userId: string
+    let username: string | undefined
 
     if (process.env.MOCK_AUTH === 'true') {
       const cookieHeader = request.headers.get('cookie') || ''
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
         })
       )
       userId = cookies['mock_user_id'] || 'mock-user-id'
+      username = cookies['mock_username']
     } else {
       const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -27,12 +29,22 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       userId = user.id
+      username = user.user_metadata?.username
     }
 
     // Get current user's profile
-    const profile = await prisma.profile.findUnique({
+    let profile = await prisma.profile.findUnique({
       where: { userId },
     })
+
+    // Stale cookie recovery: if userId is not found, try to find by username
+    if (!profile && username && process.env.MOCK_AUTH === 'true') {
+      const profileByUsername = await prisma.profile.findUnique({ where: { username } })
+      if (profileByUsername) {
+        console.warn(`[friends] Stale cookie userId="${userId}" recovered via username="${username}"`)
+        profile = profileByUsername
+      }
+    }
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })

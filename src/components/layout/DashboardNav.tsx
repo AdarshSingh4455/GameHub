@@ -178,8 +178,26 @@ export default function DashboardNav({ user }: Props) {
   }, [router])
 
   // Load details / stats dynamically
-  const loadProfileDetails = () => {
+  const loadProfileDetails = async () => {
     if (user) {
+      // In mock mode: attempt to repair any stale cookie before fetching profile data.
+      // This handles cases where the browser has an old hashed user ID that doesn't match the DB.
+      try {
+        const syncRes = await fetch('/api/auth/sync-cookie')
+        if (syncRes.ok) {
+          const syncData = await syncRes.json()
+          if (syncData.corrected) {
+            // Cookie was stale and has been corrected — reload the page so all
+            // subsequent API calls use the corrected cookie.
+            console.log('[DashboardNav] Stale cookie corrected, reloading...')
+            window.location.reload()
+            return
+          }
+        }
+      } catch {
+        // Non-critical — continue even if sync fails
+      }
+
       fetch('/api/profile/details')
         .then((res) => {
           if (res.ok) return res.json()
@@ -214,6 +232,7 @@ export default function DashboardNav({ user }: Props) {
             .catch(() => {})
         })
         .catch(() => {})
+
     } else {
       const guestXP = parseInt(localStorage.getItem('gamehub_guest_xp') || '0', 10)
       const guestLevel = parseInt(localStorage.getItem('gamehub_guest_level') || '1', 10)

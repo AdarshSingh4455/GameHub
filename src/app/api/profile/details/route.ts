@@ -8,6 +8,7 @@ import { checkAndUnlockProgressionItems } from '@/lib/cosmeticUnlocks'
 export async function GET(request: Request) {
   try {
     let userId: string
+    let username: string | undefined
     if (process.env.MOCK_AUTH === 'true') {
       const cookieHeader = request.headers.get('cookie') || ''
       const cookies = Object.fromEntries(
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
         })
       )
       userId = cookies['mock_user_id'] || 'mock-user-id'
+      username = cookies['mock_username']
     } else {
       const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
@@ -27,11 +29,36 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       userId = user.id
+      username = user.user_metadata?.username
     }
 
-    const profile = await prisma.profile.findUnique({
+    let profile = await prisma.profile.findUnique({
       where: { userId }
     })
+
+    // Stale cookie recovery: if userId is not found, recover by username using same logic as resolve-user
+    if (!profile && username && process.env.MOCK_AUTH === 'true') {
+      // Exact username match
+      let recovered = await prisma.profile.findUnique({ where: { username } })
+
+      // Case-insensitive + prefix matching
+      if (!recovered) {
+        const allProfiles = await prisma.profile.findMany()
+        recovered = allProfiles.find((p: any) => p.username?.toLowerCase() === username.toLowerCase()) || null
+        if (!recovered) {
+          const usernameLower = username.toLowerCase()
+          recovered = allProfiles.find((p: any) => {
+            const uname = (p.username || '').toLowerCase()
+            return uname.startsWith(usernameLower) || usernameLower.startsWith(uname)
+          }) || null
+        }
+      }
+
+      if (recovered) {
+        console.warn(`[profile/details] Stale cookie userId="${userId}" recovered via username="${username}" -> userId="${recovered.userId}"`)
+        profile = recovered
+      }
+    }
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })

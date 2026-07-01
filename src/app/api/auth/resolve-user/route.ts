@@ -13,24 +13,42 @@ export async function GET(request: NextRequest) {
 
     const searchName = username || email?.split('@')[0] || ''
     
-    // First try: Find by exact username in the database
+    // 1. Exact username match
     let profile = await prisma.profile.findUnique({
       where: { username: searchName }
     })
 
-    // Second try: Case-insensitive search if exact find failed
+    // 2. Case-insensitive username match
     if (!profile) {
       const allProfiles = await prisma.profile.findMany()
+
       profile = allProfiles.find(
         (p: any) => p.username?.toLowerCase() === searchName.toLowerCase()
       ) || null
+
+      // 3. Email match: check if any profile stores the full email
+      if (!profile && email) {
+        profile = allProfiles.find(
+          (p: any) => p.email?.toLowerCase() === email.toLowerCase()
+        ) || null
+      }
+
+      // 4. Email-prefix match: if user's display name starts with the part before @
+      // This handles adarsh004455 -> Adarsh (display name starts with "adarsh")
+      if (!profile && email) {
+        const emailPrefix = email.split('@')[0].toLowerCase()
+        profile = allProfiles.find((p: any) => {
+          const uname = (p.username || '').toLowerCase()
+          return uname.startsWith(emailPrefix) || emailPrefix.startsWith(uname)
+        }) || null
+      }
     }
 
     if (profile) {
       return NextResponse.json({ userId: profile.userId })
     }
 
-    // Default stable fallback if profile does not exist yet (to generate a consistent ID for new users)
+    // Stable fallback for genuinely new users
     let hash = 0
     const val = email || searchName
     for (let i = 0; i < val.length; i++) {

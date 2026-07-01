@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "cashNotes" INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "RankedMatch" ADD COLUMN IF NOT EXISTS "gameSlug" TEXT NOT NULL DEFAULT 'snake-arena';

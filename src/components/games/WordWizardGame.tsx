@@ -170,12 +170,14 @@ export default function WordWizardGame() {
       setActiveHint(null)
 
       // Set Time limit
-      let initialTime = 60
+      let initialTime = 85 // New default: 85s (1 min 25s)
       if (localDifficulty === 'hard') {
-        initialTime = 120
+        initialTime = 145
+      } else if (localDifficulty === 'easy') {
+        initialTime = 65
       }
       if (selectedModifier === 'time_attack') {
-        initialTime = 40
+        initialTime = 55
       }
       
       setTimeLeft(mode === 'endless' ? null : initialTime)
@@ -218,7 +220,8 @@ export default function WordWizardGame() {
     if (lowerWord.length < 3) return
     totalAttemptsRef.current++
 
-    if (!isValidWord(lowerWord)) {
+    const isTarget = targetWords.some(w => w.toLowerCase() === lowerWord)
+    if (!isValidWord(lowerWord) && !isTarget) {
       particlesRef.current?.addFloatingText(window.innerWidth / 2 - 100, window.innerHeight / 2 - 150, 'Not a Word', '#ef4444')
       return
     }
@@ -250,9 +253,9 @@ export default function WordWizardGame() {
     const finalScoreIncrease = Math.floor(scoreResult.totalBeforeCombo * (1 + (newCombo - 1) * comboFactor))
 
     // Target Words objective check
-    let isTarget = false
+    let isNewTargetFound = false
     if (targetWords.includes(lowerWord) && !foundTargetWords.has(lowerWord)) {
-      isTarget = true
+      isNewTargetFound = true
       setFoundTargetWords((prev) => {
         const next = new Set(prev)
         next.add(lowerWord)
@@ -306,12 +309,12 @@ export default function WordWizardGame() {
     }
 
     // Success bursts and float text
-    particlesRef.current?.addBurst(window.innerWidth / 2, window.innerHeight / 2 - 100, isTarget ? '#fef08a' : '#34d399', 18)
+    particlesRef.current?.addBurst(window.innerWidth / 2, window.innerHeight / 2 - 100, isNewTargetFound ? '#fef08a' : '#34d399', 18)
     particlesRef.current?.addFloatingText(
       window.innerWidth / 2 - 100,
       window.innerHeight / 2 - 150,
-      `+${finalScoreIncrease} ${isTarget ? 'Target! ✨' : ''}`,
-      isTarget ? '#fef08a' : '#34d399'
+      `+${finalScoreIncrease} ${isNewTargetFound ? 'Target! ✨' : ''}`,
+      isNewTargetFound ? '#fef08a' : '#34d399'
     )
   }, [foundWords, specialTiles, combo, activeModifier, targetWords, foundTargetWords, mode, maxTime])
 
@@ -565,14 +568,14 @@ export default function WordWizardGame() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 20,
+        gap: 12,
         width: '100%',
         maxWidth: 550,
         margin: '0 auto',
-        padding: '16px 8px',
+        padding: '8px 8px',
         color: '#f8fafc',
         position: 'relative',
-        minHeight: 650,
+        minHeight: 'auto',
       }}
     >
       <WordWizardParticles ref={particlesRef} />
@@ -732,7 +735,7 @@ export default function WordWizardGame() {
                       fontWeight: 700,
                     }}
                   >
-                    {d === 'easy' ? '4x4 Easy' : d === 'normal' ? '5x5 Normal' : '6x6 Hard'}
+                    {d === 'easy' ? '8x8 Easy' : d === 'normal' ? '10x10 Normal' : '12x12 Hard'}
                   </button>
                 ))}
               </div>
@@ -798,14 +801,14 @@ export default function WordWizardGame() {
           <div
             style={{
               width: '100%',
-              padding: '14px 16px',
+              padding: '10px 14px',
               background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.4) 100%)',
               border: '1.5px solid rgba(129, 140, 248, 0.15)',
               borderRadius: 20,
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), inset 0 0 15px rgba(129, 140, 248, 0.05)',
               display: 'flex',
               flexDirection: 'column',
-              gap: 12,
+              gap: 8,
             }}
             id="ww-objective-panel"
           >
@@ -875,20 +878,34 @@ export default function WordWizardGame() {
             )}
           </div>
 
-          {/* Active Hint Message Box */}
+          <div style={{ width: '100%', maxWidth: board.length >= 12 ? 400 : 380, margin: '0 auto' }}>
+            <WordWizardBoard
+              grid={board}
+              specialTiles={specialTiles}
+              path={wordPath}
+              setPath={setWordPath}
+              onSubmitWord={handleSubmitWord}
+              particlesRef={particlesRef}
+              disabled={isLoading}
+              hintHighlights={hintHighlights}
+              hintLevel={activeHint?.level || 0}
+            />
+          </div>
+
+          {/* Active Hint Message Box (repositioned below the board to prevent layout shifting) */}
           {activeHint && (
             <div
               data-testid="ww-hint-message"
               className="hint-message-box"
               style={{
                 width: '100%',
-                padding: '10px 14px',
+                padding: '8px 12px',
                 background: 'rgba(167, 139, 250, 0.08)',
                 border: '1.5px solid rgba(167, 139, 250, 0.3)',
                 borderRadius: 16,
                 textAlign: 'center',
                 fontWeight: 700,
-                fontSize: '0.9rem',
+                fontSize: '0.85rem',
                 color: '#c084fc',
                 textShadow: '0 0 8px rgba(167, 139, 250, 0.3)',
                 boxShadow: '0 4px 15px rgba(167, 139, 250, 0.1)',
@@ -898,18 +915,6 @@ export default function WordWizardGame() {
               💡 {hintMessage}
             </div>
           )}
-
-          <WordWizardBoard
-            grid={board}
-            specialTiles={specialTiles}
-            path={wordPath}
-            setPath={setWordPath}
-            onSubmitWord={handleSubmitWord}
-            particlesRef={particlesRef}
-            disabled={isLoading}
-            hintHighlights={hintHighlights}
-            hintLevel={activeHint?.level || 0}
-          />
 
           {/* Found words slider panel */}
           <div

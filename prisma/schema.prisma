@@ -23,6 +23,7 @@ model Profile {
   dailyRewardDay       Int                 @default(1)
   migratedFromGuest    Boolean             @default(false)
   coins                Int                 @default(0)
+  cashNotes            Int                 @default(0)
   selectedTitle        String?
   selectedBadge        String?
   selectedFrame        String?

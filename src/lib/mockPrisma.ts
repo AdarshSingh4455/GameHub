@@ -488,6 +488,7 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
       xp: 100,
       level: 1,
       coins: 50,
+      cashNotes: 0,
       isGuest: false,
       lastSeenAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
@@ -521,6 +522,7 @@ function getOrCreateProfile(db: MockDbState, userId: string, overrideName?: stri
   if (profile.streakProtectionActive === undefined) profile.streakProtectionActive = false
   if (profile.lastActiveAt === undefined) profile.lastActiveAt = new Date().toISOString()
   if (profile._count === undefined) profile._count = { wonMatches: 0, friends: 0 }
+  if (profile.cashNotes === undefined) profile.cashNotes = 0
   if (profile.rankedMmr === undefined) profile.rankedMmr = 1000
   if (profile.rankedWins === undefined) profile.rankedWins = 0
   if (profile.rankedLosses === undefined) profile.rankedLosses = 0
@@ -601,6 +603,7 @@ function createModelMock(modelName: string) {
               const d = params.data || {}
               if (d.xp?.increment)    profile.xp    += d.xp.increment
               if (d.coins?.increment) profile.coins += d.coins.increment
+              if (d.cashNotes?.increment) profile.cashNotes += d.cashNotes.increment
               Object.assign(profile, d)
               profile.updatedAt = new Date().toISOString()
               saveDb(db)

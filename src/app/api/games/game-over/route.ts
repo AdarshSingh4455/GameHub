@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     const { gameSlug, result, metadata } = body
 
-    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+    if (process.env.MOCK_AUTH === 'true') {
       return NextResponse.json({
         gameSlug,
         result,

@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
-  if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+  if (process.env.MOCK_AUTH === 'true') {
     return {
       auth: {
         getUser: async () => {

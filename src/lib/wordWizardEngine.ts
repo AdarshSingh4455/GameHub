@@ -208,6 +208,14 @@ export function generateBoard(
   const pool = getLetterPool(difficulty, dailyModifier)
 
   if (targetWords && targetWords.length > 0) {
+    targetWords.forEach(w => {
+      const lower = w.toLowerCase()
+      WORD_SET.add(lower)
+      for (let i = 1; i <= lower.length; i++) {
+        PREFIX_SET.add(lower.substring(0, i))
+      }
+    })
+
     const MAX_ATTEMPTS = 200
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {

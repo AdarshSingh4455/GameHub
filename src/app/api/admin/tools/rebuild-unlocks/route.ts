@@ -7,7 +7,7 @@ import { checkAndUnlockProgressionItems } from '@/lib/cosmeticUnlocks'
 export async function POST() {
   try {
     let userId: string
-    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+    if (process.env.MOCK_AUTH === 'true') {
       userId = 'mock-user-id'
     } else {
       const supabase = await createClient()

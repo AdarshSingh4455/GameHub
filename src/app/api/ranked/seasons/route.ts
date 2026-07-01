@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         seasonName: s.name,
         endDate: s.endDate,
         winner: sortedSnaps[0] || null,
-        topPlayers: sortedSnaps.slice(0, 5),
+        topPlayers: sortedSnaps.slice(0, 10),
       }
     })
 
@@ -58,7 +58,12 @@ export async function GET(request: NextRequest) {
             { username: 'BlitzMaster', mmr: 3410, rank: 'Master', wins: 125, losses: 70, winRate: 64, peakTier: 'Master', rewards: { title: 'Season 0 Elite' }, seasonNumber: 0, completionDate: new Date('2026-05-31') },
             { username: 'PixelLord', mmr: 3180, rank: 'Master', wins: 110, losses: 65, winRate: 63, peakTier: 'Master', rewards: { title: 'Season 0 Elite' }, seasonNumber: 0, completionDate: new Date('2026-05-31') },
             { username: 'GamerX', mmr: 2950, rank: 'Diamond I', wins: 95, losses: 60, winRate: 61, peakTier: 'Diamond I', rewards: { title: 'Season 0 Challenger' }, seasonNumber: 0, completionDate: new Date('2026-05-31') },
-            { username: 'ApexPlayer', mmr: 2840, rank: 'Diamond II', wins: 88, losses: 56, winRate: 61, peakTier: 'Diamond II', rewards: { title: 'Season 0 Challenger' }, seasonNumber: 0, completionDate: new Date('2026-05-31') }
+            { username: 'ApexPlayer', mmr: 2840, rank: 'Diamond II', wins: 88, losses: 56, winRate: 61, peakTier: 'Diamond II', rewards: { title: 'Season 0 Challenger' }, seasonNumber: 0, completionDate: new Date('2026-05-31') },
+            { username: 'ShadowWalker', mmr: 2710, rank: 'Diamond III', wins: 80, losses: 52, winRate: 60, peakTier: 'Diamond III', rewards: { title: 'Season 0 Contender' }, seasonNumber: 0, completionDate: new Date('2026-05-31') },
+            { username: 'CodeNinja', mmr: 2560, rank: 'Platinum I', wins: 75, losses: 48, winRate: 60, peakTier: 'Platinum I', rewards: { title: 'Season 0 Contender' }, seasonNumber: 0, completionDate: new Date('2026-05-31') },
+            { username: 'Nebula', mmr: 2420, rank: 'Platinum II', wins: 70, losses: 45, winRate: 60, peakTier: 'Platinum II', rewards: { title: 'Season 0 Contender' }, seasonNumber: 0, completionDate: new Date('2026-05-31') },
+            { username: 'Vortex', mmr: 2280, rank: 'Platinum III', wins: 65, losses: 42, winRate: 60, peakTier: 'Platinum III', rewards: { title: 'Season 0 Contender' }, seasonNumber: 0, completionDate: new Date('2026-05-31') },
+            { username: 'AlphaGamer', mmr: 2150, rank: 'Gold I', wins: 60, losses: 40, winRate: 60, peakTier: 'Gold I', rewards: { title: 'Season 0 Contender' }, seasonNumber: 0, completionDate: new Date('2026-05-31') }
           ]
         }
       ] as any[]

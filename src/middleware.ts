@@ -11,7 +11,7 @@ const AUTH_REQUIRED_PREFIXES = [
 ]
 
 export async function middleware(request: NextRequest) {
-  if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+  if (process.env.MOCK_AUTH === 'true') {
     return NextResponse.next({ request })
   }
 

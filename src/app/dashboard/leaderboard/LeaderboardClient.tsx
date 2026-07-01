@@ -137,6 +137,10 @@ interface SeasonWinner {
   wins: number
   losses: number
   winRate: number
+  avatarUrl?: string | null
+  rewards?: any
+  seasonNumber?: number
+  completionDate?: Date | string
 }
 
 interface HallOfFameEntry {
@@ -236,6 +240,7 @@ export default function LeaderboardClient({
   const [selectedArchiveId, setSelectedArchiveId] = useState<string>('')
 
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
+  const [expandedSeasons, setExpandedSeasons] = useState<string[]>([])
 
   // Matchmaking Queue States
   const [isSearchingRanked, setIsSearchingRanked] = useState(false)
@@ -1433,65 +1438,310 @@ export default function LeaderboardClient({
             <div style={{ padding: '2rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }}>Loading Hall of Fame...</div>
           ) : (
             <>
-              {hallOfFame.map((entry, idx) => (
-                <div key={entry.seasonId || idx} className="card animate-slideUp" style={{
-                  padding: '1.5rem',
-                  background: 'linear-gradient(135deg, hsl(222 25% 10%), hsl(222 20% 7%))',
-                  border: '1px solid hsl(220 20% 16%)',
-                  borderRadius: '24px',
-                }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
-                    <div>
-                      <h3 style={{ margin: 0, fontWeight: 900, color: 'hsl(45 100% 55%)', fontSize: '1.15rem' }}><CrownIcon size={18} className="inline mr-2 text-yellow-400" /> {entry.seasonName}</h3>
-                      <span style={{ fontSize: '0.72rem', color: 'hsl(220 10% 50%)' }}>
-                        Archived: {new Date(entry.endDate).toLocaleDateString()}
-                      </span>
+              {/* Champion Spotlight - Highlight the latest completed season's winner */}
+              {hallOfFame.length > 0 && hallOfFame[0].winner && (() => {
+                const latest = hallOfFame[0]
+                const champ = latest.winner
+                if (!champ) return null
+                const rankDetails = getRankDetails(champ.mmr, 0)
+                
+                return (
+                  <div
+                    className="card animate-slideUp"
+                    style={{
+                      padding: '2rem',
+                      background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(217, 119, 6, 0.03) 50%, rgba(15, 23, 42, 0.95) 100%)',
+                      border: '2px solid rgba(251, 191, 36, 0.35)',
+                      borderRadius: '24px',
+                      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(251, 191, 36, 0.05)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      marginBottom: '1rem',
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      top: 18,
+                      right: -30,
+                      background: 'linear-gradient(135deg, #fbbf24, #d97706)',
+                      color: '#0f172a',
+                      fontWeight: 900,
+                      fontSize: '0.75rem',
+                      padding: '4px 35px',
+                      transform: 'rotate(45deg)',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                    }}>
+                      🏆 CHAMPION
                     </div>
-                    {entry.winner && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(251, 191, 36, 0.05)', padding: '0.4rem 1rem', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
-                        <span style={{ fontSize: '0.78rem', color: 'hsl(220 10% 50%)', fontWeight: 600 }}>CHAMPION:</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fef08a' }}>
-                            {entry.winner.displayName || (entry.winner.username.includes('@') ? entry.winner.username.split('@')[0] : entry.winner.username)}
-                          </span>
-                          <span style={{ fontSize: '0.75rem', color: 'hsl(220 10% 60%)' }}>({entry.winner.mmr} MMR)</span>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                      <div style={{ position: 'relative' }}>
+                        <div style={{
+                          padding: 4,
+                          background: 'linear-gradient(135deg, #fbbf24, #d97706)',
+                          borderRadius: '50%',
+                          boxShadow: '0 0 25px rgba(251, 191, 36, 0.4)',
+                        }}>
+                          <div style={{ borderRadius: '50%', border: '3px solid #0f172a', overflow: 'hidden', display: 'flex' }}>
+                            <Avatar
+                              avatarUrl={champ.avatarUrl || null}
+                              username={champ.username}
+                              size={90}
+                            />
+                          </div>
+                        </div>
+                        <div style={{
+                          position: 'absolute',
+                          bottom: -6,
+                          right: -6,
+                          background: '#fbbf24',
+                          borderRadius: '50%',
+                          width: 32,
+                          height: 32,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '2px solid #0f172a',
+                          boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+                        }}>
+                          👑
                         </div>
                       </div>
-                    )}
+
+                      <div style={{ flex: 1, minWidth: 260 }}>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          color: '#fbbf24',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.15em',
+                        }}>
+                          Active Season Champion Spotlight
+                        </span>
+                        <h2 style={{
+                          margin: '4px 0 10px 0',
+                          fontSize: '2rem',
+                          fontWeight: 950,
+                          color: '#fff',
+                          textShadow: '0 0 10px rgba(255,255,255,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                        }}>
+                          {champ.displayName || (champ.username.includes('@') ? champ.username.split('@')[0] : champ.username)}
+                        </h2>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem 1.5rem', marginBottom: '1rem' }}>
+                          <div>
+                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Season</div>
+                            <div style={{ fontWeight: 800, color: '#f8fafc', fontSize: '0.95rem' }}>{latest.seasonName}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Division</div>
+                            <div style={{ fontWeight: 800, color: rankDetails.badgeColor, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <RankBadge mmr={champ.mmr} size="sm" />
+                              {champ.rank || rankDetails.label}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Final MMR</div>
+                            <div style={{ fontWeight: 900, color: '#38bdf8', fontSize: '0.95rem' }}>⚡ {champ.mmr} MMR</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Win Rate</div>
+                            <div style={{ fontWeight: 850, color: '#10b981', fontSize: '0.95rem' }}>🔥 {champ.winRate || Math.round((champ.wins / (champ.wins + champ.losses || 1)) * 100)}%</div>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          borderRadius: 16,
+                          padding: '12px 16px',
+                        }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fbbf24', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            🎁 Rewards Earned:
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {champ.rewards?.title && (
+                              <span style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'rgba(236, 72, 153, 0.1)', border: '1px solid rgba(236, 72, 153, 0.3)', borderRadius: 20, color: '#f472b6', fontWeight: 700 }}>
+                                🏷️ {champ.rewards.title}
+                              </span>
+                            )}
+                            {champ.rewards?.frame && (
+                              <span style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'rgba(167, 139, 250, 0.1)', border: '1px solid rgba(167, 139, 250, 0.3)', borderRadius: 20, color: '#c084fc', fontWeight: 700 }}>
+                                🖼️ {champ.rewards.frame}
+                              </span>
+                            )}
+                            {champ.rewards?.badge && (
+                              <span style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: 20, color: '#38bdf8', fontWeight: 700 }}>
+                                🛡️ {champ.rewards.badge}
+                              </span>
+                            )}
+                            {champ.rewards?.cashNotes > 0 && (
+                              <span style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 20, color: '#34d399', fontWeight: 800 }}>
+                                💵 {champ.rewards.cashNotes} Cash Notes
+                              </span>
+                            )}
+                            {champ.rewards?.coins > 0 && (
+                              <span style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: 20, color: '#fbbf24', fontWeight: 800 }}>
+                                🪙 {champ.rewards.coins} Coins
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                )
+              })()}
 
-                  <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.78rem', textTransform: 'uppercase', color: 'hsl(220 10% 50%)', fontWeight: 700 }}>
-                    Top Standings Snapshots
-                  </h4>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 850, color: '#fff', margin: '1rem 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                📜 Archived Seasons Records
+              </h2>
 
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem', color: 'hsl(220 10% 50%)', textTransform: 'uppercase' }}>
-                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left' }}>Rank</th>
-                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left' }}>Player</th>
-                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left' }}>Division</th>
-                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left' }}>MMR</th>
-                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Win Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {entry.topPlayers.map((player, pIdx) => (
-                        <tr key={pIdx} style={{ fontSize: '0.8rem', borderBottom: pIdx < entry.topPlayers.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
-                          <td style={{ padding: '0.5rem 0.5rem', fontWeight: 700, color: pIdx === 0 ? 'hsl(45 100% 55%)' : 'hsl(220 10% 50%)' }}>
-                            {pIdx <= 2 ? <AwardIcon size={16} style={{ color: pIdx === 0 ? 'hsl(45 100% 55%)' : pIdx === 1 ? 'hsl(220 10% 75%)' : 'hsl(35 60% 50%)' }} /> : `#${pIdx + 1}`}
-                          </td>
-                          <td style={{ padding: '0.5rem 0.5rem', fontWeight: 600, color: 'white' }}>
-                            {player.displayName || (player.username.includes('@') ? player.username.split('@')[0] : player.username)}
-                          </td>
-                          <td style={{ padding: '0.5rem 0.5rem', color: 'hsl(220 10% 60%)' }}>{player.rank}</td>
-                          <td style={{ padding: '0.5rem 0.5rem', color: 'hsl(220 100% 65%)', fontWeight: 600 }}>{player.mmr} MMR</td>
-                          <td style={{ padding: '0.5rem 0.5rem', textAlign: 'right', color: 'hsl(142 70% 50%)', fontWeight: 600 }}>{player.winRate}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {hallOfFame.map((entry, idx) => {
+                  const isExpanded = expandedSeasons.includes(entry.seasonId)
+                  const champ = entry.winner
+                  
+                  return (
+                    <div
+                      key={entry.seasonId || idx}
+                      className="card"
+                      style={{
+                        background: 'linear-gradient(135deg, hsl(222 25% 10%), hsl(222 20% 7%))',
+                        border: isExpanded ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid hsl(220 20% 16%)',
+                        borderRadius: '20px',
+                        overflow: 'hidden',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <div
+                        onClick={() => {
+                          const id = entry.seasonId
+                          setExpandedSeasons(prev =>
+                            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                          )
+                        }}
+                        style={{
+                          padding: '1.25rem 1.5rem',
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '1rem',
+                          cursor: 'pointer',
+                          background: isExpanded ? 'rgba(99, 102, 241, 0.04)' : 'transparent',
+                          userSelect: 'none',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                          <span style={{ fontSize: '1.5rem' }}>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</span>
+                          <div>
+                            <h3 style={{ margin: 0, fontWeight: 850, color: isExpanded ? '#818cf8' : '#f8fafc', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              {entry.seasonName}
+                            </h3>
+                            <span style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.4)' }}>
+                              📅 End Date: {new Date(entry.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                        </div>
+
+                        {champ && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.02)', padding: '4px 10px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <Avatar avatarUrl={champ.avatarUrl || null} username={champ.username} size={24} />
+                              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fbbf24' }}>
+                                {champ.displayName || (champ.username.includes('@') ? champ.username.split('@')[0] : champ.username)}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 700 }}>⚡ {champ.mmr} MMR</span>
+                            </div>
+                            <span style={{ fontSize: '1.2rem', color: 'rgba(255, 255, 255, 0.3)' }}>
+                              {isExpanded ? '▲' : '▼'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {isExpanded && (
+                        <div style={{
+                          padding: '1.5rem',
+                          background: 'rgba(0, 0, 0, 0.15)',
+                          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <h4 style={{ margin: 0, fontSize: '0.78rem', textTransform: 'uppercase', color: 'rgba(255, 255, 255, 0.4)', fontWeight: 800, letterSpacing: '0.05em' }}>
+                              🏆 Season Top 10 Final Standings
+                            </h4>
+                          </div>
+
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', textAlign: 'left' }}>
+                                  <th style={{ padding: '8px 6px', width: 60 }}>Rank</th>
+                                  <th style={{ padding: '8px 6px' }}>Player</th>
+                                  <th style={{ padding: '8px 6px' }}>Division</th>
+                                  <th style={{ padding: '8px 6px' }}>MMR</th>
+                                  <th style={{ padding: '8px 6px', textAlign: 'center' }}>Win Rate</th>
+                                  <th style={{ padding: '8px 6px', textAlign: 'center' }}>Record (W/L)</th>
+                                  <th style={{ padding: '8px 6px', textAlign: 'right' }}>Rewards</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {entry.topPlayers.map((player, pIdx) => {
+                                  const pDetails = getRankDetails(player.mmr, 0)
+                                  
+                                  return (
+                                    <tr
+                                      key={pIdx}
+                                      style={{
+                                        fontSize: '0.78rem',
+                                        borderBottom: pIdx < entry.topPlayers.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none',
+                                        background: pIdx === 0 ? 'rgba(251, 191, 36, 0.02)' : 'transparent',
+                                      }}
+                                    >
+                                      <td style={{ padding: '10px 6px', fontWeight: 800 }}>
+                                        {pIdx === 0 ? '👑 #1' : pIdx === 1 ? '🥈 #2' : pIdx === 2 ? '🥉 #3' : `#${pIdx + 1}`}
+                                      </td>
+                                      <td style={{ padding: '10px 6px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                          <Avatar avatarUrl={player.avatarUrl || null} username={player.username} size={20} />
+                                          <span style={{ fontWeight: 700, color: pIdx === 0 ? '#fbbf24' : '#fff' }}>
+                                            {player.displayName || (player.username.includes('@') ? player.username.split('@')[0] : player.username)}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td style={{ padding: '10px 6px', color: pDetails.badgeColor, fontWeight: 650 }}>
+                                        {player.rank || pDetails.label}
+                                      </td>
+                                      <td style={{ padding: '10px 6px', color: '#38bdf8', fontWeight: 700 }}>
+                                        ⚡ {player.mmr}
+                                      </td>
+                                      <td style={{ padding: '10px 6px', textAlign: 'center', color: '#10b981', fontWeight: 700 }}>
+                                        {player.winRate}%
+                                      </td>
+                                      <td style={{ padding: '10px 6px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+                                        {player.wins}W / {player.losses}L
+                                      </td>
+                                      <td style={{ padding: '10px 6px', textAlign: 'right', fontWeight: 600, color: '#a78bfa' }}>
+                                        {player.rewards?.title || 'Contender'}
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
 
               {hallOfFame.length === 0 && (
                 <div style={{ padding: '3rem', textAlign: 'center', color: 'hsl(220 10% 50%)' }} className="card">

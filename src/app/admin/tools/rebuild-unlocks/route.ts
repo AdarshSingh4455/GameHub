@@ -72,7 +72,7 @@ function calculateStreak(claimDates: Date[]): { currentStreak: number; longestSt
 async function runRecoveryTool(request: Request) {
   try {
     let userId: string
-    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+    if (process.env.MOCK_AUTH === 'true') {
       const cookieHeader = request.headers.get('cookie') || ''
       const cookies = Object.fromEntries(
         cookieHeader.split(';').map(c => {

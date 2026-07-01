@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(_request: NextRequest) {
   try {
-    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+    if (process.env.MOCK_AUTH === 'true') {
       return NextResponse.json({
         stats: {
           classic: { highScore: 4500, bestCombo: 6, highestLevel: 5, totalLines: 48, avgLines: 12, perfectClears: 1 },

@@ -74,9 +74,9 @@ export default function WordWizardHUD({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
+        gap: 6,
         width: '100%',
-        padding: '12px 16px',
+        padding: '8px 12px',
         background: 'rgba(255, 255, 255, 0.02)',
         border: '1px solid rgba(255, 255, 255, 0.05)',
         borderRadius: 16,

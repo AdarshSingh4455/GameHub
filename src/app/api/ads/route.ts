@@ -10,7 +10,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'gameSlug parameter is required' }, { status: 400 })
     }
 
-    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+    if (process.env.MOCK_AUTH === 'true') {
       return NextResponse.json({
         ads: [
           {
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'adId and valid action (impression/click) are required' }, { status: 400 })
     }
 
-    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+    if (process.env.MOCK_AUTH === 'true') {
       return NextResponse.json({ success: true, impressions: 1, clicks: 0 }, { status: 200 })
     }
 

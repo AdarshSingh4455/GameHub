@@ -37,7 +37,7 @@ export async function getAuthenticatedProfile(request: Request) {
   let userId: string | undefined
   let username: string | undefined
 
-  if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+  if (process.env.MOCK_AUTH === 'true') {
     // Read from cookies in the request headers
     const cookieHeader = request.headers.get('cookie') || ''
     const cookies = Object.fromEntries(
@@ -101,7 +101,7 @@ export async function getAuthenticatedProfile(request: Request) {
       }
       if (!profile) throw err
     }
-  } else if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production' && username && profile.username !== username) {
+  } else if (process.env.MOCK_AUTH === 'true' && username && profile.username !== username) {
     // In mock mode, always sync the username from the cookie so E2E tests are consistent
     try {
       profile = await prisma.profile.update({

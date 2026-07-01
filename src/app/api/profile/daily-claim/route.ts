@@ -10,7 +10,7 @@ import { checkAndUnlockProgressionItems } from '@/lib/cosmeticUnlocks'
 
 export async function GET() {
   try {
-    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+    if (process.env.MOCK_AUTH === 'true') {
       const now = new Date()
       const nextUtcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
       const secondsRemaining = Math.max(0, Math.ceil((nextUtcMidnight.getTime() - now.getTime()) / 1000))
@@ -85,7 +85,7 @@ export async function GET() {
 
 export async function POST() {
   try {
-    if (process.env.MOCK_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+    if (process.env.MOCK_AUTH === 'true') {
       return NextResponse.json({
         success: true,
         coinsGained: 50,

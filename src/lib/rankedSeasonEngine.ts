@@ -5,22 +5,46 @@ import { getRankDetails } from './rankedUtils'
 function getRewardsForRank(rankIndex: number, seasonNumber: number): any {
   if (rankIndex === 0) {
     return {
-      title: `Season ${seasonNumber} Grand Champion`,
+      title: `Season ${seasonNumber} Champion`,
+      frame: `Season ${seasonNumber} Champion Frame`,
+      badge: `Season ${seasonNumber} Champion Badge`,
+      cashNotes: 500,
       coins: 10000,
-      frame: 'Exclusive Trophy + Limited Frame'
+      message: `Season ${seasonNumber} Champion Badge + Title + Frame + 500 Cash Notes + 10k Coins`
     }
   }
-  if (rankIndex < 3) {
+  if (rankIndex === 1) {
     return {
-      title: `Season ${seasonNumber} Elite`,
+      title: `Season ${seasonNumber} Vice Champion`,
+      frame: `Season ${seasonNumber} Premium Frame`,
+      cashNotes: 300,
       coins: 5000,
-      frame: 'Animated Border'
+      message: `Season ${seasonNumber} Premium Frame + Title + 300 Cash Notes + 5k Coins`
+    }
+  }
+  if (rankIndex === 2) {
+    return {
+      title: `Season ${seasonNumber} Elite Contender`,
+      frame: `Season ${seasonNumber} Premium Border`,
+      cashNotes: 150,
+      coins: 3000,
+      message: `Season ${seasonNumber} Premium Border + Title + 150 Cash Notes + 3k Coins`
+    }
+  }
+  if (rankIndex >= 3 && rankIndex < 10) {
+    return {
+      title: `Season ${seasonNumber} Top 10 Elite`,
+      badge: `Season ${seasonNumber} Top 10 Badge`,
+      cashNotes: 25,
+      coins: 1000,
+      message: `Season ${seasonNumber} Top 10 Badge + Title + 25 Cash Notes + 1k Coins`
     }
   }
   return {
     title: `Season ${seasonNumber} Contender`,
-    coins: 2000,
-    frame: 'Gold Rank Frame'
+    cashNotes: 0,
+    coins: 500,
+    message: `Season ${seasonNumber} Contender Title + 500 Coins`
   }
 }
 
@@ -78,18 +102,21 @@ export async function rotateRankedSeason(): Promise<any> {
           profileId: p.id,
           type: 'SYSTEM',
           title: `🏆 Season ${currentNumber} Completed!`,
-          message: `Congratulations! You finished Rank #${idx + 1} with ${p.rankedMmr} MMR. Reward: ${rewards.title} + ${rewards.coins} Coins credited!`,
+          message: `Congratulations! You finished Rank #${idx + 1} with ${p.rankedMmr} MMR. Reward: ${rewards.message} credited!`,
           linkUrl: '/dashboard/leaderboard',
           isRead: false
         }
       }).catch(() => null)
 
-      // Award coins to profile
+      // Award rewards to profile
       await tx.profile.update({
         where: { id: p.id },
         data: {
           coins: { increment: rewards.coins },
-          selectedTitle: rewards.title // Set exclusive title
+          cashNotes: { increment: rewards.cashNotes || 0 },
+          selectedTitle: rewards.title,
+          ...(rewards.frame ? { selectedFrame: rewards.frame } : {}),
+          ...(rewards.badge ? { selectedBadge: rewards.badge } : {}),
         }
       }).catch(() => null)
 

@@ -25,7 +25,6 @@ import SnakeArenaGame from '@/components/games/SnakeArenaGame'
 import WhosSpyLandingPage from '@/components/games/WhosSpyLandingPage'
 import BubbleShooterSagaGame from '@/components/games/BubbleShooterSagaGame'
 import MemoryPlateGame from '@/components/games/MemoryPlateGame'
-import SkyFlightGame from '@/components/games/SkyFlightGame'
 
 import GameChromeWrapper from '@/components/games/GameChromeWrapper'
 import type { GameInfo } from '@/lib/games'
@@ -80,7 +79,6 @@ export default function GamePageClient({ game, username, slug }: Props) {
             {game.componentName === 'spy'        && <WhosSpyLandingPage />}
             {game.componentName === 'bubbleshooter' && <BubbleShooterSagaGame />}
             {game.componentName === 'memoryplate' && <MemoryPlateGame />}
-            {game.componentName === 'skyflight' && <SkyFlightGame />}
 
             {/* Legacy Iframe Games */}
             {game.componentName === 'iframe'     && (

@@ -670,38 +670,6 @@ export const GameIcon: React.FC<GameIconProps> = ({ slug, size = 40, className }
     )
   }
 
-  // 23. Sky Flight Icon
-  if (slug === 'sky-flight') {
-    return (
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 40 40"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className={className}
-        style={{ display: 'inline-block', verticalAlign: 'middle' }}
-      >
-        <rect width="40" height="40" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-        {/* Colorful Airplane & Flight Trails */}
-        {/* Wind Trails */}
-        <path d="M6 25 L16 23 M4 17 L14 15 M8 11 L18 10" stroke="rgba(56, 189, 248, 0.4)" strokeWidth="1.5" strokeLinecap="round" />
-        {/* Airplane flying diagonally up-right */}
-        <g transform="translate(4, -4) rotate(15 20 20)">
-          {/* Flame Tail */}
-          <path d="M12 21 L6 21 L10 19 Z" fill="#ea580c" />
-          <path d="M12 21 L8 21 L11 20 Z" fill="#facc15" />
-          {/* Wings */}
-          <path d="M20 9 L15 25 L21 21 Z" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.5" />
-          <path d="M20 29 L15 25 L21 21 Z" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.5" />
-          {/* Fuselage / Main Body */}
-          <path d="M28 21 L12 17 L12 25 Z" fill="#a855f7" stroke="#ffffff" strokeWidth="0.75" />
-          {/* Cockpit Canopy */}
-          <path d="M24 20 L21 19 L21 22 Z" fill="#ffffff" />
-        </g>
-      </svg>
-    )
-  }
 
   // Fallback to vector icon if no SVG defined
   return (

@@ -341,22 +341,6 @@ export const GAMES_REGISTRY: GameInfo[] = [
       { value: 'memory-plate-classic', label: 'Memory Plate (Classic)' }
     ],
   },
-  {
-    slug: 'sky-flight',
-    name: 'Sky Flight',
-    category: 'Arcade',
-    emoji: '✈️',
-    description: 'Steer your plane through lanes to dodge storm clouds, lightning, and birds. Collect powerups and keep going!',
-    multiplayer: false,
-    type: 'internal',
-    badge: 'New',
-    componentName: 'skyflight',
-    supportsRanked: true,
-    supportsLeaderboard: true,
-    leaderboardModes: [
-      { value: 'sky-flight-classic', label: 'Sky Flight (Classic)' }
-    ],
-  },
 ]
 
 export function getGameBySlug(slug: string): GameInfo | undefined {

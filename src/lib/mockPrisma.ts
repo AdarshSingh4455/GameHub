@@ -624,10 +624,20 @@ function createModelMock(modelName: string) {
             if (where.id?.in) {
               list = list.filter(p => where.id.in.includes(p.id))
             }
+
+            const isRankedQuery = params.orderBy?.rankedMmr !== undefined || params.select?.rankedMmr !== undefined || params.where?.rankedMmr !== undefined
+            if (isRankedQuery) {
+              list = list.map(p => getOrCreateProfile(db, p.userId))
+            }
+
             // Sort by XP descending if requested (common for leaderboards)
             if (params.orderBy?.xp === 'desc') {
               list.sort((a, b) => b.xp - a.xp)
             }
+            if (params.orderBy?.rankedMmr === 'desc') {
+              list.sort((a, b) => (b.rankedMmr ?? 1000) - (a.rankedMmr ?? 1000))
+            }
+
             // Apply select projection
             if (params.select) {
               const keys = Object.keys(params.select)
@@ -642,6 +652,17 @@ function createModelMock(modelName: string) {
                 if (p.currentRank === undefined) p.currentRank = null
                 if (p.previousRank === undefined) p.previousRank = null
                 if (p._count === undefined) p._count = { wonMatches: 0, friends: 0 }
+
+                if (isRankedQuery) {
+                  if (p.rankedMmr === undefined) p.rankedMmr = 1000
+                  if (p.rankedWins === undefined) p.rankedWins = 0
+                  if (p.rankedLosses === undefined) p.rankedLosses = 0
+                  if (p.rankedStreak === undefined) p.rankedStreak = 0
+                  if (p.rankedPeakRank === undefined) p.rankedPeakRank = 'Bronze'
+                  if (p.placementMatchesRemaining === undefined) p.placementMatchesRemaining = 5
+                  if (p.rankedProtectionMatches === undefined) p.rankedProtectionMatches = 0
+                }
+
                 return Object.fromEntries(keys.map(k => [k, p[k]]))
               })
             }
@@ -2254,10 +2275,10 @@ function createModelMock(modelName: string) {
               { id: 'memory-plate-silver', slug: 'memory-plate-silver', name: 'Memory Expert', description: 'Recreate 30 plates in Memory Plate.', xpReward: 200, coinReward: 50, category: 'Gameplay' },
               { id: 'memory-plate-gold', slug: 'memory-plate-gold', name: 'Memory Master', description: 'Recreate 100 plates in Memory Plate.', xpReward: 500, coinReward: 150, category: 'Gameplay' },
               { id: 'memory-plate-perfect', slug: 'memory-plate-perfect', name: 'Flawless Plate', description: 'Recreate a plate with 100% accuracy on Hard difficulty.', xpReward: 300, coinReward: 100, category: 'Special' },
-              { id: 'sky-flight-bronze', slug: 'sky-flight-bronze', name: 'Rookie Flyer', description: 'Fly a total of 5,000 meters in Sky Flight.', xpReward: 100, coinReward: 25, category: 'Gameplay' },
-              { id: 'sky-flight-silver', slug: 'sky-flight-silver', name: 'Captain Flyer', description: 'Fly a total of 15,000 meters in Sky Flight.', xpReward: 200, coinReward: 50, category: 'Gameplay' },
-              { id: 'sky-flight-gold', slug: 'sky-flight-gold', name: 'Sonic Jet', description: 'Fly a total of 50,000 meters in Sky Flight.', xpReward: 500, coinReward: 150, category: 'Gameplay' },
-              { id: 'sky-flight-perfect', slug: 'sky-flight-perfect', name: 'Flawless Flight', description: 'Complete a 1,500m+ run with no collisions in Sky Flight.', xpReward: 350, coinReward: 100, category: 'Special' }
+              { id: 'sky-flight-bronze', slug: 'sky-flight-bronze', name: '[Legacy] Rookie Flyer', description: '(Legacy) Fly a total of 5,000 meters in Sky Flight. No longer earnable.', xpReward: 100, coinReward: 25, category: 'Legacy' },
+              { id: 'sky-flight-silver', slug: 'sky-flight-silver', name: '[Legacy] Captain Flyer', description: '(Legacy) Fly a total of 15,000 meters in Sky Flight. No longer earnable.', xpReward: 200, coinReward: 50, category: 'Legacy' },
+              { id: 'sky-flight-gold', slug: 'sky-flight-gold', name: '[Legacy] Sonic Jet', description: '(Legacy) Fly a total of 50,000 meters in Sky Flight. No longer earnable.', xpReward: 500, coinReward: 150, category: 'Legacy' },
+              { id: 'sky-flight-perfect', slug: 'sky-flight-perfect', name: '[Legacy] Flawless Flight', description: '(Legacy) Complete a 1,500m+ run with no collisions in Sky Flight. No longer earnable.', xpReward: 350, coinReward: 100, category: 'Legacy' }
             ]
           }
         }

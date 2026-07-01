@@ -559,6 +559,8 @@ export default function BubbleShooterSagaGame() {
     obstacleWidth: 100,
     obstacleHeight: 18,
     obstacleY: 420,
+    poppingBubbles: [] as any[],
+    fallingBubbles: [] as any[],
   })
 
   // Load Saved Game Progress
@@ -639,12 +641,17 @@ export default function BubbleShooterSagaGame() {
     engine.isShooting = false
     engine.angle = -Math.PI / 2
     engine.gameFinishedTriggered = false
+    engine.poppingBubbles = []
+    engine.fallingBubbles = []
 
     // Initialize Grid with Level layout
+    const gridLayout = JSON.parse(JSON.stringify(config.initialGridLayout))
+    cleanFloatingGrid(gridLayout)
+
     const grid: (Bubble | null)[][] = Array(ROWS_COUNT).fill(null).map(() => Array(COLS_COUNT).fill(null))
-    for (let r = 0; r < config.initialGridLayout.length; r++) {
-      for (let c = 0; c < config.initialGridLayout[r].length; c++) {
-        const val = config.initialGridLayout[r][c]
+    for (let r = 0; r < gridLayout.length; r++) {
+      for (let c = 0; c < gridLayout[r].length; c++) {
+        const val = gridLayout[r][c]
         if (val > 0) {
           const { x, y } = getHexCoordinates(r, c)
           grid[r][c] = {
@@ -708,7 +715,15 @@ export default function BubbleShooterSagaGame() {
   // Trigger bubble shooting
   const triggerShoot = useCallback(() => {
     const engine = stateRef.current
-    if (engine.isShooting || engine.shot || isPaused || engine.gameFinishedTriggered || engine.localShots <= 0) return
+    if (
+      engine.isShooting ||
+      engine.shot ||
+      (engine.poppingBubbles && engine.poppingBubbles.length > 0) ||
+      (engine.fallingBubbles && engine.fallingBubbles.length > 0) ||
+      isPaused ||
+      engine.gameFinishedTriggered ||
+      engine.localShots <= 0
+    ) return
 
     const launcherX = CANVAS_WIDTH / 2
     const launcherY = CANVAS_HEIGHT - 60
@@ -797,8 +812,12 @@ export default function BubbleShooterSagaGame() {
       for (let r = Math.max(0, hitRow - 2); r <= Math.min(ROWS_COUNT - 1, hitRow + 2); r++) {
         const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
         for (let c = 0; c < colsInRow; c++) {
-          if (engine.grid[r][c]) {
-            popped.add(`${r},${c}`)
+          const row = engine.grid[r]
+          if (row) {
+            const bubble = row[c]
+            if (bubble && bubble.state === 'idle') {
+              popped.add(`${r},${c}`)
+            }
           }
         }
       }
@@ -807,8 +826,12 @@ export default function BubbleShooterSagaGame() {
       for (let r = Math.max(0, hitRow - 1); r <= Math.min(ROWS_COUNT - 1, hitRow + 1); r++) {
         const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
         for (let c = 0; c < colsInRow; c++) {
-          if (engine.grid[r][c]) {
-            popped.add(`${r},${c}`)
+          const row = engine.grid[r]
+          if (row) {
+            const bubble = row[c]
+            if (bubble && bubble.state === 'idle') {
+              popped.add(`${r},${c}`)
+            }
           }
         }
       }
@@ -825,7 +848,8 @@ export default function BubbleShooterSagaGame() {
 
       while (queue.length > 0) {
         const [r, c] = queue.shift()!
-        const currBubble = engine.grid[r][c]
+        const row = engine.grid[r]
+        const currBubble = row ? row[c] : null
         if (!currBubble) continue
 
         const currColor = currBubble.colorIndex
@@ -836,7 +860,8 @@ export default function BubbleShooterSagaGame() {
           const nc = c + dc
           const colsInRow = nr % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
           if (nr >= 0 && nr < ROWS_COUNT && nc >= 0 && nc < colsInRow) {
-            const neighbor = engine.grid[nr][nc]
+            const nRow = engine.grid[nr]
+            const neighbor = nRow ? nRow[nc] : null
             if (neighbor && neighbor.state === 'idle') {
               const key = `${nr},${nc}`
               if (!popped.has(key)) {
@@ -876,8 +901,15 @@ export default function BubbleShooterSagaGame() {
         const [r, c] = key.split(',').map(Number)
         const b = engine.grid[r][c]
         if (b) {
-          b.state = 'popping'
-          b.popProgress = 0
+          if (!engine.poppingBubbles) engine.poppingBubbles = []
+          engine.poppingBubbles.push({
+            x: b.x,
+            y: b.y,
+            colorIndex: b.colorIndex,
+            popProgress: 0,
+          })
+
+          engine.grid[r][c] = null
 
           if (b.colorIndex === 9) {
             rescuedLocal++
@@ -924,7 +956,7 @@ export default function BubbleShooterSagaGame() {
         playSound('pop', isMuted)
       }
 
-      setTimeout(() => dropFloatingIslands(), 150)
+      dropFloatingIslandsSync(comboMult)
       engine.consecutiveMisses = 0
     } else {
       engine.comboCount = 0
@@ -957,28 +989,10 @@ export default function BubbleShooterSagaGame() {
           }
         }
       }
-
-      if (engine.consecutiveMisses >= 4) {
-        engine.ceilingOffsetY += BUBBLE_RADIUS * 1.5
-        engine.consecutiveMisses = 0
-        addFloatingText("Ceiling descends!", CANVAS_WIDTH / 2, 80, '#ef4444')
-        playSound('bounce', isMuted)
-
-        for (let r = 0; r < ROWS_COUNT; r++) {
-          const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
-          for (let c = 0; c < colsInRow; c++) {
-            const b = engine.grid[r][c]
-            if (b) {
-              const { y } = getHexCoordinates(r, c)
-              b.y = y
-            }
-          }
-        }
-      }
     }
   }
 
-  const dropFloatingIslands = () => {
+  const dropFloatingIslandsSync = (comboMult: number) => {
     const engine = stateRef.current
     const connected = new Set<string>()
     const queue: [number, number][] = []
@@ -1025,9 +1039,16 @@ export default function BubbleShooterSagaGame() {
       for (let c = 0; c < colsInRow; c++) {
         const b = engine.grid[r][c]
         if (b && b.state === 'idle' && !connected.has(`${r},${c}`)) {
-          b.state = 'falling'
-          b.fallVelX = (Math.random() - 0.5) * 4.5
-          b.fallVelY = 2 + Math.random() * 3.5
+          if (!engine.fallingBubbles) engine.fallingBubbles = []
+          engine.fallingBubbles.push({
+            x: b.x,
+            y: b.y,
+            colorIndex: b.colorIndex,
+            fallVelX: (Math.random() - 0.5) * 4.5,
+            fallVelY: 2 + Math.random() * 3.5,
+          })
+
+          engine.grid[r][c] = null
           dropCount++
 
           if (b.colorIndex === 9) {
@@ -1035,12 +1056,20 @@ export default function BubbleShooterSagaGame() {
             setRescuesCount(engine.localRescues)
           }
 
-          engine.localScore += 150
+          engine.localScore += 150 * comboMult
         }
       }
     }
 
     if (dropCount > 0) {
+      if (dropCount >= 6) {
+        engine.localScore += 1000 * comboMult
+        addFloatingText(`MEGA DROP BONUS +${1000 * comboMult}!`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10, '#10b981')
+      } else if (dropCount >= 3) {
+        engine.localScore += 400 * comboMult
+        addFloatingText(`DROP BONUS +${400 * comboMult}!`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10, '#34d399')
+      }
+
       setScore(engine.localScore)
       addFloatingText(`Dropped +${dropCount}!`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30, '#10b981')
       playSound('pop', isMuted)
@@ -1050,6 +1079,10 @@ export default function BubbleShooterSagaGame() {
   const checkGameStates = useCallback(() => {
     const engine = stateRef.current
     if (engine.gameFinishedTriggered) return
+    if (
+      (engine.poppingBubbles && engine.poppingBubbles.length > 0) ||
+      (engine.fallingBubbles && engine.fallingBubbles.length > 0)
+    ) return
 
     let victory = false
     const config = activeLevel!
@@ -1459,43 +1492,46 @@ export default function BubbleShooterSagaGame() {
         ctx.setLineDash([])
       }
 
-      engine.isPoppingOrFalling = false
+      // Draw all active idle bubbles in the grid
       for (let r = 0; r < ROWS_COUNT; r++) {
         const colsInRow = r % 2 === 0 ? COLS_COUNT : COLS_COUNT - 1
         for (let c = 0; c < colsInRow; c++) {
           const b = engine.grid[r][c]
-          if (!b) continue
-
-          if (b.state === 'popping') {
-            engine.isPoppingOrFalling = true
-            b.popProgress = (b.popProgress || 0) + 0.08
-            if (b.popProgress >= 1) {
-              const hexColor = b.colorIndex <= 6 ? BUBBLE_COLORS[b.colorIndex - 1] : '#fbbf24'
-              createExplosion(b.x, b.y, hexColor)
-              engine.grid[r][c] = null
-            } else {
-              ctx.save()
-              ctx.translate(b.x, b.y)
-              ctx.scale(1 - b.popProgress, 1 - b.popProgress)
-              drawBubbleBall(ctx, 0, 0, b.colorIndex)
-              ctx.restore()
-            }
-          } else if (b.state === 'falling') {
-            engine.isPoppingOrFalling = true
-            b.x += b.fallVelX || 0
-            b.y += b.fallVelY || 0
-            b.fallVelY = (b.fallVelY || 0) + 0.25
-
-            if (b.y > CANVAS_HEIGHT + 30) {
-              engine.grid[r][c] = null
-            } else {
-              drawBubbleBall(ctx, b.x, b.y, b.colorIndex)
-            }
-          } else {
+          if (b && b.state === 'idle') {
             drawBubbleBall(ctx, b.x, b.y, b.colorIndex)
           }
         }
       }
+
+      // Update and draw popping bubbles
+      engine.poppingBubbles = (engine.poppingBubbles || []).filter((b: any) => {
+        b.popProgress += 0.08
+        if (b.popProgress >= 1) {
+          const hexColor = b.colorIndex <= 6 ? BUBBLE_COLORS[b.colorIndex - 1] : '#fbbf24'
+          createExplosion(b.x, b.y, hexColor)
+          return false
+        }
+        ctx.save()
+        ctx.translate(b.x, b.y)
+        ctx.scale(1 - b.popProgress, 1 - b.popProgress)
+        drawBubbleBall(ctx, 0, 0, b.colorIndex)
+        ctx.restore()
+        return true
+      })
+
+      // Update and draw falling bubbles
+      engine.fallingBubbles = (engine.fallingBubbles || []).filter((b: any) => {
+        b.x += b.fallVelX || 0
+        b.y += b.fallVelY || 0
+        b.fallVelY = (b.fallVelY || 0) + 0.25
+        if (b.y > CANVAS_HEIGHT + 30) {
+          return false
+        }
+        drawBubbleBall(ctx, b.x, b.y, b.colorIndex)
+        return true
+      })
+
+      engine.isPoppingOrFalling = (engine.poppingBubbles.length > 0 || engine.fallingBubbles.length > 0)
 
       if (engine.shot) {
         drawBubbleBall(ctx, engine.shot.x, engine.shot.y, engine.shot.colorIndex)
@@ -2106,4 +2142,59 @@ export default function BubbleShooterSagaGame() {
       )}
     </div>
   )
+}
+
+function cleanFloatingGrid(grid: number[][]) {
+  const rows = grid.length
+  if (rows <= 1) return
+
+  const visited = Array(rows).fill(null).map((_, r) => Array(grid[r].length).fill(false))
+  const queue: [number, number][] = []
+
+  // Push all cells in row 0 that have a bubble
+  for (let c = 0; c < grid[0].length; c++) {
+    if (grid[0][c] > 0) {
+      queue.push([0, c])
+      visited[0][c] = true
+    }
+  }
+
+  const neighborsOffsetEven = [
+    [-1, 0], [-1, 1],
+    [0, -1], [0, 1],
+    [1, 0], [1, 1]
+  ]
+  const neighborsOffsetOdd = [
+    [-1, -1], [-1, 0],
+    [0, -1], [0, 1],
+    [1, -1], [1, 0]
+  ]
+
+  let head = 0
+  while (head < queue.length) {
+    const [r, c] = queue[head++]
+    const isEven = r % 2 === 0
+    const offsets = isEven ? neighborsOffsetEven : neighborsOffsetOdd
+
+    for (const [dr, dc] of offsets) {
+      const nr = r + dr
+      const nc = c + dc
+      
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < grid[nr].length) {
+        if (grid[nr][nc] > 0 && !visited[nr][nc]) {
+          visited[nr][nc] = true
+          queue.push([nr, nc])
+        }
+      }
+    }
+  }
+
+  // Clear any bubble not visited
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      if (grid[r][c] > 0 && !visited[r][c]) {
+        grid[r][c] = 0
+      }
+    }
+  }
 }

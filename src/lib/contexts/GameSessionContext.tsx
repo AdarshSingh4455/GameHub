@@ -1292,30 +1292,6 @@ async function updateDailyChallengesForMatch(
     }
   }
 
-  // Sky Flight daily challenges
-  if (gameSlug === 'sky-flight') {
-    await incrementDailyChallengeProgress('daily_sf_play', 1, user)
-    const score = (metadata?.score as number) ?? 0
-    const gameMeta = (metadata?.gameMetadata as Record<string, any>) ?? {}
-    const distance = gameMeta.distance ?? 0
-    const coinsCollected = gameMeta.coinsCollected ?? 0
-
-    const challenges = getStoredDailyChallenges()
-    const distChallenge = challenges.find(c => c.id === 'daily_sf_distance')
-    if (distChallenge && distance >= distChallenge.target) {
-      await incrementDailyChallengeProgress('daily_sf_distance', 1, user)
-    }
-
-    const coinsChallenge = challenges.find(c => c.id === 'daily_sf_coins')
-    if (coinsChallenge && coinsCollected >= coinsChallenge.target) {
-      await incrementDailyChallengeProgress('daily_sf_coins', 1, user)
-    }
-
-    const scoreChallenge = challenges.find(c => c.id === 'daily_sf_score')
-    if (scoreChallenge && score >= scoreChallenge.target) {
-      await incrementDailyChallengeProgress('daily_sf_score', 1, user)
-    }
-  }
 }
 
 export function useGameSession() {

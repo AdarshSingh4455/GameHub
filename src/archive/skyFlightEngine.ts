@@ -1,4 +1,4 @@
-import { SeededRandom } from './memoryPlateEngine';
+import { SeededRandom } from '../lib/memoryPlateEngine';
 
 export type WeatherType = 'sunny' | 'sunset' | 'rain' | 'snow' | 'night' | 'goldenhour';
 export type ObstacleType = 'bird' | 'cloud' | 'lightning' | 'plane' | 'balloon' | 'windmill';

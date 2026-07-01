@@ -29,9 +29,6 @@ export function getDailyChallenges(dateStr: string): DailyChallenge[] {
 
   const mpScoreGoal = Math.floor(pickRange(1000, 2500) / 100) * 100
   const mpAccuracyGoal = Math.floor(pickRange(75, 95))
-  const sfDistanceGoal = Math.floor(pickRange(1500, 4000) / 100) * 100
-  const sfCoinsGoal = Math.floor(pickRange(15, 50))
-  const sfScoreGoal = Math.floor(pickRange(2000, 6000) / 100) * 100
 
   return [
     { id: 'daily_play_3', text: 'Play 3 Games', gameSlug: 'all', target: 3, current: 0, completed: false, xpReward: 100, coinReward: 20 },
@@ -63,12 +60,7 @@ export function getDailyChallenges(dateStr: string): DailyChallenge[] {
     // Memory Plate procedural challenges
     { id: 'daily_mp_play', text: 'Play Memory Plate', gameSlug: 'memory-plate', target: 1, current: 0, completed: false, xpReward: 100, coinReward: 20 },
     { id: 'daily_mp_score', text: `Score ${mpScoreGoal} in Memory Plate`, gameSlug: 'memory-plate', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 },
-    { id: 'daily_mp_accuracy', text: `Get ${mpAccuracyGoal}% Accuracy in Memory Plate`, gameSlug: 'memory-plate', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 },
-    // Sky Flight procedural challenges
-    { id: 'daily_sf_play', text: 'Play Sky Flight', gameSlug: 'sky-flight', target: 1, current: 0, completed: false, xpReward: 100, coinReward: 20 },
-    { id: 'daily_sf_distance', text: `Fly ${sfDistanceGoal}m in Sky Flight`, gameSlug: 'sky-flight', target: 1, current: 0, completed: false, xpReward: 150, coinReward: 30 },
-    { id: 'daily_sf_coins', text: `Collect ${sfCoinsGoal} Coins in Sky Flight`, gameSlug: 'sky-flight', target: 1, current: 0, completed: false, xpReward: 150, coinReward: 30 },
-    { id: 'daily_sf_score', text: `Score ${sfScoreGoal} in Sky Flight`, gameSlug: 'sky-flight', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 }
+    { id: 'daily_mp_accuracy', text: `Get ${mpAccuracyGoal}% Accuracy in Memory Plate`, gameSlug: 'memory-plate', target: 1, current: 0, completed: false, xpReward: 200, coinReward: 40 }
   ]
 }
 

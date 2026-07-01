@@ -145,20 +145,6 @@ const GAME_RULES: Record<string, string[]> = {
     'Tap items from the tray to select, and tap the plate to place them.',
     'In Medium/Hard difficulty, tap placed items to rotate them by 90 degrees.',
     'Submit to calculate your accuracy and speed score.'
-  ],
-  'sky-flight': [
-    'Steer your airplane left and right across 3 lanes.',
-    'Dodge incoming obstacles: birds, thunderclouds, lightning bolts, and rival aircraft.',
-    'Grab coins for points, and powerups: Shield, Slow-Mo, Magnet, Turbo, and 2x Double Score.',
-    'Difficulty scaling increases speed, lane pressure, and obstacle combinations over time.',
-    'Reach the target score in Ranked mode to secure an early matchmaking victory!'
-  ],
-  'skyflight': [
-    'Steer your airplane left and right across 3 lanes.',
-    'Dodge incoming obstacles: birds, thunderclouds, lightning bolts, and rival aircraft.',
-    'Grab coins for points, and powerups: Shield, Slow-Mo, Magnet, Turbo, and 2x Double Score.',
-    'Difficulty scaling increases speed, lane pressure, and obstacle combinations over time.',
-    'Reach the target score in Ranked mode to secure an early matchmaking victory!'
   ]
 }
 

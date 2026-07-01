@@ -292,62 +292,19 @@ export const ACHIEVEMENT_RULES: AchievementRule[] = [
   },
   {
     slug: 'sky-flight-bronze',
-    check: async ({ profileId, gameSlug, tx }) => {
-      if (gameSlug !== 'sky-flight') return false
-      const scores = await tx.score.findMany({
-        where: { game: { slug: 'sky-flight' }, profileId }
-      })
-      const totalDist = scores.reduce((sum, s) => {
-        const meta = (s.metadata as Record<string, any>) || {}
-        const gameMeta = (meta.gameMetadata as Record<string, any>) || {}
-        return sum + (gameMeta.distance ?? 0)
-      }, 0)
-      return totalDist >= 5000
-    }
+    check: async () => false
   },
   {
     slug: 'sky-flight-silver',
-    check: async ({ profileId, gameSlug, tx }) => {
-      if (gameSlug !== 'sky-flight') return false
-      const scores = await tx.score.findMany({
-        where: { game: { slug: 'sky-flight' }, profileId }
-      })
-      const totalDist = scores.reduce((sum, s) => {
-        const meta = (s.metadata as Record<string, any>) || {}
-        const gameMeta = (meta.gameMetadata as Record<string, any>) || {}
-        return sum + (gameMeta.distance ?? 0)
-      }, 0)
-      return totalDist >= 15000
-    }
+    check: async () => false
   },
   {
     slug: 'sky-flight-gold',
-    check: async ({ profileId, gameSlug, tx }) => {
-      if (gameSlug !== 'sky-flight') return false
-      const scores = await tx.score.findMany({
-        where: { game: { slug: 'sky-flight' }, profileId }
-      })
-      const totalDist = scores.reduce((sum, s) => {
-        const meta = (s.metadata as Record<string, any>) || {}
-        const gameMeta = (meta.gameMetadata as Record<string, any>) || {}
-        return sum + (gameMeta.distance ?? 0)
-      }, 0)
-      return totalDist >= 50000
-    }
+    check: async () => false
   },
   {
     slug: 'sky-flight-perfect',
-    check: async ({ profileId, gameSlug, tx }) => {
-      if (gameSlug !== 'sky-flight') return false
-      const scores = await tx.score.findMany({
-        where: { game: { slug: 'sky-flight' }, profileId }
-      })
-      return scores.some(s => {
-        const meta = (s.metadata as Record<string, any>) || {}
-        const gameMeta = (meta.gameMetadata as Record<string, any>) || {}
-        return (gameMeta.distance ?? 0) >= 1500 && (meta.collisions ?? 0) === 0
-      })
-    }
+    check: async () => false
   },
   {
     slug: 'level-5',

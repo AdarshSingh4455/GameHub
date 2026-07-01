@@ -9,3 +9,20 @@
   - `[x]` Verify card styles, hover animations, and mobile responsiveness fixes (Issue 5)
 - `[x]` Run build & lint verification
 - `[x]` Perform manual testing & verify additional user requirements
+- `[ ]` TASK 1: Restore Ranked Competitive Player Card
+  - `[ ]` Fix the root cause in `LeaderboardClient.tsx` (missing user/rankedStats state hydration/updates)
+  - `[ ]` Set `myProfile` properly to `data.profile` (root cause of undefined username/avatar)
+  - `[ ]` Restore the complete Player Card UI exactly as originally designed (avatar, badge, username, MMR, rank, progress, peak rank, streak, season info, Find Match button)
+- `[ ]` TASK 2: Restore Ranked Match History
+  - `[ ]` Fix the Recent Ranked Matches section in `LeaderboardClient.tsx`
+  - `[ ]` Dynamically compute Rank Before/After, queue type, match duration if not in DB response, but check if they are already in the DB response
+  - `[ ]` Implement client-side pagination for Recent Ranked Matches (5 per page)
+  - `[ ]` Ensure Recent Ranked Matches update immediately after a match finishes without requiring a page refresh
+- `[ ]` TASK 3: Database & Mock Refinements
+  - `[ ]` Update `mockPrisma.ts`'s `profile.findMany` sorting & backfill but scope it strictly to leaderboard/ranked queries (e.g. check for select/where conditions for ranked)
+  - `[ ]` Make sure no global database schema is modified
+- `[x]` TASK 4: Bubble Shooter Physics Fix
+  - `[x]` Disable descending ceiling mechanic (keep Y offset fixed at 0)
+  - `[x]` Ensure valid board generation (no floating bubbles on initial generate)
+  - `[x]` Implement gameplay flow: Attachment -> Match -> Pop -> BFS/DFS -> Drop -> Chain Reaction -> Score -> Spawn
+- `[ ]` TASK 5: Archive Sky Flightrements

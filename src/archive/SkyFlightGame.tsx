@@ -12,7 +12,7 @@ import {
   CollectibleInstance,
   PowerupType,
   WEATHER_THEMES
-} from '@/lib/skyFlightEngine'
+} from '@/archive/skyFlightEngine'
 import { audioSynth } from '@/lib/audioSynth'
 
 type GameState = 'menu' | 'playing' | 'gameover' | 'paused'

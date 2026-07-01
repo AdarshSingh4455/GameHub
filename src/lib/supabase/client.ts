@@ -34,20 +34,18 @@ export function createClient() {
         signInWithPassword: async ({ email, password }: any) => {
           // Extract username from email
           const mockUsername = email.split('@')[0]
-          let mockUserId = 'mock-user-id'
+          let mockUserId = `mock-uid-${mockUsername}`
 
-          // Map stable test users to their database mock ids
-          if (email.includes('stable') || email.includes('user-b') || email.includes('test-b')) {
-            mockUserId = 'test-user-b'
-          } else if (email.includes('user-a') || email.includes('test-a')) {
-            mockUserId = 'test-user-a'
-          } else {
-            let hash = 0
-            for (let i = 0; i < email.length; i++) {
-              hash = (hash << 5) - hash + email.charCodeAt(i)
-              hash |= 0
+          try {
+            const res = await fetch(`/api/auth/resolve-user?username=${encodeURIComponent(mockUsername)}&email=${encodeURIComponent(email)}`)
+            if (res.ok) {
+              const data = await res.json()
+              if (data.userId) {
+                mockUserId = data.userId
+              }
             }
-            mockUserId = `mock-uid-${Math.abs(hash)}`
+          } catch (e) {
+            console.error('Failed to resolve mock user ID:', e)
           }
 
           if (typeof window !== 'undefined') {
@@ -68,6 +66,7 @@ export function createClient() {
             error: null
           }
         },
+
         signUp: async ({ email, password, options }: any) => {
           const mockUsername = options?.data?.username || email.split('@')[0]
           let hash = 0

@@ -33,16 +33,39 @@ export interface PlateLayout {
   foods: FoodPlacement[];
   previewDurationMs: number;
   isMirrored?: boolean;
+  surfaceType?: string;
+  theme?: string;
 }
 
-export const FOOD_CATALOG = [
-  'burger', 'pizza', 'donut', 'cake', 'cookie', 
-  'croissant', 'sushi', 'cupcake', 'ice-cream', 'apple', 
-  'strawberry', 'taco', 'fries', 'pancake', 'egg', 
-  'lemon', 'orange', 'salad', 'pretzel', 'watermelon'
-];
+export const FOOD_THEMES = {
+  breakfast: [
+    'egg', 'pancake', 'croissant', 'toast', 'juice', 'coffee', 'waffle',
+    'bacon', 'sausage', 'oatmeal', 'muffin', 'tea', 'milk', 'yogurt'
+  ],
+  fastfood: [
+    'burger', 'fries', 'pizza', 'taco', 'pretzel', 'donut', 'cookie',
+    'hotdog', 'nuggets', 'onion-rings', 'sandwich', 'milkshake', 'popcorn', 'soda'
+  ],
+  fruits: [
+    'apple', 'orange', 'lemon', 'watermelon', 'strawberry', 'banana', 'grapes',
+    'cherry', 'peach', 'pineapple', 'mango', 'blueberry', 'kiwi', 'pear'
+  ],
+  desserts: [
+    'cake', 'donut', 'cookie', 'ice-cream', 'cupcake', 'pie', 'chocolate',
+    'pudding', 'macaron', 'candy', 'lollipop', 'brownie', 'tart', 'jelly'
+  ],
+  asian: [
+    'sushi', 'dumplings', 'ramen', 'rice-bowl', 'spring-roll', 'tempura', 'boba',
+    'green-tea', 'dim-sum', 'bao', 'wonton', 'mochi', 'skewer', 'tofu'
+  ]
+} as const;
+
+export const FOOD_CATALOG = Array.from(
+  new Set(Object.values(FOOD_THEMES).flat())
+);
 
 export const FOOD_DISPLAY_NAMES: Record<string, string> = {
+  // Existing ones
   'burger': 'Premium Burger',
   'pizza': 'Hot Pizza Slice',
   'donut': 'Glazed Donut',
@@ -62,22 +85,124 @@ export const FOOD_DISPLAY_NAMES: Record<string, string> = {
   'orange': 'Zesty Orange',
   'salad': 'Healthy Garden Salad',
   'pretzel': 'Salted Pretzel',
-  'watermelon': 'Juicy Watermelon'
+  'watermelon': 'Juicy Watermelon',
+  
+  // New Breakfast
+  'toast': 'Butter Toast',
+  'juice': 'Fresh Orange Juice',
+  'coffee': 'Hot Espresso',
+  'waffle': 'Belgian Waffle',
+  'bacon': 'Crispy Bacon Strips',
+  'sausage': 'Grilled Sausage',
+  'oatmeal': 'Warm Oatmeal Bowl',
+  'muffin': 'Blueberry Muffin',
+  'tea': 'Chamomile Tea',
+  'milk': 'Fresh Milk Glass',
+  'yogurt': 'Greek Yogurt',
+  
+  // New Fast Food
+  'hotdog': 'Classic Hotdog',
+  'nuggets': 'Chicken Nuggets',
+  'onion-rings': 'Crispy Onion Rings',
+  'sandwich': 'Club Sandwich',
+  'milkshake': 'Vanilla Milkshake',
+  'popcorn': 'Butter Popcorn',
+  'soda': 'Fizzy Soda Can',
+  
+  // New Fruits
+  'banana': 'Ripe Banana',
+  'grapes': 'Sweet Purple Grapes',
+  'cherry': 'Red Cherries',
+  'peach': 'Juicy Peach',
+  'pineapple': 'Tropical Pineapple',
+  'mango': 'Sweet Mango',
+  'blueberry': 'Fresh Blueberries',
+  'kiwi': 'Sliced Kiwi',
+  'pear': 'Green Pear',
+  
+  // New Desserts
+  'pie': 'Apple Pie Slice',
+  'chocolate': 'Dark Chocolate Bar',
+  'pudding': 'Caramel Pudding',
+  'macaron': 'French Macarons',
+  'candy': 'Fruit Candy',
+  'lollipop': 'Swirl Lollipop',
+  'brownie': 'Fudge Brownie',
+  'tart': 'Fruit Tart',
+  'jelly': 'Strawberry Jelly',
+  
+  // New Asian Cuisine
+  'dumplings': 'Steamed Dumplings',
+  'ramen': 'Shoyu Ramen Bowl',
+  'rice-bowl': 'Teriyaki Rice Bowl',
+  'spring-roll': 'Crispy Spring Rolls',
+  'tempura': 'Shrimp Tempura',
+  'boba': 'Brown Sugar Boba',
+  'green-tea': 'Matcha Green Tea',
+  'dim-sum': 'Dim Sum Basket',
+  'bao': 'Steamed Pork Bao',
+  'wonton': 'Fried Wontons',
+  'mochi': 'Sweet Rice Mochi',
+  'skewer': 'Chicken Yakitori',
+  'tofu': 'Agedashi Tofu'
 };
 
-// Similar looking groups to challenge memory in medium/hard
-export const SIMILAR_GROUPS = [
-  ['apple', 'orange', 'lemon', 'watermelon'], // fruits
-  ['burger', 'taco', 'fries', 'sushi'],        // savory
-  ['donut', 'cake', 'cookie', 'croissant', 'cupcake', 'ice-cream', 'pancake', 'pretzel'] // sweet
+export interface Coordinate {
+  x: number;
+  y: number;
+}
+
+export const EASY_ANCHORS: Coordinate[] = [
+  { x: 0, y: 0 },
+  { x: 0, y: -26 },
+  { x: 0, y: 26 },
+  { x: -26, y: 0 },
+  { x: 26, y: 0 },
+  { x: -18, y: -18 },
+  { x: 18, y: -18 },
+  { x: -18, y: 18 },
+  { x: 18, y: 18 }
+];
+
+export const MEDIUM_ANCHORS: Coordinate[] = [
+  { x: -26, y: -26 }, { x: -9, y: -26 }, { x: 9, y: -26 }, { x: 26, y: -26 },
+  { x: -26, y: -9 },  { x: -9, y: -9 },  { x: 9, y: -9 },  { x: 26, y: -9 },
+  { x: -26, y: 9 },   { x: -9, y: 9 },   { x: 9, y: 9 },   { x: 26, y: 9 },
+  { x: -26, y: 26 },  { x: -9, y: 26 },  { x: 9, y: 26 },  { x: 26, y: 26 }
+];
+
+export const HARD_ANCHORS: Coordinate[] = [
+  // Dinner plate zone (near center/left)
+  { x: -10, y: 10 },
+  { x: -10, y: -2 },
+  { x: -10, y: 22 },
+  { x: -22, y: 10 },
+  { x: 2, y: 10 },
+  // Bowl zone (bottom-right)
+  { x: 24, y: 24 },
+  { x: 14, y: 24 },
+  { x: 24, y: 14 },
+  // Side plate / Serving board zone (left/top-left)
+  { x: -28, y: -25 },
+  { x: -18, y: -25 },
+  { x: -28, y: -15 },
+  // Cup/saucer area (top-right)
+  { x: 26, y: -26 },
+  { x: 16, y: -26 },
+  { x: 26, y: -16 },
+  // Placemat borders / ambient napkin placement
+  { x: 10, y: -5 },
+  { x: -5, y: -20 },
+  { x: 20, y: 0 },
+  { x: -30, y: 5 },
+  { x: -30, y: 25 },
+  { x: 0, y: 32 }
 ];
 
 export function getDifficultyConfig(difficulty: 'easy' | 'medium' | 'hard') {
   switch (difficulty) {
     case 'easy':
       return {
-        itemCount: 3,
-        shapes: ['circle'] as const,
         previewDurationMs: 6000,
         enableRotation: false,
         minSpacing: 25,
@@ -85,8 +210,6 @@ export function getDifficultyConfig(difficulty: 'easy' | 'medium' | 'hard') {
       };
     case 'medium':
       return {
-        itemCount: 5,
-        shapes: ['circle', 'square'] as const,
         previewDurationMs: 5000,
         enableRotation: true,
         minSpacing: 20,
@@ -94,8 +217,6 @@ export function getDifficultyConfig(difficulty: 'easy' | 'medium' | 'hard') {
       };
     case 'hard':
       return {
-        itemCount: 7, // 7 to 9
-        shapes: ['circle', 'square', 'hexagon'] as const,
         previewDurationMs: 4000,
         enableRotation: true,
         minSpacing: 16,
@@ -108,99 +229,65 @@ export function generatePlateLayout(seed: number, difficulty: 'easy' | 'medium' 
   const prng = new SeededRandom(seed);
   const config = getDifficultyConfig(difficulty);
   
-  const shape = prng.pick(config.shapes);
-  const themes = ['neon-blue', 'neon-pink', 'neon-green', 'gold', 'cyberpunk', 'holo-purple'];
-  const color = prng.pick(themes);
+  // Select theme randomly
+  const themeList = ['breakfast', 'fastfood', 'fruits', 'desserts', 'asian'] as const;
+  const theme = prng.pick(themeList);
+  const themeFoods = FOOD_THEMES[theme];
   
-  const decos = ['none', 'star', 'stripes', 'dots'] as const;
-  const decoration = difficulty === 'easy' ? 'none' : prng.pick(decos);
-
   // Determine items count
-  let itemCount = config.itemCount;
-  if (difficulty === 'hard') {
-    // 7, 8, or 9
-    itemCount = Math.floor(prng.range(7, 10));
-  }
-
-  // Determine food selection. Harder modes use similar looking items.
-  const selectedFoods: string[] = [];
-  const useSimilar = difficulty !== 'easy' && prng.next() > 0.4;
-  
-  if (useSimilar) {
-    const group = prng.pick(SIMILAR_GROUPS);
-    for (let i = 0; i < itemCount; i++) {
-      selectedFoods.push(prng.pick(group));
-    }
+  let itemCount = 4;
+  if (difficulty === 'easy') {
+    itemCount = Math.floor(prng.range(4, 7)); // 4 to 6
+  } else if (difficulty === 'medium') {
+    itemCount = Math.floor(prng.range(6, 10)); // 6 to 9
   } else {
-    for (let i = 0; i < itemCount; i++) {
-      selectedFoods.push(prng.pick(FOOD_CATALOG));
-    }
+    itemCount = Math.floor(prng.range(10, 15)); // 10 to 14
   }
-
-  const foods: FoodPlacement[] = [];
-  const maxTries = 100;
-
+  
+  // Select items from the chosen theme without repetition
+  const selectedFoods: string[] = [];
+  const pool = [...themeFoods];
   for (let i = 0; i < itemCount; i++) {
+    if (pool.length === 0) break;
+    const idx = Math.floor(prng.range(0, pool.length));
+    selectedFoods.push(pool.splice(idx, 1)[0]);
+  }
+  
+  // Select surface type
+  let surfaceType = 'ceramic';
+  if (difficulty === 'easy') {
+    surfaceType = 'ceramic';
+  } else if (difficulty === 'medium') {
+    surfaceType = prng.pick(['wood-tray', 'slate-board', 'square-platter', 'breakfast-tray']);
+  } else {
+    surfaceType = 'restaurant-table';
+  }
+  
+  // Select anchors
+  let anchorPool = difficulty === 'easy' 
+    ? [...EASY_ANCHORS] 
+    : difficulty === 'medium' 
+      ? [...MEDIUM_ANCHORS] 
+      : [...HARD_ANCHORS];
+      
+  const foods: FoodPlacement[] = [];
+  for (let i = 0; i < selectedFoods.length; i++) {
     const type = selectedFoods[i];
-    let placed = false;
-    let tryCount = 0;
-
-    while (!placed && tryCount < maxTries) {
-      tryCount++;
-      // Radius limit on placement (plate radius is 50, keep foods within 36 radius)
-      const radiusLimit = 35;
-      const angle = prng.range(0, Math.PI * 2);
-      const dist = prng.range(0, radiusLimit);
-      
-      const x = Math.round(Math.cos(angle) * dist);
-      const y = Math.round(Math.sin(angle) * dist);
-      
-      // Check collision/overlap with already placed foods
-      let collision = false;
-      for (const p of foods) {
-        const dx = p.x - x;
-        const dy = p.y - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < config.minSpacing) {
-          collision = true;
-          break;
-        }
-      }
-
-      if (!collision) {
-        // rotation in steps of 90 degrees if rotation enabled
-        const rotation = config.enableRotation ? prng.pick([0, 90, 180, 270]) : 0;
-        const scale = parseFloat(prng.range(0.85, 1.05).toFixed(2));
-        
-        foods.push({
-          id: `food-${i}-${Date.now()}-${Math.floor(prng.range(0, 1000))}`,
-          type,
-          x,
-          y,
-          rotation,
-          scale
-        });
-        placed = true;
-      }
-    }
+    if (anchorPool.length === 0) break;
+    const anchorIdx = Math.floor(prng.range(0, anchorPool.length));
+    const anchor = anchorPool.splice(anchorIdx, 1)[0];
     
-    // Fallback if placement fails, place anyway but with less strict spacing
-    if (!placed) {
-      const angle = prng.range(0, Math.PI * 2);
-      const dist = prng.range(0, 32);
-      const x = Math.round(Math.cos(angle) * dist);
-      const y = Math.round(Math.sin(angle) * dist);
-      const rotation = config.enableRotation ? prng.pick([0, 90, 180, 270]) : 0;
-      
-      foods.push({
-        id: `food-fallback-${i}`,
-        type,
-        x,
-        y,
-        rotation,
-        scale: 1.0
-      });
-    }
+    const rotation = config.enableRotation ? prng.pick([0, 90, 180, 270]) : 0;
+    const scale = parseFloat(prng.range(0.9, 1.1).toFixed(2));
+    
+    foods.push({
+      id: `food-${i}-${Date.now()}-${Math.floor(prng.range(0, 1000))}`,
+      type,
+      x: anchor.x,
+      y: anchor.y,
+      rotation,
+      scale
+    });
   }
 
   // Mirror layout option for Hard difficulty
@@ -217,12 +304,14 @@ export function generatePlateLayout(seed: number, difficulty: 'easy' | 'medium' 
   return {
     seed,
     difficulty,
-    plateShape: shape,
-    plateColor: color,
-    decorationStyle: decoration,
+    plateShape: difficulty === 'easy' ? 'circle' : (difficulty === 'medium' ? 'square' : 'circle'),
+    plateColor: 'ceramic',
+    decorationStyle: 'none',
     foods,
     previewDurationMs: config.previewDurationMs,
-    isMirrored
+    isMirrored,
+    surfaceType,
+    theme
   };
 }
 

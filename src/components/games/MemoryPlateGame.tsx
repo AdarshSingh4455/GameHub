@@ -8,13 +8,14 @@ import {
   scorePlateSubmission,
   FOOD_CATALOG,
   FOOD_DISPLAY_NAMES,
+  FOOD_THEMES,
   PlateLayout,
   FoodPlacement
 } from '@/lib/memoryPlateEngine'
 import FoodIcon from './FoodIcon'
 import { audioSynth } from '@/lib/audioSynth'
 
-type GameState = 'menu' | 'preview' | 'countdown' | 'placing' | 'results'
+type GameState = 'menu' | 'loading_assets' | 'preview' | 'countdown' | 'placing' | 'results'
 
 export default function MemoryPlateGame() {
   const { submitGameResult } = useGameSession()
@@ -59,6 +60,9 @@ export default function MemoryPlateGame() {
   const [selectedTrayFood, setSelectedTrayFood] = useState<string | null>(null)
   const [selectedPlacedId, setSelectedPlacedId] = useState<string | null>(null)
   
+  // Animation classes
+  const [animationClass, setAnimationClass] = useState<string>('animate-appear')
+  
   // References
   const previewTimerRef = useRef<any>(null)
   const placingTimerRef = useRef<any>(null)
@@ -84,9 +88,38 @@ export default function MemoryPlateGame() {
     setIsSoundMuted(isMuted)
   }, [])
 
+  // Preload helper
+  const preloadAssets = (foodsToPreload: string[], callback: () => void) => {
+    let loadedCount = 0
+    const targetCount = foodsToPreload.length
+    if (targetCount === 0) {
+      callback()
+      return
+    }
+    let finished = false
+    const timeoutId = setTimeout(() => {
+      if (!finished) {
+        finished = true
+        callback()
+      }
+    }, 2500)
+
+    foodsToPreload.forEach(food => {
+      const img = new Image()
+      img.onload = img.onerror = () => {
+        loadedCount++
+        if (loadedCount >= targetCount && !finished) {
+          finished = true
+          clearTimeout(timeoutId)
+          callback()
+        }
+      }
+      img.src = `/assets/games/memory-plate/foods/${food}.svg`
+    })
+  }
+
   // Start new round
   const startRound = useCallback((round: number, nextDifficulty: 'easy' | 'medium' | 'hard') => {
-    // Generate new seed or use existing query parameter for ranked synchronization
     const querySeed = searchParams.get('seed')
     const seed = querySeed ? parseInt(querySeed, 10) + round * 10 : Math.floor(Math.random() * 1000000)
     
@@ -97,46 +130,53 @@ export default function MemoryPlateGame() {
     setRevealedCount(0)
     setSelectedTrayFood(null)
     setSelectedPlacedId(null)
-    setGameState('preview')
+    setAnimationClass('animate-appear')
+    setGameState('loading_assets')
 
-    // Music control
-    if (round === 1) {
-      audioSynth.stopBgm()
-      audioSynth.startBgm('memory')
-    }
+    // Collect assets to preload
+    const themeName = layout.theme || 'breakfast'
+    const themeFoods = FOOD_THEMES[themeName] || []
+    const foodsToPreload = Array.from(new Set([...layout.foods.map(f => f.type), ...themeFoods]))
 
-    // Play slide animation sound
-    setTimeout(() => {
-      audioSynth.playPop()
-    }, 100)
+    preloadAssets(foodsToPreload, () => {
+      setGameState('preview')
 
-    // Stagger reveal of food items
-    let count = 0
-    const staggerInterval = setInterval(() => {
-      count++
-      setRevealedCount(count)
-      if (layout.foods && count >= layout.foods.length) {
-        clearInterval(staggerInterval)
-        
-        // Start preview visual timer bar
-        previewStartTimeRef.current = Date.now()
-        const duration = layout.previewDurationMs
-        
-        if (previewTimerRef.current) clearInterval(previewTimerRef.current)
-        previewTimerRef.current = setInterval(() => {
-          const elapsed = Date.now() - previewStartTimeRef.current
-          const percent = Math.max(0, 100 - (elapsed / duration) * 100)
-          setPreviewTimerLeft(percent)
-          
-          if (elapsed >= duration) {
-            clearInterval(previewTimerRef.current)
-            startCountdown()
-          }
-        }, 30)
-      } else {
-        audioSynth.playTick()
+      if (round === 1) {
+        audioSynth.stopBgm()
+        audioSynth.startBgm('memory')
       }
-    }, 300)
+
+      setTimeout(() => {
+        audioSynth.playPop()
+      }, 100)
+
+      // Stagger reveal of food items
+      let count = 0
+      const staggerInterval = setInterval(() => {
+        count++
+        setRevealedCount(count)
+        if (layout.foods && count >= layout.foods.length) {
+          clearInterval(staggerInterval)
+          
+          previewStartTimeRef.current = Date.now()
+          const duration = layout.previewDurationMs
+          
+          if (previewTimerRef.current) clearInterval(previewTimerRef.current)
+          previewTimerRef.current = setInterval(() => {
+            const elapsed = Date.now() - previewStartTimeRef.current
+            const percent = Math.max(0, 100 - (elapsed / duration) * 100)
+            setPreviewTimerLeft(percent)
+            
+            if (elapsed >= duration) {
+              clearInterval(previewTimerRef.current)
+              startCountdown()
+            }
+          }, 30)
+        } else {
+          audioSynth.playTick()
+        }
+      }, 250)
+    })
   }, [searchParams])
 
   // Countdown Phase
@@ -152,7 +192,6 @@ export default function MemoryPlateGame() {
       setCountdown(val)
       if (val <= 0) {
         clearInterval(cInterval)
-        // Transition to Placing Phase
         startPlacing()
       } else {
         audioSynth.playTick()
@@ -163,8 +202,8 @@ export default function MemoryPlateGame() {
   // Placing Phase
   const startPlacing = () => {
     setGameState('placing')
+    setAnimationClass('animate-appear')
     
-    // 30 seconds for easy, 40 for medium, 50 for hard
     const timeLimit = difficulty === 'easy' ? 30 : difficulty === 'medium' ? 45 : 60
     setPlacingTimeTotal(timeLimit)
     setPlacingTimeLeft(timeLimit)
@@ -178,7 +217,6 @@ export default function MemoryPlateGame() {
       
       if (left <= 0) {
         clearInterval(placingTimerRef.current)
-        // Auto-submit on timeout
         handleSubmit()
       }
     }, 1000)
@@ -189,7 +227,6 @@ export default function MemoryPlateGame() {
     if (placingTimerRef.current) clearInterval(placingTimerRef.current)
     if (!plateLayout) return
 
-    const timeSpent = placingTimeTotal - placingTimeLeft
     const result = scorePlateSubmission(
       plateLayout,
       placedFoods.map(f => ({ type: f.type, x: f.x, y: f.y, rotation: f.rotation, scale: f.scale })),
@@ -197,11 +234,12 @@ export default function MemoryPlateGame() {
       placingTimeTotal
     )
 
-    // Sound
     if (result.accuracy >= 70) {
       audioSynth.playSuccess()
+      setAnimationClass('animate-celebrate')
     } else {
       audioSynth.playBuzzer()
+      setAnimationClass('animate-shake')
     }
 
     setRoundAccuracy(result.accuracy)
@@ -210,7 +248,6 @@ export default function MemoryPlateGame() {
     setAccuracyHistory(prev => [...prev, result.accuracy])
     setGameState('results')
 
-    // Submit early matchmaking result if ranked and exceeds target score
     if (isRanked && (totalScore + result.score) >= targetScore) {
       triggerEndGame(totalScore + result.score, 'win')
     }
@@ -223,11 +260,8 @@ export default function MemoryPlateGame() {
       setRoundNumber(nextRound)
       startRound(nextRound, difficulty)
     } else {
-      // Game session complete
       const finalAccuracySum = accuracyHistory.reduce((a, b) => a + b, 0)
       const avgAccuracy = Math.round(finalAccuracySum / totalRoundCount)
-      
-      // Outcome
       const isWinner = isRanked ? (totalScore >= targetScore) : (avgAccuracy >= 60)
       triggerEndGame(totalScore, isWinner ? 'win' : 'loss')
     }
@@ -236,17 +270,12 @@ export default function MemoryPlateGame() {
   // End Game & submit result
   const triggerEndGame = (finalScore: number, finalResult: 'win' | 'loss') => {
     audioSynth.stopBgm()
-    
-    // Save to daily challenges
     const finalAccuracy = Math.round(accuracyHistory.reduce((a, b) => a + b, 0) / Math.max(1, accuracyHistory.length))
     
-    // Daily challenges checks
     window.dispatchEvent(new CustomEvent('gamehub_increment_challenge', {
       detail: { slug: 'memory-plate', score: finalScore, accuracy: finalAccuracy, difficulty }
     }))
 
-    // Save achievement stats
-    // Submit result
     submitGameResult({
       gameSlug: 'memory-plate',
       result: finalResult,
@@ -270,7 +299,6 @@ export default function MemoryPlateGame() {
       }
     })
 
-    // Ranked stats post
     if (isRanked) {
       fetch('/api/ranked/stats', {
         method: 'POST',
@@ -294,25 +322,19 @@ export default function MemoryPlateGame() {
     const clickX = e.clientX - rect.left
     const clickY = e.clientY - rect.top
 
-    // Center is (rect.width/2, rect.height/2)
     const centerX = rect.width / 2
     const centerY = rect.height / 2
 
-    // Map pixel offsets to relative offsets (-40 to 40)
-    // Plate width/height is roughly 320px
-    const scaleFactor = 320 / 100 // pixels per coordinate unit
+    const scaleFactor = 320 / 100
     const rx = Math.round((clickX - centerX) / scaleFactor)
     const ry = Math.round((clickY - centerY) / scaleFactor)
 
-    // Boundaries check (keep within radius 38)
     const dist = Math.sqrt(rx * rx + ry * ry)
-    if (dist > 38) {
-      // Outside plate boundaries
+    if (dist > 38 && difficulty !== 'hard') {
       return
     }
 
     if (selectedTrayFood) {
-      // Place new food item
       const newItem: FoodPlacement = {
         id: `placed-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         type: selectedTrayFood,
@@ -325,7 +347,6 @@ export default function MemoryPlateGame() {
       audioSynth.playPop()
       setSelectedTrayFood(null)
     } else if (selectedPlacedId) {
-      // Move existing item
       setPlacedFoods(prev => prev.map(f => {
         if (f.id === selectedPlacedId) {
           return { ...f, x: rx, y: ry }
@@ -360,7 +381,6 @@ export default function MemoryPlateGame() {
   // Init ranked game immediately on mount if param present
   useEffect(() => {
     if (isRanked) {
-      // Start Ranked queue immediately
       setDifficulty(difficulty === 'easy' ? 'easy' : difficulty === 'hard' ? 'hard' : 'medium')
       setRoundNumber(1)
       setTotalScore(0)
@@ -374,22 +394,184 @@ export default function MemoryPlateGame() {
     }
   }, [isRanked, startRound, difficulty])
 
-  // Helper styles based on plate theme
-  const getPlateBackground = (color: string) => {
-    switch (color) {
-      case 'neon-blue':
-        return 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
-      case 'neon-pink':
-        return 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)'
-      case 'neon-green':
-        return 'linear-gradient(135deg, #10b981 0%, #047857 100%)'
-      case 'gold':
-        return 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)'
-      case 'cyberpunk':
-        return 'linear-gradient(135deg, #a855f7 0%, #1e1b4b 100%)'
-      case 'holo-purple':
+  // Premium serving surfaces renderer
+  const renderSurfaceBackground = (surfaceType: string) => {
+    switch (surfaceType) {
+      case 'ceramic': // Easy: Premium white dinner plate
+        return (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #f8fafc 50%, #f1f5f9 85%, #cbd5e1 100%)',
+            boxShadow: 'inset 0 4px 10px rgba(255,255,255,0.8), inset 0 -4px 12px rgba(0,0,0,0.06), 0 10px 25px rgba(0,0,0,0.2)',
+            border: '12px solid #e2e8f0'
+          }}>
+            {/* Inner rim ring */}
+            <div style={{
+              position: 'absolute', inset: '16px', borderRadius: '50%',
+              border: '1px solid rgba(0,0,0,0.04)',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'
+            }} />
+            {/* Gloss reflection overlay */}
+            <div style={{
+              position: 'absolute', top: '8px', left: '15%', width: '70%', height: '30%',
+              background: 'linear-gradient(to bottom, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 100%)',
+              borderRadius: '50%'
+            }} />
+          </div>
+        )
+      case 'wood-tray': // Medium: Wooden serving tray
+        return (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '16px',
+            background: 'linear-gradient(135deg, #854d0e 0%, #713f12 50%, #451a03 100%)',
+            border: '10px solid #451a03',
+            boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{
+              position: 'absolute', inset: '6px', borderRadius: '8px',
+              border: '1.5px solid rgba(0,0,0,0.25)',
+              boxShadow: 'inset 0 1px 3px rgba(255,255,255,0.1)'
+            }} />
+          </div>
+        )
+      case 'slate-board': // Medium: Slate serving board
+        return (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '8px',
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            border: '4px solid #334155',
+            boxShadow: 'inset 0 2px 5px rgba(255,255,255,0.05), 0 12px 28px rgba(0,0,0,0.3)',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              position: 'absolute', inset: 0, opacity: 0.08,
+              background: 'repeating-linear-gradient(45deg, #000, #000 2px, transparent 2px, transparent 10px)'
+            }} />
+          </div>
+        )
+      case 'square-platter': // Medium: Square ceramic platter
+        return (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '24px',
+            background: 'radial-gradient(circle at 30% 30%, #fafaf9 0%, #f5f5f4 50%, #e7e5e4 100%)',
+            border: '8px solid #d6d3d1',
+            boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.8), 0 12px 28px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              position: 'absolute', inset: '10px', borderRadius: '16px',
+              border: '1.5px solid rgba(0,0,0,0.03)',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)'
+            }} />
+          </div>
+        )
+      case 'breakfast-tray': // Medium: Breakfast tray with handles
+        return (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '12px',
+            background: 'linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%)',
+            border: '8px solid #0284c7',
+            boxShadow: '0 12px 28px rgba(0,0,0,0.25)'
+          }}>
+            {/* Left handle */}
+            <div style={{
+              position: 'absolute', left: '-18px', top: '35%', width: '10px', height: '30%',
+              background: '#0369a1', borderRadius: '4px 0 0 4px', boxShadow: '-2px 4px 6px rgba(0,0,0,0.2)'
+            }} />
+            {/* Right handle */}
+            <div style={{
+              position: 'absolute', right: '-18px', top: '35%', width: '10px', height: '30%',
+              background: '#0369a1', borderRadius: '0 4px 4px 0', boxShadow: '2px 4px 6px rgba(0,0,0,0.2)'
+            }} />
+          </div>
+        )
+      case 'restaurant-table': // Hard: Restaurant table layout
+        return (
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: '#0f172a',
+            overflow: 'hidden'
+          }}>
+            {/* Tablecloth check pattern */}
+            <div style={{
+              position: 'absolute', inset: 0, opacity: 0.04,
+              backgroundImage: 'radial-gradient(#fff 15%, transparent 16%), radial-gradient(#fff 15%, transparent 16%)',
+              backgroundSize: '30px 30px',
+              backgroundPosition: '0 0, 15px 15px'
+            }} />
+            {/* Placemat */}
+            <div style={{
+              position: 'absolute', inset: '10px',
+              background: 'linear-gradient(180deg, #f5f5dc 0%, #e2e2bf 100%)',
+              border: '1.5px solid #d2b48c', borderRadius: '6px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+            }} />
+            {/* Napkin (bottom-left decorative) */}
+            <div style={{
+              position: 'absolute', left: '15px', bottom: '15px', width: '60px', height: '60px',
+              background: '#ef4444', clipPath: 'polygon(0 100%, 100% 100%, 50% 0)', opacity: 0.75,
+              boxShadow: '1px 2px 4px rgba(0,0,0,0.1)'
+            }} />
+            
+            {/* 1. Dinner Plate (left-center) */}
+            <div style={{
+              position: 'absolute', left: 'calc(50% + -10 * 3.2px)', top: 'calc(50% + 10 * 3.2px)',
+              width: '160px', height: '160px', transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #f8fafc 50%, #f1f5f9 85%, #cbd5e1 100%)',
+              boxShadow: 'inset 0 2px 5px rgba(255,255,255,0.8), 0 6px 15px rgba(0,0,0,0.15)',
+              border: '6px solid #e2e8f0'
+            }} />
+
+            {/* 2. Side Plate (top-left) */}
+            <div style={{
+              position: 'absolute', left: 'calc(50% + -25 * 3.2px)', top: 'calc(50% + -20 * 3.2px)',
+              width: '80px', height: '80px', transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #f8fafc 50%, #cbd5e1 100%)',
+              boxShadow: 'inset 0 1px 3px rgba(255,255,255,0.8), 0 4px 10px rgba(0,0,0,0.12)',
+              border: '3px solid #e2e8f0'
+            }} />
+
+            {/* 3. Bowl (bottom-right) */}
+            <div style={{
+              position: 'absolute', left: 'calc(50% + 22 * 3.2px)', top: 'calc(50% + 22 * 3.2px)',
+              width: '95px', height: '95px', transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              background: '#9a3412',
+              boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.4), 0 6px 12px rgba(0,0,0,0.2)',
+              border: '3px solid #7c2d12'
+            }}>
+              {/* Inner soup fill */}
+              <div style={{
+                position: 'absolute', inset: '10px', borderRadius: '50%',
+                background: '#451a03', boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.5)'
+              }} />
+            </div>
+
+            {/* 4. Cup & Saucer (top-right) */}
+            <div style={{
+              position: 'absolute', left: 'calc(50% + 23 * 3.2px)', top: 'calc(50% + -22 * 3.2px)',
+              width: '65px', height: '65px', transform: 'translate(-50%, -50%)',
+              borderRadius: '50%',
+              background: '#fff',
+              border: '3px solid #cbd5e1',
+              boxShadow: '0 3px 8px rgba(0,0,0,0.1)'
+            }}>
+              {/* Coffee fill */}
+              <div style={{
+                position: 'absolute', inset: '12px', borderRadius: '50%',
+                background: '#543d2b', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.6)'
+              }} />
+              {/* Cup handle */}
+              <div style={{
+                position: 'absolute', right: '-12px', top: '25%', width: '12px', height: '50%',
+                background: '#fff', border: '2px solid #cbd5e1', borderRadius: '0 8px 8px 0'
+              }} />
+            </div>
+          </div>
+        )
       default:
-        return 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)'
+        return null
     }
   }
 
@@ -410,6 +592,44 @@ export default function MemoryPlateGame() {
         overflow: 'hidden'
       }}
     >
+      {/* CSS Animation Keyframes injection */}
+      <style>{`
+        @keyframes plate-appear {
+          0% { opacity: 0; transform: scale(0.85); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes shake-wrong {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-8px); }
+          40%, 80% { transform: translateX(8px); }
+        }
+        @keyframes celebration-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.08); filter: brightness(1.15); }
+        }
+        @keyframes fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        .animate-appear {
+          animation: plate-appear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .animate-shake {
+          animation: shake-wrong 0.4s ease-in-out;
+        }
+        .animate-celebrate {
+          animation: celebration-pulse 0.6s ease-in-out 2;
+        }
+        .animate-fade {
+          animation: fade-in 0.3s ease-out forwards;
+        }
+        .food-hover:hover {
+          transform: scale(1.1) translateY(-2px);
+          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.35);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+      `}</style>
+
       {/* Sound Controller */}
       <button
         onClick={handleToggleSound}
@@ -436,9 +656,12 @@ export default function MemoryPlateGame() {
       {/* ── STATE: MENU ── */}
       {gameState === 'menu' && (
         <div style={{ textAlign: 'center', maxWidth: '400px', width: '100%' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#a855f7', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '2.5rem', fontWeight: 800, color: '#a855f7', marginBottom: '0.5rem' }}>
             Memory Plate
           </h2>
+          <div style={{ display: 'inline-block', background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168,85,247,0.2)', padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', color: '#c084fc', fontWeight: 600, marginBottom: '1.5rem' }}>
+            ✨ Premium Redesign
+          </div>
           <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '2rem' }}>
             Memorize the arrangement of ingredients on the plate and recreate it exactly as shown. Speed and accuracy matter!
           </p>
@@ -480,12 +703,33 @@ export default function MemoryPlateGame() {
         </div>
       )}
 
+      {/* ── STATE: LOADING ASSETS ── */}
+      {gameState === 'loading_assets' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+          <div style={{
+            width: '40px', height: '40px',
+            border: '3px solid rgba(168, 85, 247, 0.2)',
+            borderTopColor: '#a855f7',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+          <style>{`
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          `}</style>
+          <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Preloading food theme collections...</p>
+        </div>
+      )}
+
       {/* ── STATE: PREVIEW ── */}
       {gameState === 'preview' && plateLayout && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-          <div style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 600, display: 'flex', gap: '1rem' }}>
+          <div style={{ marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: 600, display: 'flex', gap: '1rem' }}>
             <span>Round {roundNumber} of {totalRoundCount}</span>
-            <span style={{ color: '#a855f7' }}>Memorize the plate!</span>
+            <span style={{ color: '#a855f7' }}>Theme: {plateLayout.theme?.toUpperCase()}</span>
+          </div>
+
+          <div style={{ marginBottom: '1rem', color: '#c084fc', fontSize: '0.8rem', fontWeight: 500 }}>
+            Memorize the arrangement!
           </div>
 
           {/* Dynamic visual timer bar */}
@@ -493,22 +737,25 @@ export default function MemoryPlateGame() {
             <div style={{ width: `${previewTimerLeft}%`, height: '100%', background: '#a855f7', transition: 'width 30ms linear' }} />
           </div>
 
-          {/* Plate Layout rendering */}
+          {/* Interactive Plate Container */}
           <div
             ref={plateContainerRef}
+            className={animationClass}
             style={{
               width: '320px',
               height: '320px',
-              borderRadius: plateLayout.plateShape === 'circle' ? '50%' : plateLayout.plateShape === 'square' ? '16px' : '30%',
-              background: getPlateBackground(plateLayout.plateColor),
               position: 'relative',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+              boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              clipPath: plateLayout.plateShape === 'hexagon' ? 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' : undefined
+              borderRadius: difficulty === 'easy' ? '50%' : difficulty === 'medium' ? '16px' : '0px',
+              overflow: 'hidden'
             }}
           >
+            {/* Draw beautiful surface backdrop */}
+            {renderSurfaceBackground(plateLayout.surfaceType || 'ceramic')}
+
             {/* Foods popping up sequentially */}
             {plateLayout.foods.slice(0, revealedCount).map((food) => (
               <div
@@ -517,8 +764,8 @@ export default function MemoryPlateGame() {
                   position: 'absolute',
                   left: `calc(50% + ${food.x * 3.2}px)`,
                   top: `calc(50% + ${food.y * 3.2}px)`,
-                  width: '60px',
-                  height: '60px',
+                  width: '54px',
+                  height: '54px',
                   transform: `translate(-50%, -50%) rotate(${food.rotation}deg) scale(${food.scale})`,
                   transition: 'all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
                 }}
@@ -533,7 +780,7 @@ export default function MemoryPlateGame() {
       {/* ── STATE: COUNTDOWN ── */}
       {gameState === 'countdown' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: '5rem', fontWeight: 900, color: '#ec4899', animation: 'pulse 1s infinite' }}>
+          <span style={{ fontSize: '5rem', fontWeight: 900, color: '#ec4899', transform: 'scale(1)', transition: 'all 0.5s' }}>
             {countdown}
           </span>
           <p style={{ color: '#94a3b8', fontSize: '1rem', marginTop: '1rem' }}>Recreation starts next...</p>
@@ -542,7 +789,7 @@ export default function MemoryPlateGame() {
 
       {/* ── STATE: PLACING ── */}
       {gameState === 'placing' && plateLayout && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '380px', fontSize: '0.9rem' }}>
             <span>Round {roundNumber} of {totalRoundCount}</span>
             <span style={{ color: placingTimeLeft < 10 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
@@ -554,18 +801,20 @@ export default function MemoryPlateGame() {
           <div
             ref={plateContainerRef}
             onClick={handlePlateClick}
+            className={animationClass}
             style={{
               width: '320px',
               height: '320px',
-              borderRadius: plateLayout.plateShape === 'circle' ? '50%' : plateLayout.plateShape === 'square' ? '16px' : '30%',
-              background: 'hsl(222, 18%, 18%)',
-              border: '4px dashed rgba(255,255,255,0.15)',
               position: 'relative',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+              boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
               cursor: selectedTrayFood || selectedPlacedId ? 'crosshair' : 'default',
-              clipPath: plateLayout.plateShape === 'hexagon' ? 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' : undefined
+              borderRadius: difficulty === 'easy' ? '50%' : difficulty === 'medium' ? '16px' : '0px',
+              overflow: 'hidden'
             }}
           >
+            {/* Draw beautiful surface backdrop */}
+            {renderSurfaceBackground(plateLayout.surfaceType || 'ceramic')}
+
             {/* Placed foods */}
             {placedFoods.map((food) => (
               <div
@@ -579,13 +828,16 @@ export default function MemoryPlateGame() {
                   position: 'absolute',
                   left: `calc(50% + ${food.x * 3.2}px)`,
                   top: `calc(50% + ${food.y * 3.2}px)`,
-                  width: '60px',
-                  height: '60px',
+                  width: '54px',
+                  height: '54px',
                   transform: `translate(-50%, -50%) rotate(${food.rotation}deg)`,
                   border: selectedPlacedId === food.id ? '2px solid #a855f7' : 'none',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
+                  boxShadow: selectedPlacedId === food.id ? '0 0 10px rgba(168,85,247,0.8)' : 'none',
                   cursor: 'pointer',
-                  padding: '2px'
+                  padding: '2px',
+                  background: 'rgba(255,255,255,0.04)',
+                  zIndex: 20
                 }}
               >
                 <FoodIcon type={food.type} />
@@ -607,7 +859,9 @@ export default function MemoryPlateGame() {
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    zIndex: 25
                   }}
                 >
                   ✕
@@ -630,7 +884,9 @@ export default function MemoryPlateGame() {
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      zIndex: 25
                     }}
                   >
                     ↻
@@ -641,11 +897,11 @@ export default function MemoryPlateGame() {
           </div>
 
           {/* Recreate instructions */}
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', margin: 0 }}>
-            {selectedTrayFood ? `Tap plate to place ${FOOD_DISPLAY_NAMES[selectedTrayFood]}` : selectedPlacedId ? 'Tap empty plate spot to move item' : 'Tap item below, then tap plate to arrange'}
+          <p style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', margin: 0, minHeight: '1.2rem' }}>
+            {selectedTrayFood ? `Tap surface to place ${FOOD_DISPLAY_NAMES[selectedTrayFood]}` : selectedPlacedId ? 'Tap empty surface spot to move item' : 'Tap item below, then tap surface to arrange'}
           </p>
 
-          {/* Food Selection Tray (Horizontal Scrollable) */}
+          {/* Food Selection Tray (Only chosen theme foods scrollable) */}
           <div
             style={{
               display: 'flex',
@@ -653,13 +909,14 @@ export default function MemoryPlateGame() {
               overflowX: 'auto',
               width: '100%',
               maxWidth: '380px',
-              padding: '0.5rem',
+              padding: '0.6rem 0.5rem',
               background: 'rgba(255,255,255,0.03)',
               borderRadius: '12px',
-              border: '1px solid rgba(255,255,255,0.05)'
+              border: '1px solid rgba(255,255,255,0.05)',
+              scrollbarWidth: 'thin'
             }}
           >
-            {FOOD_CATALOG.map(food => (
+            {(FOOD_THEMES[plateLayout.theme || 'breakfast'] || []).map(food => (
               <button
                 key={food}
                 onClick={() => {
@@ -667,17 +924,21 @@ export default function MemoryPlateGame() {
                   setSelectedPlacedId(null)
                   audioSynth.playTick()
                 }}
+                className="food-hover"
                 style={{
                   minWidth: '54px',
                   height: '54px',
                   borderRadius: '10px',
-                  background: selectedTrayFood === food ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.05)',
-                  border: selectedTrayFood === food ? '2px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
+                  background: selectedTrayFood === food ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)',
+                  border: selectedTrayFood === food ? '2.5px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  position: 'relative'
+                  position: 'relative',
+                  outline: 'none',
+                  padding: '4px',
+                  transition: 'all 0.15s ease'
                 }}
                 title={FOOD_DISPLAY_NAMES[food]}
               >
@@ -693,7 +954,7 @@ export default function MemoryPlateGame() {
             className="btn btn-success"
             onClick={handleSubmit}
             disabled={placedFoods.length === 0}
-            style={{ width: '100%', maxWidth: '320px', padding: '0.75rem', borderRadius: '12px' }}
+            style={{ width: '100%', maxWidth: '320px', padding: '0.75rem', borderRadius: '12px', fontWeight: 600 }}
           >
             Submit Arrangement
           </button>
@@ -702,12 +963,12 @@ export default function MemoryPlateGame() {
 
       {/* ── STATE: RESULTS ── */}
       {gameState === 'results' && plateLayout && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '1.5rem', textAlign: 'center' }}>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>
-            Round {roundNumber} Results
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '1.25rem', textAlign: 'center' }}>
+          <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: roundAccuracy >= 70 ? '#10b981' : '#f59e0b' }}>
+            {roundAccuracy >= 70 ? 'Excellent Match!' : 'Round Completed'}
           </h3>
 
-          <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', margin: '1rem 0' }}>
+          <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', margin: '0.5rem 0' }}>
             <div>
               <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#f59e0b' }}>{roundAccuracy}%</div>
               <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Accuracy</div>
@@ -719,28 +980,34 @@ export default function MemoryPlateGame() {
           </div>
 
           {/* Side-by-side comparison */}
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
             {/* Target */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Original Plate</span>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 500 }}>Original Layout</span>
               <div
                 style={{
-                  width: '140px',
-                  height: '140px',
-                  borderRadius: plateLayout.plateShape === 'circle' ? '50%' : plateLayout.plateShape === 'square' ? '8px' : '20%',
-                  background: getPlateBackground(plateLayout.plateColor),
-                  position: 'relative'
+                  width: '150px',
+                  height: '150px',
+                  position: 'relative',
+                  borderRadius: difficulty === 'easy' ? '50%' : difficulty === 'medium' ? '12px' : '0px',
+                  overflow: 'hidden',
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.3)',
+                  transform: 'scale(1)'
                 }}
               >
+                {/* Micro scaled layout background */}
+                <div style={{ transform: 'scale(0.46875)', transformOrigin: 'top left', width: '320px', height: '320px', position: 'absolute' }}>
+                  {renderSurfaceBackground(plateLayout.surfaceType || 'ceramic')}
+                </div>
                 {plateLayout.foods.map((food) => (
                   <div
                     key={food.id}
                     style={{
                       position: 'absolute',
-                      left: `calc(50% + ${food.x * 1.4}px)`,
-                      top: `calc(50% + ${food.y * 1.4}px)`,
-                      width: '28px',
-                      height: '28px',
+                      left: `calc(50% + ${food.x * 1.5}px)`,
+                      top: `calc(50% + ${food.y * 1.5}px)`,
+                      width: '26px',
+                      height: '26px',
                       transform: `translate(-50%, -50%) rotate(${food.rotation}deg) scale(${food.scale})`
                     }}
                   >
@@ -752,26 +1019,30 @@ export default function MemoryPlateGame() {
 
             {/* Submission */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Your Plate</span>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 500 }}>Your Arrangement</span>
               <div
                 style={{
-                  width: '140px',
-                  height: '140px',
-                  borderRadius: plateLayout.plateShape === 'circle' ? '50%' : plateLayout.plateShape === 'square' ? '8px' : '20%',
-                  background: 'hsl(222, 18%, 18%)',
-                  border: '2px dashed rgba(255,255,255,0.1)',
-                  position: 'relative'
+                  width: '150px',
+                  height: '150px',
+                  position: 'relative',
+                  borderRadius: difficulty === 'easy' ? '50%' : difficulty === 'medium' ? '12px' : '0px',
+                  overflow: 'hidden',
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.3)'
                 }}
               >
+                {/* Micro scaled layout background */}
+                <div style={{ transform: 'scale(0.46875)', transformOrigin: 'top left', width: '320px', height: '320px', position: 'absolute' }}>
+                  {renderSurfaceBackground(plateLayout.surfaceType || 'ceramic')}
+                </div>
                 {placedFoods.map((food) => (
                   <div
                     key={food.id}
                     style={{
                       position: 'absolute',
-                      left: `calc(50% + ${food.x * 1.4}px)`,
-                      top: `calc(50% + ${food.y * 1.4}px)`,
-                      width: '28px',
-                      height: '28px',
+                      left: `calc(50% + ${food.x * 1.5}px)`,
+                      top: `calc(50% + ${food.y * 1.5}px)`,
+                      width: '26px',
+                      height: '26px',
                       transform: `translate(-50%, -50%) rotate(${food.rotation}deg) scale(${food.scale})`
                     }}
                   >
@@ -785,7 +1056,7 @@ export default function MemoryPlateGame() {
           <button
             className="btn btn-primary"
             onClick={handleProceed}
-            style={{ width: '100%', maxWidth: '320px', padding: '0.75rem', borderRadius: '12px', marginTop: '1rem' }}
+            style={{ width: '100%', maxWidth: '320px', padding: '0.75rem', borderRadius: '12px', marginTop: '0.5rem', fontWeight: 600 }}
           >
             {roundNumber < totalRoundCount ? 'Next Round' : 'View Session Results'}
           </button>

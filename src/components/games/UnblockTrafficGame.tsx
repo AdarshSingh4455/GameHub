@@ -94,7 +94,7 @@ function isValidState(
   switchGate: SwitchGateSystem | null = null,
   keyhole: KeyholeSystem | null = null
 ): boolean {
-  const occupied = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false))
+  const occupied = new Uint8Array(64)
 
   // Determine if switch is currently occupied
   let isSwitchPressed = false
@@ -134,8 +134,9 @@ function isValidState(
       }
 
       if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
-        if (occupied[r][c]) return false
-        occupied[r][c] = true
+        const idx = r * gridSize + c
+        if (occupied[idx]) return false
+        occupied[idx] = 1
       }
 
       // One-way arrows constraint check
@@ -172,20 +173,29 @@ function solveTrafficPuzzle(
   const queue: { state: Vehicle[]; path: TrafficSolverMove[] }[] = []
   const visited = new Set<string>()
 
+  // Optimization: target and key indices are constant across state mutations
+  const targetIdx = vehicles.findIndex(v => v.isTarget)
+  const keyIdx = vehicles.findIndex(v => v.id === 'key-vehicle')
+
   function hashState(state: Vehicle[]): string {
-    return state.map(v => `${v.id}:${v.row},${v.col}`).join(';')
+    let hash = ''
+    for (let i = 0; i < state.length; i++) {
+      hash += `${state[i].row},${state[i].col};`
+    }
+    return hash
   }
 
   queue.push({ state: vehicles, path: [] })
   visited.add(hashState(vehicles))
 
-  const maxIterations = 6000
+  // Dynamically allocate budget: 50,000 for complex 8x8 grids, 6,000 for standard grids
+  const maxIterations = gridSize >= 8 ? 50000 : 6000
   let iter = 0
 
   while (queue.length > 0 && iter < maxIterations) {
     iter++
     const curr = queue.shift()!
-    const target = curr.state.find(v => v.isTarget)!
+    const target = curr.state[targetIdx]
     const exitDir = target.facing
 
     let reachedExit = false
@@ -205,24 +215,23 @@ function solveTrafficPuzzle(
 
     // Target vehicle lock state check (requires key to reach keyhole)
     let isTargetUnlocked = true
-    if (keyhole) {
-      const keyCar = curr.state.find(v => v.id === 'key-vehicle')
-      if (keyCar) {
-        let keyReached = false
-        for (let i = 0; i < keyCar.size; i++) {
-          const r = keyCar.row + (keyCar.orientation === 'v' ? i : 0)
-          const c = keyCar.col + (keyCar.orientation === 'h' ? i : 0)
-          if (r === keyhole.keyholeRow && c === keyhole.keyholeCol) {
-            keyReached = true
-            break
-          }
+    if (keyhole && keyIdx !== -1) {
+      const keyCar = curr.state[keyIdx]
+      let keyReached = false
+      for (let i = 0; i < keyCar.size; i++) {
+        const r = keyCar.row + (keyCar.orientation === 'v' ? i : 0)
+        const c = keyCar.col + (keyCar.orientation === 'h' ? i : 0)
+        if (r === keyhole.keyholeRow && c === keyhole.keyholeCol) {
+          keyReached = true
+          break
         }
-        isTargetUnlocked = keyReached
       }
+      isTargetUnlocked = keyReached
     }
 
-    // Generate candidates from tapping each unlocked vehicle once
-    for (const v of curr.state) {
+    // Generate candidates
+    for (let i = 0; i < curr.state.length; i++) {
+      const v = curr.state[i]
       if (v.isLocked) continue
       if (v.isTarget && !isTargetUnlocked) continue
 
@@ -235,6 +244,9 @@ function solveTrafficPuzzle(
       let currRow = v.row
       let currCol = v.col
       let steps = 0
+
+      // Optimization: Create array copy once per vehicle and update index in-place
+      const candidateState = [...curr.state]
 
       while (true) {
         const nextRow = currRow + stepRow
@@ -254,10 +266,7 @@ function solveTrafficPuzzle(
           }
         }
 
-        const candidateState = curr.state.map(item => {
-          if (item.id === v.id) return { ...item, row: nextRow, col: nextCol }
-          return item
-        })
+        candidateState[i] = { ...v, row: nextRow, col: nextCol }
 
         if (isValidState(candidateState, gridSize, oneWayCells, switchGate, keyhole)) {
           currRow = nextRow
@@ -269,10 +278,8 @@ function solveTrafficPuzzle(
       }
 
       if (steps > 0) {
-        const nextState = curr.state.map(item => {
-          if (item.id === v.id) return { ...item, row: currRow, col: currCol }
-          return item
-        })
+        const nextState = [...curr.state]
+        nextState[i] = { ...v, row: currRow, col: currCol }
 
         const hash = hashState(nextState)
         if (!visited.has(hash)) {
@@ -542,26 +549,44 @@ function generateTrafficLevel(difficulty: Difficulty, levelNum: number): LevelDa
   }
 
   const fallbackList: Vehicle[] = [
-    { id: 'target', row: fRow, col: fCol, size: 2, orientation: fOrient, isTarget: true, type: 'car', color: TARGET_COLOR, facing: fFacing },
-    {
-      id: 'v-fallback',
-      row: exitDir === 'right' || exitDir === 'left' ? (targetRow === 2 ? 0 : 1) : 2,
-      col: exitDir === 'right' || exitDir === 'left' ? 2 : (targetCol === 2 ? 0 : 1),
-      size: 2,
-      orientation: exitDir === 'right' || exitDir === 'left' ? 'v' : 'h',
-      isTarget: false,
-      type: 'suv',
-      color: VEHICLE_COLORS[0],
-      facing: exitDir === 'right' || exitDir === 'left' ? 'down' : 'right'
-    },
+    { id: 'target', row: fRow, col: fCol, size: 2, orientation: fOrient, isTarget: true, type: 'car', color: TARGET_COLOR, facing: fFacing }
   ]
+
+  if (keyhole) {
+    // Add golden key vehicle pre-placed on the keyhole cell so it's unlocked
+    fallbackList.push({
+      id: 'key-vehicle',
+      row: keyhole.keyholeRow,
+      col: keyhole.keyholeCol,
+      size: 2,
+      orientation: fOrient,
+      isTarget: false,
+      type: 'car',
+      color: 'hsl(48 95% 48%)',
+      facing: fFacing
+    })
+  }
+
+  // Add a generic blocking vehicle that is easy to move
+  fallbackList.push({
+    id: 'v-fallback',
+    row: exitDir === 'right' || exitDir === 'left' ? (targetRow === 2 ? 0 : 1) : 2,
+    col: exitDir === 'right' || exitDir === 'left' ? 2 : (targetCol === 2 ? 0 : 1),
+    size: 2,
+    orientation: exitDir === 'right' || exitDir === 'left' ? 'v' : 'h',
+    isTarget: false,
+    type: 'suv',
+    color: VEHICLE_COLORS[0],
+    facing: exitDir === 'right' || exitDir === 'left' ? 'down' : 'right'
+  })
+
   return {
     vehicles: fallbackList,
     minMoves: 2,
     gridSize,
-    oneWayCells: [],
-    switchGate: null,
-    keyhole: null,
+    oneWayCells,
+    switchGate,
+    keyhole,
   }
 }
 
@@ -754,26 +779,124 @@ export default function UnblockTrafficGame() {
     }
   }, [level, difficulty, stage])
 
-  // Start Level
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [validationResult, setValidationResult] = useState<string | null>(null)
+  const [isValidating, setIsValidating] = useState(false)
+
+  // Start Level with deferred execution to keep UI thread responsive
   const startLevel = (diff: Difficulty, lvlNum: number) => {
-    const data = generateTrafficLevel(diff, lvlNum)
-    setVehicles(data.vehicles)
-    setInitialVehicles(data.vehicles.map(v => ({ ...v })))
-    setGridSize(data.gridSize)
-    setOneWayCells(data.oneWayCells)
-    setSwitchGate(data.switchGate)
-    setKeyhole(data.keyhole)
-    setMinMovesNeeded(data.minMoves)
-    setUndoStack([])
-    setSelectedVehicleId(null)
-    setMovesCount(0)
-    setTimeElapsed(0)
-    setHintsUsed(0)
-    setHintMessage(null)
-    setHintHighlight(null)
-    setDifficulty(diff)
-    setLevel(lvlNum)
-    setStage('playing')
+    setIsGenerating(true)
+    setTimeout(() => {
+      try {
+        const data = generateTrafficLevel(diff, lvlNum)
+        setVehicles(data.vehicles)
+        setInitialVehicles(data.vehicles.map(v => ({ ...v })))
+        setGridSize(data.gridSize)
+        setOneWayCells(data.oneWayCells)
+        setSwitchGate(data.switchGate)
+        setKeyhole(data.keyhole)
+        setMinMovesNeeded(data.minMoves)
+        setUndoStack([])
+        setSelectedVehicleId(null)
+        setMovesCount(0)
+        setTimeElapsed(0)
+        setHintsUsed(0)
+        setHintMessage(null)
+        setHintHighlight(null)
+        setDifficulty(diff)
+        setLevel(lvlNum)
+        setStage('playing')
+      } catch (err) {
+        console.error("Failed to generate level:", err)
+        setStage('setup')
+      } finally {
+        setIsGenerating(false)
+      }
+    }, 50)
+  }
+
+  // Interactive full campaign validator to verify solvability and state constraints
+  const runCampaignValidation = () => {
+    setIsValidating(true)
+    setValidationResult("Starting campaign validation checks...")
+    
+    setTimeout(() => {
+      let results: string[] = []
+      let success = true
+      
+      for (let lvl = 1; lvl <= 50; lvl++) {
+        let diff: Difficulty = 'tutorial'
+        if (lvl <= 10) diff = 'tutorial'
+        else if (lvl <= 20) diff = 'beginner'
+        else if (lvl <= 30) diff = 'intermediate'
+        else if (lvl <= 40) diff = 'advanced'
+        else diff = 'master'
+        
+        try {
+          const data = generateTrafficLevel(diff, lvl)
+          
+          // Check solvability
+          const solution = solveTrafficPuzzle(
+            data.vehicles,
+            data.gridSize,
+            data.oneWayCells,
+            data.switchGate,
+            data.keyhole
+          )
+          
+          if (!solution) {
+            results.push(`Level ${lvl} (${diff}): FAILED - Unsolvable.`)
+            success = false
+            continue
+          }
+          
+          // Check overlaps
+          let overlapDetected = false
+          const occupied = Array(data.gridSize).fill(null).map(() => Array(data.gridSize).fill(false))
+          
+          for (const v of data.vehicles) {
+            for (let i = 0; i < v.size; i++) {
+              const r = v.row + (v.orientation === 'v' ? i : 0)
+              const c = v.col + (v.orientation === 'h' ? i : 0)
+              
+              if (r < 0 || r >= data.gridSize || c < 0 || c >= data.gridSize) {
+                if (!v.isTarget) {
+                  results.push(`Level ${lvl} (${diff}): FAILED - Vehicle ${v.id} out of bounds at (${r},${c}).`)
+                  overlapDetected = true
+                  break
+                }
+              } else {
+                if (occupied[r][c]) {
+                  results.push(`Level ${lvl} (${diff}): FAILED - Overlap detected at (${r},${c}).`)
+                  overlapDetected = true
+                  break
+                }
+                occupied[r][c] = true
+              }
+            }
+            if (overlapDetected) break
+          }
+          
+          if (overlapDetected) {
+            success = false
+            continue
+          }
+          
+          results.push(`Level ${lvl} (${diff}): PASSED - Solvable in ${solution.length} moves.`)
+          
+        } catch (err: any) {
+          results.push(`Level ${lvl} (${diff}): FAILED with exception: ${err.message}`)
+          success = false
+        }
+      }
+      
+      if (success) {
+        setValidationResult(`SUCCESS: All 50 levels validated successfully!\n\n` + results.join('\n'))
+      } else {
+        setValidationResult(`FAILURE: Validation failed!\n\n` + results.join('\n'))
+      }
+      setIsValidating(false)
+    }, 100)
   }
 
   // Endless Lab level
@@ -1582,10 +1705,31 @@ export default function UnblockTrafficGame() {
         flexDirection: 'column',
         gap: '1.25rem',
         padding: '0.5rem',
+        position: 'relative'
       }}
       className="animate-fadeIn"
       id="unblock-traffic-root"
     >
+      {isGenerating && (
+        <div style={{
+          position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.85)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          zIndex: 100, gap: '1rem', borderRadius: '16px'
+        }}>
+          <div style={{
+            width: '40px', height: '40px',
+            border: '3px solid rgba(56, 189, 248, 0.2)',
+            borderTopColor: '#38bdf8',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+          <style>{`
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          `}</style>
+          <p style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>Generating solvable level...</p>
+        </div>
+      )}
+
       {/* 1. SETUP STAGE */}
       {stage === 'setup' && (
         <div
@@ -1719,6 +1863,44 @@ export default function UnblockTrafficGame() {
                 }}
               >
                 <LockIcon size={14} className="inline mr-1 text-red-500" /> Endless Lab Mode unlocks after Level 50
+              </div>
+            )}
+
+            <button
+              onClick={runCampaignValidation}
+              disabled={isValidating}
+              className="btn btn-secondary"
+              style={{
+                borderRadius: 14,
+                padding: '0.65rem',
+                fontSize: '0.85rem',
+                marginTop: '0.5rem',
+                borderColor: 'rgba(56, 189, 248, 0.25)',
+                background: 'rgba(56, 189, 248, 0.04)',
+                color: '#38bdf8'
+              }}
+              id="traffic-validate-campaign-btn"
+            >
+              {isValidating ? '🔍 Checking Solvability...' : '🔍 Validate 1-50 Campaign'}
+            </button>
+
+            {validationResult && (
+              <div
+                style={{
+                  background: 'hsl(222 20% 6%)',
+                  border: '1px solid hsl(220 15% 15%)',
+                  borderRadius: 10,
+                  padding: '0.75rem',
+                  fontSize: '0.72rem',
+                  color: '#94a3b8',
+                  maxHeight: '140px',
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  textAlign: 'left',
+                  fontFamily: 'monospace'
+                }}
+              >
+                {validationResult}
               </div>
             )}
           </div>

@@ -1,6 +1,5 @@
 import { LudoState, PlayerColor, Token, Move, Player, GameLogEntry, Coordinate } from './types';
 import { getAvailableMoves, getCoordinate, isSafeCell, START_INDICES } from './rules';
-import { ludoAudio } from './audio';
 
 const PLAYER_ORDER: PlayerColor[] = ['RED', 'BLUE', 'YELLOW', 'GREEN'];
 
@@ -58,7 +57,6 @@ export const ludoEngine = {
       return state;
     }
 
-    ludoAudio.playRoll();
     const roll = Math.floor(Math.random() * 6) + 1;
     const currentTurn = state.currentTurn;
     const logs = [...state.logs];
@@ -140,11 +138,8 @@ export const ludoEngine = {
 
     // Check if token finished / arrived Home
     if (toPos === 57) {
-      ludoAudio.playHome();
       logs.unshift(createLogEntry(`${currentTurn} token arrived HOME!`, currentTurn));
       extraTurnAwarded = true;
-    } else {
-      ludoAudio.playMove();
     }
 
     // Check Capture Opponent Rule
@@ -167,7 +162,6 @@ export const ludoEngine = {
           const capToken = oppTokensOnCell[0];
           capToken.position = 0; // Send back to base yard
           capturedOpponent = true;
-          ludoAudio.playCapture();
           logs.unshift(createLogEntry(`${currentTurn} captured ${opp.color}'s token!`, currentTurn));
           extraTurnAwarded = true;
         }
@@ -177,7 +171,6 @@ export const ludoEngine = {
     // Check Winner Condition
     const allFinished = player.tokens.every((t) => t.position === 57);
     if (allFinished && !state.winner) {
-      ludoAudio.playVictory();
       logs.unshift(createLogEntry(`🎉 ${currentTurn} HAS WON THE GAME! 🎉`, currentTurn));
       return {
         nextState: {

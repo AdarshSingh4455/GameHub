@@ -18,199 +18,173 @@ const faceRotations: Record<number, string> = {
   4: 'rotateX(0deg) rotateY(-90deg)',
 };
 
-const colorMap: Record<PlayerColor, string> = {
-  RED: 'linear-gradient(135deg, #ff4b72, #b30022)',
-  BLUE: 'linear-gradient(135deg, #549cff, #0047b3)',
-  YELLOW: 'linear-gradient(135deg, #ffcc00, #cc8800)',
-  GREEN: 'linear-gradient(135deg, #00e676, #007a3d)',
+const colorGradient: Record<PlayerColor, { face: string; glow: string; dot: string }> = {
+  RED:    { face: 'linear-gradient(135deg, #ff5580 0%, #cc0033 100%)', glow: 'rgba(255, 51, 102, 0.7)',  dot: '#fff' },
+  BLUE:   { face: 'linear-gradient(135deg, #5599ff 0%, #0044bb 100%)', glow: 'rgba(51, 136, 255, 0.7)',  dot: '#fff' },
+  YELLOW: { face: 'linear-gradient(135deg, #ffdd33 0%, #cc8800 100%)', glow: 'rgba(255, 170, 0, 0.7)',   dot: '#fff' },
+  GREEN:  { face: 'linear-gradient(135deg, #33ee88 0%, #006633 100%)', glow: 'rgba(0, 204, 102, 0.7)',   dot: '#fff' },
 };
 
-const colorGlow: Record<PlayerColor, string> = {
-  RED: 'rgba(255, 51, 102, 0.65)',
-  BLUE: 'rgba(51, 136, 255, 0.65)',
-  YELLOW: 'rgba(255, 170, 0, 0.65)',
-  GREEN: 'rgba(0, 204, 102, 0.65)',
+// Dot positions for each face value using a 3x3 grid (index 0..8, row-major)
+const DOT_POSITIONS: Record<number, number[]> = {
+  1: [4],
+  2: [0, 8],
+  3: [0, 4, 8],
+  4: [0, 2, 6, 8],
+  5: [0, 2, 4, 6, 8],
+  6: [0, 2, 3, 5, 6, 8],
 };
 
-export const Dice: React.FC<DiceProps> = ({
-  value,
-  isRolling,
-  onRoll,
-  disabled,
-  playerColor,
-}) => {
+const SIZE = 58; // px — dice face size
+
+export const Dice: React.FC<DiceProps> = ({ value, isRolling, onRoll, disabled, playerColor }) => {
   const [rotation, setRotation] = useState<string>(faceRotations[value] || faceRotations[1]);
-  const [anticipating, setAnticipating] = useState(false);
+  const [pressing, setPressing] = useState(false);
 
   useEffect(() => {
     if (isRolling) {
-      const randX = (Math.floor(Math.random() * 3) + 4) * 360; 
-      const randY = (Math.floor(Math.random() * 3) + 4) * 360;
-      setRotation(`rotateX(${randX + 45}deg) rotateY(${randY + 45}deg)`);
+      const rx = (Math.floor(Math.random() * 3) + 4) * 360 + Math.random() * 90;
+      const ry = (Math.floor(Math.random() * 3) + 4) * 360 + Math.random() * 90;
+      setRotation(`rotateX(${rx}deg) rotateY(${ry}deg)`);
     } else {
       setRotation(faceRotations[value] || faceRotations[1]);
     }
   }, [isRolling, value]);
 
-  const handleRollClick = () => {
+  const handleClick = () => {
     if (disabled || isRolling) return;
-    setAnticipating(true);
+    setPressing(true);
     setTimeout(() => {
-      setAnticipating(false);
+      setPressing(false);
       onRoll();
-    }, 120);
+    }, 110);
   };
 
-  const getDots = (face: number) => {
-    const dotsMap: Record<number, number[]> = {
-      1: [4],
-      2: [0, 8],
-      3: [0, 4, 8],
-      4: [0, 2, 6, 8],
-      5: [0, 2, 4, 6, 8],
-      6: [0, 2, 3, 5, 6, 8],
-    };
-    const activeDots = dotsMap[face] || [];
-    return Array.from({ length: 9 }).map((_, i) => (
-      <div
-        key={i}
-        style={{
-          width: 5,
-          height: 5,
-          borderRadius: '50%',
-          backgroundColor: activeDots.includes(i) ? 'white' : 'transparent',
-          boxShadow: activeDots.includes(i) ? '0 0.5px 1px rgba(0,0,0,0.5)' : 'none',
-          transition: 'background-color 0.2s',
-        }}
-      />
-    ));
-  };
-
+  const { face, glow, dot } = colorGradient[playerColor];
   const isPlayable = !disabled && !isRolling;
+
+  const renderFace = (faceNum: number) => {
+    const rot = faceRotations[faceNum];
+    const activeDots = DOT_POSITIONS[faceNum] || [];
+    return (
+      <div
+        key={faceNum}
+        style={{
+          position: 'absolute',
+          width: `${SIZE}px`,
+          height: `${SIZE}px`,
+          background: face,
+          border: '2px solid rgba(255,255,255,0.18)',
+          borderRadius: '12px',
+          boxSizing: 'border-box',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateRows: 'repeat(3, 1fr)',
+          padding: '8px',
+          gap: '2px',
+          alignItems: 'center',
+          justifyItems: 'center',
+          backfaceVisibility: 'hidden',
+          transform: `${rot} translateZ(${SIZE / 2}px)`,
+          boxShadow: `inset 0 2px 8px rgba(255,255,255,0.12), inset 0 -3px 8px rgba(0,0,0,0.35)`,
+        }}
+      >
+        {Array.from({ length: 9 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              width: activeDots.includes(i) ? '8px' : '0px',
+              height: activeDots.includes(i) ? '8px' : '0px',
+              borderRadius: '50%',
+              background: dot,
+              boxShadow: activeDots.includes(i) ? '0 1px 3px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.4)' : 'none',
+              transition: 'all 0.15s',
+            }}
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div
+      onClick={handleClick}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '0.4rem',
-        background: 'rgba(255, 255, 255, 0.02)',
-        borderRadius: '12px',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(10px)',
-        width: '54px',
-        height: '54px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
         position: 'relative',
+        width: `${SIZE}px`,
+        height: `${SIZE}px`,
+        perspective: '500px',
+        cursor: isPlayable ? 'pointer' : disabled ? 'not-allowed' : 'default',
+        flexShrink: 0,
       }}
     >
-      <div
-        onClick={handleRollClick}
-        style={{
-          position: 'relative',
-          width: '36px',
-          height: '36px',
-          cursor: isPlayable ? 'pointer' : 'not-allowed',
-          perspective: '400px',
-          transform: anticipating ? 'scale(1.15) rotate(10deg)' : isPlayable ? 'scale(1.04)' : 'scale(1)',
-          transition: 'transform 0.12s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
-          zIndex: 5,
-        }}
-        className={isPlayable ? 'dice-interactive' : ''}
-      >
-        {/* Glow behind the active dice */}
-        {isPlayable && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '-3px',
-              left: '-3px',
-              right: '-3px',
-              bottom: '-3px',
-              background: colorGlow[playerColor],
-              borderRadius: '8px',
-              filter: 'blur(10px)',
-              zIndex: 0,
-              animation: 'active-dice-glow 1.8s infinite ease-in-out',
-            }}
-          />
-        )}
-
-        {/* 3D Cube Wrapper */}
+      {/* Glow halo when it's your turn */}
+      {isPlayable && (
         <div
           style={{
-            width: '100%',
-            height: '100%',
             position: 'absolute',
-            transformStyle: 'preserve-3d',
-            transform: rotation,
-            transition: isRolling ? 'transform 0.75s cubic-bezier(0.1, 0.8, 0.35, 1)' : 'transform 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.15)',
-            animation: isRolling ? 'dice-roll-bounce 0.75s ease-in-out infinite' : 'none',
-            zIndex: 1,
+            inset: '-8px',
+            borderRadius: '20px',
+            background: glow,
+            filter: 'blur(14px)',
+            opacity: 0.6,
+            pointerEvents: 'none',
+            animation: 'diceGlow 1.6s infinite ease-in-out',
+            zIndex: 0,
           }}
-        >
-          {([1, 6, 2, 5, 3, 4] as const).map((face) => {
-            const rot = faceRotations[face];
-            const translateZ = '18px'; // half of 36px
-            return (
-              <div
-                key={face}
-                style={{
-                  position: 'absolute',
-                  width: '36px',
-                  height: '36px',
-                  background: colorMap[playerColor],
-                  border: '1.5px solid rgba(255,255,255,0.22)',
-                  borderRadius: '8px',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gridTemplateRows: 'repeat(3, 1fr)',
-                  padding: '4px',
-                  boxSizing: 'border-box',
-                  alignItems: 'center',
-                  justifyItems: 'center',
-                  backfaceVisibility: 'hidden',
-                  transform: `${rot} translateZ(${translateZ})`,
-                  boxShadow: `inset 0 0 8px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0,0,0,0.35)`,
-                }}
-              >
-                {getDots(face)}
-              </div>
-            );
-          })}
-        </div>
+        />
+      )}
+
+      {/* 3D cube */}
+      <div
+        style={{
+          width: `${SIZE}px`,
+          height: `${SIZE}px`,
+          position: 'relative',
+          transformStyle: 'preserve-3d',
+          transform: rotation,
+          transition: isRolling
+            ? 'transform 0.78s cubic-bezier(0.1, 0.85, 0.35, 1)'
+            : 'transform 0.38s cubic-bezier(0.18, 0.89, 0.32, 1.15)',
+          animation: isRolling ? 'diceBounce 0.78s ease-in-out' : 'none',
+          scale: pressing ? '0.9' : isPlayable ? '1' : '0.92',
+          zIndex: 1,
+        }}
+      >
+        {([1, 6, 2, 5, 3, 4] as const).map(renderFace)}
       </div>
 
-      {/* Dynamic dice roll shadow scaling */}
+      {/* Ground shadow */}
       <div
         style={{
           position: 'absolute',
-          bottom: '2px',
-          width: '26px',
-          height: '4px',
-          background: 'rgba(0,0,0,0.6)',
+          bottom: '-10px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: `${SIZE * 0.7}px`,
+          height: '6px',
+          background: 'rgba(0,0,0,0.5)',
           borderRadius: '50%',
-          filter: 'blur(2px)',
-          transform: isRolling ? 'scale(0.5)' : 'scale(1)',
-          opacity: isRolling ? 0.2 : 0.85,
-          transition: 'all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)',
-          zIndex: 1,
+          filter: 'blur(3px)',
+          opacity: isRolling ? 0.2 : 0.7,
+          scale: isRolling ? '0.5' : '1',
+          transition: 'all 0.4s ease',
+          zIndex: 0,
           pointerEvents: 'none',
         }}
       />
 
       <style>{`
-        @keyframes dice-roll-bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-16px); }
+        @keyframes diceGlow {
+          0%, 100% { opacity: 0.45; filter: blur(12px); }
+          50% { opacity: 0.8; filter: blur(18px); }
         }
-        @keyframes active-dice-glow {
-          0%, 100% { opacity: 0.5; filter: blur(8px); }
-          50% { opacity: 1.0; filter: blur(12px); }
-        }
-        .dice-interactive:hover {
-          transform: scale(1.1) !important;
+        @keyframes diceBounce {
+          0% { transform: translateY(0); }
+          30% { transform: translateY(-20px); }
+          60% { transform: translateY(-8px); }
+          80% { transform: translateY(-4px); }
+          100% { transform: translateY(0); }
         }
       `}</style>
     </div>

@@ -50,3 +50,49 @@ export interface Coordinate {
   x: number; // 0..14 grid x
   y: number; // 0..14 grid y
 }
+
+// Particle type for visual effects like capture explosions
+export interface LudoParticle {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+  alpha: number;
+  life: number;
+  maxLife: number;
+}
+
+// --- Future Extension Hooks & Interfaces (Sprint 2 Preparation Only) ---
+
+export interface LudoAIStrategy {
+  name: string;
+  selectMove(tokens: Token[], diceValue: number, availableMoves: Move[]): Promise<Move | null>;
+}
+
+export interface LudoMultiplayerAdapter {
+  onStateChange: (state: LudoState) => void;
+  sendRollDice: () => Promise<void>;
+  sendMoveToken: (tokenId: number) => Promise<void>;
+  joinRoom: (roomCode: string) => Promise<void>;
+  leaveRoom: () => Promise<void>;
+}
+
+export interface LudoSpectatorManager {
+  spectators: string[];
+  onSpectatorJoin: (userId: string) => void;
+  onSpectatorLeave: (userId: string) => void;
+}
+
+export interface LudoReplaySystem {
+  recordState: (state: LudoState) => void;
+  playReplay: (states: LudoState[]) => void;
+}
+
+export interface LudoTournamentHooks {
+  onMatchComplete: (winnerId: string, score: number) => void;
+  onRewardClaim: (rewardId: string) => void;
+}
+

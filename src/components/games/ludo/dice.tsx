@@ -19,17 +19,17 @@ const faceRotations: Record<number, string> = {
 };
 
 const colorMap: Record<PlayerColor, string> = {
-  RED: 'hsl(0, 80%, 50%)',
-  BLUE: 'hsl(210, 85%, 50%)',
-  YELLOW: 'hsl(45, 95%, 45%)',
-  GREEN: 'hsl(140, 75%, 40%)',
+  RED: 'linear-gradient(135deg, #ff4b72, #b30022)',
+  BLUE: 'linear-gradient(135deg, #549cff, #0047b3)',
+  YELLOW: 'linear-gradient(135deg, #ffcc00, #cc8800)',
+  GREEN: 'linear-gradient(135deg, #00e676, #007a3d)',
 };
 
 const colorGlow: Record<PlayerColor, string> = {
-  RED: 'rgba(255, 0, 0, 0.4)',
-  BLUE: 'rgba(0, 100, 255, 0.4)',
-  YELLOW: 'rgba(255, 200, 0, 0.4)',
-  GREEN: 'rgba(0, 200, 50, 0.4)',
+  RED: 'rgba(255, 51, 102, 0.5)',
+  BLUE: 'rgba(51, 136, 255, 0.5)',
+  YELLOW: 'rgba(255, 170, 0, 0.5)',
+  GREEN: 'rgba(0, 204, 102, 0.5)',
 };
 
 export const Dice: React.FC<DiceProps> = ({
@@ -40,23 +40,29 @@ export const Dice: React.FC<DiceProps> = ({
   playerColor,
 }) => {
   const [rotation, setRotation] = useState<string>(faceRotations[value] || faceRotations[1]);
+  const [anticipating, setAnticipating] = useState(false);
 
   useEffect(() => {
     if (isRolling) {
-      // Create a rapid, high-spin random rotation while rolling
-      const randX = Math.floor(Math.random() * 3 + 3) * 360; // 1080, 1440, etc.
-      const randY = Math.floor(Math.random() * 3 + 3) * 360;
+      // Rapid multiple rotations (inertia)
+      const randX = (Math.floor(Math.random() * 3) + 4) * 360; // 1440, 1800, etc.
+      const randY = (Math.floor(Math.random() * 3) + 4) * 360;
       setRotation(`rotateX(${randX + 45}deg) rotateY(${randY + 45}deg)`);
     } else {
-      // Snap to final face after rolling completes
+      // Snap to target face
       setRotation(faceRotations[value] || faceRotations[1]);
     }
   }, [isRolling, value]);
 
-  const handleDiceClick = () => {
-    if (!disabled && !isRolling) {
+  const handleRollClick = () => {
+    if (disabled || isRolling) return;
+    
+    // Trigger roll anticipation effect
+    setAnticipating(true);
+    setTimeout(() => {
+      setAnticipating(false);
       onRoll();
-    }
+    }, 150);
   };
 
   const getDots = (face: number) => {
@@ -77,11 +83,14 @@ export const Dice: React.FC<DiceProps> = ({
           height: 8,
           borderRadius: '50%',
           backgroundColor: activeDots.includes(i) ? 'white' : 'transparent',
+          boxShadow: activeDots.includes(i) ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
           transition: 'background-color 0.2s',
         }}
       />
     ));
   };
+
+  const isPlayable = !disabled && !isRolling;
 
   return (
     <div
@@ -90,28 +99,47 @@ export const Dice: React.FC<DiceProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '1.5rem',
+        padding: '1.25rem',
         background: 'rgba(255, 255, 255, 0.03)',
-        borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(8px)',
-        minWidth: '120px',
+        borderRadius: '20px',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
+        backdropFilter: 'blur(16px)',
+        minWidth: '130px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
       }}
     >
       <div
-        onClick={handleDiceClick}
+        onClick={handleRollClick}
         style={{
           position: 'relative',
           width: '60px',
           height: '60px',
-          cursor: disabled || isRolling ? 'not-allowed' : 'pointer',
+          cursor: isPlayable ? 'pointer' : 'not-allowed',
           perspective: '600px',
-          opacity: disabled ? 0.6 : 1,
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          transform: disabled || isRolling ? 'none' : 'scale(1.05)',
+          transform: anticipating ? 'scale(1.2) rotate(15deg)' : isPlayable ? 'scale(1.05)' : 'scale(1)',
+          transition: 'transform 0.15s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
         }}
+        className={isPlayable ? 'dice-interactive' : ''}
       >
-        {/* Dice Container with animations */}
+        {/* Glow behind the active dice */}
+        {isPlayable && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '-5px',
+              left: '-5px',
+              right: '-5px',
+              bottom: '-5px',
+              background: colorGlow[playerColor],
+              borderRadius: '12px',
+              filter: 'blur(12px)',
+              zIndex: 0,
+              animation: 'active-dice-glow 2s infinite ease-in-out',
+            }}
+          />
+        )}
+
+        {/* 3D Cube Wrapper */}
         <div
           style={{
             width: '100%',
@@ -119,14 +147,14 @@ export const Dice: React.FC<DiceProps> = ({
             position: 'absolute',
             transformStyle: 'preserve-3d',
             transform: rotation,
-            transition: isRolling ? 'transform 0.8s cubic-bezier(0.1, 0.8, 0.3, 1)' : 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
-            animation: isRolling ? 'dice-bounce 0.8s ease-in-out infinite' : 'none',
+            transition: isRolling ? 'transform 0.8s cubic-bezier(0.1, 0.8, 0.35, 1)' : 'transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.15)',
+            animation: isRolling ? 'dice-roll-bounce 0.8s ease-in-out infinite' : 'none',
+            zIndex: 1,
           }}
         >
-          {/* Render 6 faces */}
           {([1, 6, 2, 5, 3, 4] as const).map((face) => {
             const rot = faceRotations[face];
-            const translateZ = '30px'; // Half of cube size (60px)
+            const translateZ = '30px';
             return (
               <div
                 key={face}
@@ -135,18 +163,18 @@ export const Dice: React.FC<DiceProps> = ({
                   width: '60px',
                   height: '60px',
                   background: colorMap[playerColor],
-                  border: '2px solid rgba(255,255,255,0.2)',
-                  borderRadius: '10px',
+                  border: '2px solid rgba(255,255,255,0.25)',
+                  borderRadius: '12px',
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
                   gridTemplateRows: 'repeat(3, 1fr)',
-                  padding: '6px',
+                  padding: '7px',
                   boxSizing: 'border-box',
                   alignItems: 'center',
                   justifyItems: 'center',
                   backfaceVisibility: 'hidden',
                   transform: `${rot} translateZ(${translateZ})`,
-                  boxShadow: `inset 0 0 10px rgba(0, 0, 0, 0.4), 0 0 15px ${colorGlow[playerColor]}`,
+                  boxShadow: `inset 0 0 12px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0,0,0,0.3)`,
                 }}
               >
                 {getDots(face)}
@@ -161,36 +189,50 @@ export const Dice: React.FC<DiceProps> = ({
         style={{
           width: '50px',
           height: '6px',
-          background: 'rgba(0,0,0,0.6)',
+          background: 'rgba(0,0,0,0.5)',
           borderRadius: '50%',
-          marginTop: '16px',
-          filter: 'blur(4px)',
-          transform: isRolling ? 'scale(0.6)' : 'scale(1)',
-          opacity: isRolling ? 0.3 : 0.8,
-          transition: 'all 0.4s ease-in-out',
+          marginTop: '18px',
+          filter: 'blur(3px)',
+          transform: isRolling ? 'scale(0.55)' : 'scale(1)',
+          opacity: isRolling ? 0.25 : 0.8,
+          transition: 'all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
         }}
       />
 
       {/* Instructions label */}
       <span
         style={{
-          fontSize: '0.75rem',
-          color: 'rgba(255,255,255,0.5)',
+          fontSize: '0.72rem',
+          color: isPlayable ? '#fff' : 'rgba(255,255,255,0.4)',
           marginTop: '12px',
-          fontWeight: 600,
+          fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '1px',
           textAlign: 'center',
+          textShadow: isPlayable ? `0 0 8px ${colorGlow[playerColor]}` : 'none',
+          animation: isPlayable ? 'text-glow 1.5s infinite alternate' : 'none',
         }}
       >
         {isRolling ? 'Rolling...' : disabled ? `${playerColor}'s Turn` : 'Tap to Roll'}
       </span>
 
-      {/* Inject custom dice-bounce animation */}
+      {/* Keyframe animations */}
       <style>{`
-        @keyframes dice-bounce {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
+        @keyframes dice-roll-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-24px); }
+        }
+        @keyframes active-dice-glow {
+          0%, 100% { opacity: 0.4; filter: blur(10px); }
+          50% { opacity: 0.9; filter: blur(14px); }
+        }
+        @keyframes text-glow {
+          0% { opacity: 0.8; }
+          100% { opacity: 1.0; }
+        }
+        .dice-interactive:hover {
+          transform: scale(1.12) !important;
+          box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
         }
       `}</style>
     </div>

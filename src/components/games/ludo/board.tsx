@@ -184,7 +184,7 @@ export const LudoBoard: React.FC<BoardProps> = ({
     const groups: Record<string, Token[]> = {};
     tokens.forEach((token) => {
       // Exclude the actively moving token from static layout groups
-      if (isMovingTokenId === token.id && movingTokenColor === token.color && movingCoordinate) {
+      if (isMovingTokenId === token.id && movingTokenColor === token.color) {
         return;
       }
       const coord = getCoordinate(token.color, token.id, token.position);
@@ -524,92 +524,98 @@ export const LudoBoard: React.FC<BoardProps> = ({
                 style={{
                   cursor: isPlayable ? 'pointer' : 'default',
                   transition: isMoving ? 'transform 0.16s linear' : 'transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
-                  animation: isLanding
-                    ? 'token-landing-bounce 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
-                    : isPlayable
-                      ? 'token-breathing 2s infinite ease-in-out'
-                      : 'none',
                 }}
                 transform={`translate(${cx}, ${cy + hopOffset}) scale(${scale})`}
                 className={isPlayable ? 'active-token-hover' : ''}
               >
-                {/* Active pulse glow halo */}
-                {isPlayable && (
-                  <circle
-                    r="44"
-                    fill="none"
-                    stroke={colorTheme[token.color].main}
-                    strokeWidth="5"
-                    style={{ animation: 'active-ring-pulse 1.4s infinite ease-in-out' }}
-                  />
-                )}
-
-                {/* Token Soft Shadow (Offset downward) */}
-                <circle cx="0" cy="9" r="29" fill="rgba(0,0,0,0.4)" />
-
-                {/* Metallic Gold/Silver outer rim */}
-                <circle
-                  cx="0"
-                  cy="0"
-                  r="28"
-                  fill="url(#silverRim)"
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
-                />
-
-                {/* Token Primary resin body */}
-                <circle
-                  cx="0"
-                  cy="0"
-                  r="24"
-                  fill={`url(#${token.color.toLowerCase()}BaseGrad)`}
-                  stroke={colorTheme[token.color].border}
-                  strokeWidth="2"
+                <g
                   style={{
-                    filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.3))',
-                    animation: isPlayable ? 'token-breathing 2s infinite ease-in-out' : 'none',
+                    transformOrigin: '0px 0px',
+                    animation: isLanding
+                      ? 'token-landing-bounce 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
+                      : isPlayable
+                        ? 'token-breathing 2s infinite ease-in-out'
+                        : 'none',
                   }}
-                />
+                >
+                  {/* Active pulse glow halo */}
+                  {isPlayable && (
+                    <circle
+                      r="44"
+                      fill="none"
+                      stroke={colorTheme[token.color].main}
+                      strokeWidth="5"
+                      style={{ animation: 'active-ring-pulse 1.4s infinite ease-in-out' }}
+                    />
+                  )}
 
-                {/* Secondary inner ring */}
-                <circle
-                  cx="0"
-                  cy="0"
-                  r="15"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.22)"
-                  strokeWidth="2"
-                />
+                  {/* Token Soft Shadow (Offset downward) */}
+                  <circle cx="0" cy="9" r="29" fill="rgba(0,0,0,0.4)" />
 
-                {/* Core gem */}
-                <circle
-                  cx="0"
-                  cy="0"
-                  r="9"
-                  fill={colorTheme[token.color].dark}
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
-                />
+                  {/* Metallic Gold/Silver outer rim */}
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r="28"
+                    fill="url(#silverRim)"
+                    stroke="#ffffff"
+                    strokeWidth="1.5"
+                  />
 
-                {/* Spot reflection highlights */}
-                <circle cx="-4" cy="-4" r="3.5" fill="#ffffff" opacity="0.85" />
-                <path
-                  d="M -16 -8 A 18 18 0 0 1 16 -8 A 18 10 0 0 0 -16 -8 Z"
-                  fill="url(#glossHighlight)"
-                  pointerEvents="none"
-                />
+                  {/* Token Primary resin body */}
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r="24"
+                    fill={`url(#${token.color.toLowerCase()}BaseGrad)`}
+                    stroke={colorTheme[token.color].border}
+                    strokeWidth="2"
+                    style={{
+                      filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.3))',
+                    }}
+                  />
+
+                  {/* Secondary inner ring */}
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r="15"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.22)"
+                    strokeWidth="2"
+                  />
+
+                  {/* Core gem */}
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r="9"
+                    fill={colorTheme[token.color].dark}
+                    stroke="#ffffff"
+                    strokeWidth="1.5"
+                  />
+
+                  {/* Spot reflection highlights */}
+                  <circle cx="-4" cy="-4" r="3.5" fill="#ffffff" opacity="0.85" />
+                  <path
+                    d="M -16 -8 A 18 18 0 0 1 16 -8 A 18 10 0 0 0 -16 -8 Z"
+                    fill="url(#glossHighlight)"
+                    pointerEvents="none"
+                  />
+                </g>
               </g>
             );
           });
         })}
 
         {/* 9. Moving Token Layer (Absolute Overlay for Smooth 60FPS CSS sliding transitions) */}
-        {isMovingTokenId !== null && movingTokenColor !== null && movingCoordinate && (() => {
+        {isMovingTokenId !== null && movingTokenColor !== null && (() => {
           const token = tokens.find(t => t.id === isMovingTokenId && t.color === movingTokenColor);
           if (!token) return null;
 
-          const cx = movingCoordinate.x * 100 + 50;
-          const cy = movingCoordinate.y * 100 + 50;
+          const coord = movingCoordinate || getCoordinate(token.color, token.id, token.position);
+          const cx = coord.x * 100 + 50;
+          const cy = coord.y * 100 + 50;
 
           return (
             <g

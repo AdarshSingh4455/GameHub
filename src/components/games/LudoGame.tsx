@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { LudoState, PlayerColor, Coordinate, GameConfig, Move } from './ludo/types';
+import { LudoState, PlayerColor, Coordinate, GameConfig, Move, Token } from './ludo/types';
 import { ludoEngine, createLogEntry } from './ludo/engine';
 import { LudoBoard } from './ludo/board';
 import { Dice } from './ludo/dice';
@@ -50,7 +50,7 @@ export default function LudoGame() {
   const [gameConfig, setGameConfig] = useState<GameConfig | null>(null);
   const [gameState, setGameState] = useState<LudoState | null>(null);
 
-  // Animation states (local only — coordinates and indices are not duplicated)
+  // Animation states (local only)
   const [isMovingTokenId, setIsMovingTokenId] = useState<number | null>(null);
   const [movingTokenColor, setMovingTokenColor] = useState<PlayerColor | null>(null);
   const [movingCoordinate, setMovingCoordinate] = useState<Coordinate | null>(null);
@@ -70,6 +70,8 @@ export default function LudoGame() {
     RED: false, GREEN: false, YELLOW: false, BLUE: false,
   });
 
+  // Concurrency & Animation Locks
+  const isAnimatingRef = useRef(false);
   const animationCleanupRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTurnRef = useRef<PlayerColor | null>(null);
 
@@ -89,35 +91,15 @@ export default function LudoGame() {
     setMovingCoordinate(null);
     setDiceRolling(false);
     setAiThinking(false);
+    isAnimatingRef.current = false;
     lastTurnRef.current = initialState.currentTurn;
   }, []);
 
-  // ── Roll dice ───────────────────────────────────────────────────────────
-  const handleRollDice = useCallback(() => {
+  // ── Unified, transport-agnostic executeMove pipeline ───────────────────
+  const executeMove = useCallback((tokenId: number, color: PlayerColor) => {
+    // ── Pre-flight validation & Synchronous Lock ──
     if (!gameState) return;
-    if (gameState.phase !== 'DICE_ROLL' || diceRolling || isMovingTokenId !== null) return;
-
-    ludoAudio.playRollBegin();
-    setDiceRolling(true);
-
-    setTimeout(() => {
-      ludoAudio.playRollImpact();
-      setDiceRolling(false);
-      
-      setGameState(prev => {
-        if (!prev) return prev;
-        const next = ludoEngine.rollDice(prev);
-        // Play reveal sound on successful roll
-        ludoAudio.playRollReveal();
-        return next;
-      });
-    }, 850);
-  }, [gameState, diceRolling, isMovingTokenId]);
-
-  // ── Token move — animation-synchronized state commit ────────────────────
-  const handleTokenClick = useCallback((tokenId: number, color: PlayerColor) => {
-    if (!gameState) return;
-    if (gameState.phase !== 'TOKEN_MOVE' || isMovingTokenId !== null) return;
+    if (gameState.phase !== 'TOKEN_MOVE' || isAnimatingRef.current) return;
 
     // Verify move is legal
     const isLegal = gameState.availableMoves.some(
@@ -125,19 +107,23 @@ export default function LudoGame() {
     );
     if (!isLegal) return;
 
+    // Acquire lock immediately (synchronously prevents concurrent double-clicks/taps)
+    isAnimatingRef.current = true;
+
     const startPos = gameState.players
       .find(p => p.color === color)!
       .tokens.find(t => t.id === tokenId)!.position;
 
-    // Compute the full transition BEFORE starting animation
+    // Compute final state and movement path in the engine
     const { nextState, animatedPath } = ludoEngine.moveToken(gameState, tokenId);
 
     if (animatedPath.length === 0) {
+      isAnimatingRef.current = false;
       setGameState(nextState);
       return;
     }
 
-    // ── Begin step-by-step animation ──────────────────────────────────────
+    // ── Phase 1: Forward step-by-step movement animation ──
     setIsMovingTokenId(tokenId);
     setMovingTokenColor(color);
     setMovingCoordinate(animatedPath[0]);
@@ -154,60 +140,136 @@ export default function LudoGame() {
           ludoAudio.playMove();
         }
       } else {
-        // ── Animation complete ──
+        // Forward animation complete
         if (animationCleanupRef.current) clearInterval(animationCleanupRef.current);
-        setIsMovingTokenId(null);
-        setMovingTokenColor(null);
-        setMovingCoordinate(null);
-
+        
+        // Resolve landing and capture logic
         const endPos = nextState.players.find(p => p.color === color)!.tokens.find(t => t.id === tokenId)!.position;
 
-        if (nextState.phase === 'FINISHED' && nextState.winner) {
-          ludoAudio.playVictory();
-          setShowWinnerModal(true);
-        } else if (endPos === 57) {
-          ludoAudio.playHome();
-        } else {
-          // Check if capture occurred
-          const captureOccurred = gameState.players.some(p => {
-            if (p.color === color) return false;
-            return p.tokens.some(t => {
-              const oldT = gameState.players.find(op => op.color === p.color)!.tokens.find(ot => ot.id === t.id)!;
-              const newT = nextState.players.find(op => op.color === p.color)!.tokens.find(nt => nt.id === t.id);
-              return oldT.position > 0 && newT?.position === 0;
-            });
+        // Detect if an opponent token was captured
+        let capturedTokenInfo: { color: PlayerColor; id: number; fromPosition: number } | null = null;
+        gameState.players.forEach(opp => {
+          if (opp.color === color) return;
+          opp.tokens.forEach(t => {
+            const nextT = nextState.players.find(p => p.color === opp.color)!.tokens.find(nt => nt.id === t.id)!;
+            if (t.position > 0 && nextT.position === 0) {
+              capturedTokenInfo = { color: opp.color, id: t.id, fromPosition: t.position };
+            }
           });
-          if (captureOccurred) ludoAudio.playCapture();
-          else ludoAudio.playMove();
+        });
+
+        // ── Phase 2: Capture backward-travel animation ──
+        if (capturedTokenInfo) {
+          // Play capture explosion sound once
+          ludoAudio.playCapture();
+
+          // Wait 200ms on the capture cell before executing reverse travel
+          setTimeout(() => {
+            const cap = capturedTokenInfo!;
+            const revPath: Coordinate[] = [];
+            
+            // Build backward coordinate path from current track location back to 0 (base yard slot)
+            for (let pos = cap.fromPosition; pos >= 0; pos--) {
+              revPath.push(getCoordinate(cap.color, cap.id, pos));
+            }
+
+            setIsMovingTokenId(cap.id);
+            setMovingTokenColor(cap.color);
+            setMovingCoordinate(revPath[0]);
+
+            let revIndex = 0;
+            const revInterval = setInterval(() => {
+              revIndex++;
+              if (revIndex < revPath.length) {
+                setMovingCoordinate(revPath[revIndex]);
+                ludoAudio.playMove(); // clicking reverse steps
+              } else {
+                // Reverse animation completed — release visual overrides and commit
+                clearInterval(revInterval);
+                setIsMovingTokenId(null);
+                setMovingTokenColor(null);
+                setMovingCoordinate(null);
+                
+                // Commit state and release locks
+                isAnimatingRef.current = false;
+                setGameState(nextState);
+              }
+            }, 80); // swift backward slide
+          }, 200);
+        } else {
+          // No capture: snap active visual coordinates and resolve sound
+          setIsMovingTokenId(null);
+          setMovingTokenColor(null);
+          setMovingCoordinate(null);
+
+          if (nextState.phase === 'FINISHED' && nextState.winner) {
+            ludoAudio.playVictory();
+            setShowWinnerModal(true);
+          } else if (endPos === 57) {
+            ludoAudio.playHome();
+          } else {
+            ludoAudio.playMove();
+          }
+
+          // Commit state and release locks
+          isAnimatingRef.current = false;
+          setGameState(nextState);
         }
-
-        // Commit engine state AFTER animation
-        setGameState(nextState);
       }
-    }, 160);
-  }, [gameState, isMovingTokenId]);
+    }, 160); // 160ms cell-by-cell linear forward step duration
+  }, [gameState]);
 
-  // ── Auto-step (for AI/Debug execution) ──────────────────────────────────
+  // ── Roll dice ───────────────────────────────────────────────────────────
+  const handleRollDice = useCallback(() => {
+    if (!gameState) return;
+    if (gameState.phase !== 'DICE_ROLL' || diceRolling || isAnimatingRef.current) return;
+
+    // Acquire animation lock
+    isAnimatingRef.current = true;
+    ludoAudio.playRollBegin();
+    setDiceRolling(true);
+
+    setTimeout(() => {
+      ludoAudio.playRollImpact();
+      setDiceRolling(false);
+      
+      setGameState(prev => {
+        if (!prev) return prev;
+        const next = ludoEngine.rollDice(prev);
+        ludoAudio.playRollReveal();
+        
+        // Release animation lock
+        isAnimatingRef.current = false;
+        return next;
+      });
+    }, 850);
+  }, [gameState, diceRolling]);
+
+  // ── Human move selector callback ────────────────────────────────────────
+  const handleTokenClick = useCallback((tokenId: number, color: PlayerColor) => {
+    executeMove(tokenId, color);
+  }, [executeMove]);
+
+  // ── Auto-step (for AI decisions or debug checks) ────────────────────────
   const handleAutoStep = useCallback(() => {
-    if (!gameState || gameState.phase === 'FINISHED') return;
+    if (!gameState || gameState.phase === 'FINISHED' || isAnimatingRef.current) return;
 
     if (gameState.phase === 'DICE_ROLL' && !diceRolling) {
       handleRollDice();
     } else if (gameState.phase === 'TOKEN_MOVE' && gameState.availableMoves.length > 0 && isMovingTokenId === null) {
-      // Determine strategy based on player name difficulty tags
       const player = gameState.players.find(p => p.color === gameState.currentTurn)!;
       const diff = getAIDifficulty(player.name);
       
       const bestMove = ludoAI.selectMove(gameState, diff);
       if (bestMove) {
-        handleTokenClick(bestMove.tokenId, gameState.currentTurn);
+        executeMove(bestMove.tokenId, gameState.currentTurn);
       } else {
-        // Fallback to random if AI yields null
+        // Fallback random move selection
         const rnd = gameState.availableMoves[Math.floor(Math.random() * gameState.availableMoves.length)];
-        handleTokenClick(rnd.tokenId, gameState.currentTurn);
+        executeMove(rnd.tokenId, gameState.currentTurn);
       }
     }
-  }, [gameState, diceRolling, isMovingTokenId, handleRollDice, handleTokenClick]);
+  }, [gameState, diceRolling, isMovingTokenId, handleRollDice, executeMove]);
 
   // ── Turn change audio trigger ───────────────────────────────────────────
   useEffect(() => {
@@ -218,14 +280,14 @@ export default function LudoGame() {
     lastTurnRef.current = gameState.currentTurn;
   }, [gameState?.currentTurn]);
 
-  // ── AI thinking and execution controller ────────────────────────────────
+  // ── AI thinking timer and controller ────────────────────────────────────
   useEffect(() => {
     if (!gameState || gameState.phase === 'FINISHED') return;
 
     const activePlayer = gameState.players.find(p => p.color === gameState.currentTurn)!;
     const isCurrentAuto = isAutoPlayer[gameState.currentTurn] || activePlayer.isAuto;
 
-    if (!isCurrentAuto || diceRolling || isMovingTokenId !== null) {
+    if (!isCurrentAuto || diceRolling || isMovingTokenId !== null || isAnimatingRef.current) {
       setAiThinking(false);
       return;
     }
@@ -268,6 +330,7 @@ export default function LudoGame() {
     setShowWinnerModal(false);
     setSelectedPlayer(null);
     setAiThinking(false);
+    isAnimatingRef.current = false;
   };
 
   // ── Highlighted path (cells a token could reach) ────────────────────────
@@ -613,7 +676,7 @@ export default function LudoGame() {
         }}>
           <button
             onClick={handleAutoStep}
-            disabled={!gameState || gameState.phase === 'FINISHED' || aiThinking}
+            disabled={!gameState || gameState.phase === 'FINISHED' || aiThinking || isAnimatingRef.current}
             style={{
               background: 'rgba(255,214,0,0.12)', border: '1px solid rgba(255,214,0,0.3)',
               color: '#ffd600', padding: '5px 12px', borderRadius: '8px',
@@ -747,12 +810,12 @@ export default function LudoGame() {
               value={gameState.diceValue}
               isRolling={diceRolling}
               onRoll={handleRollDice}
-              disabled={gameState.phase !== 'DICE_ROLL' || diceRolling || isMovingTokenId !== null || aiThinking}
+              disabled={gameState.phase !== 'DICE_ROLL' || diceRolling || isMovingTokenId !== null || aiThinking || isAnimatingRef.current}
               playerColor={gameState.currentTurn}
             />
 
             {/* Tap to roll badge */}
-            {gameState.phase === 'DICE_ROLL' && !diceRolling && isMovingTokenId === null && !aiThinking && (
+            {gameState.phase === 'DICE_ROLL' && !diceRolling && isMovingTokenId === null && !aiThinking && !isAnimatingRef.current && (
               <div style={{
                 position: 'absolute', bottom: '-11px', left: '50%',
                 transform: 'translateX(-50%)',
@@ -766,7 +829,7 @@ export default function LudoGame() {
             )}
 
             {/* Pick token badge */}
-            {gameState.phase === 'TOKEN_MOVE' && isMovingTokenId === null && !aiThinking && (
+            {gameState.phase === 'TOKEN_MOVE' && isMovingTokenId === null && !aiThinking && !isAnimatingRef.current && (
               <div style={{
                 position: 'absolute', bottom: '-11px', left: '50%',
                 transform: 'translateX(-50%)',

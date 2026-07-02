@@ -89,13 +89,31 @@ export const FINISH_COORDINATES: Record<PlayerColor, Coordinate> = {
   BLUE:   { x: 7, y: 8 },
 };
 
-/** Base yard slot offsets for the 4 tokens of each player */
-export const BASE_OFFSETS: Record<PlayerColor, Coordinate[]> = {
-  RED:    [{ x: 1.6, y: 1.6 }, { x: 3.4, y: 1.6 }, { x: 1.6, y: 3.4 }, { x: 3.4, y: 3.4 }],
-  GREEN:  [{ x: 10.6, y: 1.6 }, { x: 12.4, y: 1.6 }, { x: 10.6, y: 3.4 }, { x: 12.4, y: 3.4 }],
-  YELLOW: [{ x: 10.6, y: 10.6 }, { x: 12.4, y: 10.6 }, { x: 10.6, y: 12.4 }, { x: 12.4, y: 12.4 }],
-  BLUE:   [{ x: 1.6, y: 10.6 }, { x: 3.4, y: 10.6 }, { x: 1.6, y: 12.4 }, { x: 3.4, y: 12.4 }],
+/** Top-left grid corner cell of each player's base yard */
+const YARD_CORNERS: Record<PlayerColor, Coordinate> = {
+  RED:    { x: 0, y: 0 },
+  GREEN:  { x: 9, y: 0 },
+  YELLOW: { x: 9, y: 9 },
+  BLUE:   { x: 0, y: 9 },
 };
+
+/** Pixel-perfect relative offsets to center tokens exactly in the 4 yard circles */
+const YARD_TOKEN_OFFSETS: Coordinate[] = [
+  { x: 1.4, y: 1.4 },
+  { x: 3.4, y: 1.4 },
+  { x: 1.4, y: 3.4 },
+  { x: 3.4, y: 3.4 },
+];
+
+/** Get coordinate dynamically calculated for centering yard tokens */
+export function getYardCoordinate(color: PlayerColor, id: number): Coordinate {
+  const corner = YARD_CORNERS[color];
+  const offset = YARD_TOKEN_OFFSETS[id];
+  return {
+    x: corner.x + offset.x,
+    y: corner.y + offset.y,
+  };
+}
 
 // ─── Coordinate helpers ────────────────────────────────────────────────────
 
@@ -103,7 +121,7 @@ export const BASE_OFFSETS: Record<PlayerColor, Coordinate[]> = {
  * Convert a token's local step position (0..57) to board grid coordinates.
  */
 export function getCoordinate(color: PlayerColor, id: number, step: number): Coordinate {
-  if (step === 0)   return BASE_OFFSETS[color][id];
+  if (step === 0)   return getYardCoordinate(color, id);
   if (step >= 57)   return FINISH_COORDINATES[color];
   if (step >= 52)   return HOME_COLUMNS[color][step - 52]; // index 0..4
   const trackIdx = (START_INDICES[color] + step - 1) % 52;

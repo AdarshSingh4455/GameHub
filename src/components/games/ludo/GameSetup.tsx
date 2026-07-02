@@ -32,6 +32,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
 
   // Local config
   const [localPlayersCount, setLocalPlayersCount] = useState<2 | 3 | 4>(4);
+  const [twoPlayerCombo, setTwoPlayerCombo] = useState<'RED_YELLOW' | 'BLUE_GREEN'>('RED_YELLOW');
 
   // AI config
   const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('MEDIUM');
@@ -44,21 +45,46 @@ export default function GameSetup({ onStart }: GameSetupProps) {
 
   // ── Helper generators ──────────────────────────────────────────────────────
 
-  const getAIConfigs = (): { activeColors: PlayerColor[]; configs: PlayerConfig[]; turnOrder: PlayerColor[] } => {
-    // Determine which colors are active based on human color and AI count
-    const remainingColors = ALL_COLORS.filter(c => c !== humanColor);
-    const assignedAIColors = remainingColors.slice(0, aiCount);
+  const getLocalColors = (): PlayerColor[] => {
+    if (localPlayersCount === 2) {
+      return twoPlayerCombo === 'RED_YELLOW' ? ['RED', 'YELLOW'] : ['BLUE', 'GREEN'];
+    }
+    if (localPlayersCount === 3) {
+      return ['RED', 'GREEN', 'YELLOW'];
+    }
+    return ['RED', 'GREEN', 'YELLOW', 'BLUE'];
+  };
 
-    const activeColors = [humanColor, ...assignedAIColors];
-    
-    // Sort active colors in clockwise order to establish true turn order
+  const getAIConfigs = (): { activeColors: PlayerColor[]; configs: PlayerConfig[]; turnOrder: PlayerColor[] } => {
+    let activeColors: PlayerColor[] = [];
+    if (aiCount === 1) {
+      // 2 players: strictly opposite color
+      const opposites: Record<PlayerColor, PlayerColor> = {
+        RED: 'YELLOW',
+        YELLOW: 'RED',
+        BLUE: 'GREEN',
+        GREEN: 'BLUE',
+      };
+      activeColors = [humanColor, opposites[humanColor]];
+    } else if (aiCount === 2) {
+      // 3 players: human plus two adjacent/non-opposite
+      if (humanColor === 'RED') activeColors = ['RED', 'GREEN', 'YELLOW'];
+      else if (humanColor === 'GREEN') activeColors = ['GREEN', 'YELLOW', 'BLUE'];
+      else if (humanColor === 'YELLOW') activeColors = ['YELLOW', 'BLUE', 'RED'];
+      else activeColors = ['BLUE', 'RED', 'GREEN'];
+    } else {
+      // 4 players
+      activeColors = [...ALL_COLORS];
+    }
+
+    // Establish clockwise turn order based on active colors
     const turnOrder = ALL_COLORS.filter(c => activeColors.includes(c));
 
     const configs: PlayerConfig[] = ALL_COLORS.map(color => {
       if (color === humanColor) {
         return { color, role: 'HUMAN', name: 'You (Human)' };
       }
-      if (assignedAIColors.includes(color)) {
+      if (activeColors.includes(color)) {
         return { color, role: 'AI', name: `AI ${COLOR_NAMES[color]} (${aiDifficulty.toLowerCase()})` };
       }
       return { color, role: 'NONE', name: COLOR_NAMES[color] };
@@ -69,12 +95,16 @@ export default function GameSetup({ onStart }: GameSetupProps) {
 
   const handleStartGame = () => {
     if (selectedMode === 'LOCAL') {
-      const activeColors = ALL_COLORS.slice(0, localPlayersCount);
-      const playerConfigs: PlayerConfig[] = ALL_COLORS.map((color, i) => ({
-        color,
-        role: i < localPlayersCount ? 'HUMAN' : 'NONE',
-        name: `Player ${COLOR_NAMES[color]}`,
-      }));
+      const activeColors = getLocalColors();
+      const playerConfigs: PlayerConfig[] = ALL_COLORS.map(color => {
+        const isActive = activeColors.includes(color);
+        return {
+          color,
+          role: isActive ? 'HUMAN' : 'NONE',
+          name: `Player ${COLOR_NAMES[color]}`,
+        };
+      });
+
       onStart({
         mode: 'LOCAL',
         activeColors,
@@ -82,7 +112,6 @@ export default function GameSetup({ onStart }: GameSetupProps) {
       });
     } else if (selectedMode === 'VS_AI') {
       const { activeColors, configs } = getAIConfigs();
-      // Embed difficulty state inside configuration name string so the game engine is informed
       const customConfigs = configs.map(c => {
         if (c.role === 'AI') {
           return {
@@ -101,6 +130,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
     }
   };
 
+  const localActiveColors = getLocalColors();
   const { turnOrder: aiTurnOrder } = getAIConfigs();
 
   return (
@@ -135,7 +165,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
           border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: '24px',
           boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-          padding: '2rem 1.75rem',
+          padding: '2.25rem 1.75rem',
           boxSizing: 'border-box',
           position: 'relative',
           zIndex: 5,
@@ -162,7 +192,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
           </p>
         </div>
 
-        {/* ── MODE TABS (In-place Transition Cards) ───────────────────────── */}
+        {/* ── MODE TABS ───────────────────────────────────────────────────── */}
         <div
           style={{
             display: 'grid',
@@ -207,54 +237,96 @@ export default function GameSetup({ onStart }: GameSetupProps) {
           })}
         </div>
 
-        {/* ── MODE CONFIGURATION (In-place Transition Panels) ─────────────── */}
-        <div style={{ minHeight: '190px' }}>
+        {/* ── CONFIGURATION PANELS ────────────────────────────────────────── */}
+        <div style={{ minHeight: '210px' }}>
           {/* LOCAL PLAY PANEL */}
           {selectedMode === 'LOCAL' && (
-            <div className="fade-in-panel">
-              <h3 style={{ margin: '0 0 0.8rem 0', fontSize: '0.9rem', fontWeight: 800, color: '#ffcc00', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                Local Match Setup
-              </h3>
-              <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.78rem', color: '#888', lineHeight: 1.4 }}>
-                Pass and play with friends on the same screen. No connection required.
-              </p>
+            <div className="fade-in-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <h3 style={{ margin: '0 0 0.8rem 0', fontSize: '0.9rem', fontWeight: 800, color: '#ffcc00', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  Local Match Setup
+                </h3>
+                <p style={{ margin: '0 0 1rem 0', fontSize: '0.78rem', color: '#888', lineHeight: 1.4 }}>
+                  Pass and play with friends on the same screen. No connection required.
+                </p>
 
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.72rem', color: '#5e616c', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.7rem', color: '#5e616c', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
                   Total Players
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  {([2, 3, 4] as const).map(num => {
-                    const activeColors = ALL_COLORS.slice(0, num);
-                    return (
-                      <button
-                        key={num}
-                        onClick={() => setLocalPlayersCount(num)}
-                        style={{
-                          flex: 1,
-                          padding: '12px 6px',
-                          borderRadius: '12px',
-                          border: `1px solid ${localPlayersCount === num ? '#ff3366' : 'rgba(255,255,255,0.06)'}`,
-                          background: localPlayersCount === num ? 'rgba(255, 51, 102, 0.1)' : 'rgba(255, 255, 255, 0.02)',
-                          color: localPlayersCount === num ? '#ff3366' : '#8c8e9d',
-                          fontWeight: 900,
-                          fontSize: '1rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                      >
-                        {num} Players
-                      </button>
-                    );
-                  })}
+                  {([2, 3, 4] as const).map(num => (
+                    <button
+                      key={num}
+                      onClick={() => setLocalPlayersCount(num)}
+                      style={{
+                        flex: 1,
+                        padding: '10px 4px',
+                        borderRadius: '12px',
+                        border: `1.5px solid ${localPlayersCount === num ? '#ff3366' : 'rgba(255,255,255,0.06)'}`,
+                        background: localPlayersCount === num ? 'rgba(255, 51, 102, 0.1)' : 'rgba(255, 255, 255, 0.02)',
+                        color: localPlayersCount === num ? '#ff3366' : '#8c8e9d',
+                        fontWeight: 900,
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {num} Players
+                    </button>
+                  ))}
                 </div>
               </div>
 
+              {/* 2-Player Opposing Colors Combination Selection */}
+              {localPlayersCount === 2 && (
+                <div style={{ animation: 'slideIn 0.2s ease-out' }}>
+                  <label style={{ display: 'block', fontSize: '0.7rem', color: '#5e616c', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Opposite Color Pairing
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => setTwoPlayerCombo('RED_YELLOW')}
+                      style={{
+                        flex: 1,
+                        padding: '8px 4px',
+                        borderRadius: '10px',
+                        border: `1.5px solid ${twoPlayerCombo === 'RED_YELLOW' ? '#ffd600' : 'rgba(255,255,255,0.06)'}`,
+                        background: twoPlayerCombo === 'RED_YELLOW' ? 'rgba(255, 214, 0, 0.08)' : 'rgba(255,255,255,0.02)',
+                        color: twoPlayerCombo === 'RED_YELLOW' ? '#ffd600' : '#8c8e9d',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      🔴 Red vs Yellow 🟡
+                    </button>
+                    <button
+                      onClick={() => setTwoPlayerCombo('BLUE_GREEN')}
+                      style={{
+                        flex: 1,
+                        padding: '8px 4px',
+                        borderRadius: '10px',
+                        border: `1.5px solid ${twoPlayerCombo === 'BLUE_GREEN' ? '#3388ff' : 'rgba(255,255,255,0.06)'}`,
+                        background: twoPlayerCombo === 'BLUE_GREEN' ? 'rgba(51, 136, 255, 0.08)' : 'rgba(255,255,255,0.02)',
+                        color: twoPlayerCombo === 'BLUE_GREEN' ? '#3388ff' : '#8c8e9d',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      🔵 Blue vs Green 🟢
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Player assignments preview */}
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'rgba(0,0,0,0.15)', padding: '8px 12px', borderRadius: '12px' }}>
-                <span style={{ fontSize: '0.68rem', color: '#4c4e56', fontWeight: 700 }}>COLORS:</span>
-                {ALL_COLORS.slice(0, localPlayersCount).map(color => (
-                  <div key={color} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: COLOR_HEX[color] }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(0,0,0,0.15)', padding: '10px 14px', borderRadius: '12px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.68rem', color: '#5e616c', fontWeight: 800, textTransform: 'uppercase' }}>COLORS:</span>
+                {localActiveColors.map(color => (
+                  <div key={color} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 800, color: COLOR_HEX[color] }}>
                     <span>{COLOR_EMOJI[color]}</span>
                     <span>{COLOR_NAMES[color]}</span>
                   </div>
@@ -493,7 +565,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
               letterSpacing: '0.02em',
               boxShadow: '0 8px 32px rgba(255, 51, 102, 0.3), 0 4px 16px rgba(255, 204, 0, 0.15)',
               transition: 'all 0.2s ease',
-              marginTop: '0.5rem',
+              marginTop: '1rem',
             }}
             className="setup-cta"
           >

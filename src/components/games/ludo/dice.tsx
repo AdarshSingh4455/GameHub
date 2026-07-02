@@ -9,13 +9,24 @@ interface DiceProps {
   playerColor: PlayerColor;
 }
 
-const faceRotations: Record<number, string> = {
+// The rotation of each face on the 3D cube relative to its center
+const CUBE_FACE_ROTATIONS: Record<number, string> = {
   1: 'rotateX(0deg) rotateY(0deg)',
-  6: 'rotateX(180deg) rotateY(0deg)',
-  2: 'rotateX(90deg) rotateY(0deg)',
-  5: 'rotateX(-90deg) rotateY(0deg)',
-  3: 'rotateX(0deg) rotateY(-90deg)',
-  4: 'rotateX(0deg) rotateY(90deg)',
+  6: 'rotateY(180deg)',
+  2: 'rotateX(90deg)',
+  5: 'rotateX(-90deg)',
+  3: 'rotateY(-90deg)',
+  4: 'rotateY(90deg)',
+};
+
+// The rotation of the parent cube wrapper to bring that face to the front (mathematical inverse)
+const CUBE_WRAPPER_ROTATIONS: Record<number, string> = {
+  1: 'rotateX(0deg) rotateY(0deg)',
+  6: 'rotateY(-180deg)',
+  2: 'rotateX(-90deg)',
+  5: 'rotateX(90deg)',
+  3: 'rotateY(90deg)',
+  4: 'rotateY(-90deg)',
 };
 
 const colorGradient: Record<PlayerColor, { face: string; glow: string; dot: string }> = {
@@ -38,7 +49,7 @@ const DOT_POSITIONS: Record<number, number[]> = {
 const SIZE = 58; // px — dice face size
 
 export const Dice: React.FC<DiceProps> = ({ value, isRolling, onRoll, disabled, playerColor }) => {
-  const [rotation, setRotation] = useState<string>(faceRotations[value] || faceRotations[1]);
+  const [rotation, setRotation] = useState<string>(CUBE_WRAPPER_ROTATIONS[value] || CUBE_WRAPPER_ROTATIONS[1]);
   const [pressing, setPressing] = useState(false);
 
   useEffect(() => {
@@ -47,7 +58,7 @@ export const Dice: React.FC<DiceProps> = ({ value, isRolling, onRoll, disabled, 
       const ry = (Math.floor(Math.random() * 3) + 4) * 360 + Math.random() * 90;
       setRotation(`rotateX(${rx}deg) rotateY(${ry}deg)`);
     } else {
-      setRotation(faceRotations[value] || faceRotations[1]);
+      setRotation(CUBE_WRAPPER_ROTATIONS[value] || CUBE_WRAPPER_ROTATIONS[1]);
     }
   }, [isRolling, value]);
 
@@ -64,7 +75,7 @@ export const Dice: React.FC<DiceProps> = ({ value, isRolling, onRoll, disabled, 
   const isPlayable = !disabled && !isRolling;
 
   const renderFace = (faceNum: number) => {
-    const rot = faceRotations[faceNum];
+    const rot = CUBE_FACE_ROTATIONS[faceNum];
     const activeDots = DOT_POSITIONS[faceNum] || [];
     return (
       <div

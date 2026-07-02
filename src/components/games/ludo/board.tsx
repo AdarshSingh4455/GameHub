@@ -102,6 +102,25 @@ export const LudoBoard: React.FC<BoardProps> = ({
   const prevTokensRef = useRef<Token[]>([]);
   const requestRef = useRef<number | null>(null);
 
+  // Landing bounce animation trigger state
+  const [landingToken, setLandingToken] = useState<{ color: PlayerColor; id: number } | null>(null);
+  const prevMovingIdRef = useRef<number | null>(null);
+  const prevMovingColorRef = useRef<PlayerColor | null>(null);
+
+  useEffect(() => {
+    if (prevMovingIdRef.current !== null && isMovingTokenId === null && prevMovingColorRef.current !== null) {
+      const color = prevMovingColorRef.current;
+      const id = prevMovingIdRef.current;
+      setLandingToken({ color, id });
+      const timer = setTimeout(() => {
+        setLandingToken(null);
+      }, 180);
+      return () => clearTimeout(timer);
+    }
+    prevMovingIdRef.current = isMovingTokenId;
+    prevMovingColorRef.current = movingTokenColor;
+  }, [isMovingTokenId, movingTokenColor]);
+
   // Particle physics animation loop
   useEffect(() => {
     const updateParticles = () => {
@@ -498,6 +517,7 @@ export const LudoBoard: React.FC<BoardProps> = ({
 
             const isMoving = isMovingTokenId === token.id && movingTokenColor === token.color;
             const hopOffset = isMoving ? -18 : 0;
+            const isLanding = landingToken?.color === token.color && landingToken?.id === token.id;
 
             return (
               <g
@@ -506,6 +526,11 @@ export const LudoBoard: React.FC<BoardProps> = ({
                 style={{
                   cursor: isPlayable ? 'pointer' : 'default',
                   transition: isMoving ? 'transform 0.16s linear' : 'transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+                  animation: isLanding
+                    ? 'token-landing-bounce 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
+                    : isPlayable
+                      ? 'token-breathing 2s infinite ease-in-out'
+                      : 'none',
                 }}
                 transform={`translate(${cx}, ${cy + hopOffset}) scale(${scale})`}
                 className={isPlayable ? 'active-token-hover' : ''}
@@ -594,6 +619,12 @@ export const LudoBoard: React.FC<BoardProps> = ({
         @keyframes token-breathing {
           0%, 100% { transform: scale(1.0); }
           50% { transform: scale(1.06); }
+        }
+        @keyframes token-landing-bounce {
+          0% { transform: scale(1.22) translateY(-12px); filter: brightness(1.2) drop-shadow(0 12px 18px rgba(0,0,0,0.45)); }
+          45% { transform: scale(0.85) translateY(2px); filter: brightness(1.0); }
+          75% { transform: scale(1.06) translateY(-2px); }
+          100% { transform: scale(1.0) translateY(0); }
         }
         .active-token-hover:hover {
           transform: scale(1.22) !important;

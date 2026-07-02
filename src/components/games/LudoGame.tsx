@@ -242,7 +242,7 @@ export default function LudoGame() {
         isAnimatingRef.current = false;
         return next;
       });
-    }, 850);
+    }, 500);
   }, [gameState, diceRolling]);
 
   // ── Human move selector callback ────────────────────────────────────────

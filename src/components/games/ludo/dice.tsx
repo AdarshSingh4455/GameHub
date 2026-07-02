@@ -155,9 +155,9 @@ export const Dice: React.FC<DiceProps> = ({ value, isRolling, onRoll, disabled, 
           transformStyle: 'preserve-3d',
           transform: rotation,
           transition: isRolling
-            ? 'transform 0.78s cubic-bezier(0.1, 0.85, 0.35, 1)'
-            : 'transform 0.38s cubic-bezier(0.18, 0.89, 0.32, 1.15)',
-          animation: isRolling ? 'diceBounce 0.78s ease-in-out' : 'none',
+            ? 'transform 0.5s cubic-bezier(0.12, 0.85, 0.4, 1)'
+            : 'transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.15)',
+          animation: isRolling ? 'diceBounce 0.5s ease-in-out' : 'none',
           scale: pressing ? '0.9' : isPlayable ? '1' : '0.92',
           zIndex: 1,
         }}
